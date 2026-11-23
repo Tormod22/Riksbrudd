@@ -16,7 +16,7 @@
 (function (rot) {
   'use strict';
   const B = rot.Bakkekamp; if (!B) return;
-  const { REGLER, Dekning, Kikkert, Granat, Følge, Indikator } = B;
+  const { REGLER, Dekning, Kikkert, Granat, Følge, Indikator, Lagkamp, Undertrykk, Fiende3d } = B;
   const api = { test: false }, auto = () => !navigator.webdriver || api.test;
   const tilfV = (typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random;
   const r3 = () => (typeof R3 !== 'undefined' ? R3 : null);
@@ -123,9 +123,11 @@ body.kort #siktknapp{ right:calc(152px + env(safe-area-inset-right,0px)); bottom
     try { if (rot.Effekter3d) { Effekter3d.eksplosjon(X, Y, 5); if (Effekter3d.krater) Effekter3d.krater(X, Y, 1.4, true); } } catch (e) { /* effekten er ikke viktig */ }
     if (typeof ENHETER !== 'undefined') for (const s of ENHETER) { if (!s || s.karakter || !s.menn || !levende(s)) continue; const d = Math.hypot(s.x - X, s.y - Y); if (d > G.radius + 4) continue;
       const før = s.menn.filter(m => m.hp > 0).length, n = Granat.rammLag(s.menn, d, tilfV, 6), etter = s.menn.filter(m => m.hp > 0).length; rammet += n; falt += før - etter;
-      if (n && s.side !== 'blå') { const k = K(); if (k) k.treff = performance.now(); if (før > etter) drapTid = sek(); if (rot.EventyrSpill && EventyrSpill.felt) for (let i = 0; i < før - etter; i++) EventyrSpill.felt(); }
+      if (n && s.side !== 'blå' && !g.fiende) { const k = K(); if (k) k.treff = performance.now(); if (før > etter) drapTid = sek(); if (rot.EventyrSpill && EventyrSpill.felt) for (let i = 0; i < før - etter; i++) EventyrSpill.felt(); }
       if (n && typeof logg === 'function') logg(`Granaten rammet ${n} mann i ${s.navn}${levende(s) ? '' : ' – laget er slått ut'}.`); }
-    const d = deg(), k = K(); if (d && k) { const dd = Math.hypot(d.x - X, d.y - Y), s = Granat.skadeDeg(dd); if (s > 0) { k.hp = Math.max(5, k.hp - s); k.skadd = performance.now(); Indikator.legg(buer, Math.atan2(Y - d.y, X - d.x), 1, sek()); if (typeof logg === 'function') logg(`Du ble skadet av granaten (−${s} helse).`); } }
+    const d = deg(), k = K(); if (d && k) { const dd = Math.hypot(d.x - X, d.y - Y), dek = granatDekning(d, X, Y, dd), s = Math.round(Granat.skadeDeg(dd) * dek.faktor); smellLyd(dd);
+      if (s > 0) { k.hp = Math.max(5, k.hp - s); k.skadd = performance.now(); Indikator.legg(buer, Math.atan2(Y - d.y, X - d.x), 1, sek()); if (typeof logg === 'function') logg(`Du ble skadet av granaten${g.fra ? ' fra ' + g.fra.navn : ''} (−${s} helse)${dek.type ? ' – ' + (Dekning.REGLER_NAVN(dek.type)) + ' tok av for det verste' : ''}.`); }
+      else if (g.fiende && dd < REGLER.granat.radius + 6 && dek.type && typeof logg === 'function') logg(`Granaten gikk av ${Math.round(dd)} m unna – ${Dekning.REGLER_NAVN(dek.type)} tok trykket.`); }
     if (typeof skitten !== 'undefined') skitten = true; return { rammet, falt }; }
   api.smell = (X, Y) => { const Q = r3(); if (!Q || !Q.ut) return null; return smell({ x: X - Q.ut.cx, y: Y - Q.ut.cy, ut: Q.ut }); };
   function stegGranater(dt) { const Q = r3();
@@ -204,6 +206,86 @@ body.kort #siktknapp{ right:calc(152px + env(safe-area-inset-right,0px)); bottom
     granatKnapp.innerHTML = ''; granatKnapp.append('Granat', el('small', {}, String(antallGranater())));
     if (!kanSikte() && sikter) api.sikt(false); ring.classList.toggle('på', api.kikkertPå()); if (!g && menyÅpen) api.meny(false); markørSteg(); dekningTekst(); visMeny(); }, 100);
   setInterval(() => følgSteg(false), 1000);
-  Object.assign(api, { treffAlfa: () => Indikator.markør(sek() - treffTid, false), treffSist: () => Math.max(0, treffTid), følger: () => [...følger.keys()], hindre: () => (lesHindre(), hindre), buer: () => buer, flyr: () => flyr, sistDekning: () => sistDekning, lesHindre, antallGranater });
+  // ---------- R18-C: dekning mot granater, granater i lagkampen, maskingevær og fiendens granater ----------
+  // Dekning mot en granat gjelder bare når veggen (bilen, steinen) står MELLOM deg og granaten – hele veien, ikke bare de første metrene.
+  // Inne i et hus tar veggene av for en granat som går av ute (og omvendt).
+  Dekning.REGLER_NAVN = t => REGLER.dekning.navn[t] || t;
+  function granatDekning(d, X, Y, dd) { if (inne()) return dd > 2 ? { faktor: Dekning.typeFaktor('hus', 'stå'), type: 'hus' } : { faktor: 1, type: null };
+    if (!går() || fører()) return { faktor: 1, type: null }; lesHindre(); const r = Dekning.finn(X - d.x, Y - d.y, Dekning.prøver(hindre), stilling(), dd); return r ? { faktor: r.faktor, type: r.type } : { faktor: 1, type: null }; }
+  api.granatDekning = (X, Y) => { const d = deg(); return d ? granatDekning(d, X, Y, Math.hypot(X - d.x, Y - d.y)) : null; };
+  // smellet: lavt drønn med et skarpt knall først, svakere langt unna (egen lydkilde, som skuddene i spillet-visning.js)
+  let lydK = null;
+  function smellLyd(dd) { try { if (localStorage.getItem('riksbrudd-lyd') === 'av' || navigator.webdriver) return; lydK = lydK || new (rot.AudioContext || rot.webkitAudioContext)(); const ac = lydK, n = Math.floor(ac.sampleRate * 1.4), b = ac.createBuffer(1, n, ac.sampleRate), q = b.getChannelData(0);
+    // støyen her er bare lyd (utseende), ikke en spillregel
+    for (let i = 0; i < n; i++) q[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.4);
+    const kilde = ac.createBufferSource(), lp = ac.createBiquadFilter(), gn = ac.createGain(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(2400, ac.currentTime); lp.frequency.exponentialRampToValueAtTime(120, ac.currentTime + 1.2);
+    gn.gain.value = Math.max(.05, Math.min(.7, 9 / Math.max(6, dd))); kilde.buffer = b; kilde.connect(lp).connect(gn).connect(ac.destination); kilde.start(); } catch (e) { /* ingen lyd */ } }
+
+  const nåTid = () => (typeof tid !== 'undefined' ? tid : 0);
+  const synligLag = s => (typeof synlig === 'function' ? synlig(s) : true);
+  const blink = [];   // { X, Y, t } – kort blink i kartet der en granat gikk av i lagkampen
+  if (typeof KROKER !== 'undefined') {
+    // etter hver salve i kamprunden (spill/simulering.js): maskingeværene holder målet nede, og på kort hold brukes granatene
+    (KROKER.salve = KROKER.salve || []).push((a, b, d, f, rng, t) => { if (!auto()) return 0;
+      for (const s of [a, b]) if (!s.strid && rot.StridSpill && StridSpill.regel) try { StridSpill.regel(s); } catch (e) { /* uten stridsregler */ }
+      Undertrykk.salve(a, b, d, t);
+      const r = Lagkamp.runde(a, b, d, f, rng); if (!r.kastet) return 0;
+      const vis = a.side === 'blå' || b.side === 'blå' || synligLag(a) || synligLag(b);
+      if (vis) { blink.push({ X: b.x, Y: b.y, t: performance.now(), n: r.kastet }); if (blink.length > 24) blink.shift(); if (typeof skitten !== 'undefined') skitten = true; }
+      if (typeof logg === 'function') { const gr = r.kastet === 1 ? 'en granat' : r.kastet + ' granater', tr = r.treff ? ` – ${r.treff} treff` : ' – bom';
+        if (a.side === 'blå') logg(`${a.navn} kaster ${gr} mot ${synligLag(b) ? b.navn : 'fienden'} (${Math.round(d)} m)${tr}.${a.granater ? '' : ' Tom for granater.'}`);
+        else if (b.side === 'blå') logg(`${synligLag(a) ? a.navn : 'Fienden'} kaster ${gr} mot ${b.navn} (${Math.round(d)} m)${tr}.`); }
+      return r.treff; });
+    // undertrykt: treffer dårligere og går saktere en stund
+    KROKER.ild.push(a => (auto() ? Undertrykk.ild(a, nåTid()) : 1));
+    (KROKER.fart = KROKER.fart || []).push(s => (auto() ? Undertrykk.fart(s, nåTid()) : 1));
+    // granatene fylles når laget får ammunisjon (forsyning fra base, leir eller tettsted – spill/forsyning.js hever s.ammo)
+    KROKER.sim.push(() => { if (typeof ENHETER === 'undefined') return; for (const s of ENHETER) { if (!s || s.karakter) continue; const am = s.ammo === undefined ? 1 : s.ammo;
+      if (s.grAmmo !== undefined && am > s.grAmmo + 1e-3 && Number.isFinite(s.granater) && s.granater < Lagkamp.start(s)) { Lagkamp.fyll(s); if (s.side === 'blå' && typeof logg === 'function') logg(`${s.navn} har fått nye granater (${s.granater}).`); }
+      s.grAmmo = am; } });
+    KROKER.lagTekst.push(s => { if (!s || s.karakter || !s.menn) return null; const t = []; if (s.side === 'blå' || Number.isFinite(s.granater)) { const n = Lagkamp.antall(s); if (s.side === 'blå') t.push(n ? `${n} granat${n === 1 ? '' : 'er'}` : 'ingen granater'); }
+      const u = Undertrykk.tekst(s, nåTid()); if (u) t.push(u.charAt(0).toLowerCase() + u.slice(1)); return t.length ? t.join(' · ') : null; });
+    // blinket i kartet: en gul stjerne som vokser og tones ut på 1,2 s
+    KROKER.tegn.push((g, vx0, vy1) => { const nå = performance.now(); if (!blink.length || typeof kam === 'undefined') return;
+      for (let i = blink.length - 1; i >= 0; i--) { const b = blink[i], a = (nå - b.t) / 1200; if (a >= 1) { blink.splice(i, 1); continue; }
+        const x = (b.X - vx0) / kam.m, y = (vy1 - b.Y) / kam.m, r = 6 + 18 * a; g.save(); g.globalAlpha = 1 - a; g.fillStyle = 'rgba(255,214,90,.85)'; g.strokeStyle = 'rgba(255,120,40,.95)'; g.lineWidth = 2;
+        g.beginPath(); for (let k = 0; k < 16; k++) { const v = k * Math.PI / 8, rr = k % 2 ? r * .45 : r; g.lineTo(x + Math.cos(v) * rr, y + Math.sin(v) * rr); } g.closePath(); g.fill(); g.stroke(); g.restore(); } });
+    setInterval(() => { if (blink.length && typeof skitten !== 'undefined') skitten = true; }, 120);
+  }
+  api.blink = () => blink;
+  // ditt lette maskingevær: hvert skudd mot et lag holder det nede litt (spillet-visning.js skyt)
+  api.skudd = (W, e) => { if (!W || !W.undertrykk || !e) return 0; const U2 = REGLER.undertrykk; return Undertrykk.legg(e, U2.spillerSkudd, nåTid(), U2.spillerVarighet); };
+  // ildkraften et fiendelag har mot deg i 3D (kampSteg): samme våpentabell som 2D-kampen (Terreng.treffsjanse) og samme undertrykking
+  api.ildkraft = (e, avst) => { const n = e.menn.filter(m => m.hp > 0).length; if (!auto()) return n; return Fiende3d.ildkraft(e.menn, avst, rot.Terreng) * Undertrykk.ild(e, nåTid()); };
+
+  // FIENDENS GRANATER når du går: et fiendelag innen 15–35 m som har oppdaget deg (sniking: EventyrSpill.fiendeFaktor), kaster av og til en
+  // av sine egne granater (samme antall som i lagkampen). «Granat!» på skjermen og en rød bue mot kasteren, så du rekker å flytte deg.
+  function fiendeKast(e, d) { const Q = r3(); if (!Q || !Q.ut) return null; const u = Q.ut, F = REGLER.fiende3d, sx = e.x - u.cx, sy = e.y - u.cy, m = Fiende3d.mål(Q.bane.x, Q.bane.y, tilfV);
+    const g = Fiende3d.kast(sx, sy, bakke(sx, sy) + F.høyde, m.x, m.y, bakke(m.x, m.y) + .1); g.ut = u; g.fra = e;
+    if (typeof THREE !== 'undefined' && Q.scene) { granatGeo = granatGeo || new THREE.SphereGeometry(.09, 8, 6); granatMat = granatMat || new THREE.MeshLambertMaterial({ color: 0x3b4a2a }); g.mesh = new THREE.Mesh(granatGeo, granatMat); g.mesh.position.set(g.x, g.y, g.z); Q.scene.add(g.mesh); }
+    e.granater = Lagkamp.antall(e) - 1; e.sistGranat = sek(); flyr.push(g); Indikator.legg(buer, Math.atan2(e.y - d.y, e.x - d.x), 1, sek()); varselTid = sek();
+    if (typeof logg === 'function') logg(`Granat! ${synligLag(e) ? e.navn : 'Fienden'} kastet en granat mot deg – kom deg unna eller i dekning.`);
+    if (typeof sistAktiv !== 'undefined') sistAktiv = performance.now(); return g; }
+  let varselTid = -9;
+  api.fiendeKast = e => { const d = deg(); return e && d ? fiendeKast(e, d) : null; };
+  function fiendeSteg() { if (!auto() || !går() || fører() || (typeof tempo !== 'undefined' && !(tempo > 0)) || typeof ENHETER === 'undefined') return; const d = deg(); if (!d) return;
+    const EV = rot.EventyrSpill && EventyrSpill.fiendeFaktor ? EventyrSpill : null;
+    for (const e of ENHETER) { if (!e || e.side === 'blå' || e.karakter || !levende(e) || !e.menn) continue; const avst = Math.hypot(e.x - d.x, e.y - d.y); if (avst > REGLER.fiende3d.til) continue;
+      if (rot.AI && typeof AI.hvile === 'function' && AI.hvile(e.side, 'blå')) continue; if (Lagkamp.antall(e) <= 0) continue;
+      const f = EV ? EV.fiendeFaktor(d, e) : (synligLag(e) ? 1 : 0); if (!(f > 0)) continue;
+      if (Fiende3d.kaster(avst, sek() - (e.sistGranat || -99), Math.min(1, f) * Undertrykk.ild(e, nåTid()), tilfV())) fiendeKast(e, d); } }
+  setInterval(fiendeSteg, 1000);
+  // «GRANAT!» midt på skjermen mens en fiendegranat flyr: pil mot granaten (sett fra blikket), avstand og sekunder til smellet
+  KROKER.tegn3d.push(g => { if (!går()) return; const Q = r3(), d = deg(); if (!Q || !d) return; const fg = flyr.filter(q => q.fiende && q.ut === Q.ut); if (!fg.length) return;
+    const W = typeof VW !== 'undefined' ? VW : innerWidth, H = typeof VH !== 'undefined' ? VH : innerHeight, cx = W / 2, cy = H * .3;
+    let best = null, bd = Infinity; for (const q of fg) { const dd = Math.hypot(q.x - Q.bane.x, q.y - Q.bane.y); if (dd < bd) { bd = dd; best = q; } }
+    const th = Indikator.vinkel(best.x - Q.bane.x, best.y - Q.bane.y, Q.fot.a), fare = bd < REGLER.granat.radius, blink2 = (sek() * 4) % 2 < 1.2;
+    g.save(); g.textAlign = 'center'; g.font = '700 26px sans-serif'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.75)'; g.fillStyle = fare ? (blink2 ? '#ff4a36' : '#ffb04a') : '#ffd27a';
+    g.strokeText('GRANAT!', cx, cy); g.fillText('GRANAT!', cx, cy);
+    g.font = '600 14px sans-serif'; const t2 = `${Math.round(bd)} m · ${Fiende3d.igjen(best).toFixed(1)} s${fare ? ' – løp!' : ''}`; g.strokeText(t2, cx, cy + 20); g.fillText(t2, cx, cy + 20);
+    // pila peker dit granaten er (opp = foran deg)
+    g.translate(cx, cy + 48); g.rotate(th); g.fillStyle = fare ? '#ff4a36' : '#ffd27a'; g.beginPath(); g.moveTo(0, -16); g.lineTo(10, 6); g.lineTo(0, 1); g.lineTo(-10, 6); g.closePath(); g.stroke(); g.fill(); g.restore(); });
+
+  Object.assign(api, { treffAlfa: () => Indikator.markør(sek() - treffTid, false), treffSist: () => Math.max(0, treffTid), følger: () => [...følger.keys()], hindre: () => (lesHindre(), hindre), buer: () => buer, flyr: () => flyr, sistDekning: () => sistDekning, lesHindre, antallGranater, varselTid: () => varselTid });
   rot.BakkekampSpill = api;
 })(typeof window !== 'undefined' ? window : globalThis);

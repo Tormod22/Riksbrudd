@@ -130,7 +130,7 @@ body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen b{ font-size:16px; } body.kort.
     // kapsel fra punkt A til punkt B (ermene går ned og ut av bildet mot albuen)
     const kab = (A, B, r0, r1, c, seg = 12) => { const v = new THREE.Vector3(B[0] - A[0], B[1] - A[1], B[2] - A[2]), l = v.length(), g = Fo.kapsel(seg, r0, r1, 0, l, 1, 1, 1); g.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), v.normalize()))); g.translate(A[0], A[1], A[2]); return farg(g, c); };
     const kule = (x, y, z, r, c, sx = 1, sy = 1, sz = 1, seg = 10) => { const g = new THREE.SphereGeometry(r, seg, Math.max(4, seg - 3)); g.scale(sx, sy, sz); g.translate(x, y, z); return farg(g, c); };
-    const V = { pistol: { løp: .1, kolbe: 0, mag: .09, tykk: .03 }, mp: { løp: .16, kolbe: .12, mag: .16, tykk: .04 }, gevær: { løp: .3, kolbe: .24, mag: .13, tykk: .045 }, hagle: { løp: .36, kolbe: .26, mag: 0, tykk: .05, tre: true }, rifle: { løp: .46, kolbe: .28, mag: .06, tykk: .045, tre: true, kikkert: true } }[id] || { løp: .3, kolbe: .24, mag: .13, tykk: .045 };
+    const V = { pistol: { løp: .1, kolbe: 0, mag: .09, tykk: .03 }, mp: { løp: .16, kolbe: .12, mag: .16, tykk: .04 }, gevær: { løp: .3, kolbe: .24, mag: .13, tykk: .045 }, hagle: { løp: .36, kolbe: .26, mag: 0, tykk: .05, tre: true }, rifle: { løp: .46, kolbe: .28, mag: .06, tykk: .045, tre: true, kikkert: true }, lmg: { løp: .42, kolbe: .25, mag: 0, tykk: .058, mg: true } }[id] || { løp: .3, kolbe: .24, mag: .13, tykk: .045 };
     const T = V.tykk, L = V.løp, sk = V.tre ? tre : st, sk2 = V.tre ? tre2 : st2, ende = -.18 - L;
     if (id === 'pistol') {
       // sleiden med avrundede kanter og riller bak, rammen under, løpsmunning, sikter, skrått grep med plater, bøyle og avtrekker
@@ -163,7 +163,10 @@ body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen b{ font-size:16px; } body.kort.
       ky(0, -.115, -.02, -.016, .019, .02, sk, T * .8 / .04, 1.15, -.25);
       kz(0, -.032, -.09, -.04, .004, .004, st, 1, 1, 0, 6, 1); ky(0, -.034, -.024, -.093, .0035, .0035, st, 1, 1, 0, 6); ky(0, -.036, -.022, -.062, .003, .003, blank, 1, 1, .3, 6);
       if (V.mag) { const m = V.mag; ky(0, -.03 - m * .6, -.025, -.106, .02, .02, st2, T * .7 / .04, 1.15, .08, 8); ky(0, -.03 - m * 1.02, -.03 - m * .52, -.114 - m * .07, .02, .02, st2, T * .7 / .04, 1.15, .3, 8);
-        ky(0, -.04 - m * 1.06, -.03 - m * 1.0, -.12 - m * .13, .021, .021, st, T * .74 / .04, 1.2, .3, 8); } }
+        ky(0, -.04 - m * 1.06, -.03 - m * 1.0, -.12 - m * .13, .021, .021, st, T * .74 / .04, 1.2, .3, 8); }
+      // (R18-C) lett maskingevær: patronkasse på siden under kassa, beltet inn i kassa og en sammenslått tofot under løpet
+      if (V.mg) { kz(-T * .9, -.045, -.15, -.07, .028, .028, [.24, .27, .16], 1.1, 1.5, 0, 6, 1); kz(-T * .45, -.012, -.125, -.1, .012, .012, [.55, .45, .2], 1.6, .5, 0, 6, 1);
+        for (const sx of [-1, 1]) kz(sx * .012, -.014, ende + .06, ende + .06 + L * .55, .0045, .0045, st2, 1, 1, 0, 6, 1); } }
     // (runde 12, kritikken: «geværet holdes av et grønt rør som stikker inn fra bildekanten, med skjev vinkel og ingen hånd»)
     // ARMEN: hanske i lyst lær med håndrygg, knoker, fire bøyde fingre rundt grepet og tommel over; mansjett med strikk; underarmen
     // smalner mot håndleddet og er bredest ved albuen, med en knekk ved albuen, folder i stoffet og flekker i kamuflasje. Armen går

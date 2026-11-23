@@ -10,7 +10,8 @@
  * m (det siden sender inn):
  *   lag()            -> lista over lag (ENHETER)
  *   Terreng          terreng.js (KAMPRUNDE_MIN, slattUt, treffsjanse, ildrunde, fordelTreff, uteAvKamp)
- *   kroker           { sim: [], ild: [], fart?: [] } (KROKER i siden; leses på nytt hvert steg)
+ *   kroker           { sim: [], ild: [], fart?: [], salve?: [] } (KROKER i siden; leses på nytt hvert steg)
+ *                    salve: (a, b, d, f, rng, tid) -> ekstra treff etter a sin salve mot b (granater, undertrykking; R18-C)
  *   rng()            tilfeldighet for kampen (KRNG)
  *   hentTid(), settTid(t)   spillklokka i spillminutter (tid i siden)
  *   TIME             spillminutter per spilltime (60)
@@ -64,6 +65,9 @@
           if (ildf < 1) { let t = 0; for (let i = 0; i < treff; i++) if (rng() < ildf) t++; treff = t; }
           // over 1 (bonus, f.eks. bakgrunnen «soldat» i K1): hvert treff kan gi ett til
           else if (ildf > 1) { let t = treff; for (let i = 0; i < treff; i++) if (rng() < ildf - 1) t++; treff = t; }
+          // KROKER.salve (R18-C, spill/bakkekamp-visning.js): etter salven – granater på kort hold gir ekstra treff, maskingevær holder b nede.
+          // Krokene bruker rng bare når de faktisk gjør noe, så en kamp uten granater er nøyaktig som før.
+          if (kroker.salve) for (const h of kroker.salve) treff += h(a, b, d, f, rng, m.hentTid()) || 0;
           skudd(a, b); nå.add(b);
           if (!a.skyterPå.has(b)) { if (a.side === SP) logg(a.navn + ' skyter mot ' + (m.synlig(b) ? b.navn : 'fienden') + ' (' + Math.round(d) + ' m).'); else if (m.synlig(a)) logg(a.navn + ' åpner ild mot ' + b.navn + '.'); }
           if (!treff) continue;

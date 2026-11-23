@@ -1,7 +1,11 @@
 // Test av reglene i spill/bakkekamp.js: dekning, siktekikkert, granater, lagkamerater, treffmarkør og skadeindikator.
 const B = require('../../site/dovre-fliser/spill/bakkekamp.js'); let feil = 0;
 const ok = (b, t) => { console.log((b ? 'ok   ' : 'FEIL ') + t); if (!b) feil++; };
-const { Dekning, Kikkert, Granat, Følge, Indikator, REGLER } = B;
+const { Dekning, Kikkert, Granat, Følge, Indikator, REGLER, Lagkamp, Undertrykk, Fiende3d } = B;
+const Terreng = require('../../site/dovre-fliser/terreng.js').Terreng, Tilfeldig = require('../../site/dovre-fliser/spill/tilfeldig.js');
+const Utstyr = require('../../site/dovre-fliser/spill/utstyr.js');
+// våpnene fra stridsreglene legges inn i Terreng.VÅPEN slik visningen gjør (spill/strid-visning.js)
+Object.assign(Terreng.VÅPEN, require('../../site/dovre-fliser/spill/strid.js').VÅPEN);
 
 // DEKNING: en vegg 2 m nord for deg, skytteren 100 m nord -> dekning; skytteren sør -> ingen
 { const vegg = [[-5, 2], [5, 2], [5, 3], [-5, 3]], p = Dekning.prøver([{ type: 'hus', P: vegg }]);
@@ -47,5 +51,44 @@ ok(Granat.styrke(2) === 1 && Granat.styrke(8) > 0 && Granat.styrke(8) < 1 && Gra
   ok(L.length === 2 && L[0].s === .9, 'like retninger slås sammen');
   const A = Indikator.aktive(L, 2); ok(A.length === 2 && A[0].alfa > 0 && A[0].alfa < 1 && Indikator.aktive(L, 10).length === 0, 'buene tones ut');
   ok(Indikator.markør(0, false) === 1 && Indikator.markør(.3, false) === 0 && Indikator.markør(.3, true) > 0, 'treffmarkøren er kort, drapsmarkøren litt lenger'); }
+
+// ---------- R18-C: granater i lagkampen ----------
+const ROLLER = ['lagfører', 'nestlagfører', 'skarpskytter', 'sanitet', 'radio', 'maskingevær', 'maskingevær', 'rifle', 'rifle', 'rifle', 'rifle', 'rifle'];
+const lag = (side, bev, ekstra) => ({ side, navn: side + ' lag', strid: bev ? { bev } : undefined, menn: ROLLER.map(rolle => ({ rolle, hp: 1 })), ...(ekstra || {}) });
+{ const røver = lag('rød', 'lett'), selskap = lag('rød', 'standard'), nær = lag('blå', 'nærstrid');
+  ok(Lagkamp.antall(røver) < Lagkamp.antall(selskap) && Lagkamp.antall(selskap) < Lagkamp.antall(nær), `røvere har færrest granater (${Lagkamp.antall(røver)} / ${Lagkamp.antall(selskap)} / ${Lagkamp.antall(nær)})`);
+  let brukt = 0; const rng = () => { brukt++; return .1; };
+  const langt = Lagkamp.runde(selskap, nær, 120, {}, rng); ok(langt.kastet === 0 && brukt === 0 && selskap.granater === 4, 'ingen granater på 120 m, og tilfeldigheten brukes ikke');
+  const kort = Lagkamp.runde(selskap, nær, 40, {}, rng); ok(kort.kastet === 2 && kort.treff >= 2 && selskap.granater === 2, `på 40 m kastes to granater (${kort.treff} treff), to igjen`);
+  Lagkamp.runde(selskap, nær, 40, {}, rng); const tom = Lagkamp.runde(selskap, nær, 40, {}, rng); ok(selskap.granater === 0 && tom.kastet === 0, 'tom for granater: ingen flere kast');
+  Lagkamp.fyll(selskap); ok(selskap.granater === 4, 'etterfylt til bevæpningens antall'); }
+{ // nedgravde og skjulte mål: granaten virker bedre der kulene ikke gjør det
+  const snitt = (mål, f) => { const r = Tilfeldig.lag(7); let t = 0; for (let i = 0; i < 4000; i++) { const a = lag('rød', 'nærstrid'); t += Lagkamp.runde(a, mål, 30, f, r).treff; } return t / 4000; };
+  const åpen = snitt(lag('blå'), {}), grav = snitt(lag('blå', null, { nedgravd: true }), {}), skog = snitt(lag('blå'), { målISkog: true });
+  ok(grav > åpen * 1.3 && skog > åpen * 1.1, `mer virkning mot nedgravde (${grav.toFixed(2)}) og i skog (${skog.toFixed(2)}) enn i det åpne (${åpen.toFixed(2)})`); }
+
+// ---------- R18-C: undertrykking ----------
+{ const mg = lag('blå'), mål = lag('rød');
+  ok(Undertrykk.mg(mg) === 2 && Undertrykk.salve(mg, mål, 1000, 0) === 0, 'maskingevær når ikke fram på 1000 m');
+  const st = Undertrykk.salve(mg, mål, 300, 10); ok(st > .5 && Undertrykk.ild(mål, 11) < 1 && Undertrykk.fart(mål, 11) < 1, `to maskingevær holder laget nede (styrke ${st.toFixed(2)}, ild ×${Undertrykk.ild(mål, 11).toFixed(2)}, fart ×${Undertrykk.fart(mål, 11).toFixed(2)})`);
+  ok(Undertrykk.ild(mål, 10 + REGLER.undertrykk.varighet + .1) === 1, 'undertrykkingen går over'); Undertrykk.salve(mg, mål, 300, 10); Undertrykk.salve(mg, mål, 300, 10); ok(Undertrykk.styrke(mål, 11) === 1, 'styrken er høyst 1');
+  const uten = lag('blå'); uten.menn.forEach(m => { if (m.rolle === 'maskingevær') m.hp = 0; }); ok(Undertrykk.salve(uten, lag('rød'), 300, 0) === 0, 'uten friske maskingeværskyttere: ingen undertrykking'); }
+{ const V = Utstyr.VÅPEN.lmg; ok(V && V.takt < Utstyr.VÅPEN.gevær.takt && V.vekt > Utstyr.VÅPEN.rifle.vekt && V.magasin >= 100 && V.undertrykk, 'lett maskingevær i sekken: høy skuddtakt, stort magasin, tungt, undertrykker'); }
+
+// ---------- R18-C: fiendene i 3D med 2D-reglene ----------
+{ const rifle = [{ rolle: 'rifle', hp: 1 }], hagle = [{ våpen: 'hagle', hp: 1 }], pistol = [{ våpen: 'pistol', hp: 1 }];
+  ok(Math.abs(Fiende3d.ildkraft(rifle, 100, Terreng) - 1) < 1e-9, 'en rifle teller som én mann');
+  ok(Fiende3d.ildkraft(hagle, 40, Terreng) > 2 && Fiende3d.ildkraft(hagle, 200, Terreng) === 0, 'hagla er farligst helt nær og når ikke 200 m (samme tabell som 2D)');
+  ok(Fiende3d.ildkraft(pistol, 100, Terreng) < .5, 'en pistol teller lite på 100 m');
+  ok(Fiende3d.ildkraft([{ rolle: 'rifle', hp: 0 }], 50, Terreng) === 0, 'falne teller ikke'); }
+{ const F = REGLER.fiende3d;
+  ok(!Fiende3d.kaster(10, 99, 1, 0) && !Fiende3d.kaster(50, 99, 1, 0) && Fiende3d.kaster(25, 99, 1, 0) && !Fiende3d.kaster(25, 2, 1, 0) && !Fiende3d.kaster(25, 99, 1, .99), 'kaster bare på 15–35 m, ikke for ofte og bare av og til');
+  const g = Fiende3d.kast(0, 0, 1.5, 20, 0, 0); let t = 0, ferdig = false, landet = null; while (!ferdig && t < 10) { ferdig = Granat.steg(g, 1 / 30, () => 0); t += 1 / 30; if (landet === null && g.z <= .09) landet = t; }
+  ok(Math.abs(g.x - 20) < 3 && Math.abs(g.y) < .5, `granaten lander nær målet (x ${g.x.toFixed(1)} m)`);
+  ok(t >= F.varsel - .05 && landet > .8 && t - landet > .5, `du får varsel: ${t.toFixed(1)} s til smellet, ${landet.toFixed(1)} s i lufta`);
+  const r = Tilfeldig.lag(3); let maks = 0; for (let i = 0; i < 200; i++) { const m = Fiende3d.mål(0, 0, r); maks = Math.max(maks, Math.hypot(m.x, m.y)); } ok(maks <= F.spredning + 1e-9, 'landingen spres rundt deg'); }
+{ // dekning mot en granat: veggen må stå mellom deg og granaten
+  const vegg = Dekning.prøver([{ type: 'hus', P: [[-5, 3], [5, 3], [5, 4], [-5, 4]] }]);
+  ok(Dekning.finn(0, 8, vegg, 'stå', 8) && !Dekning.finn(0, -8, vegg, 'stå', 8) && !Dekning.finn(0, 2.5, vegg, 'stå', 2.5), 'veggen tar granaten bare når den er mellom'); }
 
 console.log(feil ? feil + ' feil' : 'alle testene for kamp på bakken ok'); process.exit(feil ? 1 : 0);

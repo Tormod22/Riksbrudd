@@ -13,6 +13,9 @@
     mp: { navn: 'Maskinpistol', ammo: 'a9', magasin: 30, takt: .08, lade: 2, rekkevidde: 120, skade: .35, bredde: 1.3, hagl: 1, vekt: 3, pris: 400000, tekst: 'Skyter fort, best nær' },
     gevær: { navn: 'Automatgevær', ammo: 'a556', magasin: 30, takt: .14, lade: 2.2, rekkevidde: 350, skade: .6, bredde: 1, hagl: 1, vekt: 4, pris: 600000, tekst: 'Allsidig på alle hold' },
     hagle: { navn: 'Hagle', ammo: 'ahagl', magasin: 6, takt: .8, lade: 3, rekkevidde: 60, skade: .5, bredde: 2.2, hagl: 6, vekt: 3.5, pris: 300000, tekst: 'Seks hagl per skudd – farlig helt nær' },
+    // LETT MASKINGEVÆR (R18-C, Claudes forslag): belte på 100 skudd 5,56 mm, høy skuddtakt, lang lading og tungt (9 kg). Hvert skudd mot et
+    // fiendelag holder det nede en stund (undertrykk – se spill/bakkekamp.js): de treffer dårligere og går saktere.
+    lmg: { navn: 'Lett maskingevær', ammo: 'a556', magasin: 100, takt: .075, lade: 5.5, rekkevidde: 450, skade: .5, bredde: 1.2, hagl: 1, vekt: 9, pris: 1500000, undertrykk: true, tekst: 'Høy skuddtakt, holder fienden nede – men tungt' },
     rifle: { navn: 'Skarpskyttergevær', ammo: 'a762', magasin: 5, takt: 1.4, lade: 3, rekkevidde: 700, skade: 1, bredde: .7, hagl: 1, vekt: 6, pris: 1200000, tekst: 'Ett skudd, én mann – på langt hold' },
   };
   const TING = {
