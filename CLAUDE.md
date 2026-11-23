@@ -1584,3 +1584,14 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   senere»), unntak: offisersbrakke 4 senger, lagerhall 250 m³ lager. MODELLER.gjerde, kasser, fatpall og flaggstang er byttet ut; sokkel ved
   flaggstanga i 3D. Selskapets farger fra OppstartSpill.tilstand().fraksjon.flagg. Testsiden spill/modeller-visning.html viser alle.
   WINDOWS: git har core.autocrlf=false i denne klonen; versjon.py må kjøres med LF (Python på Windows skriver ellers CRLF og feil hasher).
+  VIRKNING I LEIRBYGGENE (R18-B, 23. nov, brukeren: «vi må legge til funksjoner og virkning i alle leirbyggene»; gren claude/r18-leirvirkning,
+  notat docs/natt/leirvirkning.md): spill/leirvirkning.js (regler uten DOM, test_leirvirkning.js) har ÉN tabell VIRKNING med hva hvert
+  leirbygg gjør (moral, helse, matsvinn, arbeidstempo, vann, radio/satellitt, strømnett, vern, sikt, radar/poster, hindringer som sinker
+  fiender, trening, ammunisjon, leging, reparasjon/fylling av kjøretøy, parkering, vaktdroner, fangevakter, røvernes bytte, lager, senger,
+  strøm) – nye bygg: legg en linje der. spill/leirvirkning-visning.js (window.LeirvirkningSpill, lastes etter modeller-leir2.js) kobler det
+  på SamfunnSpill.valg/varsling (Folk: moralTillegg, helseTillegg – nytt i folk.js –, matFaktor, tempoFaktor), Leir.nettFaktor, KROKER.ild/
+  sikt/ser/fart/sim, Spillet.Trussel.bytte, Krig.rømmer og Enheter.skad; leir.js lar bygg med B.diesel/B.sol lage strøm (generatorhus 30 kW),
+  kontrollrom-visning.js mast() tar radiotillegget og satellitten hopper over terrengsjekken. Byggpanelet viser «Virkning: …» (#byggvirkning,
+  med «uten strøm»/«hardt skadet»), kortene i byggelista en kort linje (.virk, Leirvirkning.kort). Hvert slag teller én gang (moral høyst
+  +15). Prisene på generatorhus (9 mill.), bærbar generator og solpanel ble satt opp fordi de nå gir strøm. Alle tall er Claudes forslag.
+  VAKT vakter/leirvirkning.js («virkning i leirbyggene»: tekst for alle bygg, åtte målte virkninger).
