@@ -5,6 +5,12 @@
  *  - Granater: kastes i en bue, går av etter en kort lunte og skader alt innen en radius – også deg.
  *  - Lagkamerater: «følg meg», «hold her», «angrip dit» for et eget lag i nærheten.
  *  - Treffmarkør og skadeindikator: kort kryss når du treffer, rød bue på skjermkanten mot den som skyter.
+ * R18-C (23. nov): FIENDENS GRANATER, GRANATER I LAGKAMPEN OG MASKINGEVÆR (samme regler i 2D og 3D):
+ *  - Lagkamp: lag med granater (antallet etter bevæpningen) bruker dem i kamprunden på under 60 m – mer virkning mot nedgravde og
+ *    skjulte mål. Etterfylles når laget får ammunisjon.
+ *  - Undertrykk: maskingevær holder fienden nede en stund – laget i ilden treffer dårligere og går saktere.
+ *  - Fiende3d: når du går selv, kaster fiender innen 15–35 m av og til en granat mot deg (fra lagets egne granater), og skaden de
+ *    gjør på deg regnes med våpentabellen fra 2D-kampen (Terreng.treffsjanse), ikke med egne tall.
  * Visningen ligger i spill/bakkekamp-visning.js. Alle tall er Claudes forslag (samlet i REGLER).
  */
 (function (rot) {
@@ -29,6 +35,19 @@
     // TREFFMARKØR OG SKADEINDIKATOR – Claudes forslag: varighet (s), buer innen «samme» radianer slås sammen.
     markør: { treff: .25, drept: .6 },
     indikator: { varighet: 2.2, samme: .35, maks: 6 },
+    // GRANATER I LAGKAMPEN (R18-C) – Claudes forslag: under «hold» meter kan et lag bruke granater i kamprunden. Antallet per lag etter
+    // bevæpningen (røvere har færrest), høyst «perRunde» per runde og én kaster per fire friske menn. Hver granat treffer med «treff»,
+    // ganger «nedgravd» mot nedgravde mål og «skog» mot mål i skog (der kulene treffer dårlig), og gir 1 treff, av og til 2 («ekstra»).
+    lagGranat: { hold: 60, start: { standard: 4, nærstrid: 8, avstand: 2, tung: 6, egen: 4, lett: 1 }, perRunde: 2, mennPerKaster: 4,
+      treff: .5, nedgravd: 1.6, skog: 1.3, ekstra: .4, maksTreff: .9 },
+    // UNDERTRYKKING (R18-C) – Claudes forslag: hvert maskingevær som skyter på et lag (innen rekkevidden), gir «perMG» styrke (høyst 1)
+    // i «varighet» spillminutter. Ved full styrke treffer laget «ild» (×0,55) og går «fart» (×0,5) av det vanlige. Ditt lette
+    // maskingevær gir «spillerSkudd» styrke per skudd mot laget du sikter på, i «spillerVarighet» spillminutter.
+    undertrykk: { perMG: .35, varighet: 6, ild: .45, fart: .5, spillerSkudd: .05, spillerVarighet: 2 },
+    // FIENDENS GRANATER I 3D (R18-C) – Claudes forslag: et fiendelag som har oppdaget deg, kaster på «fra»–«til» meter med «sjanse» per
+    // sekund (ganget med undertrykkingen), høyst én gang per «mellom» sekunder per lag. Granaten lander innen «spredning» meter fra deg,
+    // er «fly» sekunder i lufta (etter avstanden) og går av «påBakken» sekunder etter at den lander (minst «varsel» sekunder etter kastet).
+    fiende3d: { fra: 15, til: 35, sjanse: .06, mellom: 8, spredning: 7, flyFart: 13, flyMin: 1, flyMaks: 2.2, påBakken: 1.3, varsel: 2.6, høyde: 1.5, sprett: .2, friksjon: .25 },
   };
 
   // ---------------- dekning ----------------
@@ -70,9 +89,10 @@
     kast(x, y, z, a, pitch) { const G = REGLER.granat, p = klem(pitch + G.løft, -.6, 1.2), h = Math.cos(p) * G.fart;
       return { x, y, z, vx: -Math.sin(a) * h, vy: Math.cos(a) * h, vz: Math.sin(p) * G.fart, t: 0, ligger: false }; },
     // ett steg: bakke(x, y) gir bakkens høyde. Spretter litt og ruller ut. Gir true når lunta har brent ut.
-    steg(g, dt, bakke) { const G = REGLER.granat; g.t += dt;
+    // (R18-C) g.sprett og g.friksjon kan settes per granat (fiendens granater lobbes og ruller mindre)
+    steg(g, dt, bakke) { const G = REGLER.granat, sp = g.sprett === undefined ? G.sprett : g.sprett, fr = g.friksjon === undefined ? G.friksjon : g.friksjon; g.t += dt;
       if (!g.ligger) { g.vz -= G.g * dt; g.x += g.vx * dt; g.y += g.vy * dt; g.z += g.vz * dt; const b = bakke(g.x, g.y);
-        if (Number.isFinite(b) && g.z <= b + .08) { g.z = b + .08; if (Math.abs(g.vz) > 2) { g.vz = -g.vz * G.sprett; g.vx *= G.friksjon; g.vy *= G.friksjon; } else { g.vz = 0; g.vx *= G.friksjon; g.vy *= G.friksjon; if (Math.hypot(g.vx, g.vy) < .4) g.ligger = true; } } }
+        if (Number.isFinite(b) && g.z <= b + .08) { g.z = b + .08; if (Math.abs(g.vz) > 2) { g.vz = -g.vz * sp; g.vx *= fr; g.vy *= fr; } else { g.vz = 0; g.vx *= fr; g.vy *= fr; if (Math.hypot(g.vx, g.vy) < .4) g.ligger = true; } } }
       return g.t >= G.lunte; },
     // hvor sterkt smellet tar på avstanden d: 1 innen dødelig radius, så avtagende til 0 ved ytre radius
     styrke(d) { const G = REGLER.granat; if (d <= G.dødelig) return 1; if (d >= G.radius) return 0; return 1 - (d - G.dødelig) / (G.radius - G.dødelig); },
@@ -110,6 +130,57 @@
     markør(siden, drept) { const M = REGLER.markør, L = drept ? M.drept : M.treff; return siden < 0 || siden >= L ? 0 : 1 - siden / L; },
   };
 
-  const api = { REGLER, Dekning, Kikkert, Granat, Følge, Indikator };
+  // ---------------- granater i lagkampen (2D, kamprunden) ----------------
+  const levendeMenn = s => (s.menn || []).filter(m => m.hp >= 1).length;
+  const Lagkamp = {
+    // bevæpningen til et lag (s.strid.bev settes av StridSpill.regel for både egne og fiendens lag)
+    // (uten stridsregler: samme valg som fiendeBev i spill/strid-visning.js – røvere lett, grønn avstand, ellers standard)
+    bev: s => (s && s.strid && s.strid.bev) || (s && s.side !== 'blå' && (s.raid || s.post || /røver/i.test(s.navn || '')) ? 'lett' : s && s.side === 'grønn' ? 'avstand' : 'standard'),
+    start: s => { const S = REGLER.lagGranat.start; const b = Lagkamp.bev(s); return b in S ? S[b] : S.standard; },
+    // granatene laget har nå (settes første gang fra bevæpningen)
+    antall(s) { if (!s || s.karakter) return 0; if (!Number.isFinite(s.granater)) s.granater = Lagkamp.start(s); return s.granater; },
+    fyll(s) { if (s && !s.karakter) s.granater = Lagkamp.start(s); },
+    // Én runde med granater fra a mot b på d meter (f = forholdene fra kamprunden, rng = kampens tilfeldighet). Bruker rng BARE når
+    // laget faktisk kaster (så kamper uten granater blir nøyaktig som før). Gir { kastet, treff }.
+    runde(a, b, d, f, rng) { const R = REGLER.lagGranat; if (!(d <= R.hold) || !a || !b || a.side === b.side) return { kastet: 0, treff: 0 };
+      const n = Lagkamp.antall(a); if (n <= 0) return { kastet: 0, treff: 0 };
+      const kastere = Math.min(n, R.perRunde, Math.ceil(levendeMenn(a) / R.mennPerKaster)); if (kastere <= 0) return { kastet: 0, treff: 0 };
+      let p = R.treff; if (b.nedgravd) p *= R.nedgravd; if (f && f.målISkog) p *= R.skog; p = Math.min(R.maksTreff, p);
+      let treff = 0; for (let i = 0; i < kastere; i++) if (rng() < p) treff += rng() < R.ekstra ? 2 : 1;
+      a.granater = n - kastere; return { kastet: kastere, treff }; },
+  };
+
+  // ---------------- undertrykking (maskingevær) ----------------
+  const erMG = m => m.hp >= 1 && (m.våpen || m.rolle) === 'maskingevær';
+  const Undertrykk = {
+    mg: s => (s.menn || []).filter(erMG).length,
+    // a har skutt på b i kamprunden på d meter: maskingeværene som når fram, holder b nede (nå = spillminutter)
+    salve(a, b, d, nå, rekkevidde = 900) { const n = d <= rekkevidde ? Undertrykk.mg(a) : 0; if (!n) return 0; return Undertrykk.legg(b, n * REGLER.undertrykk.perMG, nå, REGLER.undertrykk.varighet); },
+    legg(b, styrke, nå, varighet) { const st = Math.min(1, Undertrykk.styrke(b, nå) + styrke); b.undertrykt = { s: st, til: Math.max(nå + varighet, (b.undertrykt && b.undertrykt.til) || 0) }; return st; },
+    styrke: (b, nå) => (b && b.undertrykt && nå < b.undertrykt.til ? b.undertrykt.s : 0),
+    ild: (b, nå) => 1 - REGLER.undertrykk.ild * Undertrykk.styrke(b, nå),
+    fart: (b, nå) => 1 - REGLER.undertrykk.fart * Undertrykk.styrke(b, nå),
+    tekst: (b, nå) => { const s = Undertrykk.styrke(b, nå); return s > 0 ? `Holdes nede av maskingevær (treffer ${Math.round((1 - Undertrykk.ild(b, nå)) * 100)} % dårligere)` : ''; },
+  };
+
+  // ---------------- fiendene når du går selv (3D) ----------------
+  const Fiende3d = {
+    // ildkraften mot deg: hver frisk mann teller som én rifle, ganget med det våpenet hans gjør på avstanden i 2D-tabellen
+    // (Terreng.treffsjanse). En hagle teller mer helt nært, en pistol lite lenger ute, våpen som ikke når fram teller 0.
+    ildkraft(menn, avst, T) { if (!T || !T.treffsjanse) return (menn || []).filter(m => m.hp > 0).length; const ref = T.treffsjanse('rifle', Math.min(avst, 590), {}) || 1e-9; let s = 0;
+      for (const m of menn || []) if (m.hp > 0) s += T.treffsjanse(m.våpen || m.rolle, avst, {}) / ref; return s; },
+    // kaster laget nå? (avst m, sekunder siden lagets siste kast, sjanse-faktor, r = tilfeldig tall)
+    kaster(avst, siden, faktor, r) { const F = REGLER.fiende3d; return avst >= F.fra && avst <= F.til && siden >= F.mellom && r < F.sjanse * faktor; },
+    // en granat fra (x, y, z) som skal lande ved (tx, ty, tz): rett bue med flytiden etter avstanden; t settes så den går av
+    // «påBakken» s etter landing (men aldri før «varsel» s etter kastet)
+    kast(x, y, z, tx, ty, tz) { const F = REGLER.fiende3d, G = REGLER.granat, l = Math.hypot(tx - x, ty - y), T = klem(l / F.flyFart, F.flyMin, F.flyMaks);
+      const igjen = Math.max(F.varsel, T + F.påBakken); return { x, y, z, vx: (tx - x) / T, vy: (ty - y) / T, vz: (tz - z + .5 * G.g * T * T) / T, t: G.lunte - igjen, ligger: false, fiende: true, sprett: F.sprett, friksjon: F.friksjon }; },
+    // hvor granaten lander rundt deg (rng gir 0–1)
+    mål(x, y, rng) { const F = REGLER.fiende3d, v = rng() * Math.PI * 2, r = Math.sqrt(rng()) * F.spredning; return { x: x + Math.cos(v) * r, y: y + Math.sin(v) * r }; },
+    // sekunder til smellet
+    igjen: g => Math.max(0, REGLER.granat.lunte - g.t),
+  };
+
+  const api = { REGLER, Dekning, Kikkert, Granat, Følge, Indikator, Lagkamp, Undertrykk, Fiende3d };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Bakkekamp = api;
 })(typeof window !== 'undefined' ? window : globalThis);

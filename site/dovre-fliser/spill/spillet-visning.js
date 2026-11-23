@@ -183,6 +183,8 @@
     // hvert hagl (ett for de fleste våpen, seks for hagla) kan treffe en mann
     // ferdigheten Skyting vokser når du skyter mot en fiende, mest når du treffer (spill/overlev.js)
     if (best && window.OverlevSpill) OverlevSpill.øk('skyting', 1);
+    // (R18-C) maskingeværet holder laget du sikter på nede (spill/bakkekamp-visning.js)
+    if (best && W.undertrykk && window.BakkekampSpill && BakkekampSpill.skudd) BakkekampSpill.skudd(W, best, bd);
     if (best) for (let h = 0; h < (W.hagl || 1); h++) if (tilfV() < sj(bd)) { const m = best.menn.find(q => q.hp > 0); if (m) { const sk = W.skade * (window.EventyrSpill && EventyrSpill.hodeskudd && EventyrSpill.hodeskudd() ? 2 : 1); m.hp = m.hp - sk < .05 ? 0 : m.hp - sk; if (!m.hp && window.EventyrSpill && EventyrSpill.felt) EventyrSpill.felt(); K.treff = nå; if (window.OverlevSpill) OverlevSpill.øk('skyting', 2); if (!levende(best)) { logg(`${best.navn} er slått ut.`); } skitten = true; } }
     if (!K.mag) lad(); return true; }
   function slåttUt() {
@@ -208,7 +210,9 @@
   const dekF = (d, e, f) => f * (window.BakkekampSpill ? BakkekampSpill.dekning(d, e, f) : 1);
   function kampSteg() { const d = deg(); if (!d) { K.hp = Math.min(Kamp.HELSE.maks, K.hp + Kamp.HELSE.hvile * 3); return; } // dekning og sniking (spill/eventyr-visning.js): faktor per fiende – 0 når de ikke har oppdaget deg, mindre når du ligger eller står bak en vegg
     const EV = window.EventyrSpill && EventyrSpill.fiendeFaktor ? EventyrSpill : null;
-    const nær = fiender().map(e => ({ avst: Math.hypot(e.x - d.x, e.y - d.y), menn: e.menn.filter(m => m.hp > 0).length * dekF(d, e, EV ? EV.fiendeFaktor(d, e) : 1) })).filter(q => q.avst < 300);
+    // (R18-C) ildkraften per fiendelag regnes med våpentabellen fra 2D-kampen og undertrykkingen (BakkekampSpill.ildkraft); uten den teller hver mann én
+    const kraft = (e, avst) => (window.BakkekampSpill && BakkekampSpill.ildkraft ? BakkekampSpill.ildkraft(e, avst) : e.menn.filter(m => m.hp > 0).length);
+    const nær = fiender().map(e => { const avst = Math.hypot(e.x - d.x, e.y - d.y); return { avst, menn: kraft(e, avst) * dekF(d, e, EV ? EV.fiendeFaktor(d, e) : 1) }; }).filter(q => q.avst < 300);
     const dek = window.KjorSpill && KjorSpill.fører() ? 'kjøretøy' : window.OverlevSpill && OverlevSpill.iTilflukt() ? 'tilflukt' : window.Interior3d && Interior3d.inne(r3().bane.x, r3().bane.y) ? 'hus' : null, s = Kamp.skade(nær, dek);
     if (s > 0) { K.hp -= s; K.skadd = performance.now(); if (EV && EV.truffet) EV.truffet(s); if (K.hp <= 0) slåttUt(); } else if (!nær.length) K.hp = Math.min(Kamp.HELSE.maks, K.hp + Kamp.HELSE.hvile); }
   const skytKnapp = el('button', { id: 'skytknapp', type: 'button' }, 'Skyt'); document.body.appendChild(skytKnapp); let holder = null;

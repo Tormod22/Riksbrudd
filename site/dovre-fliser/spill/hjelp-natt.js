@@ -102,6 +102,21 @@ window.HJELP_TILLEGG = [
 "Lag og strid"
 ],
 [
+"Fiendens granater",
+"Når du går selv, kan fiender 15–35 m unna som har sett deg, kaste en granat. «GRANAT!» står midt på skjermen med en pil mot granaten, avstanden og sekundene til den går av, og en rød bue viser hvor den kom fra. Løp unna (over 12 m) eller kom deg i dekning: en vegg, en bil eller en stein (på huk) MELLOM deg og granaten tar det meste av trykket. Røvere har færre granater enn de væpnede selskapene.",
+"Lag og strid"
+],
+[
+"Granater i lagkampen",
+"Lag som kommer nærmere enn ca. 60 m, bruker granater – egne lag og fiendens. De virker bedre enn kuler mot nedgravde lag og mål i skog. Hvert lag har et begrenset antall (vanlig lag 4, nærstrid 8, tung 6, avstand 2, røvere 1), og de fylles opp når laget får ny ammunisjon. Et kort gult blink i kartet viser hvor de gikk av, og loggen sier hvem som kastet og om de traff.",
+"Lag og strid"
+],
+[
+"Maskingevær og undertrykking",
+"Maskingevær holder fienden nede: et lag under ild fra maskingevær treffer dårligere og går saktere en stund (lagpanelet sier «holdes nede av maskingevær»). Lagenes maskingeværskyttere gjør det av seg selv. Du kan også kjøpe et lett maskingevær til sekken (Leir-menyen, fanen Lager): 100 skudd i beltet, høy skuddtakt, men 9 kg og lang lading.",
+"Lag og strid"
+],
+[
 "Den første uka",
 "Bygg brakke, aggregat og dieseltank først, kjøp 500 l diesel, sett folk i arbeid og lag en tropp. Et vakttårn med en person på «Vakt» melder røverne før de er i leiren. Kontrollrommet (9 mill. kr) kan vente til leiren står. Den første røverbølgen kommer tidligst etter et døgn (eller en halv time spilling), og de tre første døgnene er det bare ett røverlag om gangen.",
 "Kom i gang"

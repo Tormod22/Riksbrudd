@@ -33,7 +33,7 @@ function verden(frø, lagSim) {
     logg: t => V.logg.push(Math.round(V.tid) + ': ' + t), ordre, ser, synlig: e => e.side === 'blå' || V.lag.some(s => s.side === 'blå' && levende(s) && ser(s, e.x, e.y)), levende,
     patruljelag: () => V.lag[1], patruljeMål: (fi, nr) => Simulering.patruljeMål(fi, nr, PATRULJE, 30000), patruljeAntall: PATRULJE.length,
     skudd: () => { V.skudd++; } };
-  V.sim = lagSim(m);
+  V.simM = m; V.sim = lagSim(m);
   rett(V.lag[0], 2600, 0);   // det blå laget går mot patruljen
   return V;
 }
@@ -128,6 +128,19 @@ for (const frø of [42, 7, 2026]) {
 // ujevne steg (som løkka i siden: maks 0,1 og en rest)
 { const st = [.1, .1, .037, .1, .063, .02]; const kj = V => { for (let i = 0; i < 20000; i++) V.sim.steg(st[i % st.length]); return V; };
   ok(bilde(kj(verden(5, Simulering.lag))) === bilde(kj(verden(5, gammel))), 'ujevne steg: modulen og den gamle koden er like'); }
+
+// --- R18-C: KROKER.salve (granater på kort hold og undertrykking fra maskingevær, spill/bakkekamp.js) ---
+{ const B = require('../../site/dovre-fliser/spill/bakkekamp.js');
+  const nær = (salve) => { const V = verden(5, Simulering.lag); V.lag[0].sti = null; V.lag[0].x = 2960; V.lag[1].x = 3000; V.lag[1].y = 0; V.lag[1].roligTil = 1e9;
+    V.lag.forEach(l => { l.strid = { bev: 'standard' }; });
+    if (salve) V.sim = Simulering.lag({ ...V.simM, kroker: { ...V.simM.kroker, salve: [(a, b, d, f, rng, t) => { B.Undertrykk.salve(a, b, d, t); return B.Lagkamp.runde(a, b, d, f, rng).treff; }] } });
+    V.sim.kamprunde(); return V; };
+  const uten = nær(false), med = nær(true);
+  ok(uten.lag.every(l => l.granater === undefined), 'uten salve-kroken brukes ingen granater');
+  ok(med.lag.every(l => l.granater === 2), 'med kroken kaster begge lagene to granater på 40 m (' + med.lag.map(l => l.granater).join(', ') + ' igjen)');
+  ok(med.lag.every(l => B.Undertrykk.styrke(l, med.tid + 1) > 0), 'maskingeværene holder begge lagene nede etter runden');
+  const ute = V => V.lag.reduce((n, l) => n + Terreng.uteAvKamp(l.menn), 0);
+  ok(ute(med) >= ute(uten), 'granatene gir minst like mange ute (' + ute(uten) + ' -> ' + ute(med) + ')'); }
 
 console.log(feil ? feil + ' FEIL' : 'alt ok');
 process.exit(feil ? 1 : 0);
