@@ -51,7 +51,7 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
     if (!vis) { skapKn.classList.remove('på'); return; }
     if (skapFor !== P || performance.now() - skapSjekk > 1500) { skapSjekk = performance.now(); skapFor = P; skapN = LS.husOversikt(P).medTing; }
     const t = `Se i skapene (${skapN})`; if (skapKn.textContent !== t) skapKn.textContent = t; skapKn.classList.toggle('på', skapN > 0); }
-  function samle() { for (const id of ['letknapp', 'sikreknapp', 'lutknapp', 'mobelknapp', 'dorknapp']) { const e = document.getElementById(id); if (e && e.parentNode !== rekke) rekke.appendChild(e); } }
+  function samle() { for (const id of ['letknapp', 'sikreknapp', 'lutknapp', 'mobelknapp', 'dorknapp', 'leseknapp']) { const e = document.getElementById(id); if (e && e.parentNode !== rekke) rekke.appendChild(e); } }
   samle(); document.addEventListener('DOMContentLoaded', samle); window.addEventListener('riksbrudd-spill', () => setTimeout(samle, 0));
   const NAVN = { hus: 'Bolig', hytte: 'Hytte', leil: 'Leilighetsbygg', kontor: 'Kontorbygg', skole: 'Skole', sykehus: 'Sykehus', butikk: 'Butikk', industri: 'Industribygg', lager: 'Lager', låve: 'Låve', uthus: 'Garasje eller uthus', kirke: 'Kirke', hangar: 'Hangar', terminal: 'Terminal', brakke: 'Brakka', kontrollrom: 'Kontrollrommet', storkjøkken: 'Kjøkkenet' };
   let funnTil = 0;
@@ -124,6 +124,8 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
     const R = r3(), u = R && R.ut; let mx = 0, my = 0; for (const p of P) { mx += p[0]; my += p[1]; }
     // (balansen 18. nov, Claudes forslag) det første huset du leter i, er aldri tomt: fire rasjoner og 20 000 kr når det ellers var tomt
     let f = Leting.funn(P.bygg.kl, arealAv(P), P.bygg.i); if (f.tomt && !lett.size && !navigator.webdriver) f = { ...f, tomt: false, mat: 4, penger: 20000 };
+    // (R18-F) huset en lapp pekte mot, har et gjemt lager i tillegg (spill/spor-visning.js)
+    if (window.SporSpill && SporSpill.medGjemt) f = SporSpill.medGjemt(P, f);
     const fikk = ta(f); lett.set(P.bygg.i, u ? [u.cx + mx / P.length, u.cy + my / P.length] : null); lagre();
     const mistet = ['tre', 'betong', 'stål', 'diesel'].filter(m => f[m] > 0 && fikk[m] < f[m] - 1e-6);
     { const p = lett.get(P.bygg.i), rest = {}; for (const m of mistet) rest[m] = Math.round((f[m] - (fikk[m] || 0)) * 10) / 10; if (p && mistet.length) { p[2] = rest; lagre(); } }

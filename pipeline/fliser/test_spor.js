@@ -52,4 +52,8 @@ ok(S.ute(S.finn('b1')) && !S.ute(S.finn('b5')), 'lappen på døra henger ute, br
   ok(med / 2000 > .1 && med / 2000 < .22 && galt === 0, `plater på ${Math.round(med / 20)} % av husene, normalen peker ut av huset (feil: ${galt})`); }
 // lyden inne
 { let k = 0; for (let i = 0; i < 1000; i++) if (S.lydInne('hus', i).klokke) k++; ok(k > 250 && k < 450 && !S.lydInne('låve', 3).klokke, `klokke tikker i ${k / 10} % av boligene, aldri i låven`); }
+// lyden (spill/lyd.js): tomme tettsteder har nesten ingen bylyd, og vinden uler i et knust vindu bare inne i huset
+{ const Lyd = require('../../site/dovre-fliser/spill/lyd.js'), før = Lyd.nivåer({ by: 1, vind: 8 }), etter = Lyd.nivåer({ by: 1, vind: 8, tomt: true });
+  ok(etter.by < før.by * .2 && før.glipe === 0, `bylyden i et tomt tettsted ${etter.by.toFixed(2)} (før ${før.by.toFixed(2)})`);
+  ok(Lyd.nivåer({ vind: 10, inne: true, glipe: true }).glipe > .4 && Lyd.nivåer({ vind: 10, glipe: true }).glipe === 0 && Lyd.nivåer({ vind: 0, inne: true, glipe: true }).glipe === 0, 'vind i glipa: bare inne, bare når det blåser'); }
 console.log(feil ? feil + ' FEIL' : 'alle sportestene ok'); process.exit(feil ? 1 : 0);
