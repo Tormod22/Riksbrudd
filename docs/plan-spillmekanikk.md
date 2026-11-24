@@ -30,6 +30,14 @@ hvilke deler han liker best – spør før noe stort bygges på dette.
   **Brukerens valg (23. nov):** «Forlatte steder» og «Knappe ressurser», og ellers den gode atmosfæren og stemningen generelt
   («jeg liker bare at de har gjort det generelt bra med atmosfæren»). Ikke valgt: tettere tåke/mørke og radiostøy som eget system.
 
+- **Brukerens bilder (24. nov, «disse bildene inspirerer også spillet»):** 14 fotografier fra en fjelltur sent på høsten (merket
+  @wolfratz – bildene brukes bare som stemning og beskrivelse, de legges ikke inn i spillet eller repoet). Det de viser: første tynne
+  snø som bare ligger i skyggen og på jordene mens skogen er mørk; furu som vokser rett på kalkberg, med røtter over steinene; høye,
+  lyse bergvegger og skarpe steinknauser; smale stier langs stupet med vaier og malt merking på stein og trær; utsikt med dis og blå
+  fjerne åser, lysstriper gjennom skyene og snøbyger over dalen; nakne løvtrær og gule lerker mellom grønn barskog; gyllent gress i
+  motlys. Mye av dette finnes delvis (vær og årstider, snø i bratte lier, luftperspektiv, høstfarger, bergflater) – det som kan
+  gjøres bedre er listet i docs/plan-landskap.md.
+
 ## Hvorfor dette passer Norge
 - **Få veger, mange flaskehalser:** én E6, smale dalfører, lange tunneler, store bruer. Én sprengt bru kan kutte en landsdel.
 - **Ferjer** binder Vestlandet og Nord-Norge sammen. Den som holder ferjekaiene, styrer kysten.
