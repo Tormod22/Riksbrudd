@@ -124,10 +124,11 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=65c4d067c4"></script>
+<script src="/dovre-fliser/kartflis.js?v=081046dcc6"></script>
 <script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
 <script src="/dovre-fliser/spill/simulering.js?v=441677f889"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
+<script src="/dovre-fliser/spill/snodekke.js?v=b9c132c8cc"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
 <script src="/dovre-fliser/spill/kartbilde.js?v=3eddf8856b"></script>
 <script src="/dovre-fliser/spill/kartnavn.js?v=e352eba43d"></script>
@@ -254,7 +255,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=9e5f9d0747');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=b25326f293');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -1298,7 +1299,10 @@ function detaljTekstur() {
 // under sola, men aldri helt hvitt. Fjernterrenget (spill/fjern3d.js) bruker de samme tallene på sjøen, så havet ikke får en kant.
 const VANN_GLANS = { farge: 0x6c7882, skarphet: 150, tak: 'reflectedLight.directSpecular = 0.42 * (1.0 - exp(-reflectedLight.directSpecular / 0.42));' };
 // Vær og årstid i bakken (spill/vaer-visning.js setter verdiene): snø over snøgrensen på flatt nok terreng, høstfarger på grønt.
-const VAER_U = { uSno: { value: 0 }, uSnoGrense: { value: 1900 }, uHost: { value: 0 }, uH0: { value: 0 } };
+// (R19-1, førstesnøen) uPudder = hvor tykt det tynne laget fra lette snøbyger er (0–1), uPudderGrense = hvor langt ned det ligger (moh.);
+// snøen legger seg flekkvis etter spill/snodekke.js (SNO_GLSL: samme regel i skyggekoden som i fjernterrenget, 2D-kartet og minikartet)
+const VAER_U = { uSno: { value: 0 }, uSnoGrense: { value: 1900 }, uHost: { value: 0 }, uH0: { value: 0 }, uPudder: { value: 0 }, uPudderGrense: { value: 0 } };
+const SNO_GLSL = () => (window.Snodekke ? Snodekke.glsl() : 'float snoDekke(float m, float s, float g, float p, float pg) { return smoothstep(g - 70.0, g + 70.0, m + (s - 0.5) * 120.0); }\nfloat snoFlekk(float d, float n, float f, float sk, float st, float s, float fi) { return d; }\n');
 // TÅKEBILDET (15. nov): tåka og siktfeltene ligger i et eget, lite bilde (R3.tåkeC, 1024 × 1024) som bakken legger oppå kartet i
 // skyggeleggeren (taakeKart). Før ble de tegnet inn i selve kartbildet (opptil 4096 × 4096), som så ble sendt til grafikkortet på nytt
 // hver gang et lag hadde flyttet seg – 64 MB per gang, flere ganger i sekundet på høy spillfart. Kartbildet sendes nå én gang per utsnitt.
@@ -1432,10 +1436,12 @@ function enkelBakke(mat, side) {
   mat.userData.enkel = true;
   mat.onBeforeCompile = sh => { Object.assign(sh.uniforms, VAER_U, TAAKE_U); sh.uniforms.detalj = { value: detaljTekstur() }; sh.uniforms.detaljSkala = { value: (side || 4000) / 3.2 };
     // snøen regnes per hjørne: over snøgrensen, på flatt terreng, aldri på sjøen (havnivå)
-    sh.vertexShader = 'uniform float uH0;\nuniform float uSno;\nuniform float uSnoGrense;\nvarying float vSnoE;\nvarying float vAvstE;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n  vAvstE = -mvPosition.z;').replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
+    // (R19-1) vSnoE = hvor tykt snølaget er der (full snø eller førstesnøen), vSnoBE = bratthet og havnivå, vNordE = helningen mot nord
+    sh.vertexShader = 'uniform float uH0;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uPudder;\nuniform float uPudderGrense;\nvarying float vSnoE;\nvarying float vSnoBE;\nvarying float vNordE;\nvarying float vOppE;\nvarying float vAvstE;\n' + SNO_GLSL() + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n  vAvstE = -mvPosition.z;').replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
       float mohE = position.z + uH0;
-      vSnoE = uSno * smoothstep(uSnoGrense - 70.0, uSnoGrense + 70.0, mohE) * smoothstep(0.36, 0.62, objectNormal.z) * smoothstep(1.0, 3.0, mohE);`);
-    sh.fragmentShader = 'uniform float uHost;\nuniform sampler2D taakeKart;\nuniform sampler2D detalj;\nuniform float detaljSkala;\nvarying float vSnoE;\nvarying float vAvstE;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+      vSnoE = uSno * snoDekke(mohE, 0.5, uSnoGrense, uPudder, uPudderGrense); vSnoBE = smoothstep(0.36, 0.62, objectNormal.z) * smoothstep(1.0, 3.0, mohE);
+      vNordE = objectNormal.y; vOppE = objectNormal.z;`);
+    sh.fragmentShader = 'uniform float uHost;\nuniform sampler2D taakeKart;\nuniform sampler2D detalj;\nuniform float detaljSkala;\nvarying float vSnoE;\nvarying float vSnoBE;\nvarying float vNordE;\nvarying float vOppE;\nvarying float vAvstE;\n' + SNO_GLSL() + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
       ${TAAKE_GLSL}
       float detVektE = 1.0 - smoothstep(60.0, 500.0, vAvstE);
       vec2 fUvE = vUv * detaljSkala;
@@ -1443,9 +1449,13 @@ function enkelBakke(mat, side) {
       diffuseColor.rgb *= mix(1.0, (0.8 + 0.4 * kornE) * (0.84 + 0.32 * flekkE), detVektE * 0.85);
       float gronnE = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 7.0, 0.0, 1.0);
       diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.45, 1.0, 0.5) + vec3(0.04, 0.0, 0.0), uHost * gronnE * 0.75);
-      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.96), vSnoE);`);
+      // (R19-1) førstesnøen flekkvis: skog og stein kjennes igjen på kartfargen (mørkt grønt / grått), ingen ekstra oppslag
+      float lumSE = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)), satSE = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b)) - min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b));
+      float skogSE = (1.0 - smoothstep(0.1, 0.2, lumSE)) * clamp(gronnE * 3.0, 0.0, 1.0), steinSE = (1.0 - smoothstep(0.04, 0.12, satSE)) * smoothstep(0.15, 0.35, lumSE);
+      float snoE = vSnoBE * snoFlekk(vSnoE, vNordE, smoothstep(0.75, 0.97, vOppE), skogSE, steinSE, mix(0.5, flekkE, detVektE * 0.6 + 0.4), mix(0.5, kornE, detVektE));
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.96), snoE);`);
   };
-  mat.customProgramCacheKey = () => 'enkel-bakke-2';
+  mat.customProgramCacheKey = () => 'enkel-bakke-3';
 }
 // Grafikknivået er byttet (spill/kvalitet.js): terrenget får materialet som hører til, og modulene som bygger på bakkens skyggelegging
 // (KROKER.bakke: bølger, skyskygger) kobler seg på igjen.
@@ -1465,9 +1475,9 @@ function detaljIBakken(mat, side) {
     sh.uniforms.detalj = { value: detaljTekstur() }; sh.uniforms.straa = { value: stråTekstur() }; sh.uniforms.detaljSkala = { value: side / 3.2 }; Object.assign(sh.uniforms, VAER_U, TAAKE_U);
     // (18. nov, BAKKE_FX: egne teksturer for gress, lyng, grus og berg nært, og dybde i vannet – spill/lys3d.js)
     if (mat.userData.fx && window.Lys3d) { sh.uniforms.bakkeAtlas = { value: Lys3d.atlas() }; sh.uniforms.uFxTid = Lys3d.U.uFxTid; }
-    sh.vertexShader = 'uniform float uH0;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
-      vOpp = objectNormal.z; vMoh = position.z + uH0;`);
-    sh.fragmentShader = '#ifdef BAKKE_FX\nuniform sampler2D bakkeAtlas;\nuniform float uFxTid;\n#endif\nuniform sampler2D taakeKart;\nuniform sampler2D detalj;\nuniform sampler2D straa;\nuniform float detaljSkala;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uHost;\nvarying float vOpp;\nvarying float vMoh;\n' + sh.fragmentShader.replace('#include <specularmap_fragment>', '#include <specularmap_fragment>\n      specularStrength *= 1.0 - sno * 0.94;').replace('#include <map_fragment>', `
+    sh.vertexShader = 'uniform float uH0;\nvarying float vOpp;\nvarying float vMoh;\nvarying float vNord;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
+      vOpp = objectNormal.z; vMoh = position.z + uH0; vNord = objectNormal.y;`);
+    sh.fragmentShader = '#ifdef BAKKE_FX\nuniform sampler2D bakkeAtlas;\nuniform float uFxTid;\n#endif\nuniform sampler2D taakeKart;\nuniform sampler2D detalj;\nuniform sampler2D straa;\nuniform float detaljSkala;\nuniform float uSno;\nuniform float uSnoGrense;\nuniform float uPudder;\nuniform float uPudderGrense;\nuniform float uHost;\nvarying float vOpp;\nvarying float vMoh;\nvarying float vNord;\n' + SNO_GLSL() + sh.fragmentShader.replace('#include <specularmap_fragment>', '#include <specularmap_fragment>\n      specularStrength *= 1.0 - sno * 0.94;').replace('#include <map_fragment>', `
       // (runde 10, brukerens bilder: «fjellsidene i bakgrunnen er kornete/støyete») kartbildet slås opp ett mipmap-trinn grovere langt
       // unna (150 m og ut, helt fra 550 m): med anisotropi på et ekte grafikkort ga hvert punkt i lia sin egen nabofarge – flimmer og prikker.
       // (runde 12, kritikken: «3D ovenfra er uskarpt og utvasket») – det grovere trinnet gjelder bare der du ser bakken på skrå
@@ -1520,10 +1530,20 @@ function detaljIBakken(mat, side) {
       diffuseColor.rgb = mix(diffuseColor.rgb, mix(diffuseColor.rgb, berg, 0.8), bratt);
       // (15. nov: snoen ligger ogsaa i bratte lier – foer var alt brattere enn ca. 45 grader sommergront midt paa vinteren – og der den
       // ikke ligger, i stup, er gress og lyng vissent brungult)
-      float snoH = uSno * smoothstep(uSnoGrense - 70.0, uSnoGrense + 70.0, vMoh + (flekk - 0.5) * 120.0);
+      // (R19-1, FØRSTE SNØ) snoH = hvor tykt laget er her (full snø over snøgrensen, eller det tynne laget fra lette snøbyger lenger ned);
+      // et tynt lag ligger flekkvis etter spill/snodekke.js: mer i skyggesiden (mot nord), på flate åpne jorder og på stein, lite i tett
+      // skog (skogmasken ligger i vannmaskens blå kanal på land – se skogIVannmaske) og på bratte solsider. Gress og lyng stikker opp.
+      float snoH = uSno * snoDekke(vMoh, flekk, uSnoGrense, uPudder, uPudderGrense);
       float lumV = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
+      float skogS = 0.0;
+      #ifdef USE_SPECULARMAP
+      skogS = maskeT.b * (1.0 - vannM);
+      #endif
+      float satS = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b)) - min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b));
+      float steinS = max(bratt * 0.6, (1.0 - smoothstep(0.04, 0.12, satS)) * smoothstep(0.15, 0.35, lumV));
+      float snoF = snoFlekk(snoH, vNord, smoothstep(0.75, 0.97, opp), skogS, steinS, flekk, korn);
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(lumV * 1.12 + 0.02, lumV * 0.98, lumV * 0.66), snoH * gronn * 0.8);
-      float sno = snoH * smoothstep(0.36, 0.62, opp + (korn - 0.5) * 0.15);
+      float sno = snoF * smoothstep(0.36, 0.62, opp + (korn - 0.5) * 0.15);
       // sjoen fryser ikke (feilretting 12. nov: havet ble hvitt om vinteren): vann paa havnivaa faar aldri sno. Innsjoer faar is med sno.
       // Havnivaa som i bolgene (spill/vind3d.js): under 1 moh., toner ut til 3 moh.
       sno *= 1.0 - vannM * (1.0 - smoothstep(1.0, 3.0, vMoh));
@@ -1613,7 +1633,7 @@ async function bygg3d(cx, cy, S) {
   // bunnfargen i striper med pust (18. nov, hakk: fillRect på hele 4096 × 4096 tok 60 ms i ett strekk); flisene tegnes først når den er ferdig
   // (runde 9: 256 rader om gangen – 512 tok 35–40 ms per stripe på testmaskinen)
   const bunn = (async () => { for (let y = 0; y < TW; y += 256) { g.fillRect(0, y, TW, Math.min(256, TW - y)); if (børPuste()) await pust(); } })();
-  const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false, veg: VIS.veg && S > 2200, asfalt: true }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
+  const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false, veg: VIS.veg && S > 2200, asfalt: true, snø: null }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
   const [ax, ay, bx, by] = flisområde(OMRÅDE, zt);
   for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) kø.push([x, y]);
   framdrift('henter høydene og kartet', .1); const flisAlle = kø.length || 1; let flisFerdig = 0;
@@ -1667,7 +1687,7 @@ async function bygg3d(cx, cy, S) {
   // gatelysene settes av spill/liv3d.js (langs de ferdige vegene); gatelys3d er bare reserven uten den
   if (S <= 2200 && VIS.veg && INFRA && INFRA.tettsted && window.Garnison && !window.Veg) u.lys = await gatelys3d(u);
   await pust(); await ryddHus(u); if (window.AnleggFri) await AnleggFri.rydd(u); await pust();
-  const skog = await skogmaske(u, b); await pust();
+  const skog = await skogmaske(u, b); await pust(); await skogIVannmaske(u, skog);
   { const kart = { mpp, X0: cx - S, Y1: cy + S }; await iStriper(TW, (y0, y1) => skogbunn(px, TW, skog, y0, y1, kart)); } u.bunn = bunnkart(px, TW, skog);
   { let k = 0; for (const f of KROKER.bygg3d) { framdrift('legger til veger og detaljer', .68 + .22 * k++ / KROKER.bygg3d.length); await pust(); await f(u, { px, TW, skog }); } }
   // (runde 15) også trærne krokene satte (gatetrær, einer …) holdes borte fra banene
@@ -2330,6 +2350,16 @@ function vinduTekstur() {
 
 // Bakkekart (512 × 512) til gresset: fargen under og om det kan stå gress der (grønt/gult, ikke grått, blått eller hvitt).
 // Skogrutene (terrengklasse skog, 32 m) som maske for utsnittet: [W, Uint8Array] i 512 × 512.
+// (R19-1, førstesnøen) skogen i vannmaskens blå kanal: på land er den ellers 0 (den blå kanalen er avstanden til land ute i vannet),
+// så bakkens skyggekode får vite hvor det er tett skog uten et nytt teksturoppslag (snøen blir liggende lite i tett skog).
+async function skogIVannmaske(u, skog) {
+  const d = u.vann && u.vann.piksler, W = u.vann && u.vann.width, V = skog && skog.v, SW = skog && skog.W; if (!d || !W || !V) return;
+  const f = SW / W;
+  for (let j = 0; j < W; j++) { if ((j & 63) === 0 && børPuste()) await pust(); const fy = Math.max(0, Math.min(SW - 1.001, (j + .5) * f - .5)), b = fy | 0, ty = fy - b, r0 = b * SW, r1 = r0 + SW;
+    for (let i = 0; i < W; i++) { const o = (j * W + i) * 4; if (d[o]) continue;
+      const fx = Math.max(0, Math.min(SW - 1.001, (i + .5) * f - .5)), a = fx | 0, tx = fx - a;
+      d[o + 2] = (V[r0 + a] * (1 - tx) + V[r0 + a + 1] * tx) * (1 - ty) + (V[r1 + a] * (1 - tx) + V[r1 + a + 1] * tx) * ty; } }
+}
 async function skogmaske(u, b) {
   // Brukeren fant 12. nov mørke, skarpe firkanter på jordene («presenninger»): skogklassen ble lest rute for rute (32 m) uten utjevning,
   // og en enslig skogrute midt på jordet ble malt som mørk skogbunn. Nå: skogandelen jevnes ut mellom rutene (bilineært), kanten får litt
@@ -3639,12 +3669,12 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/ferje.js?v=a957c9a286"></script>
 <script src="/dovre-fliser/spill/ferje3d.js?v=3a6a6a7ddd"></script>
 <script src="/dovre-fliser/spill/modeller.js?v=574924a872"></script>
-<script src="/dovre-fliser/spill/fjern3d.js?v=1426a34c1f"></script>
+<script src="/dovre-fliser/spill/fjern3d.js?v=d9452e01e0"></script>
 <script src="/dovre-fliser/spill/fjernkart3d.js?v=2fb00fc18a"></script>
 <script src="/dovre-fliser/spill/forut3d.js?v=14aab932fc"></script>
 <script src="/dovre-fliser/spill/tilfeldig.js?v=cd3e4749be"></script>
-<script src="/dovre-fliser/spill/vaer.js?v=79d2626993"></script>
-<script src="/dovre-fliser/spill/vaer-visning.js?v=19d8181222"></script>
+<script src="/dovre-fliser/spill/vaer.js?v=801f2b4c4c"></script>
+<script src="/dovre-fliser/spill/vaer-visning.js?v=07c43282a2"></script>
 <script src="/dovre-fliser/spill/natt3d.js?v=3d12d2ceb4"></script>
 <script src="/dovre-fliser/spill/vind3d.js?v=300b4b600d"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=d29ce62b88"></script>
@@ -3686,7 +3716,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/interior3d.js?v=539e5f7f27"></script>
 <script src="/dovre-fliser/spill/hud.js?v=57b2800eba"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=2ee4fa965b"></script>
-<script src="/dovre-fliser/spill/kompass.js?v=aefdddb2a7"></script>
+<script src="/dovre-fliser/spill/kompass.js?v=c26f3be876"></script>
 <script src="/dovre-fliser/spill/byhus.js?v=6c2683f531"></script>
 <script src="/dovre-fliser/spill/bane3d.js?v=2fd83ead3e"></script>
 <script src="/dovre-fliser/spill/gate.js?v=9ee37c3bc8"></script>

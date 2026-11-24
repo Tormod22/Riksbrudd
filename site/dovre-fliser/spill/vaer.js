@@ -17,27 +17,36 @@
     tåke: { navn: 'Tåke', sikt: .3, dis: .1, sky: .6, nedbør: null, vind: -2, dt: 1, dh: .85 },
     // storm (12. nov, brukeren: «legg til bølger, vind og tåke»): kuling med regn (snø om vinteren), store bølger og skum på sjøen
     storm: { navn: 'Storm', sikt: .6, dis: .45, sky: 1, nedbør: 'regn', vind: 10, dt: 0, dh: 0 },
+    // FØRSTE SNØ (R19-1, 24. nov, brukerens bilder fra en fjelltur sent på høsten): en lett snøbyge som legger et tynt, flekkvis lag
+    // langt ned i dalen også høst og vår (mengde = hvor tykt laget blir, 0–1; Claudes forslag). Om sommeren faller den som regn.
+    snøpudder: { navn: 'Lett snø', sikt: .8, dis: .55, sky: .9, nedbør: 'snø', vind: 2, dt: .3, dh: 0, mengde: .35 },
   };
   // dag: dagen i året spillet går på; snøgrense i moh.; temp: [natt, dag] i dalen (Dombås, ca. 650 moh.); vær: sannsynligheter;
   // fukt: hvor lett det blir morgentåke i dalen; nordlys: andelen klare netter med nordlys
   const ÅRSTIDER = {
-    vinter: { navn: 'Vinter', dag: 31, snøgrense: -1000, høst: 0, temp: [-16, -6], fukt: .3, nordlys: .4, vær: { klart: .28, skyet: .3, snø: .3, tåke: .07, storm: .05 } },
-    vår: { navn: 'Vår', dag: 125, snøgrense: 1050, høst: 0, temp: [-2, 9], fukt: .55, nordlys: .2, vær: { klart: .35, skyet: .35, regn: .15, snø: .07, tåke: .08 } },
+    vinter: { navn: 'Vinter', dag: 31, snøgrense: -1000, høst: 0, temp: [-16, -6], fukt: .3, nordlys: .4, vær: { klart: .28, skyet: .3, snø: .24, snøpudder: .06, tåke: .07, storm: .05 } },
+    vår: { navn: 'Vår', dag: 125, snøgrense: 1050, høst: 0, temp: [-2, 9], fukt: .55, nordlys: .2, vær: { klart: .31, skyet: .35, regn: .15, snø: .07, snøpudder: .04, tåke: .08 } },
     sommer: { navn: 'Sommer', dag: 200, snøgrense: 1900, høst: 0, temp: [6, 18], fukt: .4, nordlys: 0, vær: { klart: .45, skyet: .3, regn: .18, tåke: .07 } },
-    høst: { navn: 'Høst', dag: 268, snøgrense: 1350, høst: 1, temp: [0, 10], fukt: .85, nordlys: .3, vær: { klart: .27, skyet: .33, regn: .2, snø: .03, tåke: .1, storm: .07 } },
+    høst: { navn: 'Høst', dag: 268, snøgrense: 1350, høst: 1, temp: [0, 10], fukt: .85, nordlys: .3, vær: { klart: .25, skyet: .3, regn: .17, snø: .03, snøpudder: .08, tåke: .1, storm: .07 } },
   };
-  const REKKE = ['sommer', 'høst', 'vinter', 'vår'], VÆRREKKE = ['auto', 'klart', 'skyet', 'regn', 'snø', 'tåke', 'storm'];
+  // FØRSTESNØEN per årstid (Claudes forslag): grense = hvor langt ned (moh.) en lett snøbyge legger snø (en svak byge når ikke så langt
+  // ned: + svak · 250 m), smelt = hvor mange spilltimer det tynne laget ligger når det ikke snør (regn tar det tre ganger så fort),
+  // legg = hvor mange spillminutter en byge bruker på å legge hele laget sitt.
+  const PUDDER = { vinter: { grense: 0, smelt: 48 }, vår: { grense: 450, smelt: 6 }, sommer: { grense: 1500, smelt: 2 }, høst: { grense: 200, smelt: 20 }, legg: 90, svak: 250 };
+  const REKKE = ['sommer', 'høst', 'vinter', 'vår'], VÆRREKKE = ['auto', 'klart', 'skyet', 'regn', 'snøpudder', 'snø', 'tåke', 'storm'];
   const FELT = ['sikt', 'dis', 'sky', 'regn', 'snø', 'vind', 'dt', 'dh'];
 
   // fra: verdiene været skifter fra (blandet), start/varighet: overgangen i spillminutter; styrke: hvor kraftig været er (torden ved kraftig regn)
-  function ny(årstid = 'sommer') { return { årstid, vær: 'klart', låst: null, til: 120, fra: null, start: 0, varighet: 0, styrke: .6, våt: 0, sistT: null }; }
+  // pudder: det tynne snølaget fra lette snøbyger (0–1), pg: hvor langt ned det ligger (moh.)
+  function ny(årstid = 'sommer') { return { årstid, vær: 'klart', låst: null, til: 120, fra: null, start: 0, varighet: 0, styrke: .6, våt: 0, sistT: null, pudder: 0, pg: null }; }
   function trekk(vekter, r) { let s = 0; for (const [k, v] of Object.entries(vekter)) { s += v; if (r < s) return k; } return Object.keys(vekter)[0]; }
   const glatt = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
   const trinn = (a, b, x) => glatt((x - a) / (b - a));
   // Verdiene for én værtype i årstiden (om sommeren faller snøen som regn i dalen)
   function verdier(S, vær) {
     const V = VÆR[vær], å = ÅRSTIDER[S.årstid]; let regn = V.nedbør === 'regn' ? 1 : 0, snø = V.nedbør === 'snø' ? 1 : 0;
-    if (snø && å.snøgrense > 700) { snø = 0; regn = 1; }
+    if (vær === 'snøpudder') { snø = V.mengde; if (å.snøgrense > 1800) { snø = 0; regn = V.mengde; } }
+    else if (snø && å.snøgrense > 700) { snø = 0; regn = 1; }
     if (regn && vær === 'storm' && å.snøgrense < 0) { regn = 0; snø = 1; }
     return { sikt: V.sikt, dis: V.dis, sky: V.sky, regn, snø, vind: V.vind, dt: V.dt, dh: V.dh };
   }
@@ -57,12 +66,25 @@
     const dt = S.sistT == null ? 0 : Math.max(0, Math.min(600, t - S.sistT)); S.sistT = t;
     const b = blandet(S, t), mål = b.regn * (.55 + .45 * S.styrke);
     S.våt = S.våt < mål ? Math.min(mål, S.våt + dt / 25) : Math.max(mål, S.våt - dt / 150);
+    pudderSteg(S, b, dt);
     if (S.låst) { if (S.vær === S.låst) return false; skift(S, S.låst, t, 0); return true; }
     if (t < S.til) return false;
     S.til = t + 60 + rnd() * 180; const nytt = trekk(ÅRSTIDER[S.årstid].vær, rnd());
     if (nytt === S.vær) return false;
     // overgangen: 25–45 spillminutter (Claudes forslag; før 45–90, som ved 1× = sanntid ga nesten halvannen time med blå himmel og «Regn» øverst)
     skift(S, nytt, t, 25 + rnd() * 20); S.styrke = .35 + rnd() * .65; return true;
+  }
+  // Førstesnøen: mens det snør, legger laget seg opp mot bygens mengde (b.snø) på PUDDER.legg minutter; ellers smelter det på
+  // årstidens smelt-timer (raskere i regn). Grensen settes når et nytt lag begynner å legge seg.
+  function pudderSteg(S, b, dt) {
+    if (S.pudder == null) S.pudder = 0; const P = PUDDER[S.årstid] || PUDDER.høst;
+    if (b.snø > .02 && S.pudder < b.snø) {
+      if (S.pudder < .02 || S.pg == null) S.pg = P.grense + (1 - (S.styrke == null ? .6 : S.styrke)) * PUDDER.svak;
+      S.pudder = Math.min(b.snø, S.pudder + dt / PUDDER.legg);
+    } else if (b.snø <= .02 && S.pudder > 0) {
+      S.pudder = Math.max(0, S.pudder - dt / (60 * P.smelt) * (b.regn > .3 ? 3 : 1));
+      if (S.pudder === 0) S.pg = null;
+    }
   }
   function settÅrstid(S, å, t) { S.årstid = å; S.fra = null; if (!S.låst) { const v = ÅRSTIDER[å].vær; if (!v[S.vær]) { S.vær = 'skyet'; } S.til = t + 30; } }
   // Låst vær fra menyen kommer med en gang (visningen glatter det over noen sekunder)
@@ -111,7 +133,9 @@
   // blandes været mykt mellom to værtyper; ellers verdiene til været slik det står nå.
   function tilstand(S, time, t) {
     const V = VÆR[S.vær], Å = ÅRSTIDER[S.årstid], b = blandet(S, t);
-    const nedbør = b.regn >= .5 ? 'regn' : b.snø >= .5 ? 'snø' : null, snøgrense = Å.snøgrense + (Math.min(Å.snøgrense, 300) - Å.snøgrense) * b.snø;
+    // (R19-1) en lett snøbyge (snøpudder) er også nedbør, men flytter ikke den faste snøgrensen – den legger sitt eget tynne lag (pudder)
+    const lett = S.vær === 'snøpudder', nedbør = b.regn >= .5 ? 'regn' : b.snø >= .5 ? 'snø' : lett && b.snø >= .2 ? 'snø' : lett && b.regn >= .2 ? 'regn' : null;
+    const snøgrense = Å.snøgrense + (Math.min(Å.snøgrense, 300) - Å.snøgrense) * (lett ? 0 : b.snø);
     const døgn = .5 - .5 * Math.cos((time - 3) / 24 * 2 * Math.PI), temp = Math.round(Å.temp[0] + (Å.temp[1] - Å.temp[0]) * døgn - 2 * trinn(.6, .8, b.sky));
     const dagNr = t == null ? 0 : Math.floor((6 + t / 60) / 24), morgen = trinn(3, 5, time) * (1 - trinn(8.5, 11, time));
     const dalTåke = Math.min(1, Math.max(b.dh, morgen * Å.fukt * b.dt * 1.15));
@@ -119,7 +143,7 @@
     // navnNå: det statuslinja viser – i første halvdel av en overgang «Klart → regn», ellers navnet på været
     const k = overgang(S, t), fra = S.fraVær && S.fraVær !== S.vær && VÆR[S.fraVær] ? VÆR[S.fraVær].navn : null, navnNå = k < .5 && fra ? fra + ' → ' + V.navn.toLowerCase() : V.navn;
     return { vær: S.vær, navn: V.navn, navnNå, overgang: k, årstid: S.årstid, årstidNavn: Å.navn, dag: Å.dag, dato: Å.dag + dagNr, dagNr, sikt: b.sikt, dis: b.dis, sky: b.sky, nedbør,
-      regn: b.regn, snø: b.snø, snøgrense, høst: Å.høst, temp, vind: vind(t || 0, b.vind), våt: S.våt || 0, dalTåke, torden, styrke: S.styrke };
+      regn: b.regn, snø: b.snø, snøgrense, høst: Å.høst, temp, pudder: S.pudder || 0, pudderGrense: S.pg == null ? PUDDER[S.årstid].grense : S.pg, vind: vind(t || 0, b.vind), våt: S.våt || 0, dalTåke, torden, styrke: S.styrke };
   }
   // DISEN I 3D OVENFRA (runde 8, 20. nov, kritikken: «3D-kartet ovenfra er nesten helt grått i regn»). Før ble disens avstander
   // ganget med været (regn 0,4) også når kameraet var høyt oppe: bakken midt i bildet lå da bak disens ytterkant, og alt ble grått.
@@ -136,7 +160,7 @@
     const hNear = D * (DIS3D.nærBunn + DIS3D.nærDis * dis), hFar = D + Math.max(50, far - D) * (DIS3D.fjernBunn + (1 - DIS3D.fjernBunn) * dis);
     return { near: lavNear + (hNear - lavNear) * w, far: lavFar + (hFar - lavFar) * w };
   }
-  const api = { VÆR, ÅRSTIDER, REKKE, VÆRREKKE, ny, steg, settÅrstid, låsVær, solHøyde, tilstand, blandet, overgang, måneFase, måne, mørke, vinduAndel, nordlys, vind, trinn, DIS3D, dis3d };
+  const api = { VÆR, ÅRSTIDER, PUDDER, pudderSteg, REKKE, VÆRREKKE, ny, steg, settÅrstid, låsVær, solHøyde, tilstand, blandet, overgang, måneFase, måne, mørke, vinduAndel, nordlys, vind, trinn, DIS3D, dis3d };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Vaer = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

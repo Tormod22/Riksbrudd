@@ -332,6 +332,31 @@ function flisData(z, x, y, valg = KF.vis, hel = vektRutenett(G.x0 + x * span(z),
     z >= 12 && valg.bygg ? beste('hus', z, x, y, 13, 12) : null,          // byggomriss (OpenStreetMap)
     KF.norgeBlokker && !hel ? beste('okart', z, x, y, 8, 0) : null, KF.norgeBlokker && !hel ? beste('ohoyde', z, x, y, 8, 0) : null]);
 }
+// SNØ I 2D-KARTET (R19-1, førstesnøen): snøen males inn med samme regel som bakken i 3D (spill/snodekke.js) – tykt lag over snøgrensen,
+// et tynt, flekkvist lag lenger ned etter lette snøbyger (mer mot nord og på flate åpne jorder og stein, lite i skog og på bratte solsider).
+// sn = { grense, pudder, pg } fra været (VIS.snø, spill/vaer-visning.js). Skogen kjennes igjen på kartfargen (mørkt grønt), steinen på grått;
+// mønsteret er fast i kartets meter (Snodekke.støy), og snøen beholder litt av relieffet (lys fra nordvest som skyggen i kartet).
+// Vann får ikke snø. Bare når det er snø i flisen; ca. 3–6 ms per flis.
+function snøIFlis(g, E, GX, GY, N, vann, minx, maxy, r, z, sn) {
+  const T = G.T, V = { snøgrense: sn.grense, pudder: sn.pudder, pudderGrense: sn.pg };
+  // ingen snø noe sted i flisen (høyeste punkt under grensene): ingenting å gjøre
+  let høy = -Infinity; for (let k = 0; k < E.length; k++) if (E[k] > høy) høy = E[k];
+  if (!(høy > -Infinity) || Snodekke.dekke(V, høy, 1) <= 0) return;
+  const im = g.getImageData(0, 0, T, T), d = im.data, ve = z <= 8 ? 2 : z <= 10 ? 1.5 : 1.2, grov = Math.max(r * 6, 45), fin = Math.max(r * 2, 6);
+  let n = 0;
+  for (let py = 0; py < T; py++) for (let px = 0; px < T; px++) {
+    const i = (py + 1) * N + px + 1, h = E[i]; if (h !== h || vann[py * T + px] > .5) continue;
+    const X = minx + (px + .5) * r, Y = maxy - (py + .5) * r, st = Snodekke.støy(X, Y, grov), dk = Snodekke.dekke(V, h, st); if (dk <= 0) continue;
+    const gx = GX[i], gy = GY[i], nn = Math.hypot(gx, gy, 1), opp = 1 / nn, o = (py * T + px) * 4, R = d[o], Gg = d[o + 1], B = d[o + 2];
+    const lum = (R * .3 + Gg * .59 + B * .11) / 255, sat = (Math.max(R, Gg, B) - Math.min(R, Gg, B)) / 255, grønn = Math.max(0, Math.min(1, (Gg - Math.max(R, B)) / 255 * 7));
+    const skog = (1 - Snodekke.trinn(.12, .24, lum)) * Math.min(1, grønn * 3), stein = (1 - Snodekke.trinn(.04, .12, sat)) * Snodekke.trinn(.2, .45, lum);
+    const f = Snodekke.flekk(dk, { nord: gy / nn, flat: Snodekke.trinn(.75, .97, opp), skog, stein, støy: st, fin: Snodekke.støy(X + 917, Y - 331, fin) }).dekning * Snodekke.trinn(.36, .62, opp);
+    if (f <= .01) continue; n++;
+    const lys = Math.max(.72, Math.min(1.06, .8 + .2 * Math.max(0, (gx * ve * .5417 + gy * ve * .5417 + .6428) / Math.hypot(gx * ve, gy * ve, 1)) / .6428));
+    d[o] = R + (232 * lys - R) * f; d[o + 1] = Gg + (236 * lys - Gg) * f; d[o + 2] = B + (243 * lys - B) * f;
+  }
+  if (n) g.putImageData(im, 0, 0);
+}
 async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D lager bakken uten skygge)
   const T = G.T, r = res(z), c = lerret(T, T), g = c.getContext('2d', { willReadFrequently: true });
   const minx = G.x0 + x * span(z), maxy = G.y0 - y * span(z);
@@ -401,6 +426,7 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
       }
       g.putImageData(im, 0, 0);
     }
+    if (valg.snø && typeof Snodekke !== 'undefined') snøIFlis(g, E, GX, GY, N, vann, minx, maxy, r, z, valg.snø);
     if (valg.koter) koter(g, E, N, z);
   }
   if (tr && valg.traer) traer(g, z, x, y, tr, E, N, hel ? null : VK);
