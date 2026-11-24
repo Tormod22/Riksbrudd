@@ -143,10 +143,12 @@
     if (V.dis < 1) { const fog = R.scene.fog, D = !R.fot && R.bane ? R.bane.avst : 0, n = Vaer.dis3d(fog.near, fog.far, V.dis, D); fog.near = n.near; fog.far = n.far; }
     const c = R.cam.position, bakke = hoyde3d(R.ut.cx + c.x, R.ut.cy + c.y) ;
     if (R.gressMesh && bakke > V.snøgrense) R.gressMesh.visible = false;   // gresset ligger under snøen
-    if (!fall && (V.regn > .02 || V.snø > .02)) fall = lagFall(R);
+    // (R19-2) en byge som driver over der du står (spill/luft3d.js, window.BYGE), gir regnet eller snøen rundt kameraet en stund
+    const BY = window.BYGE, vRegn = Math.max(V.regn, BY ? BY.regn : 0), vSnø = Math.max(V.snø, BY ? BY.snø : 0);
+    if (!fall && (vRegn > .02 || vSnø > .02)) fall = lagFall(R);
     if (!fall) return;
     if (fall.regn.parent !== R.scene) { R.scene.add(fall.regn, fall.snø); }
-    const regn = V.regn > .02, snø = V.snø > .02, høyt = c.z - (bakke - R.ut.h0) * R.EX > 600;
+    const regn = vRegn > .02, snø = vSnø > .02, høyt = c.z - (bakke - R.ut.h0) * R.EX > 600;
     const vx = Math.cos(V.vind.retning) * V.vind.fart, vy = Math.sin(V.vind.retning) * V.vind.fart;
     fall.regn.visible = regn && !høyt; fall.snø.visible = snø && !høyt; if (høyt || (!regn && !snø)) return;
     const { B, H } = fall, wrap = (v, m) => ((v + m) % (2 * m) + 2 * m) % (2 * m) - m;
@@ -156,13 +158,13 @@
       fall.dråper.forEach((d, k) => { d[2] -= 9 * dt; if (d[2] < 0) d[2] += H; d[0] += vx * dt * .8; d[1] += vy * dt * .8;
         const x = c.x + wrap(d[0] - c.x, B), y = c.y + wrap(d[1] - c.y, B), z = c.z - H / 2 + d[2];
         p.set([x, y, z, x + sx, y + sy, z + .55], k * 6); });
-      fall.regn.geometry.setDrawRange(0, 2 * Math.round(fall.dråper.length * Math.min(1, V.regn * (.5 + .5 * (V.styrke || .6)))));
+      fall.regn.geometry.setDrawRange(0, 2 * Math.round(fall.dråper.length * Math.min(1, vRegn * (.5 + .5 * (V.styrke || .6)))));
       fall.regn.geometry.attributes.position.needsUpdate = true; }
     if (snø) { const p = fall.snø.geometry.attributes.position.array;
       fall.fnugg.forEach((d, k) => { d[2] -= 1.1 * dt; if (d[2] < 0) d[2] += H; d[3] += dt; d[0] += vx * dt * .6; d[1] += vy * dt * .6;
         const x = c.x + wrap(d[0] + Math.sin(d[3]) * .6 - c.x, B), y = c.y + wrap(d[1] + Math.cos(d[3] * .8) * .5 - c.y, B);
         p[k * 3] = x; p[k * 3 + 1] = y; p[k * 3 + 2] = c.z - H / 2 + d[2]; });
-      fall.snø.geometry.setDrawRange(0, Math.round(fall.fnugg.length * Math.min(1, V.snø)));
+      fall.snø.geometry.setDrawRange(0, Math.round(fall.fnugg.length * Math.min(1, vSnø)));
       fall.snø.geometry.attributes.position.needsUpdate = true; }
   });
   // straks(): 3D viser været med en gang (testene og skjermbildene)

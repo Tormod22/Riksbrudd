@@ -937,6 +937,16 @@ window.HJELP_TILLEGG = [
 "Leiren"
 ],
 [
+"Lysstriper og byger",
+"Når det er delvis skyet og sola står lavt, kan du se solstråler gjennom hull i skyene ned mot dalen – tydeligst når du ser mot sola. I skyet vær driver regn- og snøbyger som grå eller hvite slør over landskapet med vinden. Driver en byge over der du står, regner eller snør det rundt deg en stund, sola blir borte og sikten blir kortere. Høyt til fjells faller bygene som snø.",
+"Vær, lyd og bilde"
+],
+[
+"Blå dis i det fjerne",
+"Åser og fjell langt unna blir blåere og lysere jo lenger unna de ligger, så åsryggene står i lag bak hverandre. Det nære terrenget er klart. I grått vær og om natta er disen svakere; i tåke tar tåka over.",
+"Vær, lyd og bilde"
+],
+[
 "Lut i husene",
 "Inne i husene ligger det ting i møblene: mat og drikke i kjøleskapet og kjøkkenskapene, klær, sekker og av og til et jaktvåpen i garderoben, medisin i baderomsskapet og på nattbordet, verktøy på verktøybenken, mye mat i butikkenes reoler. Står du ved et møbel, kommer knappen «Åpne kjøleskapet (E)». Hvert møbel har sitt eget innhold, og det du legger igjen der, blir liggende. Ransakede hus har lite igjen.",
 "I 3D"
