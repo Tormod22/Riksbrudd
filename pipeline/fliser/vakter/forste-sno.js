@@ -36,7 +36,7 @@ module.exports = { navn: 'første snø (lett snøbyge, flekkvis snø i 2D og 3D)
         const middel = () => { r.setRenderTarget(mål); r.render(R3.scene, cam); r.readRenderTargetPixels(mål, 0, 0, W, H, px); r.setRenderTarget(null); let s = 0; for (let k = 0; k < px.length; k += 4) s += px[k] + px[k + 1] + px[k + 2]; return s / (W * H * 3); };
         S.pudder = 0; VaerSpill.straks(); const uten = middel(); S.pudder = 1; S.pg = -500; VaerSpill.straks(); const med = middel();
         for (const o of skjult) o.visible = true;
-        mål.dispose(); ut.lys3d = +(med - uten).toFixed(1); ut.gl = gl.getError();
+        mål.dispose(); ut.lys3d = +(med - uten).toFixed(1); ut.uten = +uten.toFixed(1); ut.med = +med.toFixed(1); ut.uP = VAER_U.uPudder.value; ut.gl = gl.getError();
         const prog = (r.info.programs || []).filter(p => p.diagnostics && !p.diagnostics.runnable).length;
         krev(prog === 0 && ut.gl === 0, '3D: skyggekoden kompilerer ikke (' + prog + ' programmer, GL-feil ' + ut.gl + ')');
         krev(ut.lys3d > 1, '3D: førstesnøen synes ikke i bakken (' + ut.lys3d + ')');
