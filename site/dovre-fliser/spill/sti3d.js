@@ -111,6 +111,10 @@
     på: (u, x, y) => { const n = u && u.stiRute ? Regler.nærmest(u.stiRute, x, y) : null; return !!n && n.d < .5; },
   };
 
+  // gress, blomster, fjellmark og gatemøbler spør u.påBane (bane3d.js): den utvides med stien. Laget her og ikke inne i kroken, så
+  // funksjonen på utsnittet ikke holder på det kroken bruker (trelister, flisene).
+  function medSti(u, før) { const R = u.stiRute; return (x, y) => (!!før && før(x, y)) || (() => { const q = Regler.nærmest(R, x, y); return !!q && q.d < .15; })(); }
+
   // ---------- stiene fra utveg-flisene ----------
   KROKER.bygg3d.push(async u => {
     u.stier = []; u.stiMerker = []; u.stiVaier = []; u.stiRute = null;
@@ -145,6 +149,7 @@
     u.stier = stier;
     if (!stier.length) return;
     u.stiRute = Regler.rutenett(stier);
+    u.påBane = medSti(u, u.påBane);
     // ryddes: trær, busker og steiner i stien (nærmeste stikant innen rydd − halv bredde)
     const iStien = (x, y) => { const q = Regler.nærmest(u.stiRute, x, y); return !!q && q.d < (q.t ? REGLER.rydd.traktor - REGLER.bredde.traktor / 2 : REGLER.rydd.sti - REGLER.bredde.sti / 2); };
     const sil = (data, s = 5) => { const ut = []; for (let k = 0; k < data.length; k += s) if (!iStien(data[k], data[k + 1])) for (let q = 0; q < s; q++) ut.push(data[k + q]); return new Float32Array(ut); };
