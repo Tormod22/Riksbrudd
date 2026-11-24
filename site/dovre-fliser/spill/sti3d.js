@@ -98,6 +98,16 @@
     mesh: () => mesh,
     // gange.js: fart der du står (x, y relativt til utsnittets midte)
     fart: (u, x, y) => (u && u.stiRute ? Regler.fart(u.stiRute, x, y) : 1),
+    // vakta: lag nettene for et prøveutsnitt uten å legge dem i scenen; svarer med tall og frigjør alt
+    prøvNett(u) {
+      const L = [], nett = typeof nettHoyde === 'function' ? (x, y) => nettHoyde(u, x, y) : () => 0; lag(u, R3, L);
+      const ut = { nett: L.length, slag: {}, under: 0, punkt: 0, trekanter: 0 };
+      for (const m of L) { const n = m.isInstancedMesh ? 'instanser' : m.isLineSegments ? 'linjer' : 'bånd'; ut.slag[n] = (ut.slag[n] || 0) + (m.isInstancedMesh ? m.count : 1);
+        if (!m.isInstancedMesh && !m.isLineSegments) { const a = m.geometry.attributes.position.array; ut.trekanter += m.geometry.index.count / 3;
+          for (let k = 0; k < a.length; k += 3) { ut.punkt++; if (a[k + 2] < nett(a[k], a[k + 1]) + .02) ut.under++; } } }
+      for (const m of L) { m.geometry.dispose(); if (m.material.dispose) m.material.dispose(); }
+      return ut;
+    },
     på: (u, x, y) => { const n = u && u.stiRute ? Regler.nærmest(u.stiRute, x, y) : null; return !!n && n.d < .5; },
   };
 
@@ -197,7 +207,7 @@
     for (const [g, [x, y, z], [sx, sy, sz]] of deler) { g.scale(sx, sy, sz); g.translate(x, y, z); const gi = g.index ? g.toNonIndexed() : g, a = gi.attributes.position.array; for (let k = 0; k < a.length; k++) pos.push(a[k]); if (gi !== g) gi.dispose(); g.dispose(); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); return g;
   }
-  function lag(u, R) {
+  function lag(u, R, ut = mesh) {
     const zf = (x, y) => (typeof nettHoyde === 'function' ? nettHoyde(u, x, y) : (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R.EX);
     const pos = [], uv = [], idx = [], stolper = [], vaier = [];
     for (const s of u.stier) {
@@ -227,7 +237,7 @@
     u.stiVaier = stolper;
     if (idx.length) {
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
-      mesh.push(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: båndTekstur(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })));
+      ut.push(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: båndTekstur(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 })));
     }
     // merkene: steiner, varder og T-er (InstancedMesh, én per slag)
     const M = u.stiMerker || [], d = new THREE.Object3D(), farge = new THREE.Color();
@@ -237,7 +247,7 @@
       steiner.forEach((m, k) => { d.position.set(m.x, m.y, zf(m.x, m.y)); d.rotation.set(0, 0, m.mot); d.scale.setScalar(m.r); d.updateMatrix(); im.setMatrixAt(k, d.matrix);
         farge.setRGB(.5, .49, .46).multiplyScalar(.85 + Regler.hash(k, 1) * .3); im.setColorAt(k, farge);
         tPos.push([m.x + Math.cos(m.mot) * .4 * m.r, m.y + Math.sin(m.mot) * .4 * m.r, zf(m.x, m.y) + .2 * m.r, m.mot, .26 * m.r]); });
-      im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; mesh.push(im);
+      im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; ut.push(im);
     }
     if (varder.length) {
       // varden: steiner stablet til ca. 1,2 m, smalere oppover
@@ -246,24 +256,24 @@
       varder.forEach((m, k) => { d.position.set(m.x, m.y, zf(m.x, m.y) - .05); d.rotation.set(0, 0, m.mot); d.scale.setScalar(.85 + Regler.hash(k, 2) * .35); d.updateMatrix(); im.setMatrixAt(k, d.matrix);
         farge.setRGB(.55, .54, .5).multiplyScalar(.85 + Regler.hash(k, 3) * .25); im.setColorAt(k, farge);
         const sk = .85 + Regler.hash(k, 2) * .35; tPos.push([m.x + Math.cos(m.mot) * .5 * sk, m.y + Math.sin(m.mot) * .5 * sk, zf(m.x, m.y) + .5 * sk, m.mot, .24]); });
-      im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; mesh.push(im);
+      im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; ut.push(im);
     }
     for (const m of M) if (m.type === 'tre') { const r = Math.max(.14, Math.min(.32, (m.h || 8) * .02)); tPos.push([m.x + Math.cos(m.mot) * (r + .02), m.y + Math.sin(m.mot) * (r + .02), zf(m.x, m.y) + 1.45, m.mot, .24]); }
     if (tPos.length) {
       const pg = new THREE.PlaneGeometry(1, 1); pg.rotateY(Math.PI / 2); pg.rotateX(0);
       const im = new THREE.InstancedMesh(pg, new THREE.MeshLambertMaterial({ map: tTekstur(), alphaTest: .5, side: THREE.DoubleSide }), tPos.length);
       tPos.forEach(([x, y, z, a, s], k) => { d.position.set(x, y, z); d.rotation.set(0, 0, a); d.scale.setScalar(s); d.updateMatrix(); im.setMatrixAt(k, d.matrix); });
-      im.instanceMatrix.needsUpdate = true; mesh.push(im);
+      im.instanceMatrix.needsUpdate = true; ut.push(im);
     }
     if (stolper.length) {
       const cg = new THREE.CylinderGeometry(.022, .028, 1.1, 5); cg.rotateX(Math.PI / 2); cg.translate(0, 0, .5);
       const im = new THREE.InstancedMesh(cg, new THREE.MeshLambertMaterial({ color: 0x4a4c50 }), stolper.length);
       stolper.forEach(([x, y, z], k) => { d.position.set(x, y, z); d.rotation.set(0, 0, 0); d.scale.setScalar(1); d.updateMatrix(); im.setMatrixAt(k, d.matrix); });
-      im.instanceMatrix.needsUpdate = true; mesh.push(im);
+      im.instanceMatrix.needsUpdate = true; ut.push(im);
       const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(vaier, 3));
-      mesh.push(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x303236 })));
+      ut.push(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x303236 })));
     }
-    for (const m of mesh) { m.name = 'sti3d'; R.scene.add(m); }
+    if (ut === mesh) for (const m of mesh) { m.name = 'sti3d'; R.scene.add(m); }
   }
   KROKER.sett3d.push((u, R) => { fjern(R); if (u.stier && u.stier.length) lag(u, R); });
 })();
