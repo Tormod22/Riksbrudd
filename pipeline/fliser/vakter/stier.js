@@ -36,6 +36,11 @@ module.exports = { navn: 'stier: 2D, 3D, merking og fart', kjør: async (pg, pro
       krev(r.under === 0, `${r.under} av ${r.punkt} punkt i stibåndet ligger under terrengnettet`);
       krev((r.slag.instanser || 0) >= 4, 'steinen, varden og T-merkene ble ikke laget');
       krev(Sti3dRegler.utsatt(100, 92, 101, 3), 'et stup ved en vanskelig sti gir ikke vaier');
+      // vaier: den samme stien i en bratt li (terrenget stiger 1,5 m per meter mot nord) – stolper på oppsiden og en vaier
+      const u2 = Object.assign({}, u, { stiMerker: [] }), r2 = Sti3d.prøvNett(u2, (x, y) => y * 1.5); ut.r2 = r2;
+      krev((r2.slag.linjer || 0) === 1 && (u2.stiVaier || []).length >= P.length - 2, `ingen vaier i den bratte lia (${(u2.stiVaier || []).length} stolper)`);
+      krev((u2.stiVaier || []).every(([, y]) => y > 10), 'vaierstolpene står på nedsiden av stien');
+      krev((r.slag.linjer || 0) === 0, 'vaier på flat mark');
       // ekte stier: ingen trær i stien
       if (u0.stier && u0.stier.length && u0.trær) { let i = 0; const q = (x, y) => { const n2 = Sti3dRegler.nærmest(u0.stiRute, x, y); return n2 && n2.d < -.05; };
         for (const k in u0.trær) { const a = u0.trær[k]; for (let j = 0; j < a.length; j += 5) if (q(a[j], a[j + 1])) i++; }

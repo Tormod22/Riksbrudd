@@ -99,8 +99,9 @@
     // gange.js: fart der du står (x, y relativt til utsnittets midte)
     fart: (u, x, y) => (u && u.stiRute ? Regler.fart(u.stiRute, x, y) : 1),
     // vakta: lag nettene for et prøveutsnitt uten å legge dem i scenen; svarer med tall og frigjør alt
-    prøvNett(u) {
-      const L = [], nett = typeof nettHoyde === 'function' ? (x, y) => nettHoyde(u, x, y) : () => 0; lag(u, R3, L);
+    // zf: valgfri høydefunksjon (vakta lager et bratt prøveterreng for vaieren)
+    prøvNett(u, zf = null) {
+      const L = [], nett = zf || (typeof nettHoyde === 'function' ? (x, y) => nettHoyde(u, x, y) : () => 0); lag(u, R3, L, zf);
       const ut = { nett: L.length, slag: {}, under: 0, punkt: 0, trekanter: 0 };
       for (const m of L) { const n = m.isInstancedMesh ? 'instanser' : m.isLineSegments ? 'linjer' : 'bånd'; ut.slag[n] = (ut.slag[n] || 0) + (m.isInstancedMesh ? m.count : 1);
         if (!m.isInstancedMesh && !m.isLineSegments) { const a = m.geometry.attributes.position.array; ut.trekanter += m.geometry.index.count / 3;
@@ -156,7 +157,8 @@
     if (u.trær) for (const k in u.trær) u.trær[k] = sil(u.trær[k]);
     if (u.smått) { if (u.smått.stein) u.smått.stein = sil(u.smått.stein); if (u.smått.busk) u.smått.busk = sil(u.smått.busk); }
     // merkene på de merkede rutene: tre innen 1,3–5 m (nærmeste), ellers stein; over tregrensen annenhver varde
-    const trær = []; if (u.trær) for (const k in u.trær) { const d = u.trær[k]; for (let q = 0; q < d.length; q += 5) trær.push([d[q], d[q + 1], d[q + 3] || 8]); }
+    // bare trær med én rett stamme (fjellbjørk, selje og einer har flere/krokete stammer)
+    const trær = []; if (u.trær) for (const k in u.trær) { if (k === 'fjellbjørk' || k === 'selje' || k === 'einer') continue; const d = u.trær[k]; for (let q = 0; q < d.length; q += 5) trær.push([d[q], d[q + 1], d[q + 3] || 8]); }
     const treRute = new Map(); for (const t of trær) { const kk = Math.floor(t[0] / 8) + ',' + Math.floor(t[1] / 8); let L = treRute.get(kk); if (!L) treRute.set(kk, L = []); L.push(t); }
     const nærTre = (x, y) => { let best = null, bd = REGLER.tre.til; for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const t of treRute.get((Math.floor(x / 8) + i) + ',' + (Math.floor(y / 8) + j)) || []) {
       const d = Math.hypot(t[0] - x, t[1] - y); if (d < bd && d > REGLER.tre.fra) { bd = d; best = t; } } return best; };
@@ -212,8 +214,8 @@
     for (const [g, [x, y, z], [sx, sy, sz]] of deler) { g.scale(sx, sy, sz); g.translate(x, y, z); const gi = g.index ? g.toNonIndexed() : g, a = gi.attributes.position.array; for (let k = 0; k < a.length; k++) pos.push(a[k]); if (gi !== g) gi.dispose(); g.dispose(); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); return g;
   }
-  function lag(u, R, ut = mesh) {
-    const zf = (x, y) => (typeof nettHoyde === 'function' ? nettHoyde(u, x, y) : (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R.EX);
+  function lag(u, R, ut = mesh, zfPrøve = null) {
+    const zf = zfPrøve || ((x, y) => (typeof nettHoyde === 'function' ? nettHoyde(u, x, y) : (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * R.EX));
     const pos = [], uv = [], idx = [], stolper = [], vaier = [];
     for (const s of u.stier) {
       const P = s.P, n0 = pos.length / 3, u0 = s.t ? .5 : 0; let L = 0;
@@ -251,7 +253,7 @@
       const im = new THREE.InstancedMesh(samle([[new THREE.IcosahedronGeometry(1, 0), [0, 0, .12], [.42, .36, .3]]]), new THREE.MeshLambertMaterial({ color: 0xffffff }), steiner.length);
       steiner.forEach((m, k) => { d.position.set(m.x, m.y, zf(m.x, m.y)); d.rotation.set(0, 0, m.mot); d.scale.setScalar(m.r); d.updateMatrix(); im.setMatrixAt(k, d.matrix);
         farge.setRGB(.5, .49, .46).multiplyScalar(.85 + Regler.hash(k, 1) * .3); im.setColorAt(k, farge);
-        tPos.push([m.x + Math.cos(m.mot) * .4 * m.r, m.y + Math.sin(m.mot) * .4 * m.r, zf(m.x, m.y) + .2 * m.r, m.mot, .26 * m.r]); });
+        tPos.push([m.x + Math.cos(m.mot) * .56 * m.r, m.y + Math.sin(m.mot) * .56 * m.r, zf(m.x, m.y) + .22 * m.r, m.mot, .24 * m.r]); });
       im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; ut.push(im);
     }
     if (varder.length) {
@@ -260,13 +262,13 @@
       const im = new THREE.InstancedMesh(samle(deler), new THREE.MeshLambertMaterial({ color: 0xffffff }), varder.length);
       varder.forEach((m, k) => { d.position.set(m.x, m.y, zf(m.x, m.y) - .05); d.rotation.set(0, 0, m.mot); d.scale.setScalar(.85 + Regler.hash(k, 2) * .35); d.updateMatrix(); im.setMatrixAt(k, d.matrix);
         farge.setRGB(.55, .54, .5).multiplyScalar(.85 + Regler.hash(k, 3) * .25); im.setColorAt(k, farge);
-        const sk = .85 + Regler.hash(k, 2) * .35; tPos.push([m.x + Math.cos(m.mot) * .5 * sk, m.y + Math.sin(m.mot) * .5 * sk, zf(m.x, m.y) + .5 * sk, m.mot, .24]); });
+        const sk = .85 + Regler.hash(k, 2) * .35; tPos.push([m.x + Math.cos(m.mot) * .68 * sk, m.y + Math.sin(m.mot) * .68 * sk, zf(m.x, m.y) + .42 * sk, m.mot, .26]); });
       im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; ut.push(im);
     }
     for (const m of M) if (m.type === 'tre') { const r = Math.max(.14, Math.min(.32, (m.h || 8) * .02)); tPos.push([m.x + Math.cos(m.mot) * (r + .02), m.y + Math.sin(m.mot) * (r + .02), zf(m.x, m.y) + 1.45, m.mot, .24]); }
     if (tPos.length) {
-      const pg = new THREE.PlaneGeometry(1, 1); pg.rotateY(Math.PI / 2); pg.rotateX(0);
-      const im = new THREE.InstancedMesh(pg, new THREE.MeshLambertMaterial({ map: tTekstur(), alphaTest: .5, side: THREE.DoubleSide }), tPos.length);
+      const pg = new THREE.PlaneGeometry(1, 1); pg.rotateX(Math.PI / 2); pg.rotateZ(Math.PI / 2);   // loddrett, forsiden mot +x, teksturen rett vei (u langs +y, v opp)
+      const im = new THREE.InstancedMesh(pg, new THREE.MeshLambertMaterial({ map: tTekstur(), emissive: 0x4a4a4a, emissiveMap: tTekstur(), alphaTest: .5, side: THREE.DoubleSide }), tPos.length);
       tPos.forEach(([x, y, z, a, s], k) => { d.position.set(x, y, z); d.rotation.set(0, 0, a); d.scale.setScalar(s); d.updateMatrix(); im.setMatrixAt(k, d.matrix); });
       im.instanceMatrix.needsUpdate = true; ut.push(im);
     }

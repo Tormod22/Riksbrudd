@@ -197,6 +197,16 @@ window.HJELP_TILLEGG = [
 "I 3D"
 ],
 [
+"Gjester i leiren",
+"I en delt verden ser gjestene vertens leir: Leir-menyen, byggpanelet, Folk og Tropper viser vertens bygg, lager, diesel, strøm og folk, og byggene står i kartet og i 3D som hos verten. Gjestene kan bygge, sette folk på oppgaver og sette opp tropper – det gjestene kjøper, betales av vertens kasse, og loggen hos verten sier hvem som gjorde hva. En tropp en gjest setter opp, styres av den gjesten. Gjestens eget lagrede spill røres ikke; last siden på nytt etter «Koble fra» for å spille det igjen.",
+"Kom i gang"
+],
+[
+"Hva gjestene kan i leiren",
+"Verten bestemmer under ☰ → «Spill sammen» → «Gjester kan i leiren»: «Bare se» (gjestene ser leiren, men kan ikke endre noe), «Bygge og folk» (bygge, planlegge, flytte, oppgradere, reparere, kjøpe materialer, diesel og mat, og sette folk på oppgaver) eller «Alt» (også rive, selge, rekruttere og lage tropper). Valget huskes for verdenen.",
+"Kom i gang"
+],
+[
 "Folk som personer",
 "Trykk «Vis folkene» i Folk og så på et navn: du får et kort med ansikt, historie, lynne og hva personen ønsker seg. Får folk ønsket sitt oppfylt, blir de mer trofaste. ★ betyr spesialist.",
 "Leiren"
@@ -1375,6 +1385,11 @@ window.HJELP_TILLEGG = [
 "Ett lagret spill per kart",
 "Spillet lagres i nettleseren, for seg for hvert kart: Rogaland (/rogaland) har sitt eget spill, og Dovre og hele Norge deler ett. Startskjermen sier fra når du har et spill lagret på et annet kart – det blir ikke rørt.",
 "Kom i gang"
+],
+[
+"Stier og merking",
+"Stiene i fjellet og skogen er med i kartet (fra OpenStreetMap). Merkede ruter er røde stiplede linjer; i 3D ser du rød T malt på steiner og trær, varder på snaufjellet og vaier der stien går langs stupet. Du går litt fortere på stien enn i terrenget. Slå stiene av og på med «Stier» i ☰.",
+"I 3D"
 ],
 [
 "Flat plass til leiren",
