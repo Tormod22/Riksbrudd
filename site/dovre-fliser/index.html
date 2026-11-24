@@ -2913,6 +2913,8 @@ function init3d() {
     bane: { x: 0, y: 0, avst: 3000, yaw: 0, pitch: .75 }, ray: new THREE.Raycaster(), EX: 1, bygger: false, nøkkel: '', sol, himmelLys, kuppel, skyer, lysTid: null };   // EX 1: ingen overdrivelse av høyden
   // skygger fra sola og tåke i dalene (spill/lys3d.js) – må kobles på før noe materiale er laget
   if (window.Lys3d) Lys3d.init(R3);
+  // blå dis i lag (spill/luft3d.js) – også i three.js sin tåke, før noe materiale er laget
+  if (window.Luft3d) Luft3d.init(R3);
 }
 // Skyer: lette sommerskyer (verdistøy i flere lag, sømløs rundt) over horisonten, tynnere mot horisonten. Øverst i bildet = senit.
 function skyTekstur() {
@@ -3644,7 +3646,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/forut3d.js?v=14aab932fc"></script>
 <script src="/dovre-fliser/spill/tilfeldig.js?v=cd3e4749be"></script>
 <script src="/dovre-fliser/spill/vaer.js?v=79d2626993"></script>
-<script src="/dovre-fliser/spill/vaer-visning.js?v=19d8181222"></script>
+<script src="/dovre-fliser/spill/vaer-visning.js?v=c221fd3129"></script>
 <script src="/dovre-fliser/spill/natt3d.js?v=3d12d2ceb4"></script>
 <script src="/dovre-fliser/spill/vind3d.js?v=300b4b600d"></script>
 <script src="/dovre-fliser/spill/lyd.js?v=d29ce62b88"></script>
@@ -3774,6 +3776,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/scenario-visning.js?v=8a7d90cede"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=6fed2358e9"></script>
 <script src="/dovre-fliser/spill/lys3d.js?v=9a7e1bb68e"></script>
+<script src="/dovre-fliser/spill/luft.js?v=98926811be"></script>
+<script src="/dovre-fliser/spill/luft3d.js?v=69896cfec0"></script>
 <script src="/dovre-fliser/spill/tema.js?v=18c02f70c1"></script>
 <script src="/dovre-fliser/spill/effekter3d.js?v=9b3d2dc2ec"></script>
 <script src="/dovre-fliser/spill/fjernby3d.js?v=fcce2ba8ce"></script>

@@ -14,7 +14,7 @@
     // Lysstriper. sol: grader over horisonten (fra, full, avtar, borte); sky: skydekket (fra, full, avtar, borte); dis: under «borte» ingen
     // (tåke). celle: rutenettets side (m), sjanse: andel av rutene med et skyhull, nær/fjern: avstand fra kameraet (m), bredde (m),
     // levetid: et skyhull varer så mange spillminutter, maks: høyst så mange striper.
-    stråle: { sol: [1, 6, 26, 42], sky: [.22, .42, .8, .95], dis: [.3, .6], celle: 1500, sjanse: .3, nær: 700, fjern: 8500, bredde: [70, 260], levetid: 22, maks: 18 },
+    stråle: { sol: [1, 6, 26, 42], sky: [.22, .42, .8, .95], dis: [.3, .6], celle: 1500, sjanse: .3, nær: 700, fjern: 8500, bredde: [140, 480], levetid: 22, maks: 18 },
     // Byger. sky: skydekket der de begynner og der det er flest; dis: under «borte» ingen (tåke). celle (m), sjanse: andel av rutene
     // med en byge når det er flest; radius (m); levetid (spillminutter fra den vokser fram til den har regnet ut); nær/fjern (m);
     // kant: andelen av radien der bygen er full (ytterst tones den ut); maks: høyst så mange; nedbør: når det alt regner/snør overalt
@@ -26,7 +26,7 @@
     snøMargin: 250,
     // Blå dis (luftperspektiv): styrke i klart vær om dagen; hvor mye skydekket tar bort; disen begynner så langt ute (m) når du går
     // og ganger kameraavstanden fra lufta; lengden (m) den tetner over (1 − e^(−d/L)); fargen den trekker mot i klart vær.
-    dis: { styrke: .5, skyTrekk: .55, startGå: 1300, startLuft: .9, lengde: 15000, blå: [.5, .64, .86], blåAndel: .6 },
+    dis: { styrke: .62, skyTrekk: .5, startGå: 1300, startLuft: .9, lengde: 11000, blå: [.44, .6, .86], blåAndel: .7 },
   };
   const klem = v => Math.max(0, Math.min(1, v)), glatt = (a, b, x) => { const t = klem((x - a) / (b - a)); return t * t * (3 - 2 * t); };
   // fast heltallsblanding (samme tall inn gir samme tall ut), 0 ≤ svar < 1

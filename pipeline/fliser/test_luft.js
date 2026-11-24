@@ -55,7 +55,7 @@ const s = L.stråler(200000, 6900000, D0, 300, 1);
 sjekk(s.length > 0 && s.length <= L.REGLER.stråle.maks, `stråler: noen striper (${s.length})`);
 sjekk(s.every(x => x.d >= L.REGLER.stråle.nær && x.d <= L.REGLER.stråle.fjern), 'stråler: innenfor nær/fjern');
 sjekk(L.stråler(200000, 6900000, D0, 300, 0).length === 0, 'stråler: ingen når styrken er 0');
-sjekk(s.every(x => x.a <= 1 && x.a > 0 && x.b >= 70 && x.b <= 260), 'stråler: styrke og bredde innenfor grensene');
+sjekk(s.every(x => x.a <= 1 && x.a > 0 && x.b >= 140 && x.b <= 480), 'stråler: styrke og bredde innenfor grensene');
 
 // type: snø høyt oppe og om vinteren
 sjekk(L.type(1500, 1350, 'høst') === 'snø' && L.type(700, 1350, 'høst') === 'regn', 'type: snø over (snøgrensen − 250 m), ellers regn');
@@ -74,6 +74,6 @@ sjekk(L.dis(vær(.6, .1), 1, .6, H).k < .05, 'dis: nesten ingen i tåke (tåka t
 sjekk(L.disAndel(klar.k, 1000, L.disStart(true)) === 0, 'dis: nært terreng (1 km) er klart når du går');
 sjekk(L.disAndel(klar.k, 2500, L.disStart(false, 3000)) === 0, 'dis: fra lufta er bakken midt i bildet klar');
 const d5 = L.disAndel(klar.k, 5000, 1300), d15 = L.disAndel(klar.k, 15000, 1300), d30 = L.disAndel(klar.k, 30000, 1300);
-sjekk(d5 < d15 && d15 < d30 && d5 < .15 && d30 > .3, `dis: åsene bak hverandre blir blåere i lag (5 km ${d5.toFixed(2)}, 15 km ${d15.toFixed(2)}, 30 km ${d30.toFixed(2)})`);
+sjekk(d5 < d15 && d15 < d30 && d5 < .2 && d30 > .3, `dis: åsene bak hverandre blir blåere i lag (5 km ${d5.toFixed(2)}, 15 km ${d15.toFixed(2)}, 30 km ${d30.toFixed(2)})`);
 
 console.log(feil ? `${feil} feil` : 'Alt i orden'); process.exit(feil ? 1 : 0);
