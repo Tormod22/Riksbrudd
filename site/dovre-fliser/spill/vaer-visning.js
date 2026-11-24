@@ -50,7 +50,9 @@
     const ny = V.snøgrense < 2600 || V.pudder > .02 ? { grense: Math.round(V.snøgrense / 50) * 50, pudder: Math.round((V.pudder || 0) * 10) / 10, pg: Math.round((V.pudderGrense || 0) / 50) * 50 } : null;
     const nøkkel = ny ? ny.grense + '|' + ny.pudder + '|' + ny.pg : '';
     if (nøkkel === snøNøkkel) return; const nå = performance.now();
-    if (snøNøkkel !== null && nå - snøSist < 20000 && !!nøkkel === !!snøNøkkel) return;
+    // små endringer (smelting, spoling) høyst hvert 20. sekund; store (ny byge, ny årstid, menyen) straks
+    const g = VIS.snø, stor = !g !== !ny || !g || Math.abs(g.pudder - ny.pudder) >= .15 || Math.abs(g.grense - ny.grense) >= 200 || Math.abs(g.pg - ny.pg) >= 100;
+    if (snøNøkkel !== null && nå - snøSist < 20000 && !stor) return;
     const første = snøNøkkel === null; snøNøkkel = nøkkel; snøSist = nå; VIS.snø = ny;
     if (!første && typeof FERDIG !== 'undefined') { FERDIG.clear(); skitten = true; }
   }
