@@ -46,8 +46,8 @@
   float p = pudder * smoothstep(pGrense - ${g(R.pudder)}, pGrense + ${g(R.pudder)}, h);
   return max(full, p);
 }
-float snoFlekk(float d, float nord, float flat, float skog, float stein, float stoy, float fin) {
-  float score = ${g(R.basis)} + ${g(R.nord)} * nord + ${g(R.flat)} * flat + ${g(R.stein)} * stein - ${g(R.skog)} * skog + ${g(R.støy)} * (stoy - 0.5) + ${g(R.fin)} * (fin - 0.5);
+float snoFlekk(float d, float nord, float flt, float skog, float stein, float stoy, float fin) {
+  float score = ${g(R.basis)} + ${g(R.nord)} * nord + ${g(R.flat)} * flt + ${g(R.stein)} * stein - ${g(R.skog)} * skog + ${g(R.støy)} * (stoy - 0.5) + ${g(R.fin)} * (fin - 0.5);
   float t = 1.0 - d;
   float andel = smoothstep(t - ${g(R.kant)}, t + ${g(R.kant)}, score);
   andel += (1.0 - andel) * smoothstep(${g(R.tykk[0])}, ${g(R.tykk[1])}, d);

@@ -128,7 +128,7 @@ function skjulMelding(type) {
 <script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
 <script src="/dovre-fliser/spill/simulering.js?v=441677f889"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
-<script src="/dovre-fliser/spill/snodekke.js?v=b9c132c8cc"></script>
+<script src="/dovre-fliser/spill/snodekke.js?v=46324f484e"></script>
 <script src="/dovre-fliser/spill/kart2d.js?v=e512e8b4e6"></script>
 <script src="/dovre-fliser/spill/kartbilde.js?v=3eddf8856b"></script>
 <script src="/dovre-fliser/spill/kartnavn.js?v=e352eba43d"></script>
@@ -255,7 +255,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=b25326f293');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=994830bf7a');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
