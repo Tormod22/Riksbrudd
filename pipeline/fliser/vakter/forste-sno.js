@@ -28,8 +28,14 @@ module.exports = { navn: 'første snø (lett snøbyge, flekkvis snø i 2D og 3D)
       // 3D: bakken kompilerer med snøen og blir lysere med førstesnø enn uten (bare når 3D er bygget)
       if (typeof R3 !== 'undefined' && R3 && R3.mesh && R3.renderer && på3d) {
         const r = R3.renderer, gl = r.getContext(), W = 64, H = 40, mål = new THREE.WebGLRenderTarget(W, H), px = new Uint8Array(W * H * 4);
-        const middel = () => { r.setRenderTarget(mål); r.render(R3.scene, R3.cam); r.readRenderTargetPixels(mål, 0, 0, W, H, px); r.setRenderTarget(null); let s = 0; for (let k = 0; k < px.length; k += 4) s += px[k] + px[k + 1] + px[k + 2]; return s / (W * H * 3); };
+        // bare terrenget, rett ovenfra (uavhengig av hvor kameraet står og hva som ellers er i bildet)
+        const cam = new THREE.PerspectiveCamera(50, W / H, 10, 20000); R3.mesh.geometry.computeBoundingBox(); const bb = R3.mesh.geometry.boundingBox;
+        cam.up.set(0, 1, 0); cam.position.set(0, 0, bb.max.z + 900); cam.lookAt(0, 0, (bb.min.z + bb.max.z) / 2);
+        const skjult = []; R3.scene.traverse(o => { if (o !== R3.mesh && o !== R3.scene && (o.isMesh || o.isPoints || o.isLine || o.isSprite) && o.visible) skjult.push(o); });
+        for (const o of skjult) o.visible = false;
+        const middel = () => { r.setRenderTarget(mål); r.render(R3.scene, cam); r.readRenderTargetPixels(mål, 0, 0, W, H, px); r.setRenderTarget(null); let s = 0; for (let k = 0; k < px.length; k += 4) s += px[k] + px[k + 1] + px[k + 2]; return s / (W * H * 3); };
         S.pudder = 0; VaerSpill.straks(); const uten = middel(); S.pudder = 1; S.pg = -500; VaerSpill.straks(); const med = middel();
+        for (const o of skjult) o.visible = true;
         mål.dispose(); ut.lys3d = +(med - uten).toFixed(1); ut.gl = gl.getError();
         const prog = (r.info.programs || []).filter(p => p.diagnostics && !p.diagnostics.runnable).length;
         krev(prog === 0 && ut.gl === 0, '3D: skyggekoden kompilerer ikke (' + prog + ' programmer, GL-feil ' + ut.gl + ')');
