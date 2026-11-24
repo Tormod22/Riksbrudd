@@ -18,7 +18,7 @@
     // skybasen i scenen (samme høyde som skylaget i spill/natt3d.js), og minst så høyt over bakken (m)
     skyH: 1500, overBakke: 650,
     // bygenes slør: sterkest (alfa), hvor mye mørkere enn disen regnslør er; striper: lysstyrken (ganger sollyset)
-    bygeAlfa: .65, regnMørk: .6, stråleLys: .22,
+    bygeAlfa: .78, regnMørk: .6, stråleLys: .22,
     // høyst så mange [PC, mobil]; Lav grafikk: byger ganges med lavAndel, ingen striper
     maksByger: [10, 6], maksStriper: [18, 10], lavAndel: .4,
     // inne i en byge: sikten (tåkas ytterkant) ganges ned med inntil så mye
@@ -86,10 +86,12 @@
   const BYGE_FS = `uniform vec3 uRegn; uniform vec3 uSno; uniform vec3 uFogF; uniform vec2 uFogA; uniform float uMaks; uniform float uTid;
     varying vec2 vUv; varying float vA; varying float vDyb; varying float vSno; varying float vFro;
     void main() { float x = vUv.x, y = vUv.y;
-      float kant = smoothstep(0.0, 0.34, x) * smoothstep(1.0, 0.66, x);
-      float folder = 0.62 + 0.38 * sin(x * 19.0 + vFro * 6.3 + sin(y * 2.7 + vFro * 4.0 + uTid * 0.05) * 2.2);
-      float strek = mix(0.78 + 0.22 * sin(x * 83.0 + vFro * 17.0), 1.0, vSno);
-      float topp = smoothstep(1.0, 0.8, y);
+      // myk, uregelmessig kant (ikke en firkant), noen brede folder, svake striper i regn; tettest nede, tones inn i skybasen øverst
+      float k0 = 0.42 + 0.12 * sin(y * 3.1 + vFro * 5.0);
+      float kant = smoothstep(0.0, k0, x) * smoothstep(1.0, 1.0 - k0, x);
+      float folder = 0.7 + 0.3 * sin(x * 7.0 + vFro * 6.3 + sin(y * 2.3 + vFro * 4.0 + uTid * 0.05) * 1.6) * sin(x * 3.3 + vFro * 2.1);
+      float strek = mix(0.9 + 0.1 * sin(x * 47.0 + y * 6.0 + vFro * 17.0), 1.0, vSno);
+      float topp = smoothstep(1.0, 0.72, y) * mix(0.5, 1.0, smoothstep(0.85, 0.35, y));
       float a = vA * kant * folder * strek * topp * uMaks;
       float f = smoothstep(uFogA.x, uFogA.y, vDyb);
       vec3 farge = mix(mix(uRegn, uSno, vSno), uFogF, f * 0.75);
