@@ -345,15 +345,17 @@ function snøIFlis(g, E, GX, GY, N, vann, minx, maxy, r, z, sn, tr) {
   const im = g.getImageData(0, 0, T, T), d = im.data, ve = z <= 8 ? 2 : z <= 10 ? 1.5 : 1.2, grov = Math.max(r * 14, 60), fin = Math.max(r * 5, 12);
   // arealklassen i punktet (samme oppslag som traer())
   const A = tr && tr.t && tr.t.a, rt = A ? res(tr.zz) : 1, tx0 = A ? G.x0 + (Math.floor((minx - G.x0) / span(tr.zz) + 1e-9)) * span(tr.zz) : 0, ty0 = A ? G.y0 - Math.floor((G.y0 - maxy) / span(tr.zz) + 1e-9) * span(tr.zz) : 0;
-  const klasse = (X, Y) => A[Math.max(0, Math.min(T - 1, Math.floor((ty0 - Y) / rt))) * T + Math.max(0, Math.min(T - 1, Math.floor((X - tx0) / rt)))];
+  // andelen av klassen k rundt punktet, jevnet ut mellom rutene (bilineært) – ellers fulgte snøkanten de firkantede rutene
+  const kl = (i, j) => A[Math.max(0, Math.min(T - 1, j)) * T + Math.max(0, Math.min(T - 1, i))];
+  const andel = (X, Y, k) => { const fx = (X - tx0) / rt - .5, fy = (ty0 - Y) / rt - .5, i = Math.floor(fx), j = Math.floor(fy), a = fx - i, b = fy - j;
+    return ((kl(i, j) === k) * (1 - a) + (kl(i + 1, j) === k) * a) * (1 - b) + ((kl(i, j + 1) === k) * (1 - a) + (kl(i + 1, j + 1) === k) * a) * b; };
   let n = 0;
   for (let py = 0; py < T; py++) for (let px = 0; px < T; px++) {
     const i = (py + 1) * N + px + 1, h = E[i]; if (h !== h || vann[py * T + px] > .5) continue;
     const X = minx + (px + .5) * r, Y = maxy - (py + .5) * r, st = Snodekke.støy(X, Y, grov), dk = Snodekke.dekke(V, h, st); if (dk <= 0) continue;
     const gx = GX[i], gy = GY[i], nn = Math.hypot(gx, gy, 1), opp = 1 / nn, o = (py * T + px) * 4, R = d[o], Gg = d[o + 1], B = d[o + 2];
     const lum = (R * .3 + Gg * .59 + B * .11) / 255, sat = (Math.max(R, Gg, B) - Math.min(R, Gg, B)) / 255, grønn = Math.max(0, Math.min(1, (Gg - Math.max(R, B)) / 255 * 7));
-    const K = A ? klasse(X, Y) : -1;
-    const skog = K >= 0 ? (K === 1 ? 1 : 0) : (1 - Snodekke.trinn(.12, .24, lum)) * Math.min(1, grønn * 3), stein = K === 0 ? .7 : (1 - Snodekke.trinn(.04, .12, sat)) * Snodekke.trinn(.2, .45, lum);
+    const skog = A ? Snodekke.trinn(.15, .85, andel(X, Y, 1) + (st - .5) * .3) : (1 - Snodekke.trinn(.12, .24, lum)) * Math.min(1, grønn * 3), stein = A ? .7 * andel(X, Y, 0) : (1 - Snodekke.trinn(.04, .12, sat)) * Snodekke.trinn(.2, .45, lum);
     const f = Snodekke.flekk(dk, { nord: gy / nn, flat: Snodekke.trinn(.75, .97, opp), skog, stein, støy: st, fin: Snodekke.støy(X + 917, Y - 331, fin) }).dekning * Snodekke.trinn(.36, .62, opp);
     if (f <= .01) continue; n++;
     const lys = Math.max(.72, Math.min(1.06, .8 + .2 * Math.max(0, (gx * ve * .5417 + gy * ve * .5417 + .6428) / Math.hypot(gx * ve, gy * ve, 1)) / .6428));
