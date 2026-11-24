@@ -124,7 +124,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=65c4d067c4"></script>
+<script src="/dovre-fliser/kartflis.js?v=4ad18835db"></script>
 <script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
 <script src="/dovre-fliser/spill/simulering.js?v=441677f889"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
@@ -234,7 +234,7 @@ function norgeMangler() {
   setTimeout(prøv, vent);
 }
 
-const VIS = { skygge: true, koter: true, traer: true, veg: true, bane: true, bygg: true, infra: true, sikt: true, taake: true };
+const VIS = { skygge: true, koter: true, traer: true, veg: true, bane: true, sti: true, bygg: true, infra: true, sikt: true, taake: true };
 KF.vis = VIS;
 // Landene vest for flisnettet (Storbritannia, Shetland, Irland, Færøyene, Island) som ett grovt bilde (pipeline/fliser/vest.py).
 const VEST = { b: [-1300000, 5650000, -200000, 8000000], bilde: null };
@@ -254,7 +254,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=9e5f9d0747');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=1d0f54d2fc');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -1613,7 +1613,7 @@ async function bygg3d(cx, cy, S) {
   // bunnfargen i striper med pust (18. nov, hakk: fillRect på hele 4096 × 4096 tok 60 ms i ett strekk); flisene tegnes først når den er ferdig
   // (runde 9: 256 rader om gangen – 512 tok 35–40 ms per stripe på testmaskinen)
   const bunn = (async () => { for (let y = 0; y < TW; y += 256) { g.fillRect(0, y, TW, Math.min(256, TW - y)); if (børPuste()) await pust(); } })();
-  const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false, veg: VIS.veg && S > 2200, asfalt: true }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
+  const [x0, y0, x1, y1] = flisområde([cx - S, cy - S, cx + S, cy + S], zt), sp = span(zt), valg = { ...VIS, skygge: false, koter: false, traer: false, veg: VIS.veg && S > 2200, sti: VIS.sti && S > 2200, asfalt: true }, kø = [];   // 3D: lys og skygge fra solen, trærne som egne 3D-trær
   const [ax, ay, bx, by] = flisområde(OMRÅDE, zt);
   for (let y = Math.max(y0, ay); y <= Math.min(y1, by); y++) for (let x = Math.max(x0, ax); x <= Math.min(x1, bx); x++) kø.push([x, y]);
   framdrift('henter høydene og kartet', .1); const flisAlle = kø.length || 1; let flisFerdig = 0;
@@ -3538,7 +3538,7 @@ document.getElementById('dombas').onclick = async () => { const S = window.Oppst
 const hjemKnapp = () => { const b = document.getElementById('dombas'), S = window.OppstartSpill && OppstartSpill.tilstand(); if (b && S && S.leir) { b.textContent = '⌂'; b.title = 'Til leiren'; b.setAttribute('aria-label', 'Til leiren'); } };
 window.addEventListener('riksbrudd-spill', hjemKnapp); setTimeout(hjemKnapp, 0);
 document.getElementById('v3d').onclick = () => slå3d(!på3d);
-const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bane: 'Jernbane', bygg: 'Bygg', infra: 'Infrastruktur', sikt: 'Siktfelt', taake: 'Tåke' };
+const NAVN = { skygge: 'Skygge', koter: 'Høydekurver', traer: 'Trær', veg: 'Veger', bane: 'Jernbane', sti: 'Stier', bygg: 'Bygg', infra: 'Infrastruktur', sikt: 'Siktfelt', taake: 'Tåke' };
 const lk = document.getElementById('lagmeny');
 for (const n of Object.keys(NAVN)) {
   const b = document.createElement('button'); b.textContent = NAVN[n]; b.setAttribute('aria-pressed', 'true');
@@ -3616,7 +3616,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/hjelp-natt.js?v=60afa2b169"></script>
 <script src="/dovre-fliser/spill/hjelp.js?v=1079336e91"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=14f321d2b1"></script>
-<script src="/dovre-fliser/spill/gange.js?v=aa16926b6a"></script>
+<script src="/dovre-fliser/spill/gange.js?v=b9050a6c72"></script>
 <script src="/dovre-fliser/spill/veg.js?v=8da99c174d"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=12c8bc2ac4"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=7f6e8f0460"></script>
@@ -3689,6 +3689,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kompass.js?v=aefdddb2a7"></script>
 <script src="/dovre-fliser/spill/byhus.js?v=6c2683f531"></script>
 <script src="/dovre-fliser/spill/bane3d.js?v=2fd83ead3e"></script>
+<script src="/dovre-fliser/spill/sti3d.js?v=8b4ba955f6"></script>
 <script src="/dovre-fliser/spill/gate.js?v=9ee37c3bc8"></script>
 <script src="/dovre-fliser/spill/gate3d.js?v=a14beb67ee"></script>
 <script src="/dovre-fliser/spill/leting.js?v=a941eb3114"></script>
@@ -3768,7 +3769,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/selskap-visning.js?v=d0896a67c1"></script>
 <script src="/dovre-fliser/spill/bakkekamp.js?v=df5617e107"></script>
 <script src="/dovre-fliser/spill/bakkekamp-visning.js?v=47b02d660c"></script>
-<script src="/dovre-fliser/spill/meny.js?v=369baf82fd"></script>
+<script src="/dovre-fliser/spill/meny.js?v=936954be6d"></script>
 <script src="/dovre-fliser/spill/flyt.js?v=8dd34da813"></script>
 <script src="/dovre-fliser/spill/scenario.js?v=55bc5f9d74"></script>
 <script src="/dovre-fliser/spill/scenario-visning.js?v=8a7d90cede"></script>

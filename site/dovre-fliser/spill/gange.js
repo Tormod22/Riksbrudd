@@ -383,7 +383,8 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
       hindring: (x, y) => typeof hindring3d === 'function' && hindring3d(x, y), vann: (x, y) => gulv(x, y) === null && (vann(x, y) || !!(u.iElv && u.iElv(x, y))) && dekke(x, y) === null };
     // skader (spill/eventyr-visning.js): brukket bein gir lavere fart og verken løp eller hopp
     // og tung last (spill/lut-visning.js): tregere, og svært tungt = ingen løping
-    const EV = window.EventyrSpill, LS = window.LutSpill, skadd = (EV && EV.fart ? EV.fart() : 1) * (LS && LS.fart ? LS.fart() : 1);
+    // og på en sti (spill/sti3d.js, R19-5) går det litt fortere enn i terrenget
+    const EV = window.EventyrSpill, LS = window.LutSpill, skadd = (EV && EV.fart ? EV.fart() : 1) * (LS && LS.fart ? LS.fart() : 1) * (window.Sti3d ? Sti3d.fart(u, kropp.x, kropp.y) : 1);
     if (ligger && hoppVent) settLigg(false);
     dørTrekk(f, fram, side, dt);
     kropp.landet = 0;
