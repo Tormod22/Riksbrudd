@@ -18,11 +18,13 @@
     // skybasen i scenen (samme høyde som skylaget i spill/natt3d.js), og minst så høyt over bakken (m)
     skyH: 1500, overBakke: 650,
     // bygenes slør: sterkest (alfa), hvor mye mørkere enn disen regnslør er; striper: lysstyrken (ganger sollyset)
-    bygeAlfa: .55, regnMørk: .7, stråleLys: .22,
+    bygeAlfa: .65, regnMørk: .6, stråleLys: .22,
     // høyst så mange [PC, mobil]; Lav grafikk: byger ganges med lavAndel, ingen striper
     maksByger: [10, 6], maksStriper: [18, 10], lavAndel: .4,
     // inne i en byge: sikten (tåkas ytterkant) ganges ned med inntil så mye
     siktInne: .55,
+    // inne i en byge: så mye av sollyset og himmelens lys som tas bort
+    solInne: .6, himmelInne: .35,
     // nedbøren rundt kameraet begynner når bygen er så sterk over deg
     dråpeFra: .12,
     // disen: høyden (m i scenen) der den er tettest, og hvor fort den tynnes oppover (m)
@@ -51,6 +53,8 @@
     const V = window.VAER, fc = R.scene.fog ? R.scene.fog.color : null;
     const dagL = trinn(-14, 6, L.e), d = Luft.dis(V, dagL, L.sky, fc ? [fc.r, fc.g, fc.b] : null);
     LF[0] = d.k; LF[1] = d.farge[0]; LF[2] = d.farge[1]; LF[3] = d.farge[2]; LL[1] = 1 / Luft.REGLER.dis.lengde;
+    // sollyset slik lys3d (og natt3d) satte det – bygen over deg demper det i ramme3d
+    T.solBase = R.sol.intensity;
   });
 
   // ---------- byger og striper: én flate per stk., plassen per instans ----------
@@ -124,7 +128,7 @@
     if (!R.ut) return; const V = window.VAER, u = R.ut, c = R.cam.position;
     // disen begynner et stykke ute: når du går ca. 1,3 km, fra lufta litt innenfor kameraavstanden (bakken midt i bildet er klar)
     LL[0] = Luft.disStart(!!R.fot, R.bane ? R.bane.avst : 0);
-    if (!V || !på()) { if (T.byger) T.byger.visible = T.striper.visible = false; settBy(0, null); return; }
+    if (!V || !på()) { if (T.byger) T.byger.visible = T.striper.visible = false; settBy(0, null); T.her = { mengde: 0, byge: null }; if (T.solBase != null) R.sol.intensity = T.solBase; return; }
     if (!T.byger) lag(R);
     // skyene driver i spilltid (som skyskyggene i spill/natt3d.js)
     const dTid = T.sistTid == null ? 0 : Math.max(0, Math.min(30, tid - T.sistTid)); T.sistTid = tid;
@@ -152,6 +156,10 @@
     // --- står du i en byge? ---
     const h = Luft.her(T.liste, X, Y); T.her = h; settBy(h.mengde, h.byge ? h.byge.type : null);
     if (h.mengde > .05) { const fog = R.scene.fog, k = 1 - VIS.siktInne * h.mengde; fog.far = Math.max(150, fog.far * k); fog.near = Math.min(fog.near, fog.far * .35); }
+    // under bygen: sola skygges bort og himmelen blir grå (lys3d/natt3d setter verdiene på nytt – her ganges de ned for dette bildet)
+    const mh = h.mengde;
+    if (T.solBase != null) R.sol.intensity = T.solBase * (1 - VIS.solInne * mh);
+    if (mh > .01) { R.kuppel.material.color.multiplyScalar(1 - VIS.himmelInne * mh); if (R.scene.background && R.scene.background.isColor) R.scene.background.lerp(fc, mh * .6); }
     const inne = h.mengde > .3;
     if (inne && !T.inne && tid - T.meldt > 20 && typeof logg === 'function') { T.meldt = tid; logg(h.byge.type === 'snø' ? 'En snøbyge driver inn over deg.' : 'En regnbyge driver inn over deg.'); }
     T.inne = inne;

@@ -20,13 +20,13 @@ module.exports = {
       const R = typeof R3 !== 'undefined' && R3, i3d = !!(R && R.ut && R.mesh && typeof på3d !== 'undefined' && på3d && !R.bygger);
       ut.i3d = i3d; if (!i3d) return ut;
       const S = VaerSpill.S, lås0 = S.låst, vær0 = S.vær, tid0 = tid, tempo0 = tempo, D0 = Luft3d.T.D.slice(), fot = R.fot;
-      const gl = R.renderer.getContext(); while (gl.getError()) { /* tøm */ }
+      const gl = R.renderer.getContext(); while (gl.getError()) { /* tøm */ } const t0 = performance.now(), tider = ut.ms = {};
       const tegn = n => { const mg = R.målGanger; R.målGanger = null; for (let i = 0; i < n; i++) { R.lysTid = null; tegn3d(); } R.målGanger = mg; };
       try {
         Luft3d.test = true; tempo = 0;
         // ettermiddag med lav sol (sommer på Dovre: ca. 15° kl. 19), skyet
         tid = Math.floor(tid / 1440) * 1440 + (19 - 6) * 60; Vaer.låsVær(S, 'skyet'); VaerSpill.oppdater(); VaerSpill.straks();
-        tegn(3);
+        tegn(3); tider.skyet = Math.round(performance.now() - t0);
         const a = Luft3d.sjekk(); ut.skyet = a;
         ok(a.byger > 0, 'ingen byger i skyet vær');
         ok(a.striper > 0, 'ingen lysstriper i skyet vær med sola ' + (window.NATT ? Math.round(NATT.e) : '?') + '°');
@@ -37,7 +37,7 @@ module.exports = {
         const c = R.cam.position, X = R.ut.cx + c.x, Y = R.ut.cy + c.y;
         const farFør = R.scene.fog.far;
         ok(Luft3d.bygeOver(X, Y), 'fant ingen byge å flytte');
-        tegn(2);
+        tegn(2); tider.over = Math.round(performance.now() - t0);
         const b = Luft3d.sjekk(); ut.over = b; ut.BYGE = { ...window.BYGE };
         ok(b.her > .3, 'bygen står over kameraet, men her = ' + b.her.toFixed(2));
         ok(window.BYGE.regn + window.BYGE.snø > .3, 'window.BYGE gir ikke nedbør over kameraet');
@@ -55,7 +55,8 @@ module.exports = {
       finally {
         Luft3d.test = false; Luft3d.T.D[0] = D0[0]; Luft3d.T.D[1] = D0[1];
         S.låst = lås0; S.vær = vær0; tid = tid0; tempo = tempo0; R.fot = fot; VaerSpill.oppdater(); VaerSpill.straks(); tegn(1);
-        ok(!Luft3d.sjekk().byger && window.BYGE.mengde === 0, 'byger igjen etter vakta');
+        // (i testene er bygene av når Luft3d.test er av; i en vanlig nettleser følger de været)
+        if (navigator.webdriver) ok(!Luft3d.sjekk().byger && window.BYGE.mengde === 0, 'byger igjen etter vakta');
       }
       return ut;
     });
