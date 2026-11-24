@@ -461,6 +461,7 @@ async function komponer(z, x, y, valg = KF.vis) {   // valg: hvilke kartlag (3D 
       g.stroke();
     }
   }
+  if (valg.sti !== false && uv && uv.t.sti && z >= STI_Z) tegnStier(g, uv.t.sti.obj, uP, z, r);   // stier (OpenStreetMap, R19-5)
   if (valg.bane && uv && uv.t.bane) {   // jernbane: mørk strek med lys stiplet kjerne, som på gamle kart
     const w = z <= 7 ? 1 : z <= 10 ? 1.5 : Math.max(1.8, 3 / r);
     g.lineCap = 'butt'; g.lineJoin = 'round';
@@ -589,6 +590,32 @@ function anlegg(g, z, hs) {
     }
   }
   g.restore();
+}
+
+// STIER (R19-5, brukeren: «smal sti langs stupet, malt merking på stein og trær»): tynne stiplede linjer fra z13, slik turkart
+// viser dem. Merkede ruter (e.m = 1, rød T) er røde og litt tydeligere, umerkede mørkebrune, traktorveger (e.t = 1) lange streker,
+// og vanskelige stier (sac_scale ≥ 4, alpint) prikket. Tallene er Claudes forslag.
+const STI_Z = 13;
+const STI_STIL = {
+  merket: { farge: 'rgba(190,38,28,.95)', kant: 'rgba(255,240,220,.55)', b: 1.7, strek: [7, 4] },
+  umerket: { farge: 'rgba(70,42,22,.85)', kant: null, b: 1.2, strek: [5, 4] },
+  traktor: { farge: 'rgba(80,58,34,.8)', kant: null, b: 1.4, strek: [12, 5] },
+  alpint: { strek: [2, 4] },
+};
+function tegnStier(g, obj, uP, z, r) {
+  const f = Math.min(1.8, Math.max(1, 2 / r));   // litt bredere når du zoomer helt inn
+  const grupper = { traktor: [], umerket: [], merket: [] };
+  for (const o of obj) (o.e.m ? grupper.merket : o.e.t ? grupper.traktor : grupper.umerket).push(o);
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  for (const n of ['traktor', 'umerket', 'merket']) {
+    const S = STI_STIL[n], liste = grupper[n]; if (!liste.length) continue;
+    const spor = alpint => { g.beginPath(); for (const o of liste) if (((o.e.s | 0) >= 4) === alpint) for (const d of o.deler) { const q = d.map(uP); if (q.length < 2) continue; g.moveTo(q[0][0], q[0][1]); for (let i = 1; i < q.length; i++) g.lineTo(q[i][0], q[i][1]); } };
+    // lys kant under de merkede, så de skiller seg fra terrenget
+    if (S.kant) { g.setLineDash([]); g.strokeStyle = S.kant; g.lineWidth = S.b * f + 1.6; spor(false); g.stroke(); spor(true); g.stroke(); }
+    g.strokeStyle = S.farge; g.lineWidth = S.b * f;
+    for (const alpint of [false, true]) { g.setLineDash((alpint ? STI_STIL.alpint.strek : S.strek).map(v => v * f)); spor(alpint); g.stroke(); }
+  }
+  g.setLineDash([]); g.lineCap = 'butt';
 }
 
 // Rullebane med oppmerking etter ICAO: kantlinjer, stiplet midtlinje, terskelstriper («pianotangenter»), banenummer i hver ende

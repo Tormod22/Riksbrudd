@@ -1392,6 +1392,11 @@ window.HJELP_TILLEGG = [
 "Kom i gang"
 ],
 [
+"Stier og merking",
+"Stiene i fjellet og skogen er med i kartet (fra OpenStreetMap). Merkede ruter er røde stiplede linjer; i 3D ser du rød T malt på steiner og trær, varder på snaufjellet og vaier der stien går langs stupet. Du går litt fortere på stien enn i terrenget. Slå stiene av og på med «Stier» i ☰.",
+"I 3D"
+],
+[
 "Flat plass til leiren",
 "Når du trykker der leiren skal ligge, sjekker spillet om det er flatt nok for de første byggene (brakke, dieseltank, aggregat og vakttårn) innen 80 m fra flagget. Er det for bratt eller vått, står det i rødt, og et grønt flagg «Plass her» viser nærmeste sted som går. Trykk «Flytt hit», så prøves det stedet. En dalbunn eller et platå er tryggest.",
 "Kom i gang"
