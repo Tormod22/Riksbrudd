@@ -53,4 +53,18 @@ ok(V.mørke(30) === 0 && V.mørke(-10) === 1, 'mørke: 0 midt på dagen, 1 dypt 
   ok(t.far > D && andel(t) < .55 && andel(t) > andel(r), `tåke ovenfra: ${Math.round(andel(t) * 100)} % – tettere enn regn, men bakken synes`);
   const lav = V.dis3d(120, 3800, .4, 0); ok(lav.far === Math.max(140, 3800 * .4) && lav.near === Math.min(120 * .4, lav.far * .25), 'nede ved bakken (går): som før');
   const m = V.dis3d(near, far, .4, 700); ok(m.near < m.far && m.far > 0, 'mellom lavt og høyt: gyldig dis'); }
+// FØRSTE SNØ (R19-1): en lett snøbyge om høsten legger et tynt lag langt ned i dalen, som smelter igjen etter noen timer
+{ const S = V.ny('høst'); V.låsVær(S, 'snøpudder'); let t = 0; V.steg(S, t);
+  const T0 = V.tilstand(S, 12, t); ok(T0.nedbør === 'snø' && T0.snø > .2 && T0.snø < .6, 'lett snø om høsten: snøfall ' + T0.snø + ' (lettere enn vanlig snø)');
+  ok(T0.snøgrense > 1000, 'lett snø flytter ikke den faste snøgrensen (' + T0.snøgrense + ' moh.)');
+  for (t = 0; t <= 180; t += 10) V.steg(S, t);
+  const T1 = V.tilstand(S, 12, t); ok(Math.abs(T1.pudder - V.VÆR.snøpudder.mengde) < 1e-9, 'etter tre timer ligger et tynt lag: ' + T1.pudder.toFixed(2));
+  ok(T1.pudderGrense < 600, 'førstesnøen ligger ned til ' + Math.round(T1.pudderGrense) + ' moh. (Dombås ca. 650)');
+  V.låsVær(S, 'klart'); for (; t <= 180 + 60 * 3; t += 10) V.steg(S, t);
+  const T2 = V.tilstand(S, 12, t); ok(T2.pudder > .1 && T2.pudder < T1.pudder, 'tre timer med opphold: laget smelter sakte (' + T2.pudder.toFixed(2) + ')');
+  V.låsVær(S, 'regn'); for (; t <= 180 + 60 * 24; t += 10) V.steg(S, t);
+  ok(V.tilstand(S, 12, t).pudder === 0 && S.pg == null, 'regn og ett døgn: førstesnøen er borte');
+  const Sm = V.ny('sommer'); V.låsVær(Sm, 'snøpudder'); const Tm = V.tilstand(Sm, 12, 0); ok(Tm.nedbør === 'regn' && Tm.snø === 0, 'lett snø om sommeren: faller som regn i dalen');
+  ok(V.VÆRREKKE.includes('snøpudder') && V.ÅRSTIDER.høst.vær.snøpudder > 0, 'lett snø kan velges i menyen og kommer av seg selv om høsten');
+  for (const [n, å] of Object.entries(V.ÅRSTIDER)) { const sum = Object.values(å.vær).reduce((a, b) => a + b, 0); ok(Math.abs(sum - 1) < 1e-9, n + ': sannsynlighetene for været er til sammen 1'); } }
 process.exit(feil ? 1 : 0);

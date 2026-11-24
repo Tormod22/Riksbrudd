@@ -14,18 +14,26 @@
   // (detaljIBakken): snø over snøgrensen der det ikke er for bratt, og høstfarger på det grønne. Over tregrensen blir grønt til grått
   // snaufjell (arealklassene er grove langt ute: Jotunheimen var grønn rett bak snøfjellene).
   // K = arealklassen, moh = høyden, opp = normalens z (1 = flatt), tg = tregrensen der (moh.), V = { snøgrense, høst }, sjø = havet (aldri snø)
-  function farge(K, moh, opp, tg, V, sjø) {
+  // (R19-1, førstesnøen) nord = normalens nordlige del, støy = fast mønster 0–1 (Snodekke.støy): et tynt lag fra lette snøbyger
+  // (V.pudder over V.pudderGrense) ligger flekkvis med samme regel som bakken nær (spill/snodekke.js) – mer mot nord, lite i skog
+  const SD = (typeof globalThis !== 'undefined' && globalThis.Snodekke) || (typeof require === 'function' ? require('./snodekke') : null);
+  function farge(K, moh, opp, tg, V, sjø, nord = 0, støy = .5) {
     let f = (FARGE[K] || FARGE[2]).slice();
     if (K === 1 || K === 2 || K === 5 || K === 6) { const t = glatt(tg + 150, tg + 500, moh) * (K === 1 ? 1 : .85); f = f.map((v, i) => v + (BERG[i] - v) * t); }
     if (V.høst) { const t = V.høst * klem((f[1] - Math.max(f[0], f[2])) * 7) * (K === 1 ? .45 : .75); f = [f[0] + (f[0] * .45 + .04) * t, f[1], f[2] - f[2] * .5 * t]; }
-    if (!sjø) { const s = glatt(V.snøgrense - 70, V.snøgrense + 70, moh) * glatt(.36, .62, opp) * (K === 1 ? .8 : 1); f = f.map((v, i) => v + (SNO[i] - v) * s); }
+    if (!sjø) {
+      // uten førstesnø: som før (full snø over snøgrensen)
+      const d = SD && V.pudder > 0 ? SD.dekke(V, moh, støy) : glatt(V.snøgrense - 70, V.snøgrense + 70, moh);
+      const flekk = SD && V.pudder > 0 ? SD.flekk(d, { nord, flat: glatt(.75, .97, opp), skog: K === 1 ? .8 : 0, stein: K === 0 ? 1 : 0, støy, fin: .5 }).dekning : d;
+      const s = flekk * glatt(.36, .62, opp) * (K === 1 ? .8 : 1); f = f.map((v, i) => v + (SNO[i] - v) * s); }
     return f;
   }
   if (typeof module !== 'undefined' && module.exports) { module.exports = { farge, FARGE }; return; }
 
   // været som ringen skal vise: det samme som bakken i utsnittet bruker (VAER_U settes av spill/vaer-visning.js)
-  const vær = () => ({ snøgrense: VAER_U.uSno.value ? VAER_U.uSnoGrense.value : 1e9, høst: VAER_U.uHost.value });
-  const værNøkkel = V => Math.round(V.snøgrense / 20) + '|' + Math.round(V.høst * 10);
+  const vær = () => ({ snøgrense: VAER_U.uSno.value ? VAER_U.uSnoGrense.value : 1e9, høst: VAER_U.uHost.value,
+    pudder: VAER_U.uPudder && VAER_U.uSno.value ? VAER_U.uPudder.value : 0, pudderGrense: VAER_U.uPudderGrense ? VAER_U.uPudderGrense.value : 0 });
+  const værNøkkel = V => Math.round(V.snøgrense / 20) + '|' + Math.round(V.høst * 10) + '|' + Math.round(V.pudder * 20) + '|' + Math.round(V.pudderGrense / 50);
   const JORD = 6371000;
   // Sjøen i ringen skal se ut som sjøen i utsnittet (feilretting 12. nov: havet hadde en synlig firkantet kant der utsnittet sluttet):
   // samme farge som kartets hav etter naturfarger() i index.html, himmelspeiling ved flat vinkel som i bølgeshaderen (spill/vind3d.js)
@@ -95,7 +103,7 @@
   function* fargeleggG(ring) {
     const { n, kl, moh, tg, sjø, ok } = ring.userData.punkt, V = vær(), kol = ring.geometry.attributes.color, nor = ring.geometry.attributes.normal;
     for (let k = 0; k < n * n; k++) { if ((k & 2047) === 0) yield; if (!ok[k]) continue;
-      const i = k % n, j = (k - i) / n, f = farge(kl[k], moh[k], nor.getZ(k), tg[k], V, !!sjø[k]), lys = .92 + .08 * Math.sin(i * 12.9898 + j * 78.233);
+      const i = k % n, j = (k - i) / n, f = farge(kl[k], moh[k], nor.getZ(k), tg[k], V, !!sjø[k], nor.getY(k), SD ? SD.støy(i * 37.1, j * 41.3, 60) : .5), lys = .92 + .08 * Math.sin(i * 12.9898 + j * 78.233);
       // sjøen har samme farge som sjøen i utsnittet (ingen firkantet kant), uten flekker
       if (sjø[k]) kol.setXYZ(k, HAVFARGE[0], HAVFARGE[1], HAVFARGE[2]); else kol.setXYZ(k, f[0] * lys, f[1] * lys, f[2] * lys); }
     kol.needsUpdate = true; ring.userData.vær = værNøkkel(V);

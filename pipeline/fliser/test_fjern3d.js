@@ -26,4 +26,11 @@ sjekk(engH[0] > engS[0] + .05 && engH[2] < engS[2] - .03 && engH[1] === engS[1],
 sjekk(F.farge(0, 600, 1, TG, HØST, false).every((v, i) => Math.abs(v - F.FARGE[0][i]) < .02), 'høst: snaufjellet endres ikke');
 // ukjent klasse gir ikke feil
 sjekk(F.farge(255, 500, 1, TG, SOMMER, false).length === 3, 'ukjent klasse får fargen til åpen mark');
+// (R19-1) førstesnøen: et tynt lag om høsten ned til 250 moh. – mer på nordsiden enn sørsiden, lite i skog, og uten lag som før
+{ const P = { snøgrense: 1350, høst: 1, pudder: .35, pudderGrense: 250 }, lys = f => (f[0] + f[1] + f[2]) / 3, snitt = (K, nord) => { let s = 0; for (let a = 0; a <= 1; a += .05) s += lys(F.farge(K, 700, .95, 1100, P, false, nord, a)); return s / 21; };
+  sjekk(snitt(2, .3) > snitt(2, -.3) + .03, `førstesnø: nordsiden lysere (${snitt(2, .3).toFixed(2)}) enn sørsiden (${snitt(2, -.3).toFixed(2)})`);
+  sjekk(snitt(1, .3) < snitt(2, .3) - .05, 'førstesnø: lite snø i skogen');
+  sjekk(lys(F.farge(2, 100, .95, 1100, P, false, .3, .5)) < .4, 'førstesnø: ingenting under grensen');
+  const uten = F.farge(2, 700, .95, 1100, { snøgrense: 1350, høst: 1 }, false), med0 = F.farge(2, 700, .95, 1100, { snøgrense: 1350, høst: 1, pudder: 0, pudderGrense: 250 }, false, .5, .9);
+  sjekk(uten.every((v, i) => Math.abs(v - med0[i]) < 1e-9), 'uten førstesnø: som før'); }
 console.log(feil ? `${feil} feil` : 'Alt i orden'); process.exit(feil ? 1 : 0);

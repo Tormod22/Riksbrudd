@@ -219,7 +219,9 @@ body.minikart3d:not(.kort) #kilde{ right:280px; }`;
     const r = k.fot ? 250 : Math.max(300, Math.min(k.u.S * .95, k.avst * 1.4)), cx = k.fot ? k.kx : k.mx, cy = k.fot ? k.ky : k.my;
     // snø i minikartet: over snøgrensen (hele vinteren) er bakken hvit i 3D, men kartbildet under er sommerkartet (12. nov: minikartet
     // var grønt og brunt midt på vinteren). Snøen legges oppå kartbildet når stedet midt i minikartet ligger over snøgrensen.
-    const VR = window.VAER, sg = VR && VR.snøgrense != null ? VR.snøgrense : 1e9, snø = R.snø(hoyde3d(cx, cy), sg);
+    // (R19-1, førstesnøen) også det tynne laget fra lette snøbyger – så mye som det i snitt dekker på flat, åpen mark (spill/snodekke.js)
+    const VR = window.VAER, sg = VR && VR.snøgrense != null ? VR.snøgrense : 1e9, mohM = hoyde3d(cx, cy);
+    const snø = Math.max(R.snø(mohM, sg), VR && VR.pudder > 0 && window.Snodekke ? Snodekke.flekk(Snodekke.dekke(VR, mohM), { flat: .7 }).dekning * .8 : 0);
     const nk = [Math.round(cx / (r / 60)), Math.round(cy / (r / 60)), Math.round(k.kurs * 2), Math.round(r), roter, R3_.nøkkel, D, Math.round(snø * 10)].join('|');
     if (nk === mini.nøkkel && nå - mini.sist < 250) return; mini.nøkkel = nk; mini.sist = nå; mini.r = r; mini.cx = cx; mini.cy = cy; mini.kurs = k.kurs;
     if (mc.width !== D * d) { mc.width = mc.height = D * d; }

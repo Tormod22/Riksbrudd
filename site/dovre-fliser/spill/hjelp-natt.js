@@ -197,6 +197,16 @@ window.HJELP_TILLEGG = [
 "I 3D"
 ],
 [
+"Gjester i leiren",
+"I en delt verden ser gjestene vertens leir: Leir-menyen, byggpanelet, Folk og Tropper viser vertens bygg, lager, diesel, strøm og folk, og byggene står i kartet og i 3D som hos verten. Gjestene kan bygge, sette folk på oppgaver og sette opp tropper – det gjestene kjøper, betales av vertens kasse, og loggen hos verten sier hvem som gjorde hva. En tropp en gjest setter opp, styres av den gjesten. Gjestens eget lagrede spill røres ikke; last siden på nytt etter «Koble fra» for å spille det igjen.",
+"Kom i gang"
+],
+[
+"Hva gjestene kan i leiren",
+"Verten bestemmer under ☰ → «Spill sammen» → «Gjester kan i leiren»: «Bare se» (gjestene ser leiren, men kan ikke endre noe), «Bygge og folk» (bygge, planlegge, flytte, oppgradere, reparere, kjøpe materialer, diesel og mat, og sette folk på oppgaver) eller «Alt» (også rive, selge, rekruttere og lage tropper). Valget huskes for verdenen.",
+"Kom i gang"
+],
+[
 "Folk som personer",
 "Trykk «Vis folkene» i Folk og så på et navn: du får et kort med ansikt, historie, lynne og hva personen ønsker seg. Får folk ønsket sitt oppfylt, blir de mer trofaste. ★ betyr spesialist.",
 "Leiren"
@@ -1300,6 +1310,11 @@ window.HJELP_TILLEGG = [
 "Sjøpanelet på telefon",
 "På telefon er sjøpanelet et lavt ark nederst med det viktigste på én rad. Trykk «Mer» for alt.",
 "Kom i gang"
+],
+[
+"Første snø",
+"Sent på høsten (og om våren) kan det komme en lett snøbyge («Lett snø» under Vær i ☰). Den legger et tynt snølag langt ned i dalen: snøen blir liggende flekkvis – mest i skyggesidene mot nord, på flate jorder og på stein, lite i tett skog og på bratte solsider – og gress og lyng stikker opp gjennom den. Laget smelter etter noen timer, fortere i regn. Du ser det i 3D, i kartet og i minikartet.",
+"Vær, lyd og bilde"
 ],
 [
 "Spol til neste hendelse",

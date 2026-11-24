@@ -5,6 +5,8 @@
 (function () {
   const S = Vaer.ny('sommer'), r3 = () => (typeof R3 !== 'undefined' ? R3 : null);
   let fall = null, sistT = 0;
+  // hvor mye av førstesnøens lag som blir liggende på greinene (Claudes forslag: litt – snøen drysser av)
+  const PUDDER_TRE = '0.55';
   const TRE_U = { uTreSno: { value: 0 }, uHostLov: { value: 0 }, uNaken: { value: 0 } };
 
   // Været blandes mykt over spilltiden (spill/vaer.js). 3D viser i tillegg en glattet kopi (vist) som tar igjen været på et par
@@ -25,6 +27,9 @@
     if (!vist || !i3d) vist = {}; for (const f of VIST) if (vist[f] == null) vist[f] = V[f];
     window.VAER = { ...V, regel: { ...V }, mål: S.årstid + '|' + S.vær + '|' + Math.round(V.sikt * 20) }; settVist();
     VAER_U.uSno.value = 1; VAER_U.uSnoGrense.value = V.snøgrense; VAER_U.uHost.value = V.høst;
+    // (R19-1) førstesnøen: det tynne laget fra lette snøbyger (spill/vaer.js pudder) – bakken, trærne, fjernterrenget og minikartet
+    if (VAER_U.uPudder) { VAER_U.uPudder.value = V.pudder || 0; VAER_U.uPudderGrense.value = V.pudderGrense || 0; }
+    snø2d(V);
     TRE_U.uHostLov.value = V.høst; TRE_U.uNaken.value = S.årstid === 'vinter' ? 1 : 0;
     if (!før || før.mål !== window.VAER.mål) {
       for (const s of ENHETER) s.siktSkitten = true;
@@ -33,6 +38,23 @@
     }
     knappÅ.textContent = 'Årstid: ' + V.årstidNavn; knappV.textContent = 'Vær: ' + (S.låst ? V.navn : 'automatisk (' + V.navn.toLowerCase() + ')');
     document.getElementById('sVaer').textContent = `${V.navnNå || V.navn}, ${V.temp} °C`; document.getElementById('sAar').textContent = V.årstidNavn.toLowerCase();
+  }
+
+  // ---------- 2D: snøen i kartflisene ----------
+  // (R19-1) kartflisene (kartflis.js) maler snøen inn med samme regel som 3D (spill/snodekke.js), etter høyden og helningen i flisen.
+  // VIS.snø går med hver flis til bakgrunnstråden. Når snøen er endret nok til å synes (grensen 50 m, laget 0,1), lages flisene på
+  // nytt – høyst hvert 20. sekund, så smeltingen ved 60× ikke lager alle flisene om og om igjen (Claudes forslag).
+  let snøNøkkel = null, snøSist = -1e9;
+  function snø2d(V) {
+    if (typeof VIS === 'undefined') return;
+    const ny = V.snøgrense < 2600 || V.pudder > .02 ? { grense: Math.round(V.snøgrense / 50) * 50, pudder: Math.round((V.pudder || 0) * 10) / 10, pg: Math.round((V.pudderGrense || 0) / 50) * 50 } : null;
+    const nøkkel = ny ? ny.grense + '|' + ny.pudder + '|' + ny.pg : '';
+    if (nøkkel === snøNøkkel) return; const nå = performance.now();
+    // små endringer (smelting, spoling) høyst hvert 20. sekund; store (ny byge, ny årstid, menyen) straks
+    const g = VIS.snø, stor = !g !== !ny || !g || Math.abs(g.pudder - ny.pudder) >= .15 || Math.abs(g.grense - ny.grense) >= 200 || Math.abs(g.pg - ny.pg) >= 100;
+    if (snøNøkkel !== null && nå - snøSist < 20000 && !stor) return;
+    const første = snøNøkkel === null; snøNøkkel = nøkkel; snøSist = nå; VIS.snø = ny;
+    if (!første && typeof FERDIG !== 'undefined') { FERDIG.clear(); skitten = true; }
   }
 
   // ---------- meny og statuslinje ----------
@@ -59,6 +81,7 @@
   // Grantrærne får snø på greinene over snøgrensen, bjørkene høstfarger (hver sin tone) eller står nakne om vinteren.
   // Buskene (einer, dvergbjørk) blir rødbrune om høsten og ligger som snødekte tuer med litt kvist om vinteren, og steinene får
   // snø oppå (12. nov: buskene lå igjen som mørkegrønne flekker på snøen). slag: 'gran', 'løv', 'busk' eller 'stein'.
+  // (R19-1) førstesnøen på trærne: lite snø på greinene (tPud = laget × PUDDER_TRE, Claudes forslag), steinene og buskene litt mer
   function treVær(m, slag) {
     const før = m.material.onBeforeCompile;
     const farge = {
@@ -72,19 +95,20 @@
         #endif`,
       busk: `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.27, 0.1) * (0.7 + 0.5 * vTFro), uHostLov * step(0.45, vTFro) * 0.6);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.34, 0.31, 0.28), uNaken * 0.7);
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.91, 0.93, 0.96), smoothstep(uSnoGrense - 60.0, uSnoGrense + 60.0, vTMoh) * smoothstep(-0.35, 0.35, vTOpp) * 0.93);`,
-      stein: `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.91, 0.93, 0.96), smoothstep(uSnoGrense - 60.0, uSnoGrense + 60.0, vTMoh) * smoothstep(0.05, 0.6, vTOpp) * 0.92);`,
-      gran: `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.95), tSno * 0.72);`,
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.91, 0.93, 0.96), max(smoothstep(uSnoGrense - 60.0, uSnoGrense + 60.0, vTMoh), tPud * 1.3 * step(0.4, vTFro)) * smoothstep(-0.35, 0.35, vTOpp) * 0.93);`,
+      stein: `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.91, 0.93, 0.96), max(smoothstep(uSnoGrense - 60.0, uSnoGrense + 60.0, vTMoh), min(1.0, tPud * 2.2) * step(0.3, vTFro)) * smoothstep(0.05, 0.6, vTOpp) * 0.92);`,
+      gran: `diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.95), max(tSno * 0.72, tPud * smoothstep(0.2, 0.7, vTOpp) * (0.6 + 0.4 * vTFro)));`,
     }[slag];
-    m.material.onBeforeCompile = (sh, r) => { if (før) før(sh, r); Object.assign(sh.uniforms, TRE_U, { uSnoGrense: VAER_U.uSnoGrense, uH0: VAER_U.uH0 });
+    m.material.onBeforeCompile = (sh, r) => { if (før) før(sh, r); Object.assign(sh.uniforms, TRE_U, { uSnoGrense: VAER_U.uSnoGrense, uH0: VAER_U.uH0, uPudder: VAER_U.uPudder, uPudderGrense: VAER_U.uPudderGrense });
       sh.vertexShader = 'uniform float uH0;\nvarying float vTOpp;\nvarying float vTMoh;\nvarying float vTFro;\n' + sh.vertexShader.replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
         vTOpp = objectNormal.z; vTMoh = instanceMatrix[3].z + uH0; vTFro = fract(sin(instanceMatrix[3].x * 12.9898 + instanceMatrix[3].y * 78.233) * 43758.5453);`);
-      sh.fragmentShader = 'uniform float uSnoGrense;\nuniform float uHostLov;\nuniform float uNaken;\nvarying float vTOpp;\nvarying float vTMoh;\nvarying float vTFro;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      sh.fragmentShader = 'uniform float uSnoGrense;\nuniform float uPudder;\nuniform float uPudderGrense;\nuniform float uHostLov;\nuniform float uNaken;\nvarying float vTOpp;\nvarying float vTMoh;\nvarying float vTFro;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
         float tSno = smoothstep(uSnoGrense - 60.0, uSnoGrense + 60.0, vTMoh) * smoothstep(-0.1, 0.6, vTOpp);
+        float tPud = uPudder * ${PUDDER_TRE} * smoothstep(uPudderGrense - 60.0, uPudderGrense + 60.0, vTMoh);
         ${farge}`);
     };
     // samme funksjonstekst for alle slagene: egen nøkkel, ellers deler de program i three.js-hurtigbufferen
-    m.material.customProgramCacheKey = () => 'vær|' + slag + '|' + !!før;
+    m.material.customProgramCacheKey = () => 'vær2|' + slag + '|' + !!før;
     m.material.needsUpdate = true;
   }
   KROKER.sett3d.push((u, R) => {

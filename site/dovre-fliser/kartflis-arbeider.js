@@ -1,7 +1,7 @@
 'use strict';
 // Bakgrunnstråd for kartflisene: samme kode som siden (kartflis.js), men komponeringen blokkerer ikke draing og zooming.
 // Siden sender 'init' (kartfilene) og så 'flis' (lag en flis) eller 'hent' (hent dataene på forhånd); svaret er et ImageBitmap.
-importScripts('/dovre-fliser/lib/pmtiles-4.3.0.js', '/dovre-fliser/spill/trygtegn.js?v=ee76ed9008', '/dovre-fliser/spill/riksgrense.js?v=7a24da0c27', '/dovre-fliser/spill/parkering.js?v=7b8d0b5227', '/dovre-fliser/spill/gagate.js?v=a462959446', '/dovre-fliser/kartflis.js?v=65c4d067c4');
+importScripts('/dovre-fliser/lib/pmtiles-4.3.0.js', '/dovre-fliser/spill/trygtegn.js?v=ee76ed9008', '/dovre-fliser/spill/riksgrense.js?v=7a24da0c27', '/dovre-fliser/spill/snodekke.js?v=46324f484e', '/dovre-fliser/spill/parkering.js?v=7b8d0b5227', '/dovre-fliser/spill/gagate.js?v=a462959446', '/dovre-fliser/kartflis.js?v=b4596a8aec');
 let byte = 0, req = 0, kilde = '';
 KF.vedBytes = (n, k) => { byte += n; req++; if (k) kilde = k; };
 setInterval(() => { if (req) { postMessage({ type: 'bytes', n: byte, req, kilde }); byte = 0; req = 0; } }, 300);   // telleren på siden
