@@ -197,6 +197,16 @@ window.HJELP_TILLEGG = [
 "I 3D"
 ],
 [
+"Gjester i leiren",
+"I en delt verden ser gjestene vertens leir: Leir-menyen, byggpanelet, Folk og Tropper viser vertens bygg, lager, diesel, strøm og folk, og byggene står i kartet og i 3D som hos verten. Gjestene kan bygge, sette folk på oppgaver og sette opp tropper – det gjestene kjøper, betales av vertens kasse, og loggen hos verten sier hvem som gjorde hva. En tropp en gjest setter opp, styres av den gjesten. Gjestens eget lagrede spill røres ikke; last siden på nytt etter «Koble fra» for å spille det igjen.",
+"Kom i gang"
+],
+[
+"Hva gjestene kan i leiren",
+"Verten bestemmer under ☰ → «Spill sammen» → «Gjester kan i leiren»: «Bare se» (gjestene ser leiren, men kan ikke endre noe), «Bygge og folk» (bygge, planlegge, flytte, oppgradere, reparere, kjøpe materialer, diesel og mat, og sette folk på oppgaver) eller «Alt» (også rive, selge, rekruttere og lage tropper). Valget huskes for verdenen.",
+"Kom i gang"
+],
+[
 "Folk som personer",
 "Trykk «Vis folkene» i Folk og så på et navn: du får et kort med ansikt, historie, lynne og hva personen ønsker seg. Får folk ønsket sitt oppfylt, blir de mer trofaste. ★ betyr spesialist.",
 "Leiren"
@@ -925,6 +935,16 @@ window.HJELP_TILLEGG = [
 "Kjøretøy, strøm og samband",
 "Garasje, verkstedhall og vaskeplass reparerer egne kjøretøy som står inntil, og fyllestasjonen fyller tanken med leirens diesel. På parkeringsplassen tar kjøretøyene halv skade. Generatorhuset gir 30 kW på diesel, og transformatoren dobler strømmen fra nettet mens det virker. Kommandosenteret gir feltradioene 10 km lenger rekkevidde, og satellittterminalen gjør at åser og fjell ikke stopper dem. Dronehangaren holder en vaktdrone over leiren (oppskytingsrampen gir én til). Kontor og møtetelt gjør alt arbeid litt raskere, og arresten vokter fangene.",
 "Leiren"
+],
+[
+"Lysstriper og byger",
+"Når det er delvis skyet og sola står lavt, kan du se solstråler gjennom hull i skyene ned mot dalen – tydeligst når du ser mot sola. I skyet vær driver regn- og snøbyger som grå eller hvite slør over landskapet med vinden. Driver en byge over der du står, regner eller snør det rundt deg en stund, sola blir borte og sikten blir kortere. Høyt til fjells faller bygene som snø.",
+"Vær, lyd og bilde"
+],
+[
+"Blå dis i det fjerne",
+"Åser og fjell langt unna blir blåere og lysere jo lenger unna de ligger, så åsryggene står i lag bak hverandre. Det nære terrenget er klart. I grått vær og om natta er disen svakere; i tåke tar tåka over.",
+"Vær, lyd og bilde"
 ],
 [
 "Lut i husene",
