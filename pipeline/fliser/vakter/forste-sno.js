@@ -29,7 +29,7 @@ module.exports = { navn: 'første snø (lett snøbyge, flekkvis snø i 2D og 3D)
       if (typeof R3 !== 'undefined' && R3 && R3.mesh && R3.renderer && på3d) {
         const r = R3.renderer, gl = r.getContext(), W = 64, H = 40, mål = new THREE.WebGLRenderTarget(W, H), px = new Uint8Array(W * H * 4);
         const middel = () => { r.setRenderTarget(mål); r.render(R3.scene, R3.cam); r.readRenderTargetPixels(mål, 0, 0, W, H, px); r.setRenderTarget(null); let s = 0; for (let k = 0; k < px.length; k += 4) s += px[k] + px[k + 1] + px[k + 2]; return s / (W * H * 3); };
-        S.pudder = 0; VaerSpill.straks(); const uten = middel(); S.pudder = .6; S.pg = -500; VaerSpill.straks(); const med = middel();
+        S.pudder = 0; VaerSpill.straks(); const uten = middel(); S.pudder = 1; S.pg = -500; VaerSpill.straks(); const med = middel();
         mål.dispose(); ut.lys3d = +(med - uten).toFixed(1); ut.gl = gl.getError();
         const prog = (r.info.programs || []).filter(p => p.diagnostics && !p.diagnostics.runnable).length;
         krev(prog === 0 && ut.gl === 0, '3D: skyggekoden kompilerer ikke (' + prog + ' programmer, GL-feil ' + ut.gl + ')');
