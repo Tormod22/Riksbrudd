@@ -13,6 +13,9 @@ Alle tall er Claudes forslag.
   (infra.json fra INFRA_TAG-releasen, hentes i Actions).
 - Regler i sti_egenskaper/merket_rute/tettsted_maske/bort_i_tettsted. Test: python3 pipeline/fliser/test_sti.py (også i Actions).
 - .github/workflows/utveg.yml kjører nå også på push til claude/r19-stier.
+- Release: kart-utveg-87430d7c8d6b (bygget 24. nov, ca. 37 min i Actions), tatt i bruk med bruk_utveg.py. 401 399 stier, 33 058 merket.
+  Fila ble 76,6 MB (før 54,9 MB, +21,7 MB / +40 %, 271 696 fliser). Spillet henter bare flisene som trengs (pmtiles i biter), så det
+  merkes bare der det finnes stier: en z11-flis med stier er større enn før.
 
 ## 2D – kartflis.js tegnStier (fra z13, STI_Z)
 Merkede røde stiplede med lys kant, umerkede mørkebrune stiplede, traktorveger lange streker, alpine (s ≥ 4) prikket.
@@ -30,6 +33,10 @@ Merkede røde stiplede med lys kant, umerkede mørkebrune stiplede, traktorveger
   hver 3. m på oppsiden av stien, vaieren 1 m over bakken med litt nedheng.
 - Gange: Sti3d.fart(u, x, y) – 1,15 på sti, 1,2 på traktorveg (gange.js ganger faktoren inn sammen med skader/last).
 - Test: node pipeline/fliser/test_sti3d.js. Vakt: pipeline/fliser/vakter/stier.js (prøvd med feil lagt inn med vilje).
+
+## Bilder (scratchpad, ikke i git)
+Dovrefjell nord for Dombås (200157 6927719: merket sti over tregrensen, varder og steiner med T), skog ved Dombås (195224 6895644:
+stien gjennom bjørkeskogen, T på tre) og Romsdalen på /norge (121009 6948455: sac_scale 3–4, vaier langs eggen).
 
 ## Ikke gjort
 - Gress og blomster rundt kameraet (gress3d/vegetasjon3d) vet ikke om stien – det kan stå gress i stien når du går.
