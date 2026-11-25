@@ -136,6 +136,9 @@ body.kort #siktknapp{ right:calc(152px + env(safe-area-inset-right,0px)); bottom
   api.smell = (X, Y) => { const Q = r3(); if (!Q || !Q.ut) return null; return smell({ x: X - Q.ut.cx, y: Y - Q.ut.cy, ut: Q.ut }); };
   function stegGranater(dt) { const Q = r3();
     for (let i = flyr.length - 1; i >= 0; i--) { const g = flyr[i];
+      // (25. nov) et nytt utsnitt mens granaten flyr: flytt den over i det nye (før forsvant den uten å gå av). Bare uten 3D tas den bort.
+      if (Q && Q.ut && g.ut && Q.ut !== g.ut) { const a = g.ut, b = Q.ut; g.x += a.cx - b.cx; g.y += a.cy - b.cy; g.z += ((a.h0 || 0) - (b.h0 || 0)) * (Q.EX || 1); g.ut = b;
+        if (g.mesh && Q.scene && g.mesh.parent !== Q.scene) { if (g.mesh.parent) g.mesh.parent.remove(g.mesh); Q.scene.add(g.mesh); } }
       if (!Q || Q.ut !== g.ut) { if (g.mesh && g.mesh.parent) g.mesh.parent.remove(g.mesh); flyr.splice(i, 1); continue; }
       const ferdig = Granat.steg(g, dt, bakke); if (g.mesh) g.mesh.position.set(g.x, g.y, g.z);
       if (ferdig) { if (g.mesh && g.mesh.parent) g.mesh.parent.remove(g.mesh); flyr.splice(i, 1); smell(g); } } }

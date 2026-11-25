@@ -59,6 +59,10 @@ module.exports = {
           ok(ut.kast.g && ut.kast.flyr === 1 && ut.kast.varsel && ut.kast.bue && ut.kast.brukt === 1, 'fiendens kast: ' + JSON.stringify(ut.kast));
           for (let i = 0; i < 60 && BK.flyr().some(q => q.fiende); i++) await vent(100);
           ut.smell = { igjen: BK.flyr().filter(q => q.fiende).length, hp: Math.round(K.hp), smell: BK.smellTall() - sm0, siste: BK.sisteSmell() }; ok(ut.smell.igjen === 0 && ut.smell.smell === 1 && K.hp < 100, 'fiendens granat gikk ikke av eller skadet deg ikke: ' + JSON.stringify(ut.smell)); K.hp = 100;
+          // (25. nov) nytt utsnitt mens granaten flyr: den flyttes over og går av (før forsvant den uten smell – ustabil vakt på telefon)
+          { const sm1 = BK.smellTall(); e.sistGranat = -99; e.granater = Math.max(1, e.granater || 0); const g2 = BK.fiendeKast(e), u0 = R.ut, u1 = Object.assign(Object.create(Object.getPrototypeOf(u0)), u0, { cx: u0.cx + 100 });
+            if (g2) { R.ut = u1; R.bane.x -= 100; for (let i = 0; i < 60 && BK.flyr().some(q => q.fiende); i++) await vent(100); R.ut = u0; R.bane.x += 100; }
+            ut.nyttUt = { g: !!g2, smell: BK.smellTall() - sm1, flyttet: !!g2 && g2.ut === u1 }; ok(ut.nyttUt.g && ut.nyttUt.smell === 1 && ut.nyttUt.flyttet, 'granaten forsvant da utsnittet ble byttet: ' + JSON.stringify(ut.nyttUt)); K.hp = 100; }
           // dekning: prøvevegg 2 m foran deg, smellet 8 m foran (bak veggen) og 8 m bak deg
           const lx = R.bane.x + fx * 2, ly = R.bane.y + fy * 2, P = [[lx - rx * 4, ly - ry * 4], [lx + rx * 4, ly + ry * 4], [lx + rx * 4 + fx * .4, ly + ry * 4 + fy * .4], [lx - rx * 4 + fx * .4, ly - ry * 4 + fy * .4]];
           const o = { P, bb: [Math.min(...P.map(p => p[0])), Math.min(...P.map(p => p[1])), Math.max(...P.map(p => p[0])), Math.max(...P.map(p => p[1]))] };
