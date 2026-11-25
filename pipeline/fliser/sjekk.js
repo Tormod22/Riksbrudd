@@ -1479,9 +1479,12 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     const nt = await pg.evaluate(async () => {
       const S = VaerSpill.S, t0 = tid, ramme = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       Vaer.settÅrstid(S, 'vinter', tid); Vaer.låsVær(S, 'klart'); tid = 17 * TIME; VaerSpill.straks(); R3.lysTid = null; await ramme(); await ramme();
+      // (25. nov) i ro tegner 3D bare fire bilder i sekundet – to rammer var ikke alltid nok på telefon (stjerner 0, himmellys 0,69): vent til natta er kommet
+      for (let i = 0; i < 40 && !(NATT.mørke > .5 && NATT.stjerner > 0); i++) { R3.lysTid = null; await ramme(); }
       NATT.prøvShadere(R3);
       const H = NATT.himmel, natt = { stj: NATT.stjerner, synlig: !!(H && H.stjerner.visible && H.stjerner.parent), fase: NATT.måne && NATT.måne.fase, mørke: NATT.mørke, himmel: R3.himmelLys.intensity };
       tid = 7 * TIME; VaerSpill.straks(); R3.lysTid = null; await ramme(); await ramme();
+      for (let i = 0; i < 40 && NATT.stjerner > 0; i++) { R3.lysTid = null; await ramme(); }
       const dag = { stj: NATT.stjerner, synlig: H.stjerner.visible };
       Vaer.settÅrstid(S, 'sommer', tid); Vaer.låsVær(S, 'auto'); S.vær = 'klart'; S.til = tid; let maks = 0, før = null;
       for (let i = 0; i < 120; i++) { tid += 1; Vaer.steg(S, tid, () => .8); VaerSpill.oppdater(); const v = VAER.regel;
