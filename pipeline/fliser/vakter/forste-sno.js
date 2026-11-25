@@ -36,6 +36,7 @@ module.exports = { navn: 'første snø (lett snøbyge, flekkvis snø i 2D og 3D)
         const tåke = R3.scene.fog; R3.scene.fog = null;
         // andre vakter kan ha latt kameraets lag (Mål ytelse) eller bakkens synlighet stå: sørg for at bakken faktisk tegnes
         const lag0 = R3.cam.layers.mask, synlig0 = R3.mesh.visible; R3.cam.layers.enableAll(); R3.mesh.visible = true;
+        const nf0 = [R3.cam.near, R3.cam.far, R3.cam.fov]; R3.cam.near = 1; R3.cam.far = 60000; R3.cam.fov = 50; R3.cam.updateProjectionMatrix();
         // fast kamera: nesten rett ned på hele utsnittet fra 2,6 km, midt på dagen – ikke det kameraet tilfeldigvis så på (tett skog skal ha lite snø)
         const cam = R3.cam, p0 = cam.position.clone(), q0 = cam.quaternion.clone(), t0 = tid; tid = Math.floor(tid / 1440) * 1440 + 6 * 60;
         if (window.lys3d) try { lys3d(true); } catch (e) { /* ok */ }
@@ -46,14 +47,14 @@ module.exports = { navn: 'første snø (lett snøbyge, flekkvis snø i 2D og 3D)
           let h = 0; for (let k = 0; k < pxMed.length; k += 4) if (pxMed[k] + pxMed[k + 1] + pxMed[k + 2] > pxUten[k] + pxUten[k + 1] + pxUten[k + 2] + 90) h++;
           if (h >= beste) { beste = h; hvite = h; uten = u0; med = m0; ut.høyde3d = hh; } }
         R3.scene.fog = tåke; for (const o of skjult) o.visible = true;
-        cam.position.copy(p0); cam.quaternion.copy(q0); cam.updateMatrixWorld(); tid = t0; R3.cam.layers.mask = lag0; R3.mesh.visible = synlig0;
+        cam.position.copy(p0); cam.quaternion.copy(q0); cam.updateMatrixWorld(); tid = t0; R3.cam.layers.mask = lag0; R3.mesh.visible = synlig0; [R3.cam.near, R3.cam.far, R3.cam.fov] = nf0; R3.cam.updateProjectionMatrix();
         // (25. nov) i tett skog skal det være lite snø, så snittet for hele bildet sier lite: tell punkter som blir tydelig lysere
         // (hvite er talt over, for den høyden som viste mest)
         ut.hvit3d = +(hvite / (W * H)).toFixed(3);
         mål.dispose(); ut.lys3d = +(med - uten).toFixed(1); ut.gl = gl.getError();
         const prog = (r.info.programs || []).filter(p => p.diagnostics && !p.diagnostics.runnable).length;
         krev(prog === 0 && ut.gl === 0, '3D: skyggekoden kompilerer ikke (' + prog + ' programmer, GL-feil ' + ut.gl + ')');
-        krev(hvite >= 8 || ut.lys3d > 1, '3D: førstesnøen synes ikke i bakken (snitt ' + ut.lys3d + ', andel tydelig lysere ' + ut.hvit3d + ', lag ' + lag0 + ', synlig ' + synlig0 + ', uSno ' + VAER_U.uSno.value + ')');
+        krev(hvite >= 8 || ut.lys3d > 1, '3D: førstesnøen synes ikke i bakken (snitt ' + ut.lys3d + ', andel tydelig lysere ' + ut.hvit3d + ', lag ' + lag0 + ', synlig ' + synlig0 + ', uSno ' + VAER_U.uSno.value + ', nær/fjern ' + nf0.join('/') + ', går ' + !!R3.fot + ')');
       } else ut.lys3d = 'ikke i 3D';
     } catch (e) { ut.feil.push('unntak: ' + e.message); } finally { tilbake(); }
     return ut;
