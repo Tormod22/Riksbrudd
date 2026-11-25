@@ -29,7 +29,12 @@ module.exports = { navn: 'første snø (lett snøbyge, flekkvis snø i 2D og 3D)
       if (typeof R3 !== 'undefined' && R3 && R3.mesh && R3.renderer && på3d) {
         const r = R3.renderer, gl = r.getContext(), W = 64, H = 40, mål = new THREE.WebGLRenderTarget(W, H), px = new Uint8Array(W * H * 4);
         const middel = () => { r.setRenderTarget(mål); r.render(R3.scene, R3.cam); r.readRenderTargetPixels(mål, 0, 0, W, H, px); r.setRenderTarget(null); let s = 0; for (let k = 0; k < px.length; k += 4) s += px[k] + px[k + 1] + px[k + 2]; return s / (W * H * 3); };
+        // bare bakken måles: alt annet (himmel, skyer, byger og dis fra R19-2, trær, hus) skjules mens det måles – ellers kunne en
+        // byge eller himmelen foran kameraet gjøre forskjellen for liten (full kjøring 25. nov: 0,8)
+        const skjult = []; R3.scene.traverse(o => { if (o !== R3.scene && o !== R3.mesh && !o.isLight && o.visible && !(R3.mesh && o.parent === R3.mesh)) { let p = o.parent, iMesh = false; while (p) { if (p === R3.mesh) iMesh = true; p = p.parent; } if (!iMesh) { o.visible = false; skjult.push(o); } } });
+        const tåke = R3.scene.fog; R3.scene.fog = null;
         S.pudder = 0; VaerSpill.straks(); const uten = middel(); S.pudder = .6; S.pg = -500; VaerSpill.straks(); const med = middel();
+        R3.scene.fog = tåke; for (const o of skjult) o.visible = true;
         mål.dispose(); ut.lys3d = +(med - uten).toFixed(1); ut.gl = gl.getError();
         const prog = (r.info.programs || []).filter(p => p.diagnostics && !p.diagnostics.runnable).length;
         krev(prog === 0 && ut.gl === 0, '3D: skyggekoden kompilerer ikke (' + prog + ' programmer, GL-feil ' + ut.gl + ')');
