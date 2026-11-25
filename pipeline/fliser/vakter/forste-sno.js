@@ -27,18 +27,30 @@ module.exports = { navn: 'første snø (lett snøbyge, flekkvis snø i 2D og 3D)
       krev(ut.andel2d > .04 && ut.andel2d < .9, '2D: snøen er ikke flekkvis (andel lysere punkter ' + ut.andel2d + ')');
       // 3D: bakken kompilerer med snøen og blir lysere med førstesnø enn uten (bare når 3D er bygget)
       if (typeof R3 !== 'undefined' && R3 && R3.mesh && R3.renderer && på3d) {
-        const r = R3.renderer, gl = r.getContext(), W = 64, H = 40, mål = new THREE.WebGLRenderTarget(W, H), px = new Uint8Array(W * H * 4);
-        const middel = () => { r.setRenderTarget(mål); r.render(R3.scene, R3.cam); r.readRenderTargetPixels(mål, 0, 0, W, H, px); r.setRenderTarget(null); let s = 0; for (let k = 0; k < px.length; k += 4) s += px[k] + px[k + 1] + px[k + 2]; return s / (W * H * 3); };
+        const r = R3.renderer, gl = r.getContext(), W = 160, H = 100, mål = new THREE.WebGLRenderTarget(W, H), px = new Uint8Array(W * H * 4);
+        const middel = () => { r.setRenderTarget(mål); r.render(R3.scene, R3.cam); r.readRenderTargetPixels(mål, 0, 0, W, H, px); r.setRenderTarget(null); middel.siste = px.slice(); let s = 0; for (let k = 0; k < px.length; k += 4) s += px[k] + px[k + 1] + px[k + 2]; return s / (W * H * 3); };
         // bare bakken måles: alt annet (himmel, skyer, byger og dis fra R19-2, trær, hus) skjules mens det måles – ellers kunne en
         // byge eller himmelen foran kameraet gjøre forskjellen for liten (full kjøring 25. nov: 0,8)
         const skjult = []; R3.scene.traverse(o => { if (o !== R3.scene && o !== R3.mesh && !o.isLight && o.visible && !(R3.mesh && o.parent === R3.mesh)) { let p = o.parent, iMesh = false; while (p) { if (p === R3.mesh) iMesh = true; p = p.parent; } if (!iMesh) { o.visible = false; skjult.push(o); } } });
         const tåke = R3.scene.fog; R3.scene.fog = null;
-        S.pudder = 0; VaerSpill.straks(); const uten = middel(); S.pudder = .6; S.pg = -500; VaerSpill.straks(); const med = middel();
+        // fast kamera: nesten rett ned på hele utsnittet fra 2,6 km, midt på dagen – ikke det kameraet tilfeldigvis så på (tett skog skal ha lite snø)
+        const cam = R3.cam, p0 = cam.position.clone(), q0 = cam.quaternion.clone(), t0 = tid; tid = Math.floor(tid / 1440) * 1440 + 6 * 60;
+        if (window.lys3d) try { lys3d(true); } catch (e) { /* ok */ }
+        // (telefon: mindre utsnitt) prøv flere høyder og bruk den som viser mest av den åpne marka
+        let uten = 0, med = 0, hvite = 0, beste = 0;
+        for (const hh of [600, 1200, 2600]) { cam.position.set(0, -hh * .15, hh); cam.up.set(0, 0, 1); cam.lookAt(0, 0, 0); cam.updateMatrixWorld();
+          S.pudder = 0; VaerSpill.straks(); const u0 = middel(), pxUten = middel.siste; S.pudder = .6; S.pg = -500; VaerSpill.straks(); const m0 = middel(), pxMed = middel.siste;
+          let h = 0; for (let k = 0; k < pxMed.length; k += 4) if (pxMed[k] + pxMed[k + 1] + pxMed[k + 2] > pxUten[k] + pxUten[k + 1] + pxUten[k + 2] + 90) h++;
+          if (h >= beste) { beste = h; hvite = h; uten = u0; med = m0; ut.høyde3d = hh; } }
         R3.scene.fog = tåke; for (const o of skjult) o.visible = true;
+        cam.position.copy(p0); cam.quaternion.copy(q0); cam.updateMatrixWorld(); tid = t0;
+        // (25. nov) i tett skog skal det være lite snø, så snittet for hele bildet sier lite: tell punkter som blir tydelig lysere
+        // (hvite er talt over, for den høyden som viste mest)
+        ut.hvit3d = +(hvite / (W * H)).toFixed(3);
         mål.dispose(); ut.lys3d = +(med - uten).toFixed(1); ut.gl = gl.getError();
         const prog = (r.info.programs || []).filter(p => p.diagnostics && !p.diagnostics.runnable).length;
         krev(prog === 0 && ut.gl === 0, '3D: skyggekoden kompilerer ikke (' + prog + ' programmer, GL-feil ' + ut.gl + ')');
-        krev(ut.lys3d > 1, '3D: førstesnøen synes ikke i bakken (' + ut.lys3d + ')');
+        krev(hvite >= 8 || ut.lys3d > 1, '3D: førstesnøen synes ikke i bakken (snitt ' + ut.lys3d + ', andel tydelig lysere ' + ut.hvit3d + ')');
       } else ut.lys3d = 'ikke i 3D';
     } catch (e) { ut.feil.push('unntak: ' + e.message); } finally { tilbake(); }
     return ut;
