@@ -40,10 +40,12 @@ module.exports = { navn: 'første snø (lett snøbyge, flekkvis snø i 2D og 3D)
         // fast kamera: nesten rett ned på hele utsnittet fra 2,6 km, midt på dagen – ikke det kameraet tilfeldigvis så på (tett skog skal ha lite snø)
         const cam = R3.cam, p0 = cam.position.clone(), q0 = cam.quaternion.clone(), t0 = tid; tid = Math.floor(tid / 1440) * 1440 + 6 * 60;
         if (window.lys3d) try { lys3d(true); } catch (e) { /* ok */ }
+        // vanlig snø (over snøgrensen) skrus av mens det måles: står utsnittet høyt til fjells (Snøhetta i full kjøring, 25. nov), er alt
+        // hvitt fra før, og førstesnøen gjør ingen forskjell
         // (telefon: mindre utsnitt) prøv flere høyder og bruk den som viser mest av den åpne marka
         let uten = 0, med = 0, hvite = 0, beste = 0;
         for (const hh of [600, 1200, 2600]) { cam.position.set(0, -hh * .15, hh); cam.up.set(0, 0, 1); cam.lookAt(0, 0, 0); cam.updateMatrixWorld();
-          S.pudder = 0; VaerSpill.straks(); const u0 = middel(), pxUten = middel.siste; S.pudder = .6; S.pg = -500; VaerSpill.straks(); const m0 = middel(), pxMed = middel.siste;
+          S.pudder = 0; VaerSpill.straks(); VAER_U.uSnoGrense.value = 9000; const u0 = middel(), pxUten = middel.siste; S.pudder = .6; S.pg = -500; VaerSpill.straks(); VAER_U.uSnoGrense.value = 9000; const m0 = middel(), pxMed = middel.siste;
           let h = 0; for (let k = 0; k < pxMed.length; k += 4) if (pxMed[k] + pxMed[k + 1] + pxMed[k + 2] > pxUten[k] + pxUten[k + 1] + pxUten[k + 2] + 90) h++;
           if (h >= beste) { beste = h; hvite = h; uten = u0; med = m0; ut.høyde3d = hh; } }
         R3.scene.fog = tåke; for (const o of skjult) o.visible = true;
@@ -54,7 +56,7 @@ module.exports = { navn: 'første snø (lett snøbyge, flekkvis snø i 2D og 3D)
         mål.dispose(); ut.lys3d = +(med - uten).toFixed(1); ut.gl = gl.getError();
         const prog = (r.info.programs || []).filter(p => p.diagnostics && !p.diagnostics.runnable).length;
         krev(prog === 0 && ut.gl === 0, '3D: skyggekoden kompilerer ikke (' + prog + ' programmer, GL-feil ' + ut.gl + ')');
-        krev(hvite >= 8 || ut.lys3d > 1, '3D: førstesnøen synes ikke i bakken (snitt ' + ut.lys3d + ', andel tydelig lysere ' + ut.hvit3d + ', lag ' + lag0 + ', synlig ' + synlig0 + ', uSno ' + VAER_U.uSno.value + ', nær/fjern ' + nf0.join('/') + ', går ' + !!R3.fot + ')');
+        krev(hvite >= 8 || ut.lys3d > 1, '3D: førstesnøen synes ikke i bakken (snitt ' + ut.lys3d + ', andel tydelig lysere ' + ut.hvit3d + ', lag ' + lag0 + ', synlig ' + synlig0 + ', uSno ' + VAER_U.uSno.value + ', nær/fjern ' + nf0.join('/') + ', går ' + !!R3.fot + ', utsnitt ' + Math.round(R3.ut.cx) + ',' + Math.round(R3.ut.cy) + ' S ' + Math.round(R3.ut.S) + ', bakke ' + R3.bakkeMerke + ')');
       } else ut.lys3d = 'ikke i 3D';
     } catch (e) { ut.feil.push('unntak: ' + e.message); } finally { tilbake(); }
     return ut;
