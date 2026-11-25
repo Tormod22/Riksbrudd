@@ -337,7 +337,7 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   const stiSlutt = s => (s.sti && s.sti.length ? s.sti[s.sti.length - 1] : null);
   const motVår = s => { const e = stiSlutt(s); return !e || (s.motMål && Math.hypot(e[0] - s.motMål.x, e[1] - s.motMål.y) < 25) || (s.forsvar && Math.hypot(e[0] - s.forsvar.x, e[1] - s.forsvar.y) < 25); };
   let motMeldt = false;
-  // inne i leiren: nær midten, eller så nær et bygg at de skader det (HERJER i leir-visning.js). (Kjøring 7: Kystalliansens lag
+  // inne i leiren: nær midten, eller så nær et bygg at de skader det (HERJER i leir-visning.js). (Kjøring 7: Ravnsunds lag
   // raserte leiren på dag 6 mens lagene sto stille – derfor gjelder det alle fiender i leiren, ikke bare røverbølgen.)
   const herjere = () => { const L = leir(); return L ? ENHETER.filter(e => e.side !== 'blå' && levende(e) && Array.isArray(e.menn) && !e.trekker && !e.flykter && !Terreng.slattUt(e.menn) && (Math.hypot(e.x - L.x, e.y - L.y) <= R.mot.inne || (window.HERJER && HERJER.has(e)))) : []; };
   let selvVakt = false;

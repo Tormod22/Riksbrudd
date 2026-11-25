@@ -10,7 +10,7 @@
   // [gruppe, nøkkel, tekst] – nøkkelen sier hvordan eksemplet tegnes (se tegnEksempel)
   const RADER = [
     ['Hvem', 'eget', 'Eget: liggende rektangel i blått'],
-    ['Hvem', 'fiende', 'Fiende: rute på spissen – rød (Kystalliansen) eller grønn (Folkefronten)'],
+    ['Hvem', 'fiende', 'Fiende: rute på spissen – rød (Ravnsund) eller grønn (Mosevakt)'],
     ['Hvem', 'nøytral', 'Nøytralt eller ingen eier: kvadrat med runde hjørner'],
     ['Hva', 'lag', 'Lag med soldater (kryss inni)'],
     ['Hva', 'k-lastebil', 'Lastebil (kolonne) – tallet er antall biler'],

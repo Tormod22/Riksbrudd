@@ -158,9 +158,9 @@ const k0 = (F, L, o = {}) => ({ B: F0.behov(F, L, { årstid: 'sommer', ...o }), 
 // ---------- runde 2: rekrutter fra byene, fanger, kulde ----------
 { const F = F0.ny(), p = F.personer[0]; S0.ankommet(p, 'Sandnes', fast(.9)); ok(/i Sandnes før kollapsen\. Kom med handelsruta fra Sandnes/.test(S0.profil(p).historie) && !p.spes, 'en rekrutt fra en by har byen i historien: ' + S0.profil(p).historie);
   ok(S0.ankommet(F.personer[1], 'Sandnes', fast(.01)).spes, 'en sjelden gang er rekrutten fra byen spesialist');
-  const m0 = F.moral, l0 = F.personer[2].lojal, nye = S0.fangerInn(F, 3, 'Kystalliansen', S0.tilf(S0.ny(3)));
-  ok(nye.length === 3 && F.personer.length === 13 && nye.every(q => q.lojal >= .15 && q.lojal <= .35 && q.fange === 'Kystalliansen') && F.moral === m0 - 2 && F.personer[2].lojal < l0, 'fanger som får bli: lite trofaste, og de andre liker det dårlig');
-  ok(/Kjempet for Kystalliansen/.test(S0.profil(nye[0]).historie), 'fangens historie: ' + S0.profil(nye[0]).historie);
+  const m0 = F.moral, l0 = F.personer[2].lojal, nye = S0.fangerInn(F, 3, 'Ravnsund', S0.tilf(S0.ny(3)));
+  ok(nye.length === 3 && F.personer.length === 13 && nye.every(q => q.lojal >= .15 && q.lojal <= .35 && q.fange === 'Ravnsund') && F.moral === m0 - 2 && F.personer[2].lojal < l0, 'fanger som får bli: lite trofaste, og de andre liker det dårlig');
+  ok(/Kjempet for Ravnsund/.test(S0.profil(nye[0]).historie), 'fangens historie: ' + S0.profil(nye[0]).historie);
   const kjør = o => { let sum = 0; for (let frø = 1; frø <= 12; frø++) { const F2 = F0.ny(), L = nyLeir(), S = S0.ny(frø), r = S0.tilf(S); S0.smitt(S, F2, r, 1, 0); for (let t = 0; t < 2 * 24; t++) S0.sykdomSteg(S, F2, 60, { B: F0.behov(F2, L, {}), tid: t * 60, auto: false, ...o }, r); sum += F2.personer.filter(q => q.syk || q.immun).length; } return sum; };
   const mild = kjør({}), kaldt = kjør({ sprengkulde: true, kald: .6 }); ok(kaldt > mild, `Grålungen smitter lettere i sprengkulde når folk fryser (${mild} mot ${kaldt} smittede på to døgn, tolv forsøk)`); }
 // (runde 12) riktig pronomen: «Hen takket» om Sindre Vik ble «Han takket»; «La hen dra» -> «La ham/henne dra»

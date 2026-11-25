@@ -5,7 +5,7 @@ const F = require('../../site/dovre-fliser/spill/fraksjoner'), R = F.REGLER;
 const lag = (navn, x, y, ute = 0) => ({ navn, x, y, menn: Array.from({ length: 12 }, (_, i) => ({ hp: i < ute ? 0 : 1 })) });
 const by = (id, navn, x, y, folk, eier) => ({ id, navn, x, y, folk, eier, inni: (X, Y) => Math.hypot(X - x, Y - y) < 500 });
 const verden = (o = {}) => ({ side: 'rød', byer: [by(1, 'Nær', 3000, 0, 500, null), by(2, 'Stor', 6000, 0, 20000, null), by(3, 'Vår', -4000, 0, 800, 'rød')], fiender: [], venner: [], hjem: [-9000, 0], ammo: 1, ...o });
-assert.equal(Object.keys(F.FRAKSJONER).join(), 'blå,rød,grønn'); assert.equal(F.FRAKSJONER.rød.navn, 'Kystalliansen');
+assert.equal(Object.keys(F.FRAKSJONER).join(), 'blå,rød,grønn'); assert.equal(F.FRAKSJONER.rød.navn, 'Ravnsund');
 { const s = lag('A', 0, 0), v = F.velg(s, verden()); assert.equal(v.hva, 'ta'); assert.equal(v.x, 6000, 'større tettsted teller som nærmere'); }
 { const s = lag('A', 0, 0), v = F.velg(s, verden({ byer: [by(1, 'Nær', 3000, 0, 500, null), by(3, 'Vår', -4000, 0, 800, 'rød')] })); assert.equal(v.x, 3000); }
 { const v = F.velg(lag('A', 0, 0, 6), verden()); assert.equal(v.hva, 'trekk'); assert.equal(v.x, -4000, 'slått ut: til eget tettsted'); }
@@ -46,7 +46,7 @@ console.log('ok – startsteder: nærmeste tettsteder i hver sin retning, ellers
   assert.equal(F.velg(s, verden({ minne: { ...minne, styrke: 40 } })).hva, 'ta', 'for sterk fiende jaktes ikke'); }
 { const s = lag('A', 0, 0), fi = [{ x: 800, y: 0, navn: 'Blå', styrke: 10 }];
   assert.equal(F.velg(s, verden({ side: 'grønn', fiender: fi, iSkog: true })).hva, 'hold', 'de forsiktige ligger i bakhold i skog'); assert.equal(F.velg(s, verden({ side: 'grønn', fiender: fi, iSkog: true, beskutt: true })).hva, 'angrip', 'men svarer når de blir beskutt');
-  assert.equal(F.velg(s, verden({ side: 'rød', fiender: [{ x: 800, y: 0, navn: 'Blå', styrke: 16 }] })).hva, 'angrip', 'Kystalliansen tar sjanser (0,7)'); assert.equal(F.velg(s, verden({ side: 'grønn', fiender: [{ x: 800, y: 0, navn: 'Blå', styrke: 16 }] })).hva, 'trekk', 'Folkefronten gjør det ikke'); }
+  assert.equal(F.velg(s, verden({ side: 'rød', fiender: [{ x: 800, y: 0, navn: 'Blå', styrke: 16 }] })).hva, 'angrip', 'Ravnsund tar sjanser (0,7)'); assert.equal(F.velg(s, verden({ side: 'grønn', fiender: [{ x: 800, y: 0, navn: 'Blå', styrke: 16 }] })).hva, 'trekk', 'Mosevakt gjør det ikke'); }
 { const s = lag('A', 0, 0), b = lag('B', 100, 0), byer = [by(1, 'Nær', 3000, 0, 500, null), by(2, 'Lenger', 0, 5000, 500, null)];
   const opptatt = new Map([[1, b]]); assert.equal(F.velg(s, verden({ byer, opptatt })).x, 0, 'tar ikke det samme tettstedet som en venn'); assert.equal(F.velg(s, verden({ byer: [byer[0]], opptatt })).x, 3000, 'men følger med når det ikke finnes noe annet');
   const tapt = [by(1, 'Nær', 3000, 0, 500, null), Object.assign(by(2, 'Tapt', 0, 6000, 500, 'blå'), { tapt: true })]; const v = F.velg(s, verden({ byer: tapt })); assert(v.y === 6000 && /tilbake/.test(v.tekst), 'vil ta tilbake det den har mistet'); }

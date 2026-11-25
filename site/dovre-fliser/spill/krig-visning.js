@@ -587,8 +587,8 @@
     for (const q of STØY) { g.strokeStyle = 'rgba(255,200,90,.9)'; g.lineWidth = 2; for (const r of [8, 15, 22]) { g.beginPath(); g.arc(px(q.x), py(q.y), r, -.9, .9); g.stroke(); } }
     // etterretning: lag du ikke ser nå, der de sist ble meldt
     g.font = '13px "Cormorant Garamond", serif'; g.textAlign = 'center';
-    // (runde 8, «lappene til fiendelag ligger oppå hverandre»: «Kystalliansens 3. lag · nå» oppå «… 4. lag») lag som ikke finnes lenger
-    // (en røverbølge som er over), tegnes ikke; merkene som ligger nær hverandre på skjermen (KLYNGE px), får ÉN lapp – «Kystalliansen: 2 lag · nå» –
+    // (runde 8, «lappene til fiendelag ligger oppå hverandre»: «Ravnsunds 3. lag · nå» oppå «… 4. lag») lag som ikke finnes lenger
+    // (en røverbølge som er over), tegnes ikke; merkene som ligger nær hverandre på skjermen (KLYNGE px), får ÉN lapp – «Ravnsund: 2 lag · nå» –
     // og lappene går gjennom Etikett med fiendens prioritet, så de ikke legges oppå andre navn. Claudes forslag: KLYNGE = 46 px.
     const KLYNGE = 46, merker = [];
     for (const q of T.etter) { const e = ENHETER.find(s => s.navn === q.navn); if (!e || synlig(e)) continue; const x = px(q.x), y = py(q.y); if (x < -40 || y < -40 || x > g.canvas.width + 40 || y > g.canvas.height + 40) continue;

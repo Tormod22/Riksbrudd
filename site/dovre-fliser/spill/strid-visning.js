@@ -3,7 +3,7 @@
  * Hvert av lagene dine har stridsregler (s.strid: når det åpner ild, hva det gjør som underlegent, tap før retrett, om det rykker
  * fram) og en bevæpning (s.strid.bev). Du setter dem i panelet «Stridsregler» fra lagpanelet, ett lag om gangen eller for alle.
  * Kampen (kamprunde i index.html) får tre ting herfra gjennom KROKER.ild: høydeforskjellen, hvem som oppdaget hvem først, og om
- * laget har lov til å skyte. Fiendens lag har også bevæpning (røvere lett, Kystalliansen standard, Folkefronten avstand) – du ser den
+ * laget har lov til å skyte. Fiendens lag har også bevæpning (røvere lett, Ravnsund standard, Mosevakt avstand) – du ser den
  * når du ser laget. Hvert spillminutt vurderer lagene dine styrkeforholdet mot fienden de ser, og trekker seg, unngår eller rykker
  * fram etter reglene sine. I testene (navigator.webdriver) gjør de ikke det av seg selv (StridSpill.test). window.StridSpill.
  */

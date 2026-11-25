@@ -101,6 +101,6 @@ console.log(`ok   krig: ${n} sjekker`);
   assert.ok(v(.85) === 'angrip' && v(1.25) !== 'angrip', `pågående angriper (${v(.85)}), forsiktig ikke (${v(1.25)})`); console.log('ok   væremåten i AI-ens valg'); }
 // (runde 8) meldte fiender nær hverandre på skjermen får én lapp
 { const K2 = require('../../site/dovre-fliser/spill/krig'), a = require('assert');
-  const g = K2.klynger([{ x: 100, y: 100, side: 'rød', navn: 'Kystalliansens 3. lag', t: 10 }, { x: 120, y: 110, side: 'rød', navn: 'Kystalliansens 4. lag', t: 12 }, { x: 300, y: 100, side: 'rød', navn: 'Kystalliansens 5. lag', t: 5 }, { x: 105, y: 100, side: 'grønn', navn: 'Folkefrontens 1. lag', t: 12 }]);
-  a.strictEqual(g.length, 3); a.strictEqual(g[0].n, 2); a.strictEqual(g[0].y, 110); a.strictEqual(K2.klyngeTekst(g[0], 12, 'Kystalliansen'), 'Kystalliansen: 2 lag · nå'); a.strictEqual(K2.klyngeTekst(g[1], 12, 'Kystalliansen'), 'Kystalliansens 5. lag · 7 min siden');
+  const g = K2.klynger([{ x: 100, y: 100, side: 'rød', navn: 'Ravnsunds 3. lag', t: 10 }, { x: 120, y: 110, side: 'rød', navn: 'Ravnsunds 4. lag', t: 12 }, { x: 300, y: 100, side: 'rød', navn: 'Ravnsunds 5. lag', t: 5 }, { x: 105, y: 100, side: 'grønn', navn: 'Mosevakts 1. lag', t: 12 }]);
+  a.strictEqual(g.length, 3); a.strictEqual(g[0].n, 2); a.strictEqual(g[0].y, 110); a.strictEqual(K2.klyngeTekst(g[0], 12, 'Ravnsund'), 'Ravnsund: 2 lag · nå'); a.strictEqual(K2.klyngeTekst(g[1], 12, 'Ravnsund'), 'Ravnsunds 5. lag · 7 min siden');
   console.log('ok   krig (runde 8): meldte fiender nær hverandre får én lapp'); }

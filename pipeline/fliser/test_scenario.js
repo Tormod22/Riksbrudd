@@ -16,7 +16,7 @@ S.vurder('hold', T({ tid: 1000, holder: id => id === 'by1' }), st); ok(st.holdtF
 ok(S.vurder('hold', T({ tid: 1000 + 2 * 1440, holder: () => true }), st).status === 'pågår', 'hold: to døgn er ikke nok');
 S.vurder('hold', T({ tid: 4000 }), st); ok(st.holdtFra === null, 'hold: mister du byen, begynner tellingen på nytt');
 // runde 14: navnet i teksten, 24 timer = 1,0, eieren ukjent etter omlasting nullstiller ikke, tapt by gir mistetVed
-{ const st2 = {}; ok(/^Ta Røysland \(Kystalliansens, 9 km NV\)/.test(S.vurder('hold', T({ målNavn: 'Røysland', målOm: 'Kystalliansens, 9 km NV' }), st2).tekst), 'hold: byen navngis');
+{ const st2 = {}; ok(/^Ta Røysland \(Ravnsunds, 9 km NV\)/.test(S.vurder('hold', T({ målNavn: 'Røysland', målOm: 'Ravnsunds, 9 km NV' }), st2).tekst), 'hold: byen navngis');
   S.vurder('hold', T({ tid: 600, holder: () => true, målNavn: 'Røysland' }), st2); ok(/Du holder Røysland: 1,0 av 3 døgn/.test(S.vurder('hold', T({ tid: 600 + 1440, holder: () => true, målNavn: 'Røysland' }), st2).tekst), 'hold: 24 t = 1,0 av 3 døgn');
   S.vurder('hold', T({ tid: 2400, holder: () => false, mistet: () => false }), st2); ok(st2.holdtFra === 600, 'hold: ukjent eier (etter omlasting) nullstiller ikke');
   S.vurder('hold', T({ tid: 2500, holder: () => false, mistet: () => true }), st2); ok(st2.holdtFra === null && st2.mistetVed === 2500 && st2.mistetMeldt === false, 'hold: tapt by nullstiller og huskes for meldingen'); }

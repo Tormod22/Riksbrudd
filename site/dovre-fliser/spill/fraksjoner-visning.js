@@ -1,9 +1,9 @@
 'use strict';
-// S8 i kartet: Kystalliansen (rød) og Folkefronten (grønn) styres av AI-en i spill/fraksjoner.js. Lagene deres tar tettsteder
+// S8 i kartet: Ravnsund (rød) og Mosevakt (grønn) styres av AI-en i spill/fraksjoner.js. Lagene deres tar tettsteder
 // (S7), henter ammunisjon i egne tettsteder, angriper og trekker seg unna. «Motstandere» i ☰ slår AI-en av og på.
 (function () {
   const F = Fraksjoner, R = F.REGLER, AI = { på: true, sider: ['rød', 'grønn'] }, nr = { rød: 0, grønn: 0 }, sist = { rød: 0, grønn: 0 };
-  const HJEM = { rød: [185600, 6902600], grønn: [204000, 6887400] };   // Kystalliansen fra Lesja-kanten i vest, Folkefronten fra Dovre-bygda i sør
+  const HJEM = { rød: [185600, 6902600], grønn: [204000, 6887400] };   // Ravnsund fra Lesja-kanten i vest, Mosevakt fra Dovre-bygda i sør
   window.AI = AI;
   // (runde 7) navnet er alltid nytt: etter en omlasting begynner telleren på nytt, mens de lagrede lagene har sine navn
   function nytt(side, x, y) { let navn; do navn = `${F.FRAKSJONER[side].eieform} ${++nr[side]}. lag`; while (typeof ENHETER !== 'undefined' && ENHETER.some(e => e.navn === navn)); const s = nyttLag(navn, x, y, side); s.ai = { neste: 60 * nr[side], mål: null, tekst: '', hva: null }; ENHETER.push(s); return s; }
@@ -40,7 +40,7 @@
   }
   // /norge: leiren ligger et annet sted enn Dovre (feilretting 12. nov: nærmeste fiende sto 661 km fra en leir i Lofoten, og ingenting
   // skjedde). Motstanderne flytter startstedene til de nærmeste tettstedene rundt leiren (regelen: Fraksjoner.startsteder), og lagene
-  // deres – og patruljen, som settes mellom Kystalliansen og leiren – settes ned på land der (Oppstart.startplasser).
+  // deres – og patruljen, som settes mellom Ravnsund og leiren – settes ned på land der (Oppstart.startplasser).
   // En avgrenset løsning: det er fortsatt bare to fraksjoner med to lag hver og én patrulje, nå i nærheten av leiren din.
   const RETN = ['øst', 'nordøst', 'nord', 'nordvest', 'vest', 'sørvest', 'sør', 'sørøst'];
   const retning = (dx, dy) => RETN[((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8];
@@ -70,14 +70,14 @@
       if (BIL[side]) { const k = BIL[side]; for (const q of lag) if (q.ombord === k) q.ombord = null; if (k.sti) Kjoretoy.stopp(k); k.x = pl[0][0] + 12; k.y = pl[0][1] + 8; }
       ut[side] = { navn: m.navn, x: m.x, y: m.y, km: Math.round(Math.hypot(m.x - leir.x, m.y - leir.y) / 1000), retning: retning(m.x - leir.x, m.y - leir.y), id: m.by ? m.by.id : null };
     }
-    // patruljen (rød, uten AI): på vegen fra Kystalliansen mot leiren, 4–12 km fra leiren; finnes det ikke land der, hos de andre røde
+    // patruljen (rød, uten AI): på vegen fra Ravnsund mot leiren, 4–12 km fra leiren; finnes det ikke land der, hos de andre røde
     const pat = ENHETER.filter(e => e.side === 'rød' && !e.ai);
     if (ut.rød && pat.length) { const d = Math.hypot(ut.rød.x - leir.x, ut.rød.y - leir.y), t = Math.max(4000, Math.min(12000, d * .5)) / d; let pl = null;
       for (const p of [{ x: leir.x + (ut.rød.x - leir.x) * t, y: leir.y + (ut.rød.y - leir.y) * t }, { x: ut.rød.x, y: ut.rød.y }]) { if (pl) break;
         try { pl = await påLand(p, pat.length, p.x === ut.rød.x ? 260 : 60); } catch (e) { console.error(e); } }
       if (mitt !== flyttNr) return null;
       if (pl) pat.forEach((s, i) => { [s.x, s.y] = pl[i]; s.sti = null; s.siktSkitten = true; }); }
-    // (19. nov, kritikken: «Kystalliansen holder til i Vatne», men krigskartet viste 0 tettsteder) – startstedet er deres fra start
+    // (19. nov, kritikken: «Ravnsund holder til i Vatne», men krigskartet viste 0 tettsteder) – startstedet er deres fra start
     const eid = startEie(ut);
     const tekst = AI.sider.filter(sd => ut[sd]).map(sd => `${F.FRAKSJONER[sd].navn} (${sd === 'rød' ? 'rød' : 'grønn'}) holder til ${ut[sd].navn ? 'i ' + ut[sd].navn : 'i terrenget'}, ${ut[sd].km} km ${ut[sd].retning} for leiren${eid[sd] ? ', og holder tettstedet' : ''}`);
     if (tekst.length) logg(tekst.join('. ') + '.');
@@ -123,7 +123,7 @@
     akk += dt * 3600 / TIME; if (akk < 60) return; const sek = akk; akk = 0;   // ett steg per spillminutt
     // ammunisjon i egne tettsteder (alle sider): tettstedet forsyner garnisonen
     for (const s of ENHETER) { if (Forsyning.ammo(s) >= 1) continue; const by = byerRundt(s, 1).find(b => Garnison.inni(b, s.x, s.y));
-      // (runde 7, gjennomspillingen: Kystalliansen mistet alle tettstedene, og sju lag sto uten ammunisjon i fem døgn) – motstanderne får
+      // (runde 7, gjennomspillingen: Ravnsund mistet alle tettstedene, og sju lag sto uten ammunisjon i fem døgn) – motstanderne får
       // også påfyll ved hovedkvarteret sitt (innen 800 m av HJEM)
       if ((by && eier(by) === s.side) || (s.ai && HJEM[s.side] && Math.hypot(s.x - HJEM[s.side][0], s.y - HJEM[s.side][1]) < 800)) s.ammo = Math.min(1, Forsyning.ammo(s) + R.påfyll * sek / 3600); }
     if (!AI.på) return;
@@ -144,10 +144,10 @@
       if (sett) M.sist = { x: sett.x, y: sett.y, navn: sett.navn, styrke: F.styrke(sett, Forsyning.ammo(sett)), t: tid };
       if (M.sist && Math.hypot(M.sist.x - s.x, M.sist.y - s.y) < 250 && !sett) M.sist = null;   // vi er der, og ingen er her lenger
       // (balansen 18. nov, Claudes forslag) i et ekte spill går motstanderne ikke løs på leiren de første døgnene: 4 på «Vanlig»,
-      // 5 på «Lett», 3 på «Hard» (4 / fiendens faktor). Gjennomspillingen hadde Kystalliansen i leiren på dag 2 og hele leiren
+      // 5 på «Lett», 3 på «Hard» (4 / fiendens faktor). Gjennomspillingen hadde Ravnsund i leiren på dag 2 og hele leiren
       // ødelagt på dag 3, før en nybegynner har mer enn én tropp. Lag innen 1,5 km fra leiren regnes heller ikke som mål da. Testene som før.
       // Runde 4 (18. nov, Claudes forslag etter gjennomspillingene 7 og 8 i docs/natt/balanse.md: leiren sto mot røverne, men falt for
-      // Kystalliansen på dag 5–6, rett etter fredstiden): 7 døgn på «Vanlig» (7 / fiendens faktor, 4–10), og et varsel i loggen ett døgn før.
+      // Ravnsund på dag 5–6, rett etter fredstiden): 7 døgn på «Vanlig» (7 / fiendens faktor, 4–10), og et varsel i loggen ett døgn før.
       const fredTid = () => { if (navigator.webdriver) return false; const f = window.SPILLREGLER && SPILLREGLER.faktor && SPILLREGLER.faktor.fiende || 1,
           slutt = Math.max(4, Math.min(10, Math.round(7 / f))) * 1440;
         if (!AI.fredVarslet && tid > slutt - 1440 && tid < slutt) { AI.fredVarslet = true; logg('Motstanderne samler seg. Om et døgn kan de gå løs på leiren din – ha minst to tropper hjemme og vakttårn bemannet.'); }
@@ -192,7 +192,7 @@
       const forsterk = window.RegionSpill && RegionSpill.fordel ? Math.max(.25, +RegionSpill.fordel(side).forsterk || 1) : 1;
       sist[side] += sek; if (sist[side] < R.forsterkning.hver / forsterk) continue;
       const lag = ENHETER.filter(e => e.side === side && e.ai && levende(e) && !F.slåttUt(e)); const holder = ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > HJEM[side][0] - 60000 && b.bb[0] < HJEM[side][0] + 60000 && b.bb[3] > HJEM[side][1] - 60000 && b.bb[1] < HJEM[side][1] + 60000 && eier(b) === side).length; const tak = F.lagTak(holder, navigator.webdriver && !AI.test ? 0 : Math.floor(tid / 1440)); if (lag.length >= tak) continue;
-      // (19. nov, gjennomspillingen: slåtte lag teller ikke, så Kystalliansen hadde 26 lag på dag 8) er det alt så mange lag som taket,
+      // (19. nov, gjennomspillingen: slåtte lag teller ikke, så Ravnsund hadde 26 lag på dag 8) er det alt så mange lag som taket,
       // samles et slått lag som står i et eget tettsted, til det nye laget; ellers kommer ikke noe nytt (ikke i testene)
       if (!navigator.webdriver || AI.test) { const alle = ENHETER.filter(e => e.side === side && e.ai && levende(e)); if (alle.length >= tak) {
         const brutt = alle.find(e => F.slåttUt(e) && ((INFRA && INFRA.tettsted) || []).some(b => eier(b) === side && b.bb[0] <= e.x && e.x <= b.bb[2] && b.bb[1] <= e.y && e.y <= b.bb[3] && Garnison.inni(b, e.x, e.y)));
@@ -204,7 +204,7 @@
   KROKER.lagTekst.push(s => s.side !== 'blå' && F.FRAKSJONER[s.side] ? F.FRAKSJONER[s.side].navn : null);
 
   // «Motstandere» i kartlagmenyen
-  const b = document.createElement('button'); b.textContent = 'Motstandere'; b.title = 'AI-en for Kystalliansen og Folkefronten'; b.setAttribute('aria-pressed', 'true');
+  const b = document.createElement('button'); b.textContent = 'Motstandere'; b.title = 'AI-en for Ravnsund og Mosevakt'; b.setAttribute('aria-pressed', 'true');
   b.onclick = () => { AI.på = !AI.på; b.classList.toggle('av', !AI.på); b.setAttribute('aria-pressed', String(AI.på)); logg(AI.på ? 'Motstanderne handler igjen.' : 'Motstanderne står stille (AI av).'); };
   document.getElementById('lagmeny').appendChild(b);
 })();

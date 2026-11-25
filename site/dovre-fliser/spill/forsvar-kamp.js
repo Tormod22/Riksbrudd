@@ -42,7 +42,7 @@
     if (Number.isFinite(o.meter) && o.retning) return `${km(o.meter)} ${o.retning} for leiren`;
     return '';
   }
-  // fienden: { bygdevern, raid, fraksjon (navn), navn } -> «bygdevernet», «røverne», «Kystalliansen», «en fiende dere ikke ser»
+  // fienden: { bygdevern, raid, fraksjon (navn), navn } -> «bygdevernet», «røverne», «Ravnsund», «en fiende dere ikke ser»
   function fiendeTekst(f) {
     if (!f) return 'en fiende dere ikke ser';
     if (f.bygdevern) return 'bygdevernet';
@@ -79,8 +79,8 @@
     if (nr >= B.fra && f >= B.faktor && (o.soldater || 0) >= B.soldater && n < B.lag) return { n: B.lag, tvunget: true }; return { n, tvunget: false }; }
   // mann per lag når bølgen er gjort større: én = Trussel.menn for ett lag
   const bølgeMenn = (én, n, B = BØLGE) => Math.max(B.minst, Math.ceil((én + B.ekstra) / Math.max(1, n)));
-  // (runde 14, kritiker J: «Folkefrontens lastebil er under ild fra fienden» om en kamp mellom motstanderne) – andre siders kamper:
-  // «Folkefronten og Kystalliansen sloss ved Vikeså.» (aldri «fienden»). a, b = navnene på sidene, sted = stedTekst
+  // (runde 14, kritiker J: «Mosevakts lastebil er under ild fra fienden» om en kamp mellom motstanderne) – andre siders kamper:
+  // «Mosevakt og Ravnsund sloss ved Vikeså.» (aldri «fienden»). a, b = navnene på sidene, sted = stedTekst
   const andreTekst = (a, b, sted) => `${a} og ${b} sloss${sted ? ' ' + sted : ''}.`;
   const api = { REGLER, BØLGE, bølgeLag, bølgeMenn, andreTekst, bølgeMenn, steg, stedTekst, fiendeTekst, tekst, årsak, medÅrsak, sluttTekst, km };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }

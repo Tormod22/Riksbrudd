@@ -33,7 +33,7 @@
     if (T.aktiv) return { timer: 0, bølge: T.bølge || 0 }; return { timer: Number.isFinite(T.nesteSpill) ? Math.max(0, (T.nesteSpill - tid) / 60) : null, bølge: T.bølge || 0 }; }
   function nærmesteSted(helt) { const s = O(); if (!s || !s.leir || typeof INFRA === 'undefined' || !INFRA || !INFRA.tettsted) return null; let best = null, bd = Infinity;
     for (const t of INFRA.tettsted) { const bb = t.bb; if (!bb) continue; const x = (bb[0] + bb[2]) / 2, y = (bb[1] + bb[3]) / 2, d = Math.hypot(x - s.leir.x, y - s.leir.y); if (d < bd && t.e && t.e.navn) { bd = d; best = { navn: t.e.navn, id: t.e.id, x, y }; } } return helt ? best : best && best.navn; }
-  // RUNDE 14: hvem som holder et tettsted (null = ingen / oss), med eieform «Kystalliansens»
+  // RUNDE 14: hvem som holder et tettsted (null = ingen / oss), med eieform «Ravnsunds»
   function eierAv(id) { if (!rot.TETTSTEDER || !rot.Garnison || id === undefined) return null; const e = Garnison.tilstand(TETTSTEDER, id).eier; return e && e !== 'blå' ? e : null; }
   const eieform = side => { const F = rot.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER[side]; return F ? F.eieform || F.navn + 's' : 'fiendens'; };
   const sidenavn = side => { const F = rot.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER[side]; return F ? F.navn : 'fienden'; };

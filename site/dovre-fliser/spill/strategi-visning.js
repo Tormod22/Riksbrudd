@@ -106,7 +106,7 @@
   // «Vaktlaget sto et døgn 780 m fra tre fiendelag ved Rognan – ingen kamp, ingen melding.» Forsvaret i mann regnes av det dere vet:
   // fiendelag dere ser nå, der fiendelag sist ble sett (e.sett, høyst SETT_MAKS spillminutter gammelt), og – i en by fienden holder –
   // etterretningens anslag over garnisonen (lagene som står i byen, rundet til nærmeste 5). Claudes forslag: SETT_MAKS 1440 (ett døgn),
-  // anslaget er et valg (fienden har holdt byen åpent siden starten, «Kystalliansen holder til i …»).
+  // anslaget er et valg (fienden har holdt byen åpent siden starten, «Ravnsund holder til i …»).
   const SETT_MAKS = 1440;
   function kjentForsvar(by) { const e = eierAv(by.id), ref = by.ref, r = ref ? Math.max(2500, byRadius(by) + 600) : 2500; let sett = 0, lagSett = 0, anslag = 0, lagA = 0;
     for (const f of ENHETER) { if (f.side === 'blå' || !levende(f) || f.karakter) continue; const st = window.Fraksjoner ? Fraksjoner.styrke(f) : 8;

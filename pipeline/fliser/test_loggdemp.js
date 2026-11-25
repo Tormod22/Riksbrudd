@@ -8,8 +8,8 @@ function logg() { const L = [], d = D.lag(); return { L, d, inn(t, nå) { const 
 // 1: samme melding fire ganger blir én linje med ×4
 { const g = logg(); for (let i = 0; i < 4; i++) g.inn('Kamp om Bryne: ingen tar tettstedet mens begge sider er der.', 100 + i * 10);
   ok(g.L.length === 1 && g.L[0] === 'Kamp om Bryne: ingen tar tettstedet mens begge sider er der. (×4)', 'fire like blir én linje med «(×4)»: ' + g.L.join(' | ')); }
-{ const g = logg(); g.inn('Kystalliansens lastebil er under ild fra fienden (20 m)!', 5); g.inn('Noe annet.', 6); g.inn('Kystalliansens lastebil er under ild fra fienden (35 m)!', 7);
-  ok(g.L.length === 2 && g.L[0] === 'Kystalliansens lastebil er under ild fra fienden (35 m)! (×2)' && g.L[1] === 'Noe annet.', 'tallene regnes ikke med, nyeste tekst øverst'); }
+{ const g = logg(); g.inn('Ravnsunds lastebil er under ild fra fienden (20 m)!', 5); g.inn('Noe annet.', 6); g.inn('Ravnsunds lastebil er under ild fra fienden (35 m)!', 7);
+  ok(g.L.length === 2 && g.L[0] === 'Ravnsunds lastebil er under ild fra fienden (35 m)! (×2)' && g.L[1] === 'Noe annet.', 'tallene regnes ikke med, nyeste tekst øverst'); }
 { const g = logg(); g.inn('Kamp om Bryne: ingen tar tettstedet mens begge sider er der.', 0); g.inn('Kamp om Bryne: ingen tar tettstedet mens begge sider er der.', 500);
   ok(g.L.length === 2 && !/×/.test(g.L[0]), 'etter vinduet (' + D.REGLER.vindu + ' min) er det en ny melding'); }
 ok(D.nøkkel('Brakke bestilt: 4 mill. kr, 1,7 t byggetid.') === D.nøkkel('Brakke bestilt: 5 mill. kr, 2 t byggetid. (×2)'), 'nøkkelen ser bort fra tall og ×n');

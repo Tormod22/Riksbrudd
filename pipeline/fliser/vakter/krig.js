@@ -195,7 +195,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       // etter fredstiden, før leirangrepene er lov
       tid = ES.fredSlutt() + 2.5 * 1440;
       const G = ES.planlegg('rød', { tving: true, bare: by.e.id }); ut.gruppe = !!G && G.mål.id === by.e.id && G.lag.length >= 2 && G.angripFra - G.start >= 4 * 60; ut.lag = G ? G.lag.length : 0;
-      ut.varsel = /Etterretning: Kystalliansen samler \d+ lag/.test(loggTekst()) && /Dombås \(ditt\)/.test(loggTekst());
+      ut.varsel = /Etterretning: Ravnsund samler \d+ lag/.test(loggTekst()) && /Dombås \(ditt\)/.test(loggTekst());
       const m = G && ENHETER.find(e => e.navn === G.lag[0]); const v1 = m ? AI.styr(m, { hva: 'ta', x: 0, y: 0, tekst: '' }) : null; ut.samles = !!v1 && /^(samle|hold)$/.test(v1.hva);
       // angrepet går ikke før varselet er ute, selv når lagene er samlet
       if (G) { for (const e of ENHETER) if (G.lag.includes(e.navn)) { e.x = G.sted.x + 20; e.y = G.sted.y + 20; }
@@ -247,7 +247,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       // (3) et ekte angrep på leiren: samme banner og knapp, med motstanderens navn
       if (ES && window.AI && AI.nytt) { ES.nullstill(); const lag = []; for (let k = 0; k < 2; k++) { const e = AI.nytt('rød', L.x + 900 + k * 40, L.y + 200); lag.push(e); nye.push(e); }
         ES.S().gruppe.rød = { mål: { leir: true, x: L.x, y: L.y, navn: 'leiren din' }, lag: lag.map(e => e.navn), behov: 1, sted: { x: L.x + 900, y: L.y + 200 }, fase: 'angriper', start: tid, angripFra: tid, side: 'rød' };
-        const A = FS.angrep(); FS.vis(); const t = document.getElementById('alarm').textContent; const nf = window.Fraksjoner ? Fraksjoner.FRAKSJONER.rød.navn : 'Kystalliansen';
+        const A = FS.angrep(); FS.vis(); const t = document.getElementById('alarm').textContent; const nf = window.Fraksjoner ? Fraksjoner.FRAKSJONER.rød.navn : 'Ravnsund';
         ut.eskalering = !!A && A.side === 'rød' && t.includes(`Angrep: ${nf}`) && !!document.getElementById('forsvarknapp'); ut.eskTekst = t.slice(0, 120); }
       // (4) egne lag ved leiren vises der de er (kontrollrommet «ute»): ikke «sist meldt»
       const KR = window.KontrollromSpill; if (KR && KR.modus && KR.modus() === 'ute') { const h = nyttLag('Vakt hjemme', L.x + 250, L.y + 100, 'blå'); ENHETER.push(h); nye.push(h); ut.hjemme = !KROKER.skjul.some(f => f(h)); }
@@ -411,7 +411,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       if (ScenarioSpill.tilstand()) ScenarioSpill.tilstand().sc = {};
       TETTSTEDER.set(id, { eier: 'rød', inntar: null });
       for (let i = 0; i < 3; i++) { const f = nyttLag('Vakt14 rød ' + i, mx + i * 30, my, 'rød'); ENHETER.push(f); nye.push(f); }
-      const sc = ScenarioSpill.scenario(); ut.navn = !!sc && sc.tekst.includes(by.e.navn) && /Kystalliansens|fiendens|\d+ km/.test(sc.tekst);
+      const sc = ScenarioSpill.scenario(); ut.navn = !!sc && sc.tekst.includes(by.e.navn) && /Ravnsunds|fiendens|\d+ km/.test(sc.tekst);
       ut.ring = typeof SCENARIO_BY === 'function' && String(SCENARIO_BY()) === String(id);
       StrategiSpill.åpne(); StrategiSpill.velg(id); await new Promise(r => setTimeout(r, 50));
       const boks = document.getElementById('krigscenario'); ut.boks = !!boks && boks.textContent.includes(by.e.navn);

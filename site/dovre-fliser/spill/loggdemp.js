@@ -27,7 +27,7 @@
     vær: /^(Det klarner opp|Det skyer over|Det begynner å (regne|snø)|Tåka kommer sigende|Det blåser opp til storm)\./,
     storVær: /^(Tåka|Det blåser opp til storm|Det begynner å snø)/,
     tips: /^(Vil du|Tips?:)/,
-    // RUNDE 14 (kritiker I: «hver omlasting skrev Spillform …, Kystalliansen holder til i … og Velkommen tilbake … inn i loggen» – 36 av
+    // RUNDE 14 (kritiker I: «hver omlasting skrev Spillform …, Ravnsund holder til i … og Velkommen tilbake … inn i loggen» – 36 av
     // 61 linjer; kritiker J: etter F5 sto det at fienden holdt en by spilleren holdt): innledningen skrives bare i et NYTT spill.
     // Når et lagret spill åpnes, holdes disse meldingene tilbake (oppsummeringen står i «Velkommen tilbake»-boksen).
     OPPSTART: /^(Spillform: |Velkommen tilbake, |Fikk ikke hentet )| \((rød|grønn)\) holder til /,

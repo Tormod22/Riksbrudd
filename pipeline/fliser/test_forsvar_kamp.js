@@ -10,7 +10,7 @@ k = null; nye = 0; for (const t of [0, 5, 5 + K.REGLER.slutt + 1]) { const r = K
 assert.strictEqual(K.tekst({ lag: 'Speidertropp 1', fiende: 'bygdevernet', sted: K.stedTekst({ by: 'Lærdalsøyri', inne: true }), mann: 7 }), '⚔ Speidertropp 1 er i kamp med bygdevernet i Lærdalsøyri (7 mann)');
 assert.ok(/ingen radiokontakt/.test(K.tekst({ lag: 'A', fiende: 'røverne', kontakt: false })));
 assert.strictEqual(K.stedTekst({ by: 'Vikeså', inne: false }), 'ved Vikeså'); assert.strictEqual(K.stedTekst({ meter: 3200, retning: 'sørvest' }), '3,2 km sørvest for leiren');
-assert.strictEqual(K.fiendeTekst({ bygdevern: true }), 'bygdevernet'); assert.strictEqual(K.fiendeTekst({ raid: 2 }), 'røverne'); assert.strictEqual(K.fiendeTekst({ fraksjon: 'Kystalliansen' }), 'Kystalliansen'); assert.strictEqual(K.fiendeTekst(null), 'en fiende dere ikke ser');
+assert.strictEqual(K.fiendeTekst({ bygdevern: true }), 'bygdevernet'); assert.strictEqual(K.fiendeTekst({ raid: 2 }), 'røverne'); assert.strictEqual(K.fiendeTekst({ fraksjon: 'Ravnsund' }), 'Ravnsund'); assert.strictEqual(K.fiendeTekst(null), 'en fiende dere ikke ser');
 assert.strictEqual(K.medÅrsak('Oddvar Aasen (Vaktlaget) er falt.', K.årsak('bygdevernet', 'i Vikeså')), 'Oddvar Aasen (Vaktlaget) falt for bygdevernet i Vikeså.');
 assert.strictEqual(K.medÅrsak('Ola og Kari (Tropp 1) har falt.', K.årsak('røverne', '')), 'Ola og Kari (Tropp 1) falt for røverne.');
 assert.strictEqual(K.medÅrsak('Noe annet.', 'falt for x'), 'Noe annet.');
@@ -26,5 +26,5 @@ console.log('ok   forsvar-kamp: én kamp per ildkamp, navn, fiende, sted og års
     A.ok(v2.n * m2 > n1 * m1, `bølge 2 (${v2.n} × ${m2}) mot bølge 1 (${n1} × ${m1}) med ${sold} soldater`); A.ok(v2.n >= 2, 'to kanter'); }
   A.strictEqual(KV.bølgeLag(2, 1, { soldater: 4, faktor: .6 }).n, 1, 'Lett som før');
   A.strictEqual(KV.bølgeLag(2, 1, { soldater: 2, faktor: 1 }).n, 1, 'for få soldater: som før');
-  A.strictEqual(KV.andreTekst('Folkefronten', 'Kystalliansen', 'ved Vikeså'), 'Folkefronten og Kystalliansen sloss ved Vikeså.'); A.ok(!/fienden/.test(KV.andreTekst('A', 'B', '')));
+  A.strictEqual(KV.andreTekst('Mosevakt', 'Ravnsund', 'ved Vikeså'), 'Mosevakt og Ravnsund sloss ved Vikeså.'); A.ok(!/fienden/.test(KV.andreTekst('A', 'B', '')));
   console.log('ok   forsvar-kamp (runde 14): bølge 2 er større enn bølge 1, andre siders kamper'); }

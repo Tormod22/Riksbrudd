@@ -1,6 +1,6 @@
 /* S8 – fraksjoner og motstandere: regler og en enkel AI uten DOM (Node: require('./fraksjoner'); nettleser: globalThis.Fraksjoner).
  * Fraksjonene er oppdiktede politiske bevegelser (designdokumentet/HANDOFF.md): spilleren er Riksrådet (blå), AI-en styrer
- * Kystalliansen (rød) og Folkefronten (grønn). AI-en tenker for hvert lag for seg: trekk tilbake når laget er slått ut, hent
+ * Ravnsund (rød) og Mosevakt (grønn). AI-en tenker for hvert lag for seg: trekk tilbake når laget er slått ut, hent
  * forsyninger/stell i et eget tettsted, angrip fiender laget ser når det er sterkt nok, ellers ta det nærmeste tettstedet som ikke
  * er ditt og hold det med ett lag (garnison). Tallene er forslag.
  */
@@ -8,8 +8,8 @@
   'use strict';
   const FRAKSJONER = {   // akse: [sentralisme, marked, tradisjon] (0–1)
     blå: { navn: 'Riksrådet', eieform: 'Riksrådets', farge: '#3b5878', lys: '#5b7ea8', sti: 'rgba(130,170,220,.9)', akse: [.9, .35, .2] },
-    rød: { navn: 'Kystalliansen', eieform: 'Kystalliansens', farge: '#8f3c2f', lys: '#b5503d', sti: 'rgba(225,125,95,.9)', akse: [.3, .9, .35] },
-    grønn: { navn: 'Folkefronten', eieform: 'Folkefrontens', farge: '#3f6b3a', lys: '#6f9a5f', sti: 'rgba(140,190,120,.9)', akse: [.15, .25, .8] },
+    rød: { navn: 'Ravnsund', eieform: 'Ravnsunds', farge: '#8f3c2f', lys: '#b5503d', sti: 'rgba(225,125,95,.9)', akse: [.3, .9, .35] },
+    grønn: { navn: 'Mosevakt', eieform: 'Mosevakts', farge: '#3f6b3a', lys: '#6f9a5f', sti: 'rgba(140,190,120,.9)', akse: [.15, .25, .8] },
   };
   const REGLER = {
     tenk: 600,             // spillsekunder mellom hver gang et AI-lag vurderer situasjonen
@@ -28,12 +28,12 @@
     jakt: 6000,            // meter: så langt går et lag for å lete der fienden sist ble sett
     tapt: 2.5,             // et tettsted fraksjonen har mistet, teller så mye «nærmere» (vil ta det tilbake)
     leirVekt: 1500,        // spillerens leir teller som et tettsted med så mange innbyggere når fraksjonen vet hvor den er
-    stil: { rød: { overtak: .7, navn: 'pågående' }, grønn: { overtak: 1, navn: 'forsiktig' } },   // Kystalliansen tar sjanser, Folkefronten gjør det ikke
+    stil: { rød: { overtak: .7, navn: 'pågående' }, grønn: { overtak: 1, navn: 'forsiktig' } },   // Ravnsund tar sjanser, Mosevakt gjør det ikke
     // KJØRETØY OG STILLINGER (17. nov, brukeren: «at fienden bruker kjøretøy eller bygger egne stillinger»)
     bil: { langt: 3000, nær: 200, av: 800 },        // kjør når målet er over 3 km unna og lastebilen står innen 200 m; gå av når en fiende ses innen 800 m
     stilling: { etter: 120, avstand: 300, vern: .6, radius: 25, maks: 4 },   // garnison i 120 min bygger en stilling (treff ×0,6 innen 25 m); høyst 4 per fraksjon
     lagPerBy: .5, lagMaks: 6,   // forsterkninger: taket vokser med et halvt lag per tettsted fraksjonen holder (høyst 6)
-    // KRIGEN SKAL IKKE AVGJØRES DAG 1 (19. nov, kritikken: «Kystalliansen tok Stavanger/Sandnes kl. 14 dag 1»). Claudes forslag:
+    // KRIGEN SKAL IKKE AVGJØRES DAG 1 (19. nov, kritikken: «Ravnsund tok Stavanger/Sandnes kl. 14 dag 1»). Claudes forslag:
     //  regionFred: så mange døgn (på «Vanlig»; delt på fiendens faktor, 1,5–4) samler motstanderne styrker i sitt eget tettsted og tar
     //    ingen andre – de forsvarer seg, men går ikke ut for å ta tettsteder;
     //  lagPerDøgn: taket for antall lag vokser med ett lag for hvert andre døgn (de bygger seg opp over dager);
@@ -96,7 +96,7 @@
     const der = b => min + andre.filter(f => b.inni(f.x, f.y) || mot(b).includes(f)).reduce((a, f) => a + sty(f), 0);
     // (runde 7) storbyene er stengt til eskaleringen sier de er lov (v.storbyStengt = innbyggere fra der det gjelder – spill/eskalering-visning.js)
     const mulig = b => (!(b.minst > 0) || (fri >= b.minst && !(v.småFørst && b.minst > R.ettLag))) && !(v.storbyStengt > 0 && (b.folk || 0) >= v.storbyStengt);
-    // (19. nov, gjennomspillingen: et rødt lag sto 51 m fra Folkefrontens garnison i Sviland i fire døgn – skogen skjulte dem, og ingen
+    // (19. nov, gjennomspillingen: et rødt lag sto 51 m fra Mosevakts garnison i Sviland i fire døgn – skogen skjulte dem, og ingen
     // tok noe) en fiende som står i tettstedet laget vil ta, vet laget om (v.iByFiende): er laget sterkt nok, går det rett mot den
     const fb = v.iByFiende;
     if (iBy && iBy.eier !== v.side && fb && avstand(fb, her) > R.inntil && min >= overtak * (fb.styrke || 0)) return { hva: 'jakt', x: fb.x, y: fb.y, tekst: `går mot ${fb.navn} i ${iBy.navn}` };
@@ -122,8 +122,8 @@
   // Sympati 0–1 mellom en fraksjon og en folkemening på de samme tre aksene (1 = helt enig).
   const sympati = (side, akse) => 1 - Math.hypot(...FRAKSJONER[side].akse.map((a, i) => a - akse[i])) / Math.sqrt(3);
   // Hvor motstanderne holder til når leiren ligger et annet sted enn Dovre (feilretting 12. nov: på /norge sto fienden bare på Dovre).
-  // leir: { x, y }; byer: [{ x, y, navn }] (tettstedene i nærheten). Kystalliansen (rød) får det nærmeste tettstedet 6–45 km fra leiren,
-  // Folkefronten (grønn) det nærmeste som ligger minst 8 km fra rødt og helst i en annen retning (over 60° fra rødt sett fra leiren).
+  // leir: { x, y }; byer: [{ x, y, navn }] (tettstedene i nærheten). Ravnsund (rød) får det nærmeste tettstedet 6–45 km fra leiren,
+  // Mosevakt (grønn) det nærmeste som ligger minst 8 km fra rødt og helst i en annen retning (over 60° fra rødt sett fra leiren).
   // Finnes det ikke tettsteder, gis et punkt 9 km vest (rød) / sørøst (grønn) for leiren med by = null – visningen må finne land der.
   function startsteder(leir, byer, o = {}) {
     const MIN = o.min || 6000, MAKS = o.maks || 45000, d = b => Math.hypot(b.x - leir.x, b.y - leir.y), vinkel = b => Math.atan2(b.y - leir.y, b.x - leir.x);

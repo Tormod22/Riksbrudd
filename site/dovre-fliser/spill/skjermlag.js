@@ -7,7 +7,7 @@
  *     Før: hendelseskortet «I LEIREN» lå oppå angrepsbanneret og «Forsvar leiren», hjelpen åpnet seg under Deg-panelet, og ☰ åpnet seg bak
  *     tegnforklaringen (liggende telefon) – alt etter tilfeldige z-index-tall i hver fil.
  *  2. KORT SOM VENTER PÅ SVAR SETTER SPILLET PÅ PAUSE: står et kort oppe (hendelse, spørsmål fra folket, spillformkort, krigskort som
- *     «Kystalliansen har overtaket»), settes farten til pause, og en lapp under kortet sier «Spillet står på pause til du svarer».
+ *     «Ravnsund har overtaket»), settes farten til pause, og en lapp under kortet sier «Spillet står på pause til du svarer».
  *     Når kortet er besvart, går spillet videre i farten det hadde. Satte du selv på pause før, blir det stående. Før sto et hendelseskort
  *     åpent i 15 spilltimer ved 600×, og krigskortet satte spillet på pause uten å si det.
  *  3. BUNNMENYEN PÅ TELEFON (Leir, Folk, Tropper, Krig, Deg, Mer) står alltid på kartet – også under angrep, med et kort oppe og når

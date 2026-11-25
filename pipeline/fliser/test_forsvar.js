@@ -37,7 +37,7 @@ console.log('ok   forsvar: mot røverne i leiren, reparasjon og skadevarsel');
   let r = F.sluttRapport({ hvem: 'Røverne', nr: 2, utfall: 'unna', tok: '450 000 kr', fiender: 2, fienderUte: 1, falne: 1, sårede: 2, skadet: 1 });
   assert.ok(r.god && /Bølge 2 er slått tilbake/.test(r.tittel) && /Dere tok 450 000 kr/.test(r.tekst) && /1 av 2 røverlag/.test(r.tekst) && /1 falt og 2 såret/.test(r.tekst) && /1 bygg skadet/.test(r.tekst), JSON.stringify(r));
   r = F.sluttRapport({ hvem: 'Røverne', nr: 3, utfall: 'herjet', tapte: '1,2 mill. kr og 40 m³ tre', fiender: 1, fienderUte: 0 }); assert.ok(!r.god && /herjet/.test(r.tittel) && /De tok 1,2 mill/.test(r.tekst) && /Ingen tap/.test(r.tekst));
-  r = F.sluttRapport({ hvem: 'Kystalliansen', utfall: 'oppgitt', fiender: 3, fienderUte: 2, ødelagt: 1 }); assert.ok(r.god && /Angrepet fra Kystalliansen er slått tilbake/.test(r.tittel) && /2 av 3 lag fra Kystalliansen/.test(r.tekst) && /1 ødelagt/.test(r.tekst)); }
+  r = F.sluttRapport({ hvem: 'Ravnsund', utfall: 'oppgitt', fiender: 3, fienderUte: 2, ødelagt: 1 }); assert.ok(r.god && /Angrepet fra Ravnsund er slått tilbake/.test(r.tittel) && /2 av 3 lag fra Ravnsund/.test(r.tekst) && /1 ødelagt/.test(r.tekst)); }
 console.log('ok   forsvar (runde 8): glattet anslag, spenn, «røverlaget» i entall og rapport etter hver bølge');
 // runde 12 (kritiker E): navnene på de sårede, de falne og byggene står i rapporten når de er kjent
 { const r = F.sluttRapport({ hvem: 'Røverne', nr: 2, utfall: 'slått', falne: 1, sårede: 1, falneNavn: ['Håkon Rønning (Leirvakta)'], sårNavn: ['Kari (deg)'], skadet: 2, skadetNavn: ['Brakke', 'Kjøkken'] });

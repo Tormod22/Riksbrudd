@@ -129,7 +129,7 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
       angrep: T && kreverAngrep() ? { slått: !!T.sc.slått, pågår: !!(T.sc.angrep && T.sc.angrep.pågår), samler: !!(T.sc.angrep && !T.sc.angrep.pågår), ingen: !!T.sc.ingen } : undefined };
   }
 
-  // (runde 14, kritiker J) «Kystalliansens, 9 km NV»: eieren og retningen fra leiren til scenariets by
+  // (runde 14, kritiker J) «Ravnsunds, 9 km NV»: eieren og retningen fra leiren til scenariets by
   const RETNING = ['Ø', 'NØ', 'N', 'NV', 'V', 'SV', 'S', 'SØ'];
   function målOm(b) { const S = spill(), [x, y] = midt(b), e = eier(b.e.id), d = S && S.leir ? Math.hypot(x - S.leir.x, y - S.leir.y) : 0;
     const eierT = e === 'blå' ? 'ditt' : e ? (window.Fraksjoner && Fraksjoner.FRAKSJONER[e] ? Fraksjoner.FRAKSJONER[e].eieform : 'fiendens') : 'nøytralt';

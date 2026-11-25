@@ -17,7 +17,7 @@
     front: 20000,       // to tettsteder med ulik eier nærmere enn dette har en front mellom seg
     trussel: 6000,      // fiendtlig lag nærmere et eget tettsted enn dette er en trussel
     marsj: 30000,       // lengste marsj i én ordre (som MARSJ_MAKS i kartet)
-    // (19. nov, kritikken: «Kystalliansen har overtaket – 69 %» kom kl. 14 dag 1) ingen vinner før det har gått så mange spillminutter
+    // (19. nov, kritikken: «Ravnsund har overtaket – 69 %» kom kl. 14 dag 1) ingen vinner før det har gått så mange spillminutter
     // (3 døgn – motstanderne samler seg de første 2,5, se Fraksjoner.REGLER.regionFred). Claudes forslag.
     tidligst: 3 * 1440,
   };

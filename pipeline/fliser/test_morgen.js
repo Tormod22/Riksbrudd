@@ -120,8 +120,8 @@ const tapLagFattig = M.dagensValg({ ...grunn, penger: 1e5, arbeidsføre: 6, folk
 ok(ids(tapLagFattig).includes('vaktlag'), 'tapt tropp og tom kasse: vaktlag av folkene (gratis): ' + ids(tapLagFattig));
 const krise = M.dagensValg({ ...grunn, penger: 0, arbeidsføre: 3, folk: 3, kriseKan: true, soldater: 4 }, fast());
 ok(krise[0].id === 'krise' && /gratis/.test(krise[0].t), 'krisehjelp først når alt er tapt: ' + ids(krise));
-const fiendeBy = M.dagensValg({ ...grunn, sted: 'Røysland', stedEier: 'Kystalliansens' }, fast()).find(v => v.id === 'speid');
-ok(fiendeBy && /mot Røysland \(Kystalliansens nå\)/.test(fiendeBy.t) && /farlig/.test(fiendeBy.følge) && fiendeBy.fiende, 'speidertur mot fiendens by navngir eieren og risikoen: ' + (fiendeBy && fiendeBy.t));
+const fiendeBy = M.dagensValg({ ...grunn, sted: 'Røysland', stedEier: 'Ravnsunds' }, fast()).find(v => v.id === 'speid');
+ok(fiendeBy && /mot Røysland \(Ravnsunds nå\)/.test(fiendeBy.t) && /farlig/.test(fiendeBy.følge) && fiendeBy.fiende, 'speidertur mot fiendens by navngir eieren og risikoen: ' + (fiendeBy && fiendeBy.t));
 const kar14 = hist => { for (let k = 0; k < 200; k++) { const r = M.storBeslutning(hist, rekke(k), null); if (r && r.id === 'karavane') return r; } return null; };
 const kfull = kar14({ ...grunn, diesel: 1000, dieselPlass: 1000, lager: { tre: 8 } });
 const matKjøp = kfull && kfull.valg.find(v => v.id === 'kjøp');
@@ -129,7 +129,7 @@ ok(matKjøp && !/diesel/i.test(matKjøp.t + matKjøp.følge), 'karavanen: ordet 
 ok(kfull && kfull.valg.some(v => v.id === 'selg' && /Selg 8 m³ tre/.test(v.t)) && /kjøper tre/.test(kfull.tekst), 'karavanen «kjøper tre» – og har knappen (8 m³): ' + (kfull && kfull.valg.map(v => v.t).join(' | ')));
 const klite = kar14({ ...grunn, lager: { tre: 2 } });
 ok(klite && !klite.valg.some(v => v.id === 'selg') && !/og kjøper tre\./.test(klite.tekst), 'for lite tre: ingen salgsknapp, og teksten sier hvorfor: ' + (klite && klite.tekst));
-const fu = M.utfall({ id: 'speid', sted: 'Røysland', fiende: 'Kystalliansens', fiendeTekst: 'I Røysland telte de 2 fiendtlige lag (ca. 9 mann).', folk: [{ navn: 'Ola A' }, { navn: 'Kari B' }] }, { røverTimer: null }, fast(.01));
+const fu = M.utfall({ id: 'speid', sted: 'Røysland', fiende: 'Ravnsunds', fiendeTekst: 'I Røysland telte de 2 fiendtlige lag (ca. 9 mann).', folk: [{ navn: 'Ola A' }, { navn: 'Kari B' }] }, { røverTimer: null }, fast(.01));
 ok(/telte de 2/.test(fu.tekst) && (fu.skadet.length || fu.borte.length), 'speidertur mot fiendens by: melder styrken, større fare: ' + fu.tekst);
 
 // --- alle tallene står i REGLER ---

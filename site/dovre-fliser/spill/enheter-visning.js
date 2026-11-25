@@ -118,7 +118,7 @@
       const ildf = KROKER.ild.reduce((v, h) => v * h(a, best), 1); if (ildf <= 0) continue;
       let treff = Terreng.ildrunde(a.menn, bd, { målPåMarsj: !!best.sti }, rng); if (ildf < 1) treff = [...Array(treff)].filter(() => rng() < ildf).length;
       SKUDD.push({ a, b: best, til: performance.now() + 1400 });
-      // (runde 14) to andre sider mot hverandre: «Folkefronten og Kystalliansen sloss ved X» (spill/forsvar-kamp.js), aldri «fienden»
+      // (runde 14) to andre sider mot hverandre: «Mosevakt og Ravnsund sloss ved X» (spill/forsvar-kamp.js), aldri «fienden»
       const andre = a.side !== 'blå' && best.side !== 'blå' && window.KampSpill && KampSpill.andre, fraNavn = synlig(a) ? a.navn : andre ? KampSpill.sideNavn(a.side, a) : 'fienden';
       if (!best.angrepet || tid - best.angrepet > 30) logg(andre ? KampSpill.andre(a, best, best.x, best.y) : `${best.navn} er under ild fra ${fraNavn} (${Math.round(bd)} m)!`); best.angrepet = tid;
       if (treff) skadKj(best, treff, false, fraNavn);

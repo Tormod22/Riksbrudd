@@ -23,8 +23,8 @@
   // (runde 13) leirens navn plasseres før egne lag og samlelappen «Leiren: 3 lag ›» (som står under det)
   E.regel(t => { const S = leir(), n = S && S.fraksjon && S.fraksjon.navn; return n && (t === n || t.startsWith(n + ' · ')) ? Math.max(P.leir, P.egne + .1) : undefined; });
 
-  // (runde 8, krig: «Kystalliansens 3. lag · nå» lå oppå «… 4. lag») merkene tegnes hver for seg, men lag som står nær hverandre på skjermen
-  // får én lapp (Krig.klynger: «Kystalliansen: 2 lag · nå»), og en lapp som ville ligget oppå en annen meldt lapp, flyttes en linje ned
+  // (runde 8, krig: «Ravnsunds 3. lag · nå» lå oppå «… 4. lag») merkene tegnes hver for seg, men lag som står nær hverandre på skjermen
+  // får én lapp (Krig.klynger: «Ravnsund: 2 lag · nå»), og en lapp som ville ligget oppå en annen meldt lapp, flyttes en linje ned
   function meldt(g, sx, sy) {
     const T = window.KrigSpill && KrigSpill.T && KrigSpill.T(); if (!T || !T.etter || !T.etter.length) return; const merker = [];
     for (const q of T.etter) { const e = ENHETER.find(s => s.navn === q.navn); if (!e || synlig(e)) continue; const x = sx(q.x), y = sy(q.y); if (x < -40 || y < -40 || x > VW + 40 || y > VH + 40) continue;

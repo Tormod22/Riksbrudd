@@ -10,7 +10,7 @@
     forsterkning: { perTusen: 1, min: .5, maks: 6 },  // mann per spilltime per 1000 innbyggere (sårede først, så falne)
     produksjon: { perTusen: 1, maks: 40 },            // tonn olje per spilltime per 1000 innbyggere
     strøm: { radius: 40000, uten: .4 },               // kraftverk innen 40 km; uten strøm: 40 % produksjon og forsterkning
-    // INNTAK ETTER STØRRELSE (19. nov, kritikken: «Kystalliansen tok Stavanger/Sandnes – 235 000 innbyggere – kl. 14 dag 1 med ett lag»).
+    // INNTAK ETTER STØRRELSE (19. nov, kritikken: «Ravnsund tok Stavanger/Sandnes – 235 000 innbyggere – kl. 14 dag 1 med ett lag»).
     // Claudes forslag: tettsteder opp til «små» innbyggere tas som før på 30 min av et lag. Større tar lengre tid ved full styrke
     // (innta × √(folk / små), høyst «maksTid» sekunder) og trenger flere mann: √folk / «perMann» (minst «minMann») friske for full fart.
     // Med færre går det saktere (andelen av mennene), og under «minst» av det som trengs, står inntaket stille.

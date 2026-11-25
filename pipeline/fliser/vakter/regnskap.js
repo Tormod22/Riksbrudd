@@ -146,7 +146,7 @@ module.exports = {
         // velkomsten lukkes når spillet går igjen
         LoggLager.velkommen(o); await vent(300); const p1 = document.getElementById('sp1'); if (p1) p1.click(); await vent(500); ut.lukketVedFart = !document.getElementById('loggvelkommen');
         // 3: innledningen skrives ikke ved omlasting (reglene), bare i et nytt spill
-        const D = LoggDemp.lag(); ut.spamOk = D.vurder('Spillform: Vanlig.', [], 0, true) === null && D.vurder('Kystalliansen (rød) holder til i Rognan, 8 km nord.', [], 0, true) === null && !!D.vurder('Spillform: Vanlig.', [], 0, false);
+        const D = LoggDemp.lag(); ut.spamOk = D.vurder('Spillform: Vanlig.', [], 0, true) === null && D.vurder('Ravnsund (rød) holder til i Rognan, 8 km nord.', [], 0, true) === null && !!D.vurder('Spillform: Vanlig.', [], 0, false);
         // 4: utvalget: aldri «Farten er», eldste først, ingen boks uten tid
         let A = LoggLager.tom('1,1'); LoggLager.legg(A, 'Farten er senket til 10×: et bygg er ferdig.', 5); LoggLager.legg(A, 'Kampen om leiren er i gang.', 10); LoggLager.legg(A, 'Bølge 1 er slått tilbake.', 40); A.økt += 1;
         const oa = LoggLager.oppsummer(A); ut.utvalgOk = !!oa && !oa.viktige.some(v => /Farten/.test(v.tekst)) && /Kampen/.test(oa.viktige[0].tekst) && oa.antall === oa.viktige.length;

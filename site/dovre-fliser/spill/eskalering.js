@@ -73,7 +73,7 @@
   // betal for det som ble kjøpt
   function betal(Ø, hva) { const P = REGLER.pris; if (hva === 'lag') { Ø.kr -= P.lag.kr; Ø.folk -= P.lag.folk; } else if (P[hva]) Ø.kr -= P[hva]; Ø.kjøpt[hva] = (Ø.kjøpt[hva] || 0) + 1; return Ø; }
   // taket for antall lag etter fredstiden: grunntaket (Fraksjoner.lagTak) og ett lag til per døgn etter freden, høyst g.tak
-  // (runde 7, gjennomspillingen: Kystalliansen holdt 14 tettsteder med 12 lag – alle var garnison, og ingen kunne gå mot storbyen) – taket
+  // (runde 7, gjennomspillingen: Ravnsund holdt 14 tettsteder med 12 lag – alle var garnison, og ingen kunne gå mot storbyen) – taket
   // vokser også med et halvt lag per tettsted de holder (byer)
   const tak = (grunn, døgnEtterFred, g = grad(), byer = 0) => { const b = Math.floor(Math.max(0, byer || 0) * REGLER.lagPerBy);
     return Math.max(grunn, Math.min(g.tak + b, grunn + Math.floor(Math.max(0, døgnEtterFred)) + b)); };

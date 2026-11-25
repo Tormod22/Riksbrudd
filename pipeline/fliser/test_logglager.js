@@ -34,6 +34,6 @@ ok(LL.oppsummer(LL.tom(leir)) === null, 'ingen tidligere meldinger: ingen oppsum
   // ingen tid har gått i forrige økt
   let C = LL.tom(leir); LL.legg(C, 'Røysland er vårt.', 0); LL.legg(C, 'Ola falt.', 0); C = LL.les(LL.pakk(C), leir); C.økt += 1; ok(LL.oppsummer(C) === null, 'ingen velkomst når ingen tid har gått (06:00–06:00)'); }
 { const D = require('../../site/dovre-fliser/spill/loggdemp.js').lag();
-  ok(D.vurder('Spillform: Vanlig · Hold byen.', [], 0, true) === null && D.vurder('Kystalliansen (rød) holder til i Rognan, 8 km nord for leiren.', [], 0, true) === null && D.vurder('Velkommen tilbake, Ivar. Har har 3 mill. kr i kassa.', [], 0, true) === null, 'omlasting: innledningen skrives ikke i loggen');
+  ok(D.vurder('Spillform: Vanlig · Hold byen.', [], 0, true) === null && D.vurder('Ravnsund (rød) holder til i Rognan, 8 km nord for leiren.', [], 0, true) === null && D.vurder('Velkommen tilbake, Ivar. Har har 3 mill. kr i kassa.', [], 0, true) === null, 'omlasting: innledningen skrives ikke i loggen');
   ok(!!D.vurder('Spillform: Vanlig · Hold byen.', [], 0, false), 'nytt spill: innledningen skrives'); }
 console.log(feil ? `${feil} FEIL` : 'Alle testene for logglager.js er ok'); process.exit(feil ? 1 : 0);
