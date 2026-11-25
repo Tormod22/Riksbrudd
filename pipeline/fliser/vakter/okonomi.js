@@ -43,8 +43,10 @@ module.exports = { navn: 'økonomi og region', kjør: async (pg, profil) => {
       // 8: leveranse av mat, og motstanderens fordel av et tettsted. (runde 13) fordelen huskes i 3 s – glem den først, ellers kan
       // svaret være fra før tettstedet fikk ny eier (mobilkontrollen feilet av og til på dette)
       const F = FolkSpill.tilstand(), m0 = F.mat; RS.tilstand().pott.mat = 3.4; RS.lever(); o.mat = F.mat === m0 + 3;
-      TETTSTEDER.set(id, { eier: 'rød', inntar: null }); RS.åpne(); if (RS.glemFordel) RS.glemFordel(); const f = RS.fordel('rød'); o.fordel = f.antall === 1 && (f.treff > 1 || f.forsterk > 1) && RS.fordel('blå').treff === 1;
-      if (!o.fordel) o.fordelHvorfor = { f, røde: [...TETTSTEDER].filter(([, t]) => t.eier === 'rød').map(([k]) => k).slice(0, 6), id };
+      // (25. nov) andre vakter kan ha latt motstanderen holde tettsteder: mål endringen fra prøvebyen alene
+      const e0 = TETTSTEDER.get(id); TETTSTEDER.set(id, { eier: null, inntar: null }); if (RS.glemFordel) RS.glemFordel(); const f0 = RS.fordel('rød'); if (e0) TETTSTEDER.set(id, e0);
+      TETTSTEDER.set(id, { eier: 'rød', inntar: null }); RS.åpne(); if (RS.glemFordel) RS.glemFordel(); const f = RS.fordel('rød'); o.fordel = f.antall === f0.antall + 1 && (f.treff > 1 || f.forsterk > 1) && RS.fordel('blå').treff === 1;
+      if (!o.fordel) o.fordelHvorfor = { f, f0, røde: [...TETTSTEDER].filter(([, t]) => t.eier === 'rød').map(([k]) => k).slice(0, 6), id };
     } catch (e) { o.feil = String(e && e.message || e); }
     // tilbake
     if (fiende && ENHETER.includes(fiende)) ENHETER.splice(ENHETER.indexOf(fiende), 1);
@@ -97,5 +99,5 @@ module.exports = { navn: 'økonomi og region', kjør: async (pg, profil) => {
   const ok6 = !e.feil && e.prisOk && e.prognoseLik && /oppdrag/.test(e.penger) && /hogst/.test(e.penger) && e.totalOk && e.strømOk && e.rekruttOk && e.hogstOk && e.flyt && e.tilbake;
   if (!ok6) return { ok: false, tekst: `Runde 6: diesel ${e.pris} kr/l (${e.prisOk}), prognose ${JSON.stringify(e.prognose)} lik ${e.prognoseLik}, Penger inn [${e.penger}], brakke «${e.brakke}» ${e.totalOk}, strøm «${e.strøm}» ${e.strømOk}, rekruttering «${e.rekrutt}», hogst ${e.hogst} ${e.hogstOk}, nedbremsing ${e.flyt}, tilbake ${e.tilbake}` + (e.feil ? ' FEIL ' + e.feil : ''), data: d };
   const ok = !d.feil && !!d.type && d.rute0 === 'åpen' && d.tjent > 0 && d.panel && d.hard && d.hardGirMer && d.rute1 !== 'åpen' && d.rute2 === 'åpen' && d.opprør && d.børs && d.veksle && d.hylle && d.mat && d.fordel && d.tilbake;
-  return { ok, tekst: `Runde 6: diesel ${e.pris} kr/l, én dieselprognose (${Math.round(e.prognose[0] / 24)} døgn), Penger inn [${e.penger}], brakke ${e.brakke}, hogst ${e.hogst}. Prøvebyen er ${d.type} og gir ${d.gir} per døgn (${d.tjent} kr på et halvt døgn med ${d.andre} andre tettsteder), panelet ${d.panel}, hard skatt ${d.hard}/${d.hardGirMer}, rute ${d.rute0} → ${d.rute1} → ${d.rute2}, opprør ${d.opprør}, svartebørs ${d.børs}, veksling ${d.veksle}, tomme hyller ${d.hylle}, mat levert ${d.mat}, motstanderens fordel ${d.fordel}${d.fordelHvorfor ? ' ' + JSON.stringify(d.fordelHvorfor).slice(0, 300) : ''}, satt tilbake ${d.tilbake}` + (d.feil ? ' – FEIL: ' + d.feil : ''), data: d };
+  return { ok, tekst: `${d.fordelHvorfor ? 'FORDEL ' + JSON.stringify(d.fordelHvorfor).slice(0, 300) + ' · ' : ''}Runde 6: diesel ${e.pris} kr/l, én dieselprognose (${Math.round(e.prognose[0] / 24)} døgn), Penger inn [${e.penger}], brakke ${e.brakke}, hogst ${e.hogst}. Prøvebyen er ${d.type} og gir ${d.gir} per døgn (${d.tjent} kr på et halvt døgn med ${d.andre} andre tettsteder), panelet ${d.panel}, hard skatt ${d.hard}/${d.hardGirMer}, rute ${d.rute0} → ${d.rute1} → ${d.rute2}, opprør ${d.opprør}, svartebørs ${d.børs}, veksling ${d.veksle}, tomme hyller ${d.hylle}, mat levert ${d.mat}, motstanderens fordel ${d.fordel}, satt tilbake ${d.tilbake}` + (d.feil ? ' – FEIL: ' + d.feil : ''), data: d };
 } };
