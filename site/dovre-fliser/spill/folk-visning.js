@@ -81,6 +81,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     if (FR.arbeidere(F, 'verksted') && !B.verksted) ut.push(B.ferdige('verksted') ? 'Verkstedet har ikke strøm.' : 'Folk på «verksted» trenger et verksted med strøm.');
     if (B.tårn > B.bemannedeTårn) ut.push(`${B.tårn - B.bemannedeTårn} vakttårn står ubemannet: sett flere på «vakt».`);
     if (!FR.arbeidere(F, 'bygg')) ut.push('Ingen på «bygg»: ingenting blir bygget.');
+    if (F.ubetalt > 0) ut.unshift(`Lønn skyldes (${LB.kroner(F.ubetalt)}): moralen synker til folkene får betalt – ta en kontrakt eller selg noe.`);
     if (FR.nød(F)) ut.unshift(F.personer.length ? `Bare ${F.personer.length} igjen i gjengen: rekrutter flere (ingen krav om seng når dere er færre enn tre).` : 'Gjengen er tom: rekrutter nye folk (de første tre trenger ikke seng).');
     return ut;
   }
@@ -116,7 +117,8 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     const linjer = [B.senger ? `${B.senger} ${B.senger === 1 ? 'seng' : 'senger'}, ${iBruk} i bruk` + (B.utenSeng ? ` – ${B.utenSeng} sover i telt` : '') : `Ingen senger – ${sover} sover i telt`,
       `Mat: ${nf(F.mat)} rasjoner` + (B.dager === Infinity ? ' (drivhusene holder)' : ` (ca. ${nf(B.dager, 1)} døgn)`) + (B.drivhus ? ` · drivhus +${nf(B.drivhus, 1)}/døgn` : '') + (B.varmMat ? ' · varm mat' : ''),
       `Varme: ${varme}`, `Helse: ${n ? Math.round(sh * 100) + ' %' : '–'}` + (B.syke ? ` · ${B.syke} syke/skadet` : '') + (B.sykestue ? ' · sykestue' : ''),
-      `Vakttårn: ${B.bemannedeTårn} av ${B.tårn} bemannet` + (F.borte ? ` · ${F.borte} har forlatt gjengen` : '')];
+      `Vakttårn: ${B.bemannedeTårn} av ${B.tårn} bemannet` + (F.borte ? ` · ${F.borte} har forlatt gjengen` : ''),
+      `Lønn: ${LB.kroner(lønnNå())} per døgn` + (F.ubetalt > 0 ? ` · ${LB.kroner(F.ubetalt)} skyldes` : '')];
     // lav skjerm (telefon): status som ett avsnitt og høyst to ting som mangler, så oppgavene synes uten å bla langt
     const kort = document.body.classList.contains('kort'), mg = mangler(B);
     panel.append(el('div', { klasse: 'status brikker' }, ...linjer.flatMap(t => String(t).split(' · ')).map(t => el('span', {}, t))));
@@ -191,12 +193,25 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     return el('div', { style: 'margin-top:6px' }, knapp(F ? `Folk (${n}) – moral ${Math.round(F.moral)} ›` : 'Folk', () => åpne(true), { id: 'folkknapp' }));
   }
 
+  // ---------- lønn (brukeren 25. nov: «Ja») ----------
+  // Alle i gjengen og mennene i egne tropper (s.fraFolk) får lønn hver spilltime (FR.lønnSteg); den følger markedets inflasjon.
+  // I testene (navigator.webdriver) betales det ikke av seg selv – FolkSpill.lønnTest = true slår det på.
+  const lønnAuto = () => !navigator.webdriver || window.FolkSpill.lønnTest;
+  const iTropper = () => (typeof ENHETER === 'undefined' ? 0 : ENHETER.filter(s => s.side === 'blå' && s.fraFolk && Array.isArray(s.menn)).reduce((a, s) => a + s.menn.filter(m => m.hp > 0).length, 0));
+  const infl = () => { try { const M = window.SpilletSpill && SpilletSpill.M && SpilletSpill.M(); return M && M.infl > 0 ? M.infl : 1; } catch (e) { return 1; } };
+  const lønnNå = () => FR.lønnPerDøgn(F.personer.length + iTropper(), infl());
+  function lønn(dt) {
+    if (!F || !lønnAuto() || !window.OppstartSpill) return null;
+    const r = FR.lønnSteg(F, dt, kr => OppstartSpill.betal(kr), { ekstra: iTropper(), infl: infl() });
+    for (const h of r.hendelser) logg(h); if (r.betalt || r.hendelser.length) lagre();
+    return r;
+  }
   // ---------- tiden ----------
   const meldt = new Map();
   KROKER.sim.push(dt => {
     const Lr = L(); if (!F || !Lr || !spill()) return;
     akk += dt;
-    if (akk >= 1) { const r = FR.steg(F, Lr, akk, valg()); akk = 0;
+    if (akk >= 1) { const r = FR.steg(F, Lr, akk, valg()); lønn(akk); akk = 0;
       for (const h of r.hendelser) logg(h); if (r.hendelser.length) lagre();
       if (r.døde && r.døde.length && window.SamfunnSpill) SamfunnSpill.døde(r.døde); }
     soldater(dt); vakter(); falne();
@@ -304,7 +319,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
 #leirmeny .ingenbygger button{ min-height:36px; border-color:#e0804a; } #leirmeny .ingenbygger small{ color:#e8c0a0; }`; document.head.appendChild(c2); }
   // R18-D (flerspiller): en gjest viser vertens folk (L.folk i speilet av vertens leir, se LeirSpill.speil). null = eget spill igjen.
   function speil(Fo) { const Lr = L(); if (!Fo || !Lr) { start(); return; } F = FR.fraJSON(Fo) || F; Lr.folk = F; visStatus(); if (åpen) vis(); }
-  window.FolkSpill = { speil, start, åpne, vis, menyRad, tilstand: () => F, valg, matFaktor: matF, grunn, forsvar: () => forsvar(), hjelpBygg, falne };
+  window.FolkSpill = { speil, start, åpne, vis, menyRad, tilstand: () => F, valg, matFaktor: matF, grunn, forsvar: () => forsvar(), hjelpBygg, falne, lønn, lønnNå, lønnTest: false };
   // Avtalen med de andre delene (byggesett, materialer): tåler at spillet ikke er startet (da 0)
   window.Folk = {
     arbeidere: o => (F ? FR.arbeidere(F, o) : 0),

@@ -62,6 +62,10 @@
     nødMoral: 50,               // en tom gjeng henter seg inn til dette, og de første nye starter ikke på bunnen
     nødBygg: 2,                 // (runde 8, Claudes forslag) i nød går nye rett på «bygg» til to bygger (ett byggelag)
     rasjonAvh: .6,              // barn og gamle (spill/samfunn.js) spiser litt mindre enn en voksen i arbeid
+    // LØNN (brukeren 25. nov: «Ja» til 15 000–20 000 kr per person i døgnet; 15 000 er Claudes valg i den nedre enden). Alle i gjengen
+    // og mennene i troppene du har laget av folket får lønn. Den betales hver spilltime og følger markedets inflasjon (o.infl).
+    // Er kassa for liten, blir lønnen skyldig: moralmålet går ned (ubetaltMoral) til alt er etterbetalt.
+    lønn: 15000, lønnPeriode: 60, ubetaltMoral: -20,
   };
   // Enkel, fast tilfeldighet (samme frø gir samme folk)
   function rng(frø) { let a = frø >>> 0 || 1; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -191,7 +195,8 @@
       - 12 * kald
       + Math.min(10, 40 * fri) - (fri < .1 ? 5 : 0)
       + (B.sykestue ? 3 : 0)
-      - (F.personer.reduce((s, p) => s + p.helse, 0) / Math.max(1, F.personer.length) < .6 ? 10 : 0);
+      - (F.personer.reduce((s, p) => s + p.helse, 0) / Math.max(1, F.personer.length) < .6 ? 10 : 0)
+      + (F.ubetalt > 0 ? R.ubetaltMoral : 0);
     F.mål = Math.max(5, Math.min(95, mål + (o.moralTillegg || 0)));   // moralTillegg: f.eks. uten vann (spill/overlev.js)
     const steg1 = R.moralFart * dt / 60; F.moral += Math.max(-steg1, Math.min(steg1, F.mål - F.moral));
     // lav moral et helt døgn: den minst lojale forlater gjengen
@@ -214,6 +219,26 @@
     if (kald > .5 && !(F.sist.kald > .5)) H.push('Folk fryser: legg inn ved (tre) eller kjøp diesel til leiren, og bygg brakker.');
     F.sist = { ...B, sult, kald, alleSeng: !B.utenSeng, liteMat, toDøgn, sultTid };
     return { hendelser: H, behov: B, sult, kald, døde };
+  }
+  // ---------- lønn ----------
+  // Lønn per døgn for n personer (infl = markedets inflasjon, 1 = som ved start)
+  const lønnPerDøgn = (n, infl = 1) => Math.round(n * R.lønn * (infl > 0 ? infl : 1));
+  // lønnSteg(F, dt, betal, o): lønnen samles opp og betales én gang per spilltime. o.ekstra = menn i egne tropper (utenfor folket),
+  // o.infl = inflasjonen. betal(kr) -> true/false. Får de ikke betalt, blir det som skyldes stående i F.ubetalt (moralen synker)
+  // og prøves betalt sammen med neste lønn. Gir { betalt, ubetalt, hendelser }.
+  function lønnSteg(F, dt, betal, o = {}) {
+    const H = [], n = F.personer.length + Math.max(0, o.ekstra || 0);
+    F.lønnAkk = (F.lønnAkk || 0) + lønnPerDøgn(n, o.infl) * dt / R.døgn; F.lønnTid = (F.lønnTid || 0) + dt;
+    if (F.lønnTid < R.lønnPeriode) return { betalt: 0, ubetalt: F.ubetalt || 0, hendelser: H };
+    F.lønnTid = 0; const ny = Math.round(F.lønnAkk), gjeld = Math.round(F.ubetalt || 0), sum = ny + gjeld; F.lønnAkk = 0;
+    if (sum <= 0) return { betalt: 0, ubetalt: 0, hendelser: H };
+    if (betal(sum)) { F.ubetalt = 0; F.lønnBetalt = (F.lønnBetalt || 0) + sum;
+      if (gjeld > 0) H.push(`Lønnen er betalt igjen (${LB.kroner(gjeld)} etterbetalt). Moralen kommer seg.`);
+      return { betalt: sum, ubetalt: 0, hendelser: H }; }
+    // ikke nok i kassa: alt eller ingenting, så skylden er lett å forstå
+    F.ubetalt = sum;
+    if (!gjeld) H.push(`Kassa er for liten til lønna: folkene får ikke betalt (${LB.kroner(sum)} skyldes). Moralen synker til de får lønnen sin – ta en kontrakt eller selg noe.`);
+    return { betalt: 0, ubetalt: sum, hendelser: H };
   }
   // ---------- mat og rekruttering ----------
   // faktor: prisen stiger når butikkene er tomme (forfallet, spill/overlev.js)
@@ -285,7 +310,7 @@
   function fjern(F, id) { if (!F || id === undefined || id === null) return null; const i = F.personer.findIndex(p => p.id === id); if (i < 0) return null; return F.personer.splice(i, 1)[0]; }
   // personId(m): mannens kobling til folket – Leirvakta har tallet (p.id), en tropp har hele personposten (som ikke står i folket)
   const personId = m => (m && (typeof m.person === 'number' || typeof m.person === 'string') ? m.person : null);
-  const api = { tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
+  const api = { tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.FolkRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -226,6 +226,7 @@ const UNNTAK = [
   ['leir-visning.js', 'LB.planMal(L, p.mal', 'malene ligger i nettleseren (localStorage) og gir bare gratis skisser; blir en egen kommando når maler kan deles'],
   ['leir-visning.js', 'L.plan = o.plan; L.nestePlan = o.nestePlan', 'angre/gjør om i planen: et øyeblikksbilde av de gratis skissene i denne nettleseren'],
   ['leir-visning.js', 'L.midt = { x: S.leir.x', 'oppstart: leirens midte settes fra OppstartSpill når spillet starter (ikke en knapp)'],
+  ['folk-visning.js', 'kr => OppstartSpill.betal(kr)', 'lønnen trekkes i simuleringen hver spilltime (KROKER.sim), ikke en knapp'],
   ['folk-visning.js', 'FR.fjern(F, FR.personId(m))', 'de som faller, går ut av folket i simuleringen (ikke en knapp)'],
   ['tropper-visning.js', 'r = TR.opprett(P, navnet)', 'inne i opprettRett – den rette funksjonen kommandoen troppOpprett kaller (TropperSpill.rett.opprett)'],
   ['tropper-visning.js', 'OppstartSpill.betal(alt)', 'betalingen inne i opprettRett (kommandoen har sjekket at det er råd)'],

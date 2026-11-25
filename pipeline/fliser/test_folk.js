@@ -132,5 +132,17 @@ ok(L0.BYGG.kjøkken && L0.kostnad('kjøkken').pris === 3e6 && L0.PRIORITET.inclu
   const H = F0.fraJSON(JSON.parse(JSON.stringify(G))); ok(H.navnBrukt.length >= alle.length + 4 && døde.every(n => H.navnBrukt.includes(n)), 'navnBrukt lagres med folket');
   const E = F0.fraJSON({ personer: [{ id: 1, navn: 'Ola Haugen' }] }); ok(E.navnBrukt.length === 1 && E.navnBrukt[0] === 'Ola Haugen', 'eldre lagring: navnBrukt = de som er med nå');
   F0.opptatteNavn = null; }
+// LØNN (brukeren 25. nov): 15 000 kr per person i døgnet, betalt hver spilltime, følger inflasjonen; tom kasse = skyld og lavere moral
+{ const G = F0.ny(5), L = L0.ny(); let kasse = 1e6; const bet = p => (p <= kasse ? (kasse -= p, true) : false);
+  ok(F0.lønnPerDøgn(10) === 150000 && F0.lønnPerDøgn(10, 1.1) === 165000, 'lønn: 150 000 kr i døgnet for ti, 10 % mer med inflasjonen');
+  let r = F0.lønnSteg(G, 30, bet); ok(r.betalt === 0 && kasse === 1e6, 'lønn: ingenting betales før en spilltime har gått');
+  r = F0.lønnSteg(G, 30, bet); ok(r.betalt === 6250 && kasse === 1e6 - 6250, 'lønn: én time for ti personer = 6 250 kr: ' + r.betalt);
+  r = F0.lønnSteg(G, 60, bet, { ekstra: 2 }); ok(r.betalt === 7500, 'lønn: menn i egne tropper får også lønn: ' + r.betalt);
+  kasse = 1000; r = F0.lønnSteg(G, 60, bet); ok(r.betalt === 0 && G.ubetalt === 6250 && kasse === 1000 && r.hendelser.length === 1 && /får ikke betalt/.test(r.hendelser[0]), 'lønn: tom kasse gir skyld og én melding: ' + r.hendelser);
+  r = F0.lønnSteg(G, 60, bet); ok(G.ubetalt === 12500 && r.hendelser.length === 0, 'lønn: skylden vokser uten ny melding');
+  const m0 = F0.steg(G, L, 60, { årstid: 'sommer' }) && G.mål; G.ubetalt = 0; F0.steg(G, L, 60, { årstid: 'sommer' }); const m1 = G.mål; G.ubetalt = 12500;
+  ok(Math.abs(m1 - m0 - 20) < 1, 'lønn: skyldig lønn gir 20 lavere moralmål: ' + m0 + ' mot ' + m1);
+  kasse = 1e6; r = F0.lønnSteg(G, 60, bet); ok(r.betalt === 18750 && G.ubetalt === 0 && /etterbetalt/.test(r.hendelser[0]), 'lønn: alt etterbetales når det er penger: ' + r.betalt);
+  const J = F0.fraJSON(JSON.parse(JSON.stringify({ ...G, ubetalt: 500 }))); ok(J.ubetalt === 500, 'lønn: skylden lagres med folket'); }
 console.log(feil ? `${feil} FEIL` : 'Alle testene for folk.js er ok');
 process.exit(feil ? 1 : 0);

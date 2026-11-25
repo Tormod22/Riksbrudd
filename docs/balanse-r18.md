@@ -69,7 +69,7 @@ Vurdering: **greit** = henger sammen med resten; **rart** = hvorfor i kolonnen; 
 | Fyring 0,5 m³ ved eller 50 l diesel per åtte personer per døgn (vinter; halvt vår/høst) | folk.js:55 | Varme | Greit. Ti personer om vinteren = 100 l = 300 000 kr i døgnet – vinteren merkes. |
 | Drivhus 6 rasjoner per døgn | folk.js:51 | Mat fra drivhuset | **Endret** (3 → 6). |
 | Rekruttering 500 000 kr | folk.js:53 | Ny person | Greit: litt under én kontrakt, og folk arbeider gratis etterpå. |
-| Ingen lønn | – | Folk koster bare mat og seng | Rart for et militærselskap (spor A/Wardogs), men det er en ny mekanikk – se «Spørsmål til brukeren». |
+| Lønn 15 000 kr per person per døgn | folk.js (R.lønn) | Folk og menn i egne tropper | **Laget 25. nov** – brukeren sa «Ja». Betales hver spilltime, følger inflasjonen; tom kasse = skyld og −20 på moralmålet. |
 | Skatt 100 kr per innbygger per døgn, høyst 1,5 mill. per tettsted | region.js:29 | Inntekt fra tettsteder | Greit. Dombås (ca. 1 300) gir 130 000 kr i døgnet; en stor by 1,5 mill. – å holde en by er som en kontrakt hver dag. |
 | Eskorte 650 000, hold 850 000 (× timer/6), rydd 750 000, hent 500 000 kr | spill/selskap.js:37–40 | Kontraktenes grunnbetaling | Greit: 0,65–1,3 mill. med avstand og rykte = 6 døgn med drift om sommeren. (Fila eies av spor A – ikke rørt.) |
 | Bot 35 % av betalingen | selskap.js:29 | Brutt kontrakt | Greit. |
@@ -206,7 +206,10 @@ påfyll en tredel per døgn), så knappheten også gjelder kjøp. Lagenes ammuni
   kontraktene 35 % av verdien på en måned med den nye inflasjonen. Det samme gjelder skatten (region.js) og oppdragene (spillet.js).
   Jeg har latt det være til spor A har landet kontraktene.
 
-## Spørsmål til brukeren (ikke gjort)
+## Spørsmål til brukeren
+
+**Svar 25. nov:** «Ja og 1%» – lønn laget (15 000 kr, nedre ende av forslaget; spill/folk.js lønnSteg), inflasjonen blir 1 % i døgnet.
+
 
 1. **Lønn til folkene?** Folk koster i dag bare mat (3 000 kr i døgnet per person) og en seng. For et militærselskap (Wardogs, spor A)
    ville en dagslønn (f.eks. 15 000–20 000 kr per person i døgnet = 0,15–0,2 mill. for ti) gjøre kontraktene nødvendige og ikke bare

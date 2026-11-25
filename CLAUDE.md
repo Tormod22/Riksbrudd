@@ -1644,3 +1644,8 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   forlatte biler med åpen dør, møbelbarrikader, håndmalte skilt (CanvasTexture), plater for vinduene. lyd.js: bylyden × 0,15 (t.tomt),
   vind i knust vindu (kanal «glipe»), knirk/tikk/drypp inne, hund langt unna og dør som slår ute. VAKT vakter/forlatt.js (selvtester).
   Målt i Dombås: huset + 1,7 % trekanter, gatene ca. 7 400 trekanter. Notat: docs/natt/forlatt.md. Tallene er Claudes forslag.
+  LØNN (25. nov, brukeren: «Ja og 1%» – lønn til folkene og inflasjonen 1 % i døgnet): spill/folk.js R.lønn = 15 000 kr per person i døgnet
+  (nedre ende av forslaget 15–20 000; Claudes valg), FolkRegler.lønnSteg/lønnPerDøgn (test_folk.js): betales hver spilltime for alle i gjengen og
+  mennene i egne tropper (s.fraFolk), ganges med markedets inflasjon (SpilletSpill.M().infl, Marked.INFL = 1,01 – uendret). Tom kasse: F.ubetalt
+  (lagres med folket), melding én gang, moralmålet −20 til alt er etterbetalt. Folk-panelet: «Lønn: … per døgn · … skyldes» og en linje under
+  knappene. Hjelpen: emnet «Lønn». I testene betales ingen lønn av seg selv (FolkSpill.lønnTest). VAKT «lønn til folkene» (vakter/lonn.js).
