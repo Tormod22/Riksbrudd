@@ -107,8 +107,15 @@ module.exports = {
           for (let q = 0; q < 100 && (Gange.venter() || !R.fot); q++) await vent(100);
           for (let q = 0; q < 40 && Gange.innVenter(); q++) { Interior3d.oppdater(true); Gange.oppdaterKnapper(); await vent(60); }
           for (let q = 0; q < 120 && Gange.dørHjelp(); q++) Gange.kamera(R, .06);
+          // (telefon, 25. nov: et nytt utsnitt kunne bli bygget mens du gikk – da forsvinner prøvehuset med det gamle utsnittet og valget
+          // «gaavalg» står åpent. Da prøves siste del én gang til: ved døra og inn.)
+          let omIgjen = false;
+          if (!R.fot && R.ut !== U) { omIgjen = true; const gv = document.getElementById('gaavalg'); if (gv) gv.classList.remove('på'); Gange.stopp(); Gange.vedDøra(h2);
+            for (let q = 0; q < 100 && (Gange.venter() || !R.fot); q++) await vent(100);
+            for (let q = 0; q < 40 && Gange.innVenter(); q++) { Interior3d.oppdater(true); Gange.oppdaterKnapper(); await vent(60); }
+            for (let q = 0; q < 120 && Gange.dørHjelp(); q++) Gange.kamera(R, .06); }
           const k3 = Gange.kropp(); d.gåInn = { går: !!R.fot, inne: !!(k3 && Interior3d.inne(k3.x, k3.y) === P2) }; if (!d.gåInn.går) d.gåInn.hvorfor = { kanInn, venter: Gange.venter(), kort: Gange.kortVenter && Gange.kortVenter(), åpent: Gange.noeÅpent && Gange.noeÅpent(), tempo, bygger: !!R.bygger, nyttUt: R.ut !== U, modal: [...document.querySelectorAll('.modal.på,.kort.på,[role=dialog].på')].map(e => e.id || e.className).slice(0, 4) }; krev(d.gåInn.går && d.gåInn.inne, '«Gå inn i huset» førte deg ikke inn: ' + JSON.stringify(d.gåInn));
-          d.gåInn.del = kanInn ? 'hele' : 'ved døra'; }
+          d.gåInn.del = kanInn && !omIgjen ? 'hele' : 'ved døra'; }
           for (const n of hus.nøkler) { const A = R.hindre.get(n), q = A ? A.indexOf(hus.o) : -1; if (q >= 0) A.splice(q, 1); } hus = null; Interior3d.oppdater(true); }
         // RUNDE 8: byggeplassen i 3D har grunnmur på bakken og reiser seg (ikke en flat plate), og den nye leiren har ting rundt flaggstanga
         if (window.Byggeplass && window.MODELLER) { const geo = p => { const g = Byggeplass.byggeplassGeo([-3.1, 3.1, -6.1, 6.1], 4.6, p, false); g.computeBoundingBox(); const r = { z0: g.boundingBox.min.z, z1: g.boundingBox.max.z, n: g.attributes.position.count / 3 }; g.dispose(); return r; };
