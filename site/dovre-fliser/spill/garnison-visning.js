@@ -144,6 +144,7 @@ body.kort #bykamp{ top:calc(var(--topp,58px) + 42px); font-size:13px; padding:4p
     if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function' && !(typeof R3 !== 'undefined' && R3 && R3.fot)) Promise.resolve(slå3d(false)).then(gå, gå); else gå(); }
   const levMenn = L => L.reduce((a, s) => a + s.menn.filter(m => m.hp > 0).length, 0);
   function bykampSteg() { if (!gAuto()) { bk.classList.remove('på'); return; } let vis = null;
+    for (const id of [...KAMPER.keys()]) if (!byer().some(b => b.e.id === id)) KAMPER.delete(id);
     for (const by of byer()) { const t = S.get(by.e.id); if (!t || t.eier !== 'blå') { KAMPER.delete(by.e.id); continue; }
       const k0 = KAMPER.get(by.e.id), på = kampOm(by, 'blå');
       if (!på) { if (k0 && tid - k0.sist > BYKAMP.slutt) KAMPER.delete(by.e.id); else if (k0) vis = vis || { by, k: k0, rolig: true }; continue; }

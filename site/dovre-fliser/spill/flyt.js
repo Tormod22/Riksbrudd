@@ -297,10 +297,10 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   const ANGREP_TYPER = new Set(['alarm', 'kontakt', 'framme', 'bygg', 'tapt']), angrepStoppet = new Set();
   let grunnAngrep = '', grunnSpill = -1e9;
   function angrepFilter(h) { if (navigator.webdriver && api2.test !== true) return h; const FS = rot.ForsvarSpill, A = FS && FS.angrep ? FS.angrep() : null; if (!A) return h;
-    const f = FS.fase ? FS.fase() : null, ute = h.filter(q => !ANGREP_TYPER.has(q.type));
-    if (angrepStoppet.has(A.id) || !f || !(f.sett || f.nær || f.kamp)) return ute;
+    const f = FS.fase ? FS.fase() : null, ute = h.filter(q => !ANGREP_TYPER.has(q.type)), id = f && f.nøkkel ? f.nøkkel : A.id;
+    if (angrepStoppet.has(id) || !f || !(f.sett || f.nær || f.kamp)) return ute;
     const q = h.find(q => q.type === 'alarm' && Number.isFinite(q.x)) || h.find(q => q.type === 'alarm' || q.type === 'kontakt');
-    if (!q) return ute; angrepStoppet.add(A.id); if (angrepStoppet.size > 30) angrepStoppet.delete(angrepStoppet.values().next().value); grunnAngrep = A.id;
+    if (!q) return ute; angrepStoppet.add(id); if (angrepStoppet.size > 30) angrepStoppet.delete(angrepStoppet.values().next().value); grunnAngrep = A.id;
     return [{ ...q, type: 'alarm' }, ...ute]; }
   let roligMeldt = false;
   function rolig() { const k = ((6 + tid / 60) % 24 + 24) % 24, RR = R.rolig; if (!(k >= RR.fra || k < RR.til)) return false;

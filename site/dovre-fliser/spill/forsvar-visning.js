@@ -274,9 +274,12 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
       if (q.hp <= 0 && før > 0) falne.push(mannNavn(q, s)); else if (q.hp > 0 && q.hp < 1 && før >= 1) sår.push(mannNavn(q, s)); } }
     return { falne, sår }; }
   const byggNavn = b => (window.Leir && Leir.BYGG[b.type] ? Leir.BYGG[b.type].navn : b.type);
-  function startAngrep(A, id) { const b = blåTall(); fra = { id, friske: b.friske, falne: b.falne, bygg: byggNå(), menn: mennNå(), lag: A ? A.lag.slice() : [], navn: A ? A.navn : 'Røverne', røvere: A ? A.røvere : true, side: A ? A.side : null, t: tid,
+  let løpNr = 0;
+  function startAngrep(A, id) { const b = blåTall(); fra = { id, løp: ++løpNr, friske: b.friske, falne: b.falne, bygg: byggNå(), menn: mennNå(), lag: A ? A.lag.slice() : [], navn: A ? A.navn : 'Røverne', røvere: A ? A.røvere : true, side: A ? A.side : null, t: tid,
       // (kritikerløkka r1) hvem som kom: «ett røverlag på 6 mann fra nordvest» (til rapporten)
-      kom: A ? `${A.røvere ? (A.lag.length === 1 ? 'ett røverlag' : A.lag.length + ' røverlag') : (A.lag.length === 1 ? 'ett lag' : A.lag.length + ' lag') + ' fra ' + A.navn} på ${A.lag.reduce((a, e) => a + (Array.isArray(e.menn) ? e.menn.length : 0), 0)} mann fra ${retn(retningMotFienden())}` : '' }; rapportNå = null; kampMeldt = ''; snartMeldt = ''; settMeldt = ''; }
+      kom: A ? `${A.røvere ? (A.lag.length === 1 ? 'ett røverlag' : A.lag.length + ' røverlag') : (A.lag.length === 1 ? 'ett lag' : A.lag.length + ' lag') + ' fra ' + A.navn} på ${A.lag.reduce((a, e) => a + (Array.isArray(e.menn) ? e.menn.length : 0), 0)} mann fra ${retn(retningMotFienden())}` : '' }; rapportNå = null; kampMeldt = ''; snartMeldt = ''; settMeldt = '';
+    // (kritikerløkka r3) et nytt spill i samme side begynner på bølge 1 igjen: det som er husket om et angrep med samme nøkkel, gjelder ikke
+    nærMeldt = ''; uteMeldt = ''; uteNærMeldt = ''; kampStart.delete(id); ventRapport.delete(id); gitt.delete(id); autoGjort.delete(id); spolt.delete(id); }
   // tapene siden starten: falne, sårede, bygg skadet og ødelagt, og hvor mange av angriperne som er slått ut
   function tap(id) { const F0 = fra && fra.id === id ? fra : null, b = blåTall(); if (!F0) return { falne: 0, sårede: 0, skadet: 0, ødelagt: 0, fiender: 0, fienderUte: 0 };
     const LS = window.LeirSpill && LeirSpill.tilstand(), falne = Math.max(0, b.falne - F0.falne);
@@ -536,7 +539,8 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   function kampPågår() { const A = angrep(), L = leir(); if (!A || !L) return false; if (kampStart.has(A.id)) return true; return A.lag.some(e => !e.trekker && !e.flykter && Math.hypot(e.x - L.x, e.y - L.y) <= KAMP.nær); }
   // (kritikerløkka r3) hvor langt angrepet er kommet – flyt.js senker farten én gang per angrep, først når angriperne er sett, er under
   // KAMP.nær m unna eller kampen har begynt
-  const fase = () => { const A = angrep(); return A ? { id: A.id, sett: settMeldt === A.id, nær: nærMeldt === A.id, kamp: kampStart.has(A.id) } : null; };
+  // (nøkkel = angrepet og når det startet: et nytt spill i samme side har bølge 1 igjen)
+  const fase = () => { const A = angrep(); return A ? { id: A.id, nøkkel: A.id + '@' + (fra && fra.id === A.id ? Math.round(fra.t) + '/' + fra.løp : '?'), sett: settMeldt === A.id, nær: nærMeldt === A.id, kamp: kampStart.has(A.id) } : null; };
   window.ForsvarSpill = { fase, AR, prognose, ventetBølge, uteNå, gåHjem, stoppLinje, kampPågår, bannerOppe: () => alarm.classList.contains('på') && !!alarm.getClientRects().length, øvelse: () => øv, kamp14: { KAMP, kampStart, ventRapport }, beredskap, sett, autoForsvar, AUTO, opphev, gjenopprett, anslagTilstand, settAnslag, neste, kjent, anslag, status, angrep, slutt, rapport: () => rapportNå, lukkRapport: () => { rapportNå = null; vis(); }, erSatt: () => satt, vakt: () => vakt, vis, retning: () => sistV, settRetning: v => { sistV = v; },
     test: false, motSteg, motFerdig, hjemSteg, herjere, repSteg, reparerAlle, repPå, settRep, etterAngrep, skade: () => skade, lukkSkade: () => { skade = null; vis(); } };
 })();
