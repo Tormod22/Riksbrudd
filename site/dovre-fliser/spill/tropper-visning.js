@@ -105,7 +105,7 @@
     const s = bærer(k); if (!s || !s.avstigning) return false; const a = s.avstigning;
     if (!r.feil) { a.kjørt = true; delete s.kjørFeil; if (r.framme) { logg(`${s.navn}: ${k.navn} står alt ved ${a.navn} – troppen går av.`); return true; } return false; }
     delete s.avstigning; s.kjørFeil = { x: a.x, y: a.y, navn: a.navn };
-    logg(`${k.navn} kommer ikke fram til ${a.navn} med bil (${String(r.feil).replace(/\.$/, '').replace(/^./, c => c.toLowerCase())}). Velg «Gå av og marsjer dit» i panelet til ${s.navn}, eller et mål ved en veg.`);
+    logg(`${k.navn} når ikke ${a.navn} med bil: ${String(r.feil).replace(/\.$/, '').replace(/^./, c => c.toLowerCase())}. Trykk «Gå av og marsjer dit» hos ${s.navn}, eller velg et mål ved en veg.`);
     if (valgt === s) visPanel(); skitten = true; return true; });
   function gåAvOgMarsjer(s) { const m = s.kjørFeil; if (!m) return; gåAv(s);
     // gåAv går gjennom kommandolaget; ordren gis når troppen faktisk står på bakken

@@ -514,9 +514,9 @@ body.kort #nestelapp small{ display:none; }
   }
   // (kritikerløkka r2, 26. nov, Ingrid: «nødlageret lå midt i Glomma») lagerPlass over sjekker bare havet (høyde ≤ 1 moh.). Etterpå sjekkes
   // terrengklassen (lagVindu, 32 m-ruter): nødlageret flyttes til nærmeste rute på fast mark – ikke vann, myr eller utenfor kartet, med
-  // fast mark rundt (LAND.kant) – helst nær en veg (LAND.veg), i samme retning fra leiren (så tittelen stemmer), og bare før noen har hentet
+  // fast mark rundt (LAND.kant) – helst på samme side av elva/vannet som leiren (LAND.vannStraff), nær en veg (LAND.veg), i samme retning fra leiren (så tittelen stemmer), og bare før noen har hentet
   // det. Gjelder også lagrede spill (k.sted.land = sjekket). Tallene i LAND er Claudes forslag.
-  const LAND = { søk: 520, kant: 2, veg: 160, vegStraff: 450, retningStraff: 900 };
+  const LAND = { søk: 520, kant: 2, veg: 160, vegStraff: 450, retningStraff: 900, vannStraff: 700 };
   let landJobb = null;
   function landLager() { if (landJobb || !S || typeof lagVindu !== 'function' || typeof Terreng === 'undefined') return landJobb;
     const k = [...S.tilbud, ...S.sider[ID].aktive].find(q => q && q.første && q.sted && q.sted.slag === 'lager' && !q.sted.land); if (!k) return null;
@@ -527,12 +527,15 @@ body.kort #nestelapp small{ display:none; }
       const fast = (i, j) => { const c = K(i, j); return c !== 3 && c !== 255; };
       const ok = (i, j) => { if (K(i, j) === 6 || !fast(i, j)) return false; for (let a = -LAND.kant; a <= LAND.kant; a++) for (let b = -LAND.kant; b <= LAND.kant; b++) if (!fast(i + a, j + b)) return false; return true; };
       const vegNær = (i, j) => { const n = Math.ceil(LAND.veg / v.r); for (let a = -n; a <= n; a++) for (let b = -n; b <= n; b++) { const q = j + b, p = i + a; if (p >= 0 && q >= 0 && p < v.w && q < v.h && v.V && v.V[q * v.w + p] > 0) return true; } return false; };
+      // går linja fra stedet mot leiren over vann (innenfor vinduet)? da ligger stedet på andre siden av en elv eller et vann
+      const overVann = (x, y) => { const d = Math.hypot(L.x - x, L.y - y), n = Math.ceil(d / (v.r / 2)); for (let q = 1; q < n; q++) { const [i, j] = Terreng.rute(v, x + (L.x - x) * q / n, y + (L.y - y) * q / n); const c = K(i, j); if (c === 255) break; if (c === 3 && !(v.V && v.V[j * v.w + i] > 0)) return true; } return false; };
       const [i0, j0] = Terreng.rute(v, x0, y0), ret0 = SK.retningOrd(x0 - L.x, y0 - L.y), n = Math.ceil(LAND.søk / v.r);
       // står det alt på fast mark og nær en veg, blir det stående
-      let best = ok(i0, j0) && vegNær(i0, j0) ? { x: x0, y: y0, sk: 0 } : null;
+      let best = ok(i0, j0) && vegNær(i0, j0) && !overVann(x0, y0) ? { x: x0, y: y0, sk: 0 } : null;
+      const sk0 = (x, y) => (overVann(x, y) ? LAND.vannStraff : 0);
       if (!best) for (let a = -n; a <= n; a++) for (let b = -n; b <= n; b++) { const i = i0 + a, j = j0 + b; if (!ok(i, j)) continue;
         const [x, y] = Terreng.senter(v, i, j), d = Math.hypot(x - x0, y - y0); if (d > LAND.søk) continue;
-        const sk = d + (vegNær(i, j) ? 0 : LAND.vegStraff) + (SK.retningOrd(x - L.x, y - L.y) === ret0 ? 0 : LAND.retningStraff);
+        const sk = d + (vegNær(i, j) ? 0 : LAND.vegStraff) + (SK.retningOrd(x - L.x, y - L.y) === ret0 ? 0 : LAND.retningStraff) + sk0(x, y);
         if ((!best || sk < best.sk) && fri0(x, y)) best = { x, y, sk }; }
       if (!best) { if (ok(i0, j0)) k.sted.land = 1; return; }
       if (best.x !== x0 || best.y !== y0) { const dx = best.x - L.x, dy = best.y - L.y, ret = SK.retningOrd(dx, dy);
