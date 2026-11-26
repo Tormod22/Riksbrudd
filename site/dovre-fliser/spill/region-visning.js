@@ -273,7 +273,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   function bygg() {
     const ut = el('div'), ST = status(true), l = leir(), s = sum();
     ut.append(kn('×', lukk, { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Regionen'));
-    ut.append(el('small', { klasse: 'ingress' }, `Tettstedene du holder, sender varer og skatt til leiren hver spilltime. «Per døgn» er et spilldøgn (kl. 06–06) – det samme døgnet som lønna og dagboka. «Nå» er et anslag med lojaliteten, ruta og strømmen slik de er nå; «siste døgn» er det som faktisk kom inn. ${Math.round(R.forvaltning * 100)} % av skatten går til bygdevern og forvaltning i tettstedet, og et nytt tettsted betaler ${Math.round(R.innkjøring.start * 100)} % av skatten det første døgnet og full skatt etter ${R.innkjøring.døgn} døgn.`));
+    ut.append(el('small', { klasse: 'ingress' }, `Tettstedene du holder, sender varer og skatt til leiren hver spilltime. «Per døgn» er et spilldøgn (kl. 06–06), som lønna. «Nå» er et anslag; «siste døgn» er det som kom inn. ${Math.round(R.forvaltning * 100)} % av skatten går til bygdevern og forvaltning. Et nytt tettsted betaler ${Math.round(R.innkjøring.start * 100)} % det første døgnet og full skatt etter ${R.innkjøring.døgn} døgn.`));
     bestillVegnett();
     if (!ST.size) ut.append(el('div', { klasse: 'sum' }, 'Du holder ingen tettsteder ennå. Et lag som står 30 minutter i et tettsted uten fiender, tar det – se under hva de nærmeste er verdt.'));
     else { ut.append(el('div', { klasse: 'sum', id: 'regionsum' }, `${ST.size} tettsted${ST.size === 1 ? '' : 'er'} gir nå (anslag per døgn): `, el('b', {}, RG.girTekst(s, kr)), '.' + sisteTekst()));
