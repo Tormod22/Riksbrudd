@@ -88,5 +88,16 @@
     const S = leir(); if (!S) return false; kam.x = S.leir.x; kam.y = S.leir.y; kam.m = Math.min(kam.m, SAMLE.inn); skitten = true; return true; };
   const førstSamle = () => KROKER.trykk.unshift(samleTrykk);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(førstSamle, 0)); else setTimeout(førstSamle, 0);
-  window.KartLapper = { leir, baseILeiren, hvem, telling, SAMLE };
+  // (kritikerløkka r3, Jonas: «Etiketten Helikopter står ved leiren fra første minutt uten forklaring») – leirens feltbil og helikopter
+  // (spill/kjor.js) er til for 3D: med 3D slått av i ☰ vises navnene ikke, og et trykk på dem i kartet forklarer hva de er
+  E.regel(t => ((t === 'Helikopter' || t === 'Feltbil') && window.UTEN_3D ? false : undefined));
+  const KJØR_TEKST = { heli: 'Leirens helikopter. Du flyr det selv i 3D: trykk «3D» og så «Gå», gå bort til det og velg «Sett deg inn».',
+    bil: 'Leirens feltbil. Du kjører den selv i 3D: trykk «3D» og så «Gå», gå bort til den og velg «Sett deg inn».' };
+  const kjørTrykk = (X, Y) => { if (typeof på3d !== 'undefined' && på3d) return false; if (window.LeirSpill && LeirSpill.plassering && LeirSpill.plassering()) return false;
+    const K = window.KjorSpill && KjorSpill.liste && KjorSpill.liste(); if (!K) return false;
+    const k = K.find(q => q && q.X !== undefined && KJØR_TEKST[q.type] && Math.hypot(q.X - X, q.Y - Y) / kam.m < 18); if (!k) return false;
+    const t = KJØR_TEKST[k.type] + (window.UTEN_3D ? ' (3D er slått av i ☰.)' : '');
+    if (window.FlytSpill && FlytSpill.visKort) FlytSpill.visKort(t, false); else logg(t); return true; };
+  KROKER.trykk.push(kjørTrykk);
+  window.KartLapper = { leir, baseILeiren, hvem, telling, SAMLE, KJØR_TEKST, kjørTrykk };
 })();
