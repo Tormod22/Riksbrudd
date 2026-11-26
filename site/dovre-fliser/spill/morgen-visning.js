@@ -54,7 +54,7 @@
     const st = nærmesteSted(true), sold = soldater(), by = egneByer();
     return { dag: dag(tid), folk: f.personer.length, arbeidsføre: arb.length, frie: arb.filter(p => p.oppgave === 'fri').length, mat: f.mat, matDøgn: B ? B.dager : (f.personer.length ? f.mat / f.personer.length : Infinity),
       moral: f.moral, penger: s.penger, matPris: Fr.R.matPris, trePris: Math.round(Lb.MATERIALER.tre.pris * Lb.REGLER.salg), dieselPris: Lb.DRIVSTOFF.prisPerLiter, lager: { tre: l.lager.tre || 0 },
-      diesel: l.drivstoff || 0, dieselPlass: Lb.kapasitet ? Lb.kapasitet(l) : 0, røverTimer: T.timer, bølge: T.bølge, post: post ? { id: post.id, gir: post.gir.penger || 0, meter: post.meter, retning: post.retning } : null,
+      diesel: l.drivstoff || 0, dieselPlass: Lb.kapasitet ? Lb.kapasitet(l) : 0, tank: (l.bygg || []).some(b => b.type === 'drivstofftank' && b.igjen <= 0), røverTimer: T.timer, bølge: T.bølge, post: post ? { id: post.id, gir: post.gir.penger || 0, meter: post.meter, retning: post.retning } : null,
       sted: st ? st.navn : null, stedEier: st && eierAv(st.id) ? eieform(eierAv(st.id)) : null, stedXY: st ? [st.x, st.y] : null, årstid: (rot.VAER && VAER.årstid) || 'sommer',
       raid: raidNå(), tapt: { byer: (S && S.taptBy || []).slice(), lag: (S && S.taptLag || []).slice() }, soldater: sold, egneByer: by,
       kriseKan: by === 0 && sold < R.krise.soldater && !(S && Number.isFinite(S.kriseSist) && dag(tid) - S.kriseSist < R.krise.pause) };
@@ -299,7 +299,9 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     S.planer2 = []; S.effekter = [];
     const igår = hjem(); S.planer = S.planer2; delete S.planer2; S.dag = Number.isFinite(S.dag) ? Math.max(S.dag, d) : d;
     // tapene i lagene siden forrige morgen (tapSteg), med navn
-    const tap = M.tapTekst(S.tap || []); S.tap = [];
+    // (R2-løkka) de som ble såret, men er friske nå, merkes «frisk igjen»
+    const helse = new Map(); for (const e of ENHETER) if (e.side === 'blå' && Array.isArray(e.menn)) for (const m of e.menn) if (m && m.navn) helse.set(m.navn, Math.max(helse.get(m.navn) || 0, m.hp));
+    const tap = M.tapTekst((S.tap || []).map(t => (t && t.hva === 'såret' && helse.get(t.navn) >= 1 ? { ...t, frisk: true } : t))); S.tap = [];
     // RUNDE 14: tapte tettsteder og tropper står i rapporten; valgene som gir soldater, ser på dem (situasjon), så de nullstilles etter kortet
     const tb = (S.taptBy || []).map(b => b.navn + (b.eier ? ` (nå ${eieform(b.eier)})` : '')), tl = S.taptLag || [];
     const taptTekst = tb.length || tl.length ? 'Tapt siden i går: ' + [tb.length ? (tb.length > 1 ? 'tettstedene ' : 'tettstedet ') + og(tb) : '', tl.length ? og(tl) + ' er slått ut' : ''].filter(Boolean).join('. ') + '. Se valgene under for flere soldater.' : null;

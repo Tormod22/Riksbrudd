@@ -4,7 +4,7 @@
  *     lite mat -> jakt og fiske / kjøp mat / halve rasjoner; røvere ventes -> dobbel vakt i natt; lite penger -> selg tre / et risikabelt
  *     oppdrag; godt med folk -> en speidertur; lav moral -> fridag; ellers ekstra skift. Hvert valg sier hva det koster og hva det gir.
  *     Neste morgen står det på kortet hvordan det gikk («I går: jakta ga 13 rasjoner»).
- *  2. Noen dager (fra dag 2, så hver tredje dag) kommer også én større beslutning på samme kort: et nabogårdsfolk vil bli med, en forlatt
+ *  2. Noen dager (fra dag 2, så hver tredje dag) kommer også én større beslutning på samme kort: folk fra en nabogård vil bli med, en forlatt
  *     tankbil (et lite oppdrag i kartet), røvere som vil ha betalt for å la dere være, eller en handelskaravane.
  * Reglene her er uten DOM (Node: require('./morgen'); nettleser: globalThis.Morgen) – test: pipeline/fliser/test_morgen.js.
  * Visningen (kortet, virkningene på folk, lager, kasse og angrep) ligger i spill/morgen-visning.js. Alle tall er Claudes forslag.
@@ -144,7 +144,7 @@
   // pausen per slag, REGLER.stor.pause; brytes når ingenting annet passer). Gir { id, tittel, tekst, valg } eller null.
   function storBeslutning(s, rng = tilf, sist = null, hist = null) {
     const R = REGLER, mulige = [];
-    if (s.folk > 0) mulige.push({ id: 'nabo', tittel: 'Et nabogårdsfolk vil bli med', tekst: `${R.nabo.folk} fra en nabogård har gitt opp gården og vil slå seg sammen med dere. De har med seg litt mat, men de trenger senger og skal ha mat hver dag.`,
+    if (s.folk > 0) mulige.push({ id: 'nabo', tittel: 'Folk fra en nabogård vil bli med', tekst: `${R.nabo.folk} fra en nabogård har gitt opp gården og vil slå seg sammen med dere. De har med seg litt mat, men de trenger senger og skal ha mat hver dag.`,
       valg: [{ id: 'alle', t: `Ta dem inn (folk +${R.nabo.folk}, mat +${R.nabo.mat})`, følge: `${R.nabo.folk} nye arbeidere i dag. Uten ledige senger faller moralen, og maten går fortere.` },
         { id: 'to', t: `Ta inn to av dem (folk +2, mat +${Math.round(R.nabo.mat / 2)})`, følge: 'To nye arbeidere. De andre går videre.' },
         { id: 'nei', t: 'Avvis dem', følge: `Ingen nye munner å mette. Noen synes det er hardt (moral ${R.nabo.avvistMoral}).` }] });
@@ -167,7 +167,8 @@
     if (s.penger >= pakke && pakke > 0) kv.push({ id: 'kjøp', t: dl ? `Kjøp ${dl} l diesel og ${R.karavane.mat} rasjoner (${kr(pakke)})` : `Kjøp ${R.karavane.mat} rasjoner (${kr(pakke)})`, følge: `Omtrent ${Math.round((1 - R.karavane.rabatt) * 100)} % billigere enn markedet.` + (dl && dl < R.karavane.diesel ? ` Bare ${dl} l får plass i tankene.` : ''), pris: pakke, diesel: dl });
     if (tm >= R.karavane.minTre && tp > 0) kv.push({ id: 'selg', t: `Selg ${tm} m³ tre (${kr(tp)})`, følge: `Bedre betalt enn på markedet (${Math.round((R.karavane.trePris - 1) * 100)} % mer).`, pris: tp, mengde: tm });
     const ktekst = 'En karavane med lastebiler har slått leir ved vegen i dag. ' + (kv.some(v => v.id === 'selg') ? 'De selger billig og kjøper tre.' : `De selger billig (de kjøper tre også, men dere har under ${R.karavane.minTre} m³).`)
-      + (kv.some(v => v.id === 'kjøp') && !dl ? ' Dieseltankene er fulle, så dere kan bare kjøpe mat.' : '');
+      // (R2-løkka 26. nov, kritikken: «Dieseltankene er fulle» når leiren ikke har noen tank) teksten sier hvorfor det ikke er plass
+      + (kv.some(v => v.id === 'kjøp') && !dl ? (s.tank === false ? ((s.dieselPlass || 0) > 0 ? ' Dere har ingen dieseltank, og den lille tanken i aggregatet er full, så dere kan bare kjøpe mat.' : ' Dere har ingen dieseltank, så dere kan bare kjøpe mat.') : ' Dieseltanken er full, så dere kan bare kjøpe mat.') : '');
     if (kv.length) mulige.push({ id: 'karavane', tittel: 'En handelskaravane', tekst: ktekst, valg: kv.concat([{ id: 'nei', t: 'Ingen handel', følge: 'Karavanen drar videre i kveld.' }]) });
     // RUNDE 13: handelsmannen kommer kl. 14 og kjøper det dere legger av til ham (en avtale med tidsfrist)
     const H = R.handel, ht = Math.min(Math.floor(s.lager && s.lager.tre || 0), Math.round(mellom(rng, H.tre))), hd = Math.min(Math.floor((s.diesel || 0) / 50) * 50, Math.round(mellom(rng, H.diesel) / 50) * 50);
@@ -232,9 +233,12 @@
     if (!Array.isArray(tap) || !tap.length) return null;
     const per = new Map();
     for (const t of tap) { if (!t || !t.navn) continue; const k = (t.lag || '') + '|' + t.navn, f = per.get(k); if (f && f.hva === 'falt' && t.hva !== 'falt') continue; per.set(k, t); }
-    const lag = new Map(); for (const t of per.values()) { const l = t.lag || 'et lag'; if (!lag.has(l)) lag.set(l, { falt: [], såret: [] }); lag.get(l)[t.hva === 'falt' ? 'falt' : 'såret'].push(t.navn + (t.fører ? ' (lagfører)' : '')); }
+    // (R2-løkka 26. nov, kritikken: rapporten gjentok «Randi Haugen ble såret» selv om hun var friskmeldt) t.frisk = vedkommende er frisk
+    // igjen nå (morgen-visning.js ser etter helsa når møtet holdes)
+    const lag = new Map(); for (const t of per.values()) { const l = t.lag || 'et lag'; if (!lag.has(l)) lag.set(l, { falt: [], såret: [], frisk: [] }); lag.get(l)[t.hva === 'falt' ? 'falt' : t.frisk ? 'frisk' : 'såret'].push(t.navn + (t.fører ? ' (lagfører)' : '')); }
     const og = a => (a.length > 4 ? a.slice(0, 3).join(', ') + ` og ${a.length - 3} til` : a.length > 1 ? a.slice(0, -1).join(', ') + ' og ' + a[a.length - 1] : a[0]);
-    const deler = [...lag].map(([l, v]) => `${l}: ` + [v.falt.length ? `${og(v.falt)} falt` : '', v.såret.length ? `${og(v.såret)} ble såret` : ''].filter(Boolean).join(', '));
+    const deler = [...lag].map(([l, v]) => `${l}: ` + [v.falt.length ? `${og(v.falt)} falt` : '', v.såret.length ? `${og(v.såret)} ble såret` : '',
+      v.frisk.length ? `${og(v.frisk)} ble såret, men er ${v.frisk.length > 1 ? 'friske' : 'frisk'} igjen` : ''].filter(Boolean).join(', '));
     return deler.length ? 'Tap i lagene: ' + deler.join('. ') + '.' : null;
   }
 

@@ -225,7 +225,7 @@
   function hendelser(ut) {
     for (const h of ut) {
       const k = h.k;
-      if (h.type === 'levert') { if (window.OppstartSpill) OppstartSpill.gi(h.kr); logg(`Kontrakt levert: ${k.tittel}. ${k.giver.navn} betalte ${kr(h.kr)}.`); rydd(k); kobling(h);
+      if (h.type === 'levert') { if (window.OppstartSpill) OppstartSpill.gi(h.kr); logg(`Kontrakt levert: ${k.tittel}. ${k.giver.navn} betalte ${kr(h.kr)}.`); rydd(k); kobling(h); levertØyeblikk(k, h.kr);
         try { window.dispatchEvent(new CustomEvent('riksbrudd-kontrakt', { detail: { type: 'levert', id: k.id, kr: h.kr } })); } catch (e) { /* gammel nettleser */ } }
       else if (h.type === 'brutt') { const bot = Math.min(h.kr || 0, (Sp() && Sp().penger) || 0); if (bot > 0) OppstartSpill.betal(bot);
         const grunn = SK.bruttTekst(k) || (h.grunn === 'frist' ? 'fristen gikk ut' : 'dere avbrøt den');
@@ -246,6 +246,33 @@
       else if (h.type === 'rivalTok') { /* stille: står i oversikten */ }
     }
     if (ut.length) { lagre(); skitten = true; }
+  }
+
+  // ---------- LEVERINGSØYEBLIKKET (R2-løkka 26. nov, kritikken: «leveringen av den første kontrakten (1,5 mill.) skjer stille – bare
+  // Neste-lappen skifter») ----------
+  // Et lite kort øverst i kartet i ca. 14 sekunder (spillet går videre): hvem som betalte, hva det betyr, og hva neste steg er – med en
+  // knapp rett dit. Den første kontrakten får hele forklaringen; senere kontrakter et kortere kort. Ikke i testene (auto()).
+  const lcss = document.createElement('style');
+  lcss.textContent = `#levertkort{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 10px); z-index:19; width:min(420px, calc(100vw - 24px)); box-sizing:border-box;
+  background:linear-gradient(180deg,#26301c,#161c10); border:1px solid #8fae5e; box-shadow:0 10px 26px rgba(0,0,0,.55); color:#e7dcc3; padding:9px 12px 10px; font-size:14px; line-height:1.4; }
+#levertkort small{ display:block; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#a9c27a; } #levertkort b{ font-family:'Cormorant Garamond', serif; font-size:19px; color:#f0e2b0; font-weight:600; }
+#levertkort p{ margin:4px 0 0; } #levertkort .knapper{ display:flex; gap:6px; justify-content:flex-end; margin-top:7px; }
+#levertkort button{ min-height:34px; padding:0 12px; background:#2a2318; border:1px solid #5a4a2a; color:#e7dcc3; font:inherit; font-size:13.5px; cursor:pointer; } #levertkort button.hoved{ border-color:#8fae5e; color:#dfeab8; }
+body.kort #levertkort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }`;
+  document.head.appendChild(lcss);
+  let levertTid = 0;
+  function levertØyeblikk(k, beløp) {
+    if (!auto() || !k) return; const s = Sp(), gml = document.getElementById('levertkort'); if (gml) gml.remove(); clearTimeout(levertTid);
+    const b = document.createElement('div'); b.id = 'levertkort'; b.setAttribute('role', 'status');
+    const kasse = s ? ` Kassa: ${kr(s.penger)}.` : '';
+    const hva = k.første ? `Dette er selskapets første inntekt – og første rykte: «${egetNavn()}» holder ord. Pengene rekker til en brakke (flere senger) eller et vakttårn (ser røverne før de kommer).`
+      : `Ryktet for å holde ord vokste. Husk de faste utgiftene: lønn og vedlikehold trekkes hver time.`;
+    const neste = k.første ? 'Neste steg: åpne Leir og bygg noe for pengene. Etterpå venter nye kontrakter i Selskapet.' : 'Neste: en ny kontrakt i Selskapet, eller bygg ut leiren.';
+    b.innerHTML = `<small>Kontrakt levert</small><b>${esc(k.giver.navn)} betalte ${esc(kr(beløp))}</b><p>${esc(hva)}${esc(kasse)}</p><p>${esc(neste)}</p>`
+      + `<div class="knapper"><button type="button" class="hoved" data-l="neste">${k.første ? 'Åpne Leir' : 'Åpne Selskapet'}</button><button type="button" data-l="ok">OK</button></div>`;
+    b.addEventListener('click', e => { const t = e.target.closest('button'); if (!t) return; b.remove(); clearTimeout(levertTid);
+      if (t.dataset.l === 'neste') { if (k.første) { const lk = document.getElementById('leirknapp'); if (lk) lk.click(); if (window.LeirSpill && LeirSpill.fane) LeirSpill.fane('bygg'); } else vis(true); } });
+    document.body.appendChild(b); levertTid = setTimeout(() => b.remove(), 14000);
   }
 
   // ---------- steget (KROKER.sim, dt i spillminutter) ----------
@@ -340,6 +367,8 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     if (k.type === 'hold') { andel = k.framdrift / (k.hold * 60); status = `Holdt ${Math.floor(k.framdrift / 60)} t ${Math.round(k.framdrift % 60)} min av ${k.hold} t` + (v.fiender ? ' – fiender ved stedet, tida står' : v.lag ? ' – laget holder stedet' : ' – ingen lag der ennå'); }
     else if (k.type === 'eskorte') { andel = v.andel || 0; status = v.tapt ? 'Bilen er borte.' : `${esc(k.bil || 'Bilen')}: ${meter(v.igjen || 0)} igjen. Velg bilen i kartet og gi den ordre.`; }
     else if (k.type === 'rydd') { status = v.i ? 'Sperra er slått ut.' : 'Sperra står. Send et lag.'; andel = v.i ? 1 : 0; }
+    // (R2-løkka, kritikken: «venter ved låven sørøst for leiren.» uten subjekt) den første kontrakten har ingen person – det er nødlageret som venter
+    else if (k.type === 'forsyning') { status = k.hentet ? `${esc(k.bærer || 'Troppen')} bærer nødlageret – ta det med hjem til leiren.` : `Nødlageret venter i ${esc(k.sted.navn)}.`; andel = k.hentet ? (v.i ? 1 : .5) : 0; }
     else { status = k.hentet ? `${esc(k.bærer || 'Laget')} har ${esc(k.person)} med seg – til leiren.` : `${esc(k.person)} venter ved ${esc(k.sted.navn)}.`; andel = k.hentet ? (v.i ? 1 : .5) : 0; }
     return `<div class="kort aktiv${klarNå ? ' klar' : ''}" data-kontrakt="${k.id}"><b>${esc(k.tittel)}</b><div class="fra">${esc(typeNavn(k))} · ${esc(k.giver.navn)} · <span class="tall">${esc(SK.fristTekst(k, tid))}</span></div>`
       + `<p>${status}</p><div class="fram"><i style="width:${Math.round(Math.max(0, Math.min(1, andel)) * 100)}%"></i></div>`

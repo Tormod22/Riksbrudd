@@ -35,7 +35,11 @@
     // RUNDE 14 (kritiker I: «hver omlasting skrev Spillform …, Ravnsund holder til i … og Velkommen tilbake … inn i loggen» – 36 av
     // 61 linjer; kritiker J: etter F5 sto det at fienden holdt en by spilleren holdt): innledningen skrives bare i et NYTT spill.
     // Når et lagret spill åpnes, holdes disse meldingene tilbake (oppsummeringen står i «Velkommen tilbake»-boksen).
-    OPPSTART: /^(Spillform: |Velkommen tilbake, |Fikk ikke hentet )| \((rød|grønn)\) holder til /,
+    // (R2-løkka 26. nov, kritikken: «Motstanderne samler styrker …» kom på nytt etter omlasting) – også den er innledning
+    OPPSTART: /^(Spillform: |Velkommen tilbake, |Fikk ikke hentet |Motstanderne samler styrker )| \((rød|grønn)\) holder til /,
+    // (R2-løkka 26. nov, kritikken: «planlegger rute … (×10)», «Speidertropp 1 er framme. (×5)») statusmeldinger om ett lag som gjentar seg,
+    // vises bare én gang så lenge de kommer oftere enn hver STILLE.hver spillminutter – uten «×n» (det er ikke nyheter)
+    STILLE: { re: /(: planlegger rute …| er framme\.)$/, hver: 180 },
   };
   // «Kamp om Bryne … (×4)» og «… (20 m)!» / «… (35 m)!» gir samme nøkkel: tall og «×n» regnes ikke med
   const nøkkel = t => String(t).replace(/\s*\(×\d+\)\s*$/, '').replace(/[\d\s.,]*\d/g, '#').trim();
@@ -44,7 +48,7 @@
   const setninger = t => String(t).split(/(?<=[.!?…])\s+(?=[A-ZÆØÅ«(📻])/);
 
   function lag(R = REGLER, tips = new Set()) {
-    const sist = new Map(), sett = new Map(), engang = new Map(), rutine = {}; let vær = { stor: false, t: -1e9, tekst: '' };
+    const sist = new Map(), sett = new Map(), engang = new Map(), stille = new Map(), rutine = {}; let vær = { stor: false, t: -1e9, tekst: '' };
     const nær = (a, b, v) => Math.abs(a - b) <= v;
     function glem(kart) { if (kart.size <= R.maks) return; const n = kart.size - R.maks; let i = 0; for (const k of kart.keys()) { if (i++ >= n) break; kart.delete(k); } }
     // svar: null = hold tilbake, ellers { tekst, fjern } (fjern = indeksen til en gammel linje som skal bort, −1 = ingen)
@@ -74,6 +78,8 @@
         }
         t = ut.join(' ');
       } else if (R.tips.test(t)) { if (tips.has(t)) return null; tips.add(t); }
+      // STILLE: statusmeldinger om et lag – samme melding (med tallene: «Speidertropp 2» er et annet lag enn «Speidertropp 1») innen STILLE.hver holdes tilbake (vinduet flyttes med hver gjentakelse)
+      if (R.STILLE && R.STILLE.re.test(t)) { const sk = String(t).replace(/\s*\(×\d+\)\s*$/, ''), f = stille.get(sk); stille.set(sk, nå); glem(stille); if (f !== undefined && nær(nå, f, R.STILLE.hver)) return null; }
       // 1: samme melding innen vinduet
       const k = nøkkel(t), før = sist.get(k);
       const n = før && nær(nå, før.t, R.vindu) ? før.n + 1 : 1;
@@ -83,7 +89,7 @@
       const fjern = n > 1 ? linjer.findIndex(l => nøkkel(l) === k) : -1;
       return { tekst: n > 1 ? t + ' (×' + n + ')' : t, fjern };
     }
-    return { vurder, tips, nullstill: () => { sist.clear(); sett.clear(); engang.clear(); for (const k of Object.keys(rutine)) delete rutine[k]; vær = { stor: false, t: -1e9, tekst: '' }; } };
+    return { vurder, tips, nullstill: () => { sist.clear(); sett.clear(); engang.clear(); stille.clear(); for (const k of Object.keys(rutine)) delete rutine[k]; vær = { stor: false, t: -1e9, tekst: '' }; } };
   }
 
   const api = { REGLER, nøkkel, setninger, lag };

@@ -45,4 +45,10 @@ ok(D.nøkkel('Brakke bestilt: 4 mill. kr, 1,7 t byggetid.') === D.nøkkel('Brakk
 { const g = logg(); g.inn('Røvere 1.1 skader brakke i leiren! Dere mistet 3 m³ tre.', 0); const r = g.inn('Røvere 1.2 skader verksted i leiren! Dere mistet 3 m³ tre.', 1); ok(r && /mistet 3/.test(r.tekst), 'setninger med tall tas ikke bort'); }
 ok(D.setninger('Det begynner å regne. Sikten er 95 % av vanlig.').length === 2 && D.setninger('Brakke bestilt: 4 mill. kr, 1,7 t byggetid.').length === 1, 'setningene deles riktig (også «4 mill. kr, 1,7 t»)');
 ok(logg().d.vurder('', [], 0) === null && logg().d.vurder(null, [], 0) === null, 'tom melding vises ikke');
+// R2-løkka: statusmeldinger om ett lag gjentas ikke («planlegger rute … (×10)», «er framme. (×5)»), men et annet lag meldes
+{ const g = logg(); let n = 0; for (let i = 0; i < 10; i++) if (g.inn('Speidertropp 1: planlegger rute …', i * 5)) n++;
+  ok(n === 1 && !g.L.some(l => /×/.test(l)), `«planlegger rute …» ti ganger på 45 min: vist ${n} gang, uten ×n`);
+  ok(!!g.inn('Speidertropp 2: planlegger rute …', 50), 'et annet lag meldes'); let f = 0; for (let i = 0; i < 5; i++) if (g.inn('Speidertropp 1 er framme.', 60 + i * 20)) f++;
+  ok(f === 1, `«er framme» fem ganger: vist ${f} gang`); ok(!!g.inn('Speidertropp 1 er framme.', 60 + 4 * 20 + 200), 'etter en lang pause meldes det igjen'); }
+{ const d = D.lag(); ok(d.vurder('Motstanderne samler styrker de første 3 døgnene og tar ingen tettsteder ennå.', [], 10, true) === null, 'etter omlasting: «Motstanderne samler styrker …» står ikke på nytt'); }
 console.log(feil ? feil + ' FEIL' : 'alle tester ok'); process.exit(feil ? 1 : 0);

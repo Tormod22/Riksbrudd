@@ -132,6 +132,14 @@ ok(klite && !klite.valg.some(v => v.id === 'selg') && !/og kjøper tre\./.test(k
 const fu = M.utfall({ id: 'speid', sted: 'Røysland', fiende: 'Ravnsunds', fiendeTekst: 'I Røysland telte de 2 fiendtlige lag (ca. 9 mann).', folk: [{ navn: 'Ola A' }, { navn: 'Kari B' }] }, { røverTimer: null }, fast(.01));
 ok(/telte de 2/.test(fu.tekst) && (fu.skadet.length || fu.borte.length), 'speidertur mot fiendens by: melder styrken, større fare: ' + fu.tekst);
 
+// --- R2-løkka: karavanen uten tank, og sårede som er friske igjen ---
+const kUten = kar14({ ...grunn, diesel: 200, dieselPlass: 200, tank: false });
+ok(kUten && !/Dieseltankene er fulle/.test(kUten.tekst) && /ingen dieseltank/.test(kUten.tekst), 'karavanen uten tank sier «ingen dieseltank», ikke «tankene er fulle»: ' + (kUten && kUten.tekst));
+const kMed = kar14({ ...grunn, diesel: 1000, dieselPlass: 1000, tank: true });
+ok(kMed && /Dieseltanken er full/.test(kMed.tekst), 'karavanen med full tank: ' + (kMed && kMed.tekst));
+ok(/Randi Haugen ble såret, men er frisk igjen/.test(M.tapTekst([{ navn: 'Randi Haugen', lag: 'Speidertropp 1', hva: 'såret', frisk: true }])), 'en såret som er frisk igjen, står som det');
+ok(!/frisk/.test(M.tapTekst([{ navn: 'Randi Haugen', lag: 'Speidertropp 1', hva: 'såret' }])), 'en som fortsatt er såret, står som før');
+
 // --- alle tallene står i REGLER ---
 ok(M.REGLER.borte === 2 && M.REGLER.stor.første === 2 && M.REGLER.stor.hver === 1 && M.REGLER.vakt.ekstra === 2, 'tallene står i REGLER');
 console.log(feil ? feil + ' FEIL' : 'alle morgentestene ok'); process.exit(feil ? 1 : 0);
