@@ -35,16 +35,19 @@
     { id: 'forsvar', tittel: 'Sett lagene i forsvar', tekst: 'Når røverne kommer, står det et rødt banner øverst: trykk «Forsvar leiren». Øv gjerne nå: Leir → Bygg → rull ned til Forsvar → «Øv».', mål: 'forsvar', ferdig: b => b.forsvarSatt },
     // (runde 8, kritiker D: steget sto oppe under angrepet selv om leiren ikke hadde ferdige bygg) vises bare når noe er skadet;
     // et angrep som er over uten skade, gjør steget ferdig uten at det har vært vist
-    { id: 'reparer', tittel: 'Reparer byggene etter et angrep', tekst: 'Etter et angrep er byggene skadet. Trykk «Reparer alle» i banneret, eller velg et bygg og Reparer. Ledige byggelag reparerer også av seg selv.', mål: 'reparer', ferdig: b => b.angrep && b.skadet === 0, vises: b => b.skadet > 0 },
+    { id: 'reparer', tittel: 'Reparer byggene etter et angrep', tekst: 'Etter et angrep er byggene skadet. Trykk «Reparer alle» i banneret, eller velg et bygg og Reparer. Ledige byggelag reparerer også av seg selv.', mål: 'reparer', ferdig: b => b.angrep && (b.skadet === 0 || !!b.reparert), vises: b => b.skadet > 0 && !b.reparert },
+    // (R3-løkka 26. nov, kritikken: «Opplæring 9/9: Reparer byggene … sto i Mål dag 3, etter at jeg hadde trykket ‹Reparer alle› dag 2»)
+    // steget er gjort når en reparasjon er satt i gang etter et angrep (b.reparert, husket i lagringen) – også om et bygg som var opptatt
+    // (oppgradering) eller som pengene ikke rakk til, fortsatt er skadet
   ];
   // stegene som kom i runde 4: en opplæring som alt var ferdig og lukket (lagret uten v), får dem ikke på nytt
   const NYE = ['tropp2', 'mat', 'forsvar', 'reparer'];
   const tom = () => ({ gjort: [], hoppet: [], slutt: false });
   const fra = t => { let o = null; try { o = typeof t === 'string' ? JSON.parse(t) : t; } catch (e) { o = null; } const T = tom(); if (!o || typeof o !== 'object') return T;
-    const ok = a => (Array.isArray(a) ? a.filter(x => STEG.some(s => s.id === x)) : []); T.gjort = ok(o.gjort); T.hoppet = ok(o.hoppet); T.slutt = !!o.slutt; T.leir = typeof o.leir === 'string' ? o.leir : undefined; T.vaktFør = !!o.vaktFør;
+    const ok = a => (Array.isArray(a) ? a.filter(x => STEG.some(s => s.id === x)) : []); T.gjort = ok(o.gjort); T.hoppet = ok(o.hoppet); T.slutt = !!o.slutt; T.leir = typeof o.leir === 'string' ? o.leir : undefined; T.vaktFør = !!o.vaktFør; T.reparert = !!o.reparert;
     if (T.slutt && !(o.v >= 2)) for (const id of NYE) if (!T.gjort.includes(id) && !T.hoppet.includes(id)) T.hoppet.push(id);
     return T; };
-  const til = T => JSON.stringify({ v: 2, leir: T.leir, gjort: T.gjort, hoppet: T.hoppet, slutt: T.slutt, ...(T.vaktFør ? { vaktFør: true } : {}) });
+  const til = T => JSON.stringify({ v: 2, leir: T.leir, gjort: T.gjort, hoppet: T.hoppet, slutt: T.slutt, ...(T.vaktFør ? { vaktFør: true } : {}), ...(T.reparert ? { reparert: true } : {}) });
   const tatt = (T, id) => T.gjort.includes(id) || T.hoppet.includes(id);
   // første steg som verken er gjort eller hoppet over
   const neste = T => STEG.find(s => !tatt(T, s.id)) || null;
@@ -133,12 +136,14 @@ body.nesteen #opplaering.ilapp{ display:none; }`;
       ...bilde4(L, F) }; }
   // RUNDE 14: har minst to stått på Vakt (dobbel vakt fra morgenmøtet teller), huskes det for steget «Mer forsvar»
   const bildeFør = bilde;
-  bilde = function () { const b = bildeFør(); if (b.påVakt >= 2 && !T.vaktFør) { T.vaktFør = true; lagre(); } b.vaktFør = !!T.vaktFør; return b; };
+  bilde = function () { const b = bildeFør(); if (b.påVakt >= 2 && !T.vaktFør) { T.vaktFør = true; lagre(); } b.vaktFør = !!T.vaktFør;
+    // (R3-løkka) en reparasjon i gang etter et angrep huskes for steget «Reparer byggene»
+    if (b.angrep && b.repareres > 0 && !T.reparert) { T.reparert = true; lagre(); } b.reparert = !!T.reparert; return b; };
   // (runde 4) mat, forsvar og reparasjon: matDøgn (mat per person), forsvarSatt (forsvaret – eller en øvelse – har vært satt),
   // angrep (minst én bølge er over) og skadet (bygg under 98 % som ikke repareres)
   function bilde4(L, F) { if (rot.ForsvarSpill && ForsvarSpill.erSatt && ForsvarSpill.erSatt()) sett.forsvar = true; const T0 = rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() ? SpilletSpill.T() : null;
     return { matDøgn: F && F.personer && F.personer.length ? F.mat / F.personer.length : 99, forsvarSatt: sett.forsvar, angrep: !!(T0 && T0.bølge >= 1 && !T0.aktiv),
-      skadet: L ? L.bygg.filter(b => b.igjen <= 0 && b.hp > 0 && b.hp < .98 && !b.arbeid).length : 0 }; }
+      skadet: L ? L.bygg.filter(b => b.igjen <= 0 && b.hp > 0 && b.hp < .98 && !b.arbeid).length : 0, repareres: L ? L.bygg.filter(b => b.arbeid && b.arbeid.hva === 'reparer').length : 0 }; }
   // hva ringen skal stå rundt for steget: knappen i kommandolinja, eller neste ting inne i menyen når den alt er åpen
   function pekPå(s) { if (!s) return null; const lm = $('leirmeny'), åpen = lm && lm.classList.contains('på');
     if (s.mål === 'leir') return kn('leir') || $('leirknapp');

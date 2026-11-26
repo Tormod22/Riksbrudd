@@ -38,4 +38,10 @@ ok(O.STEG.every(s => s.tittel && s.tekst.length > 20 && s.tekst.length < 170), '
 { const s6 = O.STEG.find(s => s.id === 'tropp2'); ok(s6.ferdig({ tropper: 1, påVakt: 0, vaktFør: true }), 'to på vakt før (dobbel vakt) godkjenner «Mer forsvar»');
   globalThis.tid = 3 * 1440 + 10; ok(s6.tittel === 'Mer forsvar', 'dag 4: «før dag 4» er borte'); globalThis.tid = 100; ok(s6.tittel === 'Mer forsvar før dag 4', 'dag 1: «før dag 4» står'); delete globalThis.tid;
   const Tv = O.tom(); Tv.vaktFør = true; ok(O.fra(O.til(Tv)).vaktFør === true, 'vaktFør lagres'); }
+// (R3-løkka) «Reparer byggene»: gjort når en reparasjon er satt i gang etter angrepet, også om et bygg fortsatt er skadet
+{ const s = O.STEG.find(q => q.id === 'reparer');
+  ok(!s.ferdig({ ...tomt, angrep: true, skadet: 1 }) && s.ferdig({ ...tomt, angrep: true, skadet: 1, reparert: true }) && s.ferdig({ ...tomt, angrep: true, skadet: 0 }), 'reparer: gjort når reparasjonen er satt i gang (eller alt er helt)');
+  ok(!s.ferdig({ ...tomt, angrep: false, skadet: 0, reparert: true }), 'reparer: ikke før et angrep');
+  ok(!O.vises(s, { ...tomt, angrep: true, skadet: 2, reparert: true }), 'reparer: vises ikke lenger når reparasjonen er i gang');
+  const Tr = O.tom(); Tr.reparert = true; ok(O.fra(O.til(Tr)).reparert === true && O.fra(O.til(O.tom())).reparert === false, 'reparert lagres'); }
 console.log(feil ? `${feil} FEIL` : 'Alt ok'); process.exit(feil ? 1 : 0);
