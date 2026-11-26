@@ -186,7 +186,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
           logg(B.del ? `${e.navn} skader byggesettet!` : r.byggeplass ? `${e.navn} skader byggeplassen for ${navn}!` : `${e.navn} skader ${navn} i leiren!`); } } }
       if (deler.n) { const mt = matTekst(deler.mat); logg(`${deler.n} ${deler.n === 1 ? 'del' : 'deler'} i byggesettet er ødelagt av ${e.navn}!` + (mt ? ` Materialene som ikke var brukt, er tilbake på lageret: ${mt}.` : '')); skitten = true; } }
     akk += dt; if (akk >= 10 || siste.nyFerdig.length || siste.ferdigArbeid.length) { akk = 0; lagre(); }
-    if (performance.now() - (sist || 0) > 1000) { sist = performance.now(); visStatus(); const nede = window.pekerNede || (() => false); if (meny && !nede(menyEl)) visMeny(); if (valgtBygg && !plassering && !nede(banner)) visByggPanel(); skitten = true; }
+    if (performance.now() - (sist || 0) > 1000) { sist = performance.now(); visStatus(); const nede = window.pekerNede || (() => false); if (meny && !nede(menyEl)) visMeny(true); if (valgtBygg && !plassering && !nede(banner)) visByggPanel(); skitten = true; }
   });
 
   // ---------- menyen ----------
@@ -213,7 +213,15 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     if (!siste.behov) return 'Ingen bygg bruker strøm ennå' + (k ? ` · strøm fra ${k}` : '') + '.';
     return (n === 1 ? 'Bygget som bruker strøm, har strøm' : `Alle ${n} byggene som bruker strøm, har strøm`) + (k ? ` · fra ${k}` : '') + '.';
   }
-  function visMeny() {
+  // pekeren (mus) over lista: da tegnes den ikke på nytt av seg selv (kortet under pekeren kan vokse når du peker på det, og et kort kunne
+  // da hoppe opp eller ned mellom visning og klikk); nye tall kommer når pekeren går ut av lista eller du trykker på noe i den
+  let pekerOver = null, utsatt = false;
+  // nettleserens egen «scroll anchoring» flyttet lista når innholdet ble byttet ut – her gjør ankerKort() det
+  menyEl.style.overflowAnchor = 'none';
+  menyEl.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') pekerOver = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+  menyEl.addEventListener('pointerleave', () => { pekerOver = null; if (utsatt && meny) visMeny(); });
+  function visMeny(auto) {
+    if (auto === true && menyEl.firstChild && pekerOver) { utsatt = true; return; }
     const S = spill(), rulle = menyEl.scrollTop;
     const kap = LB.kapasitet(L), plass = LB.lagerplass(L);
     // status som fire små fliser (tall først, forklaringen i tittelen), og en rød linje når noe mangler strøm
@@ -250,8 +258,10 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     hode.appendChild(el('h3', {}, L.folk ? `Byggelag: ${lag} (to på «bygg» = ett lag)` : `Byggelag: ${lag} (ett + ett per brakke)`));
     // delene i byggesettet (ofte mange) står samlet på én linje
     const del = J.filter(j => LB.BYGG[j.b.type].del), delAktive = J.slice(0, lag).filter(j => LB.BYGG[j.b.type].del).length;
-    J.forEach((j, i) => { if (!LB.BYGG[j.b.type].del) hode.appendChild(el('div', { klasse: 'igang' }, `${LB.BYGG[j.b.type].navn} ${HVA[j.hva]} – ` + (i >= lag ? 'venter i kø' + (j.reise > 0 ? ` (utpost: ${tidTekst(j.reise)} reise først)` : '')
-      : j.reise > 0 ? `byggelaget er på vei (${tidTekst(j.reise)} reise igjen)` : `${Math.round(LB.framdrift(j.b) * 100)} % (${tidTekst(j.hva === 'bygg' ? j.b.igjen : j.b.arbeid.igjen)} igjen)`))); });
+    J.forEach((j, i) => { if (LB.BYGG[j.b.type].del) return; const linje = el('div', { klasse: 'igang' }, `${LB.BYGG[j.b.type].navn} ${HVA[j.hva]} – ` + (i >= lag ? 'venter i kø' + (j.reise > 0 ? ` (utpost: ${tidTekst(j.reise)} reise først)` : '')
+      : j.reise > 0 ? `byggelaget er på vei (${tidTekst(j.reise)} reise igjen)` : `${Math.round(LB.framdrift(j.b) * 100)} % (${tidTekst(j.hva === 'bygg' ? j.b.igjen : j.b.arbeid.igjen)} igjen)`));
+      if (j.hva === 'bygg' && avbestillbar(j.b)) linje.append(' ', knapp('Avbestill', () => avbestill(j.b), { klasse: 'avbestill', title: `Ingen har begynt: ${LB.kroner(j.b.pris)} og materialene tilbake` }));
+      hode.appendChild(linje); });
     const delReise = Math.max(0, ...J.slice(0, lag).filter(j => LB.BYGG[j.b.type].del).map(j => j.reise));
     if (del.length) hode.appendChild(el('div', { klasse: 'igang' }, `Byggesettet: ${del.length} deler – ` + (delReise > 0 ? `byggelaget er på vei (${tidTekst(delReise)} reise igjen), ` : `${delAktive} bygges nå, `) + `${del.length - delAktive} i kø (${tidTekst(del.reduce((s, j) => s + (j.hva === 'bygg' ? j.b.igjen : j.b.arbeid.igjen), 0))} arbeid igjen)`));
     if (!J.length) hode.appendChild(el('div', { klasse: 'igang' }, 'Ingen jobber.'));
@@ -325,8 +335,19 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
         for (const n of q.noder) { if (lukket) { if (n === q.h) { /* overskriften står */ } else if (q.boks && n === q.noder[0]) n.classList.add('delboks', 'lukket'); else n.hidden = true; } til.appendChild(n); } }
       if (fane !== 'bygg') hale.hidden = true; }
     const nøkkel = hode.innerHTML + liste.innerHTML + hale.innerHTML; if (nøkkel === menyNøkkel && menyEl.firstChild) return;
+    // (kritikerløkka r2, Ingrid på PC: «byggelista hopper» – hun traff Ammunisjonsbunker og Garasje i stedet for Aggregat og Vakttårn) – står
+    // pekeren (mus) står over lista, venter nye tall til den går ut (se pekerOver); og når lista tegnes på nytt, står det øverste synlige kortet
+    // på samme sted på skjermen, selv om det har kommet en linje til over lista (en ny jobb i køen) – også på telefon
+    const anker = ankerKort(); utsatt = false;
     menyNøkkel = nøkkel; menyEl.innerHTML = ''; menyEl.append(hode, liste, hale); menyEl.scrollTop = rulle;
+    // (andre deler pynter menyen like etter – fanelinja på telefon, spill/telefon.js – så kortet rettes også i neste bilde og litt etter)
+    if (anker) { const rett = () => { const ny = menyEl.querySelectorAll(`.bygg.kort[data-type="${anker.type}"]`)[anker.nr]; if (ny && ny.getClientRects().length) { const d = ny.getBoundingClientRect().top - anker.top; if (Math.abs(d) >= 1) menyEl.scrollTop += d; } };
+      rett(); requestAnimationFrame(rett); setTimeout(rett, 160); }
   }
+  function ankerKort() { if (!menyEl.firstChild) return null; const mr = menyEl.getBoundingClientRect(), kort = [...menyEl.querySelectorAll('.bygg.kort[data-type]')].filter(k => k.getClientRects().length);
+    const k = kort.find(q => q.getBoundingClientRect().top >= mr.top - 1) || null;
+    // samme bygg kan stå flere steder i menyen (lista og en del lenger ned): husk hvilket av dem
+    return k ? { type: k.dataset.type, nr: [...menyEl.querySelectorAll(`.bygg.kort[data-type="${k.dataset.type}"]`)].indexOf(k), top: k.getBoundingClientRect().top } : null; }
   const tidTekst = LB.tidTekst;
 
   // ---------- plassering (nye bygg og flytting) ----------
@@ -377,7 +398,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       // mangler materialer, kan «Bygg her» bare svare «Mangler materialer» (og kjøpeknappen ble borte): vis bare kjøpeknappen da
       if (kan && (kan !== 'mat' || (p && p.flytt))) banner.append(knapp(p && p.flytt ? 'Flytt hit' : 'Bygg her', bekreft));
       // (runde 8, kritikken: loggen sa «Brakke bestilt: 4 mill. kr» mens knappen sa «5 mill. kr i alt») – det materialene faktisk kostet, huskes til loggen
-      if (kan === 'mat') banner.append(knapp(`Kjøp materialene og bygg: ${LB.kroner((p.pris || 0) + p.matPris)} i alt`, () => { const før = OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0;
+      if (kan === 'mat') banner.append(knapp(`Kjøp materialene og bygg: ${LB.kroner((p.pris || 0) + p.matPris)} i alt`, function kjøpOgBygg() { { const q = måSpørre(p, true); if (q) return spør(p, q, kjøpOgBygg); } const før = OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0;
         if (kjøpManglende(p.mat)) { p.kjøpt = Math.max(0, før - (OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0)); bekreft(); } }, { title: `Arbeid ${LB.kroner(p.pris || 0)} + materialer ${LB.kroner(p.matPris)}` }));
       if (kan && p && !p.flytt) banner.append(knapp('Legg i planen', () => { p.plan = true; bekreft(); }));
     }
@@ -504,8 +525,21 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', førstPlassering); else setTimeout(førstPlassering, 0);
   // Fiender som står inne i leiren og ødelegger bygg: de synes i kartet, og lag innen 300 m kan skyte på dem (kamprunde i index.html)
   const HERJER = window.HERJER = new Set(); KROKER.ser.push(e => HERJER.has(e));
+  // STORE KJØP BEKREFTES (kritikerløkka r2, Ingrid: «et kort i lista kjøper rett ut uten bekreftelse» – hun bestilte en ammunisjonsbunker
+  // til 9,3 mill. kr ved et feiltrykk): fra BEKREFT.kr (Claudes tall: 3 mill. kr) spør banneret én gang til, med navn og pris, før pengene
+  // trekkes. I testene (navigator.webdriver) som før, til LeirSpill.test = true.
+  const BEKREFT = { kr: 3e6 };
+  function måSpørre(p, medMat) { if (!p || p.plan || p.flytt || p.mal || !p.type || (navigator.webdriver && !(window.LeirSpill && LeirSpill.test === true))) return null;
+    const tot = (p.pris || 0) + (medMat ? p.matPris || 0 : 0), sig = [p.type, p.x, p.y, p.ret].join(',');
+    return tot >= BEKREFT.kr && p.bekreftet !== sig ? { tot, sig } : null; }
+  function spør(p, q, gjør) { const B = LB.BYGG[p.type];
+    banner.innerHTML = ''; banner.classList.add('på');
+    banner.append(el('div', {}, el('b', {}, `Bestille ${B.navn.toLowerCase()} for ${LB.kroner(q.tot)}?`)), el('small', {}, 'Store kjøp må bekreftes: pengene trekkes først når du trykker «Ja, bestill».'),
+      knapp('Ja, bestill', () => { p.bekreftet = q.sig; gjør(); }, { id: 'byggja' }), knapp('Nei, tilbake', () => prøv(), { id: 'byggnei' }));
+    kortBanner(); }
   function bekreft() {
     const p = plassering; if (!p || p.feil) return;
+    { const q = måSpørre(p, false); if (q) return spør(p, q, bekreft); }
     if (p.mal) { if (p.sjekket !== p.x + ',' + p.y + ',' + p.ret) return; husk(); let nr = 0;
       const r = LB.planMal(L, p.mal, p.x, p.y, p.ret, () => (p.deler[nr++] || {}).kart || {});
       if (!r.lagt.length) { angre.pop(); visBanner('Ingenting fikk plass her.'); return; }
@@ -527,6 +561,15 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       visBanner(`${LB.BYGG[p.type].navn}: trykk der neste skal stå (Fortsett er på).`); skisse3d(); return; }
     plassering = null; banner.classList.remove('på'); skisse3d();
   }
+
+  // AVBESTILLING (kritikerløkka r2, Ingrid: «jeg fant ingen måte å avbestille på»): et bygg i køen som ingen har begynt på (byggelaget er ikke
+  // kommet i gang, intet arbeid gjort) kan avbestilles – alle pengene og materialene tilbake (rives det, får du bare en del)
+  const avbestillbar = b => !!b && !LB.BYGG[b.type].del && b.igjen > 0 && b.igjen >= (b.totalt || 0) - 1e-6 && !b.arbeid;
+  function avbestill(b) { if (!avbestillbar(b)) return false; const B = LB.BYGG[b.type], pris = b.pris || 0;
+    const r = kom({ type: 'riv', bygg: b.id }); if (r.feil) { logg(r.feil); return false; }
+    const rest = Math.max(0, pris - (r.bygg || 0)); if (rest > 0 && window.OppstartSpill && OppstartSpill.gi) OppstartSpill.gi(rest);
+    logg(`${B.navn} er avbestilt: ${LB.kroner(pris)} tilbake, og materialene er på lageret igjen.`);
+    if (valgtBygg === b.id) { valgtBygg = null; banner.classList.remove('på'); } lagre(); visStatus(); bygg3dPåNytt(true); skitten = true; if (meny) visMeny(); return true; }
 
   // ---------- byggpanelet (trykk på et bygg) ----------
   // Radiomasten: hva nivået gir lagene nå og på de neste nivåene (reglene i spill/kontrollrom.js; brukeren 12. nov: 15, 25 og 40 km)
@@ -572,6 +615,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     if (rk) { const k = knapp(`Reparer (${LB.kroner(rk.pris)}${reise})`, () => { const r = kom({ type: 'reparer', bygg: b.id }); logg(r.feil || `${B.navn} repareres.` + (r.reise.min > 0 ? ` Byggelaget reiser ${tidTekst(r.reise.min)} dit først.` : '')); lagre(); visByggPanel(); }); k.disabled = !!b.arbeid; banner.appendChild(k); }
     if (!B.linje && !B.del) { const k = knapp(`Flytt (${LB.kroner(Math.round(B.pris * LB.REGLER.flyttPris))})`, () => startPlassering(b.type, b.id)); k.disabled = b.igjen > 0 || !!b.arbeid; banner.appendChild(k);
       banner.appendChild(knapp('Kopier', () => startPlassering(b.type, null, { ret: b.ret, plan: planModus }), { title: 'Sett ut et likt bygg med samme retning' })); }
+    if (avbestillbar(b)) banner.appendChild(knapp(`Avbestill (${LB.kroner(b.pris)} tilbake)`, () => avbestill(b), { id: 'avbestill', title: 'Ingen har begynt på bygget ennå: du får alle pengene og materialene tilbake' }));
     banner.appendChild(knapp(`Riv (+${LB.kroner(Math.round(b.pris * (b.igjen > 0 ? LB.REGLER.rivUferdig : LB.REGLER.rivFerdig)))})`, () => {
       // drivstoff som ikke får plass i de andre tankene når denne rives, selges tilbake (Leir.riv) – si fra før og etter
       const over = Math.max(0, L.drivstoff - LB.kapasitet({ bygg: L.bygg.filter(q => q !== b) })), liter = v => Math.round(v).toLocaleString('nb-NO');
@@ -872,7 +916,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     påEgenVeg: (X, Y) => !!L && LB.påVeg(L, X, Y), fane: id => { fane = id; if (menyEl.classList.contains('på')) { menyEl.scrollTop = 0; visMeny(); } }, start, tilstand: () => L, startPlassering, trykk, bekreft, prøv, avbryt, plassering: () => plassering, siste: () => siste, lagre, rutenett: v => { rutenett = v; }, velg: id => { valgtBygg = id; visByggPanel(); },
     planModus: v => { if (v !== undefined) planModus = v; return planModus; }, fortsett: v => { if (v !== undefined) fortsett = v; return fortsett; }, inntil: v => { if (v !== undefined) inntil = v; return inntil; },
     grunn3d,
-    angre: () => angreEn(angre, gjørOm), gjørOm: () => angreEn(gjørOm, angre), byggFraPlan, startMal, lagreMal, maler, roter, oppdater3d: bygg3dPåNytt, valgt: () => valgtBygg, visMeny: () => meny && visMeny() };
+    avbestill: id => avbestill(LB.finn(L, id)), avbestillbar: id => avbestillbar(LB.finn(L, id)), BEKREFT, angre: () => angreEn(angre, gjørOm), gjørOm: () => angreEn(gjørOm, angre), byggFraPlan, startMal, lagreMal, maler, roter, oppdater3d: bygg3dPåNytt, valgt: () => valgtBygg, visMeny: () => meny && visMeny() };
   // K1 sier fra når spillet er klart (lagret spill lest inn, eller ny leir satt opp)
   window.addEventListener('riksbrudd-spill', start);
 })();
