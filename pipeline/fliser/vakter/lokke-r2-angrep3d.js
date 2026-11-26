@@ -26,9 +26,9 @@ module.exports = {
         krev(lag0.length < 2 || (d.ring.nord >= 1 && d.ring.sør >= 1), 'ringen rundt leiren er ikke en ring: ' + JSON.stringify(d.ring));
         for (let i = 0; i < 40 && blå.some(e => e.planlegger); i++) await vent(100); FS.opphev(false);
         // (1b) røverne starter i vest, ruta kommer inn fra sør
-        const rv = nyttLag('Vaktprøve røvere 9.1', L.x - 3500, L.y, 'rød'); rv.raid = 9; rv.fra = { x: rv.x, y: rv.y }; rv.startTid = tid;
+        const rv = nyttLag('Vaktprøve røvere 9.1', L.x - 3500, L.y, 'rød'); rv.raid = 9017; rv.fra = { x: rv.x, y: rv.y }; rv.startTid = tid;
         rv.sti = [[L.x - 3500, L.y], [L.x - 2200, L.y - 2600], [L.x - 100, L.y - 1800], [L.x, L.y - 700], [L.x, L.y]]; rv.seg = 0; rv.timerIgjen = 1.5;
-        ENHETER.push(rv); nye.push(rv); T.aktiv = 9; FS.settRetning(NaN); await vent(1200);
+        ENHETER.push(rv); nye.push(rv); T.aktiv = 9017; FS.settRetning(NaN); await vent(1200);   // (fletting r3) egen bølge-id: krig-vakta bruker 9, og status husker observasjoner per id
         const sett = FS.kjent(rv), st = FS.status(); d.kant = { sett, overskrift: st ? st.overskrift : '(ingen status)' };
         if (!sett) {
           krev(/fra sør$/.test(d.kant.overskrift), 'banneret sier ikke «fra sør» for en rute som kommer inn fra sør: ' + d.kant.overskrift);

@@ -16,6 +16,8 @@ module.exports = {
     const T = SpilletSpill.T(), F = window.FolkSpill ? FolkSpill.tilstand() : null;
     const FLAGG = ['SpilletSpill', 'ForsvarSpill', 'FlytSpill', 'GarnisonSpill', 'KampSpill'], flagg = FLAGG.map(n => window[n] ? window[n].test : undefined);
     const O = SpilletSpill.O(), H = SpilletSpill.H();
+    // (fletting r3) oppdragene SpilletSpill lager mens test-flaggene er på, settes tilbake (vakta «angrep, marked, oppdrag …» krever det)
+    const O0 = SpilletSpill.O ? SpilletSpill.O() : null, Ofør = O0 ? { liste: O0.liste.slice(), nr: O0.nr, nesteSpill: O0.nesteSpill, nesteEkte: O0.nesteEkte } : null, H0 = SpilletSpill.H ? SpilletSpill.H() : null, Hfør = H0 ? H0.åpen : null;
     const før = { tid, tempo, kam: { ...kam }, penger: S.penger, moral: F ? F.moral : null, T: { ...T }, enh: ENHETER.slice(), blå: ENHETER.filter(e => e.side === 'blå').map(e => [e, e.x, e.y, e.sti, e.forsvar, e.strid, e.skyterPå]),
       tet: new Map(TETTSTEDER), lager: Object.keys(localStorage).filter(n => /^riksbrudd-(trussel|angrep|marked|oppdrag|hendelser)/.test(n)).map(n => [n, localStorage.getItem(n)]),
       logg: typeof loggLinjer !== 'undefined' ? loggLinjer.slice() : null, satt: ForsvarSpill.erSatt(), oppdrag: O && O.liste ? O.liste.slice() : null, hÅpen: H ? H.åpen : null };
@@ -85,6 +87,7 @@ module.exports = {
         TETTSTEDER.delete(by.e.id); GarnisonSpill.bykampSteg(); }
     } catch (e) { feil.push('unntak: ' + e.message); }
     finally {
+      if (O0 && Ofør) { O0.liste.splice(0, O0.liste.length, ...Ofør.liste); for (const k of ['nr', 'nesteSpill', 'nesteEkte']) { if (Ofør[k] === undefined) delete O0[k]; else O0[k] = Ofør[k]; } } if (H0) H0.åpen = Hfør;
       if (ForsvarSpill.erSatt()) ForsvarSpill.opphev(false);
       ENHETER.length = 0; ENHETER.push(...før.enh);
       for (const [e, x, y, sti, fs, sr, sk] of før.blå) { e.x = x; e.y = y; e.sti = sti; if (fs) e.forsvar = fs; else delete e.forsvar; e.strid = sr; e.skyterPå = sk; e.siktSkitten = true; }

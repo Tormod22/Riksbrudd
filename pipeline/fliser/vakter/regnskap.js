@@ -108,7 +108,8 @@ module.exports = {
         { const G = FolkRegler.fraJSON(JSON.parse(f0)), S = SS && SS.tilstand(), døde0 = S ? S.døde.length : 0; if (S) S.døde.push({ navn: 'Ragnhild Tangen', hvem: 'soldat', tid: 0 });
           const r = FolkRegler.rng(13); for (let i = 0; i < 60; i++) FolkRegler.nyPerson(G, r);
           const lagNavn = ENHETER.filter(q => q.side === 'blå').flatMap(q => q.menn.map(m => m.navn)), alle = G.personer.map(p => p.navn);
-          ut.navnOk = new Set(alle).size === alle.length && !alle.includes('Ragnhild Tangen') && !alle.some(n => lagNavn.includes(n)); if (S) S.døde.length = døde0; }
+          ut.navnOk = new Set(alle).size === alle.length && !alle.includes('Ragnhild Tangen') && !alle.some(n => lagNavn.includes(n));
+          if (!ut.navnOk) ut.navnFeil = { like: alle.filter((n, i) => alle.indexOf(n) !== i).slice(0, 4), død: alle.includes('Ragnhild Tangen'), iLag: alle.filter(n => lagNavn.includes(n)).slice(0, 4) }; if (S) S.døde.length = døde0; }
         // (16) opplæringen steg 6: kravet står konkret og to på Vakt holder
         if (window.Opplaering) { const s6 = Opplaering.STEG.find(q => q.id === 'tropp2'); ut.krav = Opplaering.krav(s6, { tropper: 0, påVakt: 1 });
           ut.kravOk = /1 på Vakt \(trenger 2\)/.test(ut.krav) && s6.ferdig({ tropper: 0, påVakt: 2 }); } else ut.kravOk = false;
@@ -174,6 +175,6 @@ module.exports = {
     Object.assign(d, { r13: e });
     const ok13 = !e.feil && e.ordreOk === true && e.klokkeOk && e.loggOk && e.tyvOk && e.krangelOk && e.navnOk && e.kravOk && e.folkOk && d.utstyrOk;
     const ok = ok13 && ok14 && !d.feil && d.falneOk && d.treffOk && d.prisOk && d.målOk && d.autoOk && d.sengerOk && d.knappOk && d.pronOk && d.letOk;
-    return { ok, tekst: `RUNDE 14: ${JSON.stringify(f)} utstyr forklart ${d.utstyrForklart} · RUNDE 13: ordre ${JSON.stringify(e.ordre)} ${e.ordreOk}, klokke ${e.klokkeOk}, logg ${e.loggOk}, tyveri ${JSON.stringify(e.tyv)}, navn ${e.navnOk}, krav «${e.krav}», folk ${JSON.stringify(e.folk)}, utstyr ${d.utstyrOk}` + (e.feil ? ' FEIL13: ' + e.feil : '') + ` · falne ${JSON.stringify(d.falne)}, treff ${JSON.stringify(d.treff)}, pris ${JSON.stringify(d.pris)}, senger «${d.senger}», knapp ${JSON.stringify(d.knapp)}, mål «${d.mål}», pronomen «${d.pron}»` + (d.feil ? ' FEIL: ' + d.feil : ''), data: d };
+    return { ok, tekst: `RUNDE 14: ${JSON.stringify(f)} utstyr forklart ${d.utstyrForklart} · RUNDE 13: ordre ${JSON.stringify(e.ordre)} ${e.ordreOk}, klokke ${e.klokkeOk}, logg ${e.loggOk}, tyveri ${JSON.stringify(e.tyv)}, navn ${e.navnOk}${e.navnFeil ? " " + JSON.stringify(e.navnFeil) : ""}, krav «${e.krav}», folk ${JSON.stringify(e.folk)}, utstyr ${d.utstyrOk}` + (e.feil ? ' FEIL13: ' + e.feil : '') + ` · falne ${JSON.stringify(d.falne)}, treff ${JSON.stringify(d.treff)}, pris ${JSON.stringify(d.pris)}, senger «${d.senger}», knapp ${JSON.stringify(d.knapp)}, mål «${d.mål}», pronomen «${d.pron}»` + (d.feil ? ' FEIL: ' + d.feil : ''), data: d };
   },
 };

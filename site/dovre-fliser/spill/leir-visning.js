@@ -338,7 +338,8 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
         q.h.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); q.h.onclick(); } };
         for (const n of q.noder) { if (lukket) { if (n === q.h) { /* overskriften står */ } else if (q.boks && n === q.noder[0]) n.classList.add('delboks', 'lukket'); else n.hidden = true; } til.appendChild(n); } }
       if (fane !== 'bygg') hale.hidden = true; }
-    const deler = [hode.innerHTML, liste.innerHTML, hale.innerHTML], nøkkel = deler.join('\u0001'); if (nøkkel === menyNøkkel && menyEl.firstChild) return;
+    // (fletting r3) lista skjules i andre faner med liste.hidden, som innerHTML ikke ser – den må være med, ellers står den gamle lista synlig i Lager og Mål
+    const deler = [hode.innerHTML, (liste.hidden ? 'skjult\u0002' : '') + liste.innerHTML, hale.innerHTML], nøkkel = deler.join('\u0001'); if (nøkkel === menyNøkkel && menyEl.firstChild) return;
     // (kritikerløkka r2, Ingrid på PC: «byggelista hopper» – hun traff Ammunisjonsbunker og Garasje i stedet for Aggregat og Vakttårn) – står
     // pekeren (mus) står over lista, venter nye tall til den går ut (se pekerOver); og når lista tegnes på nytt, står det øverste synlige kortet
     // på samme sted på skjermen, selv om det har kommet en linje til over lista (en ny jobb i køen) – også på telefon
