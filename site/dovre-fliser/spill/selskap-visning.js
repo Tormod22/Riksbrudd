@@ -423,7 +423,7 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
       + `<div class="rad"><span>Betaling <span class="kr tall">${kr(k.betaling)}</span></span><span>Bot <span class="bot tall">${kr(k.bot)}</span></span></div>`
       // (kritikerløkka r3, Jonas: opplæringen sto fast på steg 3 av 6 i tre døgn) den første kontrakten kan gis opp uten bot og uten ripe i
       // ryktet – opplæringen går videre til «Neste kontrakt»
-      + (k.første && !klarNå ? `<p class="tom">Kommer ikke troppen fram? Gi opp jobben – den første koster ingenting, og nye kontrakter står under.</p>` : '')
+      + (k.første && !klarNå && (tid - (k.godtatt || 0) > 120 || (S.tråd && S.tråd.gjort.includes('tropp'))) ? `<p class="tom">Kommer ikke troppen fram? Gi opp jobben – den første koster ingenting, og nye kontrakter står under.</p>` : '')
       + `<div class="knapper">${klarNå ? `<button class="hoved" data-s="lever" data-id="${k.id}">Lever</button>` : ''}<button data-s="vis" data-id="${k.id}">Vis i kartet</button><button class="fare" data-s="avbryt" data-id="${k.id}">${k.første ? 'Gi opp (ingen bot)' : 'Avbryt (bot)'}</button></div></div>`;
   }
   function html() {
