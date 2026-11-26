@@ -1018,7 +1018,9 @@ async function ordre(s, X, Y, stille) {
   s.planlegger = true; if (!stille) logg(s.navn + ': planlegger rute …');
   try {
     const v = await lagVindu([Math.min(s.x, X) - pad, Math.min(s.y, Y) - pad, Math.max(s.x, X) + pad, Math.max(s.y, Y) + pad], true);
-    const r = Terreng.ruteTil(v, s.x, s.y, X, Y);
+    let r = Terreng.ruteTil(v, s.x, s.y, X, Y);
+    // (R1-løkka 26. nov) KROKER.rute (spill/krig-visning.js): en krok kan gi en annen rute, f.eks. utenom fiendtlige tettsteder
+    if (r) for (const f of KROKER.rute || []) { try { const n = f(s, v, r, X, Y, stille); if (n) r = n; } catch (e) { console.error('rute', e); } }
     if (!r) { if (!stille) logg('Ingen framkommelig rute dit.'); return; }
     s.sti = r.sti; s.steg = r.steg; s.seg = 0; s.prog = 0; s.timerIgjen = r.timer; s.siktSkitten = true;
     let km = 0; for (let i = 1; i < r.sti.length; i++) km += Math.hypot(r.sti[i][0] - r.sti[i - 1][0], r.sti[i][1] - r.sti[i - 1][1]) / 1000;
@@ -3767,8 +3769,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/tropper-visning.js?v=0662e9bee5"></script>
 <script src="/dovre-fliser/spill/karakter.js?v=9aa33a2091"></script>
 <script src="/dovre-fliser/spill/lager-visning.js?v=b648a18286"></script>
-<script src="/dovre-fliser/spill/strategi.js?v=5f9b9f88e1"></script>
-<script src="/dovre-fliser/spill/strategi-visning.js?v=c1c23a1f6d"></script>
+<script src="/dovre-fliser/spill/strategi.js?v=042b63bc8f"></script>
+<script src="/dovre-fliser/spill/strategi-visning.js?v=a18ea6396b"></script>
 <script src="/dovre-fliser/spill/region.js?v=a95e5f511b"></script>
 <script src="/dovre-fliser/spill/region-visning.js?v=e576a1f956"></script>
 <script src="/dovre-fliser/spill/grense3d.js?v=ff4307ef73"></script>
@@ -3777,8 +3779,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/samfunn-visning.js?v=95272c879f"></script>
 <script src="/dovre-fliser/spill/formasjon.js?v=2efb6ba6b7"></script>
 <script src="/dovre-fliser/spill/formasjon-visning.js?v=0139de1651"></script>
-<script src="/dovre-fliser/spill/krig.js?v=87c5a4931c"></script>
-<script src="/dovre-fliser/spill/krig-visning.js?v=f2eb5ea14a"></script>
+<script src="/dovre-fliser/spill/krig.js?v=222a52201e"></script>
+<script src="/dovre-fliser/spill/krig-visning.js?v=10aaa0cc2c"></script>
 <script src="/dovre-fliser/spill/eskalering.js?v=cbce68f054"></script>
 <script src="/dovre-fliser/spill/eskalering-visning.js?v=a85f69eefe"></script>
 <script src="/dovre-fliser/spill/krig3d.js?v=a9a4afbe8e"></script>
@@ -3798,8 +3800,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kommando-visning.js?v=868d91c35f"></script>
 <script src="/dovre-fliser/spill/flerspiller.js?v=b46e5747f7"></script>
 <script src="/dovre-fliser/spill/flerspiller-visning.js?v=f93229efd8"></script>
-<script src="/dovre-fliser/spill/selskap.js?v=8bd94449ed"></script>
-<script src="/dovre-fliser/spill/selskap-visning.js?v=e8bec721b8"></script>
+<script src="/dovre-fliser/spill/selskap.js?v=3efed79e04"></script>
+<script src="/dovre-fliser/spill/selskap-visning.js?v=3abe53227a"></script>
 <script src="/dovre-fliser/spill/bakkekamp.js?v=df5617e107"></script>
 <script src="/dovre-fliser/spill/bakkekamp-visning.js?v=e39217bbb0"></script>
 <script src="/dovre-fliser/spill/spill2d.js?v=f933f4684e"></script>

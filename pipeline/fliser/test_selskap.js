@@ -121,8 +121,40 @@ ok(S0.fristTekst({ frist: 839.6 }, 0) === '14 t 0 min igjen' && S0.fristTekst({ 
   // forsyning: godta, hentet, levert i leiren
   const T5 = S0.ny(L0), f = S0.førsteKontrakt(T5, 'blå', 0, st); ok(S0.godta(T5, 'blå', f.id, 10).ok, 'første kontrakt kan tas uten krav');
   S0.steg(T5, 'blå', 20, 1, { [f.id]: { hentet: true } }); ok(f.hentet && f.status === 'aktiv', 'forsyningene hentet');
-  const lv = S0.steg(T5, 'blå', 30, 1, { [f.id]: { i: true, hentet: true } }); ok(lv[0].type === 'levert' && lv[0].kr === 400000 && !lv[0].motangrep && !lv[0].rekrutt, 'levert: 400 000 kr, ingen motangrep for den første');
+  const lv = S0.steg(T5, 'blå', 30, 1, { [f.id]: { i: true, hentet: true } }); ok(lv[0].type === 'levert' && lv[0].kr === S0.REGLER.første.betaling && !lv[0].motangrep && !lv[0].rekrutt, 'levert: hele betalingen, ingen motangrep for den første');
   ok(/nødlageret/.test(S0.lappFor(f, {}, 0)), 'lapp for forsyning');
+  // (R1-løkka 26. nov) den første kontrakten er trygg: nødlageret ligger der visningen la det (nær leiren, utenfor tettstedene),
+  // tittelen har aldri «i nødlageret», bygda som gir jobben er den nærmeste, og giver.by sier hvilket bygdevern som vet om jobben
+  const T8b = S0.ny(L0), lag8 = { x: L0.x, y: L0.y + 900 }, f8 = S0.førsteKontrakt(T8b, 'blå', 0, st, lag8);
+  ok(f8.sted.slag === 'lager' && f8.sted.x === lag8.x && f8.sted.y === lag8.y && f8.sted.retning === 'nord', 'første kontrakt: lageret ligger der visningen la det');
+  ok(f8.tittel === 'Hent nødlageret nord for leiren' && !/i nødlageret/.test(f8.tittel), 'tittel med retning: ' + f8.tittel);
+  ok(f8.giver.navn === 'Bygdelaget i Nabobygda' && f8.giver.by === 7 && f8.sted.by === 7, 'giveren er den nærmeste bygda, med id');
+  ok(/låven nord for leiren/.test(S0.kravTekst(f8)) && /bygdevernet vet om jobben/.test(S0.kravTekst(f8)), 'kravteksten forklarer lageret');
+  const T9b = S0.ny(L0), f9 = S0.førsteKontrakt(T9b, 'blå', 0, [], { x: L0.x - 900, y: L0.y }); ok(f9.tittel === 'Hent nødlageret vest for leiren' && f9.giver.navn === 'Bygdelaget i nærheten', 'uten steder: ' + f9.tittel);
+  // gamle lagrede kontrakter med «Hent nødlageret i nødlageret» får ny tittel
+  { const g = S0.ny(L0); g.tilbud.push({ id: 'k1', type: 'forsyning', første: true, tittel: 'Hent nødlageret i nødlageret', sted: { navn: 'nødlageret', x: 1, y: 1, slag: 'lager' }, giver: { navn: 'x' } });
+    ok(S0.fraJSON(S0.tilJSON(g)).tilbud[0].tittel === 'Hent nødlageret', 'gammel tittel rettes ved lesing'); }
+  // et brudd på den første kontrakten: ingen ros, men hva som skjedde og hva du gjør nå
+  { const B = S0.ny(L0), fb = S0.førsteKontrakt(B, 'blå', 0, st, lag8); S0.godta(B, 'blå', fb.id, 0); fb.hentet = true; const p0 = S0.side(B, 'blå').rykte.pålitelig;
+    const h = S0.steg(B, 'blå', 5, 1, { [fb.id]: { tapt: true } })[0]; ok(h.type === 'brutt' && h.kr === 0, 'første kontrakt brutt: ingen bot');
+    ok(S0.side(B, 'blå').rykte.pålitelig === p0 + S0.REGLER.brutt.pålitelig * S0.REGLER.første.bruddRykte, 'første kontrakt brutt: halvt ryktetap');
+    S0.oppdaterTråd(B, { brutt: true }); const st9 = S0.trådSteg(B); ok(st9.id === 'neste' && B.tråd.brutt, 'brutt -> neste, merket');
+    ok(!/vokst/.test(st9.tekst(fb)) && /gikk galt/.test(st9.tekst(fb)) && /slått ut/.test(st9.tekst(fb)), 'neste etter brudd: ' + st9.tekst(fb));
+    ok(/Prøv/.test(st9.lapp(fb)), 'lappen etter brudd'); ok(S0.fraJSON(S0.tilJSON(B), L0).tråd.brutt, 'bruddet huskes'); }
+  { const send = S0.TRÅD.find(q => q.id === 'send'); ok(/«Kjør dit»/.test(send.tekst(f8, { knapp: 'Kjør dit' })) && /«Marsjer»/.test(send.tekst(f8)), 'send-steget bruker knappens navn'); }
+  // (R1-løkka) de andre selskapene har hvert sitt rykte
+  { const R3 = S0.ny(L0); const t = ['blå', 'rød', 'grønn'].map(id => S0.rykteTekst(S0.side(R3, id).rykte)); ok(new Set(t).size === 3, 'tre ulike ryktetekster: ' + t.join(' | ')); }
+  // (R1-løkka) eskorter går ikke fra eller til steder et annet selskap holder, når det finnes andre
+  { const E = S0.ny(L0); E.sider.blå.rykte.pålitelig = 95; const ss = [{ navn: 'Rødby', x: L0.x + 5000, y: L0.y, slag: 'tettsted', id: 1, eier: 'rød' }, { navn: 'Grønnby', x: L0.x - 5000, y: L0.y, slag: 'tettsted', id: 2, eier: 'grønn' },
+      { navn: 'Fribygd', x: L0.x, y: L0.y + 6000, slag: 'tettsted', id: 3 }, { navn: 'Fristad', x: L0.x, y: L0.y - 6000, slag: 'tettsted', id: 4 }];
+    let esk = 0, dårlig = 0; for (let i = 0; i < 40; i++) for (const k of S0.lagTilbud(E, 'blå', i * 50, ss, S0.lagRand(i + 11))) if (k.type === 'eskorte') { esk++; if (/Rødby|Grønnby/.test(k.fra.navn + k.sted.navn)) dårlig++; }
+    ok(esk > 0 && dårlig === 0, `eskorter uten fiendens steder: ${esk} eskorter, ${dårlig} med fiendens steder`);
+    const E2 = S0.ny(L0); E2.sider.blå.rykte.pålitelig = 95; let fare = 0, e2 = 0; for (let i = 0; i < 40; i++) for (const k of S0.lagTilbud(E2, 'blå', i * 50, ss.slice(0, 2), S0.lagRand(i + 5))) if (k.type === 'eskorte') { e2++; if (k.fare && /holdes av et annet selskap/.test(S0.kravTekst(k))) fare++; }
+    ok(e2 > 0 && fare === e2, `bare fiendens steder: alle eskorter sier fra (${fare} av ${e2})`); }
+  // (R1-løkka) kommunen som gir en jobb i et tettsted, er stedets egen (giver.by)
+  { const G = S0.ny(L0); let n = 0, feil = 0; for (let i = 0; i < 30; i++) for (const k of S0.lagTilbud(G, 'blå', i * 50, steder.map(q => ({ ...q, x: q.x - 205000 + L0.x, y: q.y - 6900000 + L0.y })), S0.lagRand(i + 17)))
+      if (k.giver.slag !== 'firma' && k.sted.slag === 'tettsted') { n++; if (k.giver.by !== k.sted.id) feil++; }
+    ok(n > 0 && feil === 0, `bygd/kommune i tettsted er stedets egen: ${n} kontrakter, ${feil} feil`); }
   // nivåene
   const sd = S0.side(S0.ny(L0), 'blå'); ok(S0.nivå(sd).nr === 1 && S0.nesteNivå(sd).mangler.length === 2, 'nivå 1, to ting mangler for nivå 2');
   sd.sum.levert = 2; sd.rykte.pålitelig = 56; ok(S0.nivå(sd).nr === 2 && S0.nesteNivå(sd).nivå.nr === 3, 'nivå 2');
@@ -144,3 +176,8 @@ ok(S0.fristTekst({ frist: 839.6 }, 0) === '14 t 0 min igjen' && S0.fristTekst({ 
   T8.tilbud.push(ry); S0.godta(T8, 'blå', 'r1', 0); const hv = S0.lever(T8, 'blå', ry, 1, () => .01); ok(hv.motangrep && hv.rekrutt, 'motangrep og rekruttering');
 }
 console.log(`Alle ${n} testene for selskap.js er ok`);
+// (R1-løkka 26. nov) kravet bruker samme vurdering som krigskartet: forsvaret minst like stort som laget = «For svakt» (stopper ikke)
+{ const sd = S0.side(S0.ny({ x: 0, y: 0 }), 'blå'), k = { type: 'hold', nivå: 1 };
+  const a = S0.kanTa(k, { størsteLag: 4, kjøretøy: 0, forsvar: 5, forsvarTekst: 'bygdevernet 5' }, sd); assert.ok(a.ok && a.advarsel.length === 1 && /For svakt: 4 mann mot et forsvar på ca\. 5/.test(a.advarsel[0]), JSON.stringify(a));
+  const b = S0.kanTa(k, { størsteLag: 6, kjøretøy: 0, forsvar: 5 }, sd); assert.ok(b.ok && !b.advarsel.length, 'sterkere enn forsvaret: ingen advarsel');
+  console.log('ok   kravet bruker krigskartets vurdering (For svakt)'); }

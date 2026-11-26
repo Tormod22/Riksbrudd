@@ -50,3 +50,11 @@ assert.strictEqual(S.trusler('blå', O, eierAv, () => 1, []).length, 0);
     assert.equal(S.kravFor(lite, [{ menn: [{ hp: 1 }, { hp: .5 }, { hp: 0 }] }]).har, 1, 'såret teller ½, falt 0'); }
   assert.equal(S.tettsteder(1), '1 tettsted'); assert.equal(S.tettsteder(41), '41 tettsteder'); }
 console.log('ok   strategi: område, stilling, seier, fronter, neste trekk og trusler');
+// (R1-løkka 26. nov) et sted der et eget lag nylig ble slått ut, står ikke øverst i «Neste trekk»
+{ const S2 = require('../../site/dovre-fliser/spill/strategi.js'), a = require('assert');
+  const byer = [{ id: 1, navn: 'Otta', x: 3000, y: 0, folk: 2000 }, { id: 2, navn: 'Sel', x: 0, y: 7000, folk: 600 }], egne = [{ x: 0, y: 0, navn: 'Vaktlaget', mann: 8 }];
+  const før = S2.trekk('blå', byer, () => null, egne, []); a.strictEqual(før[0].by.navn, 'Otta', 'uten tap: Otta først');
+  const tap = { liste: [{ x: 3100, y: 50, tid: 100, navn: 'Speidertropp 1' }], nå: 160 }, etter = S2.trekk('blå', byer, () => null, egne, [], undefined, tap);
+  a.ok(etter[0].by.navn === 'Sel' && etter[1].tapt && /Speidertropp 1 ble slått ut her for 1 t siden/.test(S2.tapTekst(etter[1], 160)), 'etter tap: Otta trekkes ned – ' + S2.tapTekst(etter[1], 160));
+  a.strictEqual(S2.trekk('blå', byer, () => null, egne, [], undefined, { liste: tap.liste, nå: 100 + S2.REGLER.tap.tid + 1 })[0].by.navn, 'Otta', 'etter et døgn: glemt');
+  console.log('ok   strategi (R1-løkka): nylige tap trekker stedet ned'); }
