@@ -74,6 +74,9 @@
     for (const by of byer()) { const t = S.get(by.e.id); if (!t || !t.eier) continue;
       const strøm = strømFor(by);
       if (t.eier === 'blå' && b) b.beholdning += G.produksjon(by.e.folk, sek, strøm);
+      // (kritikerløkka r3, Ingrid: «Magne Tangen er rekruttert i Gjøvik og går inn i Stormtropp 2» midt i motangrepet – gratis forsterkning i
+      // fronten) – ingen nye rekrutter eller stell mens det er kamp om byen (BYKAMP.om)
+      if (gAuto() && kampOm(by, t.eier)) continue;
       for (const s of G.lagI(by, ENHETER.filter(s => s.side === t.eier))) for (const [hva, m] of G.forsterk(s, by.e.folk, sek * (t.eier !== 'blå' && window.RegionSpill && RegionSpill.fordel ? RegionSpill.fordel(t.eier).forsterk : 1), strøm, nyMann))
         if (s.side === 'blå') logg(hva === 'ny' ? `${m.navn} (${m.rolle}) er rekruttert i ${by.e.navn} og går inn i ${s.navn}.` : `${m.navn} (${s.navn}) er frisk igjen etter stell i ${by.e.navn}.`);
     }
@@ -108,6 +111,69 @@
     const sett = andre.filter(s => { try { return synlig(s); } catch (e) { return false; } }), usett = andre.length - sett.length;
     const hvemT = [sett.length ? liste(sett) + (sett[0].raid ? ' (røvere)' : sett.every(q => q.side === sett[0].side) ? ` (${hvem(sett[0].side)})` : '') : '', usett ? `${usett === 1 ? 'et lag' : usett + ' lag'} dere ikke ser` : ''].filter(Boolean).join(' og ');
     logg(`Kamp om ${by.e.navn}: ${hvemT || 'en fiende'} står også i tettstedet. Ingen tar det før den ene siden er slått ut eller har trukket seg.`); }
+
+  // ---------- (kritikerløkka r3, Ingrid: «bykampen skjer utenfor bildet – ti mann falt mens kartet sto på leiren») KAMPEN OM EN BY ----------
+  // Er det kamp om et tettsted dere holder (en motstanders angrepsgruppe går mot det, eller fiender står i stedet), står banneret #bykamp
+  // øverst: hvem som angriper, styrkene på begge sider i og ved byen nå, og tapene siden kampen begynte – med «Vis» (kartet dit). Første
+  // gang det skytes, stopper ⏭ / farten går ned én gang (hendelsen «alarm» med stedet, så kortet har «Vis»). Claudes forslag: BYKAMP.nær =
+  // meter fra byens kant der fiender regnes med (de står og skyter inn), slutt = spillminutter uten fiender før kampen regnes som over.
+  const BYKAMP = { nær: 1200, slutt: 20 };
+  const midt = by => ({ x: (by.bb[0] + by.bb[2]) / 2, y: (by.bb[1] + by.bb[3]) / 2 });
+  const iNærheten = (by, e) => e.x >= by.bb[0] - BYKAMP.nær && e.x <= by.bb[2] + BYKAMP.nær && e.y >= by.bb[1] - BYKAMP.nær && e.y <= by.bb[3] + BYKAMP.nær;
+  const kjemper = e => levende(e) && Array.isArray(e.menn) && !e.trekker && !e.flykter && !(window.Terreng && Terreng.slattUt(e.menn));
+  // angrepsgruppen (spill/eskalering-visning.js) som går mot dette stedet nå
+  function gruppeMot(by) { const ES = window.EskaleringSpill && EskaleringSpill.S ? EskaleringSpill.S() : null; if (!ES || !ES.gruppe) return null;
+    for (const side of Object.keys(ES.gruppe)) { const Gr = ES.gruppe[side]; if (Gr && Gr.mål && !Gr.mål.leir && Gr.mål.id === by.e.id && Gr.fase === 'angriper') return { side, Gr }; } return null; }
+  // fiender (andre sider enn eieren) som kjemper i eller like ved byen: angrepsgruppens lag, og andre som står i stedet
+  function fienderVed(by, eier) { const g = gruppeMot(by); return ENHETER.filter(e => e.side !== eier && kjemper(e) && !e.karakter && ((g && e.side === g.side && g.Gr.lag.includes(e.navn) && iNærheten(by, e)) || (!e.raid && G.inni(by, e.x, e.y)) || (e.skyterPå && [...e.skyterPå].some(b => b && b.side === eier && G.inni(by, b.x, b.y))))); }
+  function kampOm(by, eier) { if (!eier) return false; const f = fienderVed(by, eier); if (!f.length) return false; if (gruppeMot(by)) return true;
+    return f.some(e => (e.skyterPå && e.skyterPå.size) || ENHETER.some(s => s.side === eier && s.skyterPå && s.skyterPå.has(e))); }
+  const KAMPER = new Map();
+  const bkCss = document.createElement('style');
+  bkCss.textContent = `#bykamp{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 54px); z-index:9; display:none; max-width:min(620px,94vw); padding:6px 10px; background:#2a120d; border:1px solid #e0714f; color:#f3e3d6; font-size:14px; box-shadow:0 4px 14px rgba(0,0,0,.5); gap:6px 10px; align-items:center; justify-content:center; flex-wrap:wrap; }
+#bykamp.på{ display:flex; } #bykamp b{ color:#ffb49a; } #bykamp small{ color:#e8d0c2; } #bykamp .tall{ display:block; color:#f0dfb4; }
+#bykamp button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); min-height:34px; padding:2px 12px; font:inherit; font-size:13.5px; cursor:pointer; }
+body.kort #bykamp{ top:calc(var(--topp,58px) + 42px); font-size:13px; padding:4px 8px; } body.krig #bykamp, body.gaar #bykamp, body.foto #bykamp{ display:none; }`;
+  document.head.appendChild(bkCss);
+  const bk = document.createElement('div'); bk.id = 'bykamp'; bk.setAttribute('role', 'status'); document.body.appendChild(bk);
+  let bkNøkkel = '', bkLukket = '';
+  // kartet til byen (2D): hele byen og fiendene ved den i bildet
+  function visBy(by) { const gå = () => { const f = fienderVed(by, 'blå'), xs = [by.bb[0], by.bb[2], ...f.map(e => e.x)], ys = [by.bb[1], by.bb[3], ...f.map(e => e.y)];
+      const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys); kam.x = (x0 + x1) / 2; kam.y = (y0 + y1) / 2;
+      kam.m = Math.max(1.5, Math.min(40, Math.max(x1 - x0, y1 - y0) * 1.25 / Math.max(200, Math.min(VW, VH)))); skitten = true; };
+    if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function' && !(typeof R3 !== 'undefined' && R3 && R3.fot)) Promise.resolve(slå3d(false)).then(gå, gå); else gå(); }
+  const levMenn = L => L.reduce((a, s) => a + s.menn.filter(m => m.hp > 0).length, 0);
+  function bykampSteg() { if (!gAuto()) { bk.classList.remove('på'); return; } let vis = null;
+    for (const by of byer()) { const t = S.get(by.e.id); if (!t || t.eier !== 'blå') { KAMPER.delete(by.e.id); continue; }
+      const k0 = KAMPER.get(by.e.id), på = kampOm(by, 'blå');
+      if (!på) { if (k0 && tid - k0.sist > BYKAMP.slutt) KAMPER.delete(by.e.id); else if (k0) vis = vis || { by, k: k0, rolig: true }; continue; }
+      const våre = G.lagI(by, ENHETER.filter(s => s.side === 'blå' && levende(s) && !s.karakter)), deres = fienderVed(by, 'blå');
+      const k = k0 || { start: tid, sist: tid, menn: new Map(), lag: new Set(), skudd: false, side: (gruppeMot(by) || {}).side || (deres[0] && deres[0].side) };
+      k.sist = tid; for (const s of [...våre, ...deres]) { k.lag.add(s); for (const m of s.menn) if (!k.menn.has(m)) k.menn.set(m, { side: s.side, hp: m.hp }); }
+      // første skudd i byen: én stopp/nedbremsing med «Vis»
+      if (!k.skudd && [...våre, ...deres].some(s => s.skyterPå && s.skyterPå.size)) { k.skudd = true; const c = midt(by);
+        logg(`Kampen om ${by.e.navn} har begynt: ${hvem(k.side)} mot ${våre.length ? liste(våre) : 'garnisonen'}.`);
+        try { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'alarm', tekst: `kampen om ${by.e.navn} har begynt`, x: c.x, y: c.y } })); } catch (e) { /* eldre nettlesere */ } }
+      KAMPER.set(by.e.id, k); if (!vis || vis.rolig) vis = { by, k, våre, deres }; }
+    if (!vis) { bk.classList.remove('på'); bkNøkkel = ''; return; }
+    const { by, k } = vis, våre = vis.våre || G.lagI(by, ENHETER.filter(s => s.side === 'blå' && levende(s) && !s.karakter)), deres = vis.deres || [];
+    let vF = 0, vS = 0, dF = 0, dS = 0; for (const [m, f] of k.menn) { const vår = f.side === 'blå'; if (m.hp <= 0 && f.hp > 0) { if (vår) vF++; else dF++; } else if (m.hp > 0 && m.hp < 1 && f.hp >= 1) { if (vår) vS++; else dS++; } }
+    const tapT = (f, s2) => (f || s2 ? [f ? f + ' falt' : '', s2 ? s2 + ' såret' : ''].filter(Boolean).join(', ') : 'ingen tap');
+    const tittel = vis.rolig ? `Kampen om ${by.e.navn} har stilnet` : `Angrep på ${by.e.navn}`;
+    const linje = vis.rolig ? `ingen fiender ved byen nå · hos oss: ${tapT(vF, vS)} · hos dem: ${tapT(dF, dS)}`
+      : `${hvem(k.side)}: ${deres.length === 1 ? 'ett lag' : deres.length + ' lag'}, ${levMenn(deres)} mann · våre i byen: ${våre.length === 1 ? 'ett lag' : våre.length + ' lag'}, ${levMenn(våre)} mann`;
+    const tall = vis.rolig ? '' : `Tap siden kl. ${String(Math.floor(((6 + k.start / 60) % 24 + 24) % 24)).padStart(2, '0')}:${String(Math.floor((((k.start % 60) + 60) % 60))).padStart(2, '0')} – hos oss: ${tapT(vF, vS)} · hos dem: ${tapT(dF, dS)}`;
+    const nøkkel = [by.e.id, tittel, linje, tall].join('|'); if (bkLukket === by.e.id + '|' + k.start + (vis.rolig ? 'r' : '')) { bk.classList.remove('på'); return; }
+    bk.classList.add('på'); plasserBk(); if (nøkkel === bkNøkkel || (window.pekerNede && pekerNede(bk))) return; bkNøkkel = nøkkel;
+    const sp = document.createElement('span'), b = document.createElement('b'), sm = document.createElement('small'); b.textContent = tittel; sm.textContent = ' ' + linje; sp.append(b, sm);
+    if (tall) { const t2 = document.createElement('small'); t2.className = 'tall'; t2.textContent = tall; sp.append(t2); }
+    const vb = document.createElement('button'); vb.id = 'bykampvis'; vb.textContent = 'Vis'; vb.onclick = () => visBy(by);
+    const lb = document.createElement('button'); lb.textContent = '×'; lb.setAttribute('aria-label', 'Lukk'); lb.onclick = () => { bkLukket = by.e.id + '|' + k.start + (vis.rolig ? 'r' : ''); bk.classList.remove('på'); };
+    bk.replaceChildren(sp, vb, lb); }
+  // under angrepsbanneret for leiren når begge står
+  function plasserBk() { const a = document.getElementById('alarm'); if (a && a.classList.contains('på') && a.getClientRects().length && getComputedStyle(a).display !== 'none') { const r = a.getBoundingClientRect(); bk.style.top = Math.round(r.bottom + 6) + 'px'; } else bk.style.top = ''; }
+  setInterval(() => { try { bykampSteg(); } catch (e) { /* neste runde */ } }, 1000);
+  Object.assign(window.GarnisonSpill, { BYKAMP, kampOm, fienderVed, bykamp: () => [...KAMPER.entries()].map(([id, k]) => ({ id, start: k.start, skudd: k.skudd })), bykampSteg, visBy });
 
   // ---------- panelene ----------
   KROKER.lagTekst.push(s => { const by = byFor(s); if (!by) return null; const t = G.tilstand(S, by.e.id);
