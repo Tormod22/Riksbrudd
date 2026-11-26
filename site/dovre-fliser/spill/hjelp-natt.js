@@ -1012,6 +1012,56 @@ window.HJELP_TILLEGG = [
 "Leiren"
 ],
 [
+"Kampen om en by",
+"Angriper en motstander et tettsted dere holder, står et eget banner øverst: hvem som angriper, hvor mange dere har i byen, og hvor mange som har falt eller er såret på begge sider. «Vis» flytter kartet til byen. Byen gir ingen nye rekrutter mens det er kamp om den.",
+"Lag og strid"
+],
+[
+"Røvere som gir opp",
+"Et røverlag som har kommet nær leiren, men står utenfor uten å angripe i omtrent en spilltime, gir opp og går sin vei. Er det det siste laget, er angrepet over.",
+"Lag og strid"
+],
+[
+"Gi opp den første kontrakten",
+"Kommer ikke troppen fram til nødlageret, kan du gi opp jobben i Selskapet («Gi opp (ingen bot)»). Det koster verken penger eller rykte, og nye kontrakter står klare – nye tilbud kommer hver morgen.",
+"Kom i gang"
+],
+[
+"Marsjen i kontraktene",
+"Hvert tilbud viser marsjen fra leiren langs ruta: lengde, tid og tettsteder ruta går gjennom. Står det ⚠, rekker dere trolig ikke fristen, eller ruta går gjennom et sted som er forsvart.",
+"Lag og strid"
+],
+[
+"Hent et kjøretøy",
+"Står et eget kjøretøy igjen et stykke unna, har lagpanelet «Hent …»: troppen går dit og går om bord når den er framme.",
+"Lag og strid"
+],
+[
+"Båt og lag",
+"Velg båten og trykk «Send … til båten», eller velg laget og trykk «Gå til …»: laget går til båten og går om bord. Står laget innen 250 m, holder «Ta om bord».",
+"Lag og strid"
+],
+[
+"Utstyr på lager",
+"Oppløser du en tropp, legges kjøpte våpen og utstyr på lager i leiren. Neste tropp får det gratis.",
+"Lag og strid"
+],
+[
+"Skatt fra tettsteder",
+"Et tettsted du tar, betaler skatt til leiren hver spilltime. Et nytt tettsted betaler bare 30 % av skatten det første døgnet og full skatt etter tre døgn. En firedel av skatten går til bygdevern og forvaltning i tettstedet. «Per døgn» er et spilldøgn (kl. 06–06), det samme døgnet som lønna. I Region og Lager står både anslaget nå og det som faktisk kom inn siste døgn.",
+"Lag og strid"
+],
+[
+"Farten mens du leser",
+"Går spillet i 600× eller spoler (⏭) når du åpner noe du leser – funnet fra et hus, Selskapet, Krig, Folk og liknende – settes farten ned til 1× så klokka ikke løper fra deg. Når du lukker panelet, går farten opp igjen til det den var.",
+"Kom i gang"
+],
+[
+"Feltbilen og helikopteret",
+"Leiren har en feltbil og et helikopter som du kjører og flyr selv i 3D: trykk «3D» og «Gå», gå bort til dem og velg «Sett deg inn». I kartet står de bare parkert. Med 3D slått av vises ikke navnene deres.",
+"I 3D"
+],
+[
 "Lysstriper og byger",
 "Når det er delvis skyet og sola står lavt, kan du se solstråler gjennom hull i skyene ned mot dalen – tydeligst når du ser mot sola. I skyet vær driver regn- og snøbyger som grå eller hvite slør over landskapet med vinden. Driver en byge over der du står, regner eller snør det rundt deg en stund, sola blir borte og sikten blir kortere. Høyt til fjells faller bygene som snø.",
 "Vær, lyd og bilde"
