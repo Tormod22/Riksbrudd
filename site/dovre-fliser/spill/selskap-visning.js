@@ -364,13 +364,47 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
   const FARGE = { pålitelig: '#7c9a4e', hardhendt: '#b0443a', billig: '#d9a441' }, NAVN = { pålitelig: 'Pålitelig', hardhendt: 'Hardhendt', billig: 'Billig' };
   const måler = (k, v) => `<div class="maal" data-rykte="${k}"><span>${NAVN[k]}</span><div class="bar" title="${Math.round(v)} av 100"><i style="width:${Math.round(v)}%;background:${FARGE[k]}"></i></div><span>${esc(SK.ord(k, v))}</span></div>`;
   const typeNavn = k => SK.REGLER.TYPER[k.type].navn;
-  function avstand(k) { const s = Sp(); if (!s || !s.leir) return ''; return meter(Math.hypot(k.sted.x - s.leir.x, k.sted.y - s.leir.y)) + ' fra leiren'; }
+  function avstand(k) { const s = Sp(); if (!s || !s.leir) return ''; const m = marsj(k);
+    if (m && !m.venter && !m.feil) return SK.marsjVurdering(k, m).linje;
+    return meter(Math.hypot(k.sted.x - s.leir.x, k.sted.y - s.leir.y)) + ' i luftlinje' + (m ? ' (regner ut marsjen …)' : ''); }
+  // ---------- MARSJEN TIL STEDET (kritikerløkka r3, Ingrid: kontraktene regnet luftlinje) ----------
+  // Ruta fra leiren til stedet (eskorte: til bilen, rydd: til sperra) regnes som i ordre() (index.html): vindu med lagVindu, Terreng.ruteTil,
+  // målet i vann -> nærmeste bredd (MÅL_PÅ_LAND), og utenom fiendtlige tettsteder (Krig.sperrByer) når omvegen er god nok (Krig.omvegOk) – ellers
+  // står byene ruta går gjennom. Bare for tilbudene som vises (panelet åpent), én om gangen, og svaret huskes (per kontrakt og leir).
+  const MARSJ = new Map(); let marsjJobb = null;
+  const marsjMål = k => (k.type === 'rydd' && k.sperre ? k.sperre : k.type === 'eskorte' && k.fra && k.fra.slag !== 'leir' ? k.fra : k.sted);
+  function marsj(k) {
+    const s = Sp(); if (!k || !s || !s.leir || k.første || typeof lagVindu !== 'function' || typeof Terreng === 'undefined') return null;
+    const nø = k.id + '|' + Math.round(s.leir.x) + ',' + Math.round(s.leir.y), m = MARSJ.get(nø); if (m) return m;
+    if (!marsjJobb) marsjJobb = regnMarsj(k, nø, s.leir).finally(() => { marsjJobb = null; sistHtml = ''; });
+    return { venter: true };
+  }
+  async function regnMarsj(k, nø, L) {
+    const p = marsjMål(k), X = p.x, Y = p.y, d = Math.hypot(X - L.x, Y - L.y), maks = typeof MARSJ_MAKS !== 'undefined' ? MARSJ_MAKS : 30000;
+    if (d > maks) { MARSJ.set(nø, { forLangt: true }); return; }
+    try {
+      const pad = Math.max(2500, d * .3), v = await lagVindu([Math.min(L.x, X) - pad, Math.min(L.y, Y) - pad, Math.max(L.x, X) + pad, Math.max(L.y, Y) + pad], true);
+      let r = Terreng.ruteTil(v, L.x, L.y, X, Y), mx = X, my = Y;
+      if (!r && window.MÅL_PÅ_LAND) for (const q of MÅL_PÅ_LAND(v, L.x, L.y, X, Y)) { r = Terreng.ruteTil(v, L.x, L.y, q[0], q[1]); if (r) { mx = q[0]; my = q[1]; break; } }
+      if (!r) { MARSJ.set(nø, { ingen: true }); return; }
+      let gj = [], omveg = false; const KS = window.KrigSpill, KR = window.Krig;
+      if (KS && KS.fiendtligeByer && KR && window.Garnison) { const fi = KS.fiendtligeByer([[L.x, L.y], [mx, my]]); gj = KR.gjennomByer(r.sti, fi, Garnison.inni);
+        if (gj.length) { const sp = KR.sperrByer(v, gj, Garnison.inni), r2 = Terreng.ruteTil(sp.v, L.x, L.y, mx, my);
+          if (r2 && KR.omvegOk(r.timer, r2.timer) && !KR.gjennomByer(r2.sti, fi, Garnison.inni).length) { r = r2; gj = []; omveg = true; } } }
+      let km = 0; for (let i = 1; i < r.sti.length; i++) km += Math.hypot(r.sti[i][0] - r.sti[i - 1][0], r.sti[i][1] - r.sti[i - 1][1]) / 1000;
+      MARSJ.set(nø, { km, timer: r.timer, gjennom: gj.map(b => `${b.navn} (${b.grunn})`), omveg });
+      if (MARSJ.size > 60) MARSJ.delete(MARSJ.keys().next().value);
+    } catch (e) { MARSJ.set(nø, { feil: true, venter: false, ingen: false, km: d / 1000, timer: d / 1000 / 3 }); }
+  }
   function tilbudKort(k) {
     const igjen = Math.max(0, k.utløper - tid), går = igjen >= 60 ? `${Math.round(igjen / 60)} t` : `${Math.round(igjen)} min`;
     // (R18-A) kravet: låst nivå gir en grå knapp; mangler leiren noe, står det rødt (knappen forklarer det når du trykker)
-    const kt = SK.kanTa(k, har(k), S.sider[ID]), K = SK.kravFor(k), låst = K.nivå > nivåNå().nr, adv = kt.advarsel && kt.advarsel.length;
+    const kt = SK.kanTa(k, har(k), S.sider[ID]), K = SK.kravFor(k), låst = K.nivå > nivåNå().nr;
+    // (r3) marsjen: kan fristen holdes? ellers ⚠ i stedet for ✓
+    { const m = marsj(k); if (m && !m.venter && !m.feil) { const mv = SK.marsjVurdering(k, m); if (mv.advarsel) kt.advarsel = [...(kt.advarsel || []), mv.advarsel]; } }
+    const adv = kt.advarsel && kt.advarsel.length;
     const kravLinje = k.første ? `<div class="rad"><span class="krav ok">Din første kontrakt – vi viser deg hvert steg.</span></div>`
-      : `<div class="rad"><span class="krav${kt.ok && !adv ? ' ok' : ''}"${adv ? ' data-svak="1"' : ''}>${kt.ok && adv ? '⚠ ' + esc(kt.advarsel.join('; ')) + ' – samme vurdering som i Krig. Send et sterkere lag.' : kt.ok ? '✓ Dere har det som trengs' : 'Krever ' + esc(kt.mangler.join(' og '))}${SK.kravKort(k) && kt.ok && !adv ? ' (' + esc(SK.kravKort(k)) + ')' : ''}</span></div>`;
+      : `<div class="rad"><span class="krav${kt.ok && !adv ? ' ok' : ''}"${adv ? ' data-svak="1"' : ''}>${kt.ok && adv ? '⚠ ' + esc(kt.advarsel.join('. ')) + (kt.advarsel.some(t => /For svakt/.test(t)) ? ' – samme vurdering som i Krig. Send et sterkere lag.' : '.') : kt.ok ? '✓ Dere har det som trengs' : 'Krever ' + esc(kt.mangler.join(' og '))}${SK.kravKort(k) && kt.ok && !adv ? ' (' + esc(SK.kravKort(k)) + ')' : ''}</span></div>`;
     return `<div class="kort${låst ? ' låst' : ''}${k.første ? ' første' : ''}" data-kontrakt="${k.id}"><b>${låst ? '🔒 ' : ''}${esc(k.tittel)}</b><div class="fra">${esc(typeNavn(k))}${k.risiko === 'bakhold' ? ' · <span class="krav">⚠ meldt bakhold</span>' : k.risiko === 'rolig' ? ' · rolig rute' : ''} · ${esc(k.giver.navn)} · ${esc(avstand(k))}</div><p>${esc(SK.kravTekst(k))}</p>`
       + `<div class="rad"><span>Betaling <span class="kr tall">${kr(k.betaling)}</span></span><span>Bot ved brudd <span class="bot tall">${kr(k.bot)}</span></span><span>Frist <span class="tall">${k.timer} t</span> etter at dere tar den</span></div>`
       + (k.konkurrent ? `<div class="rad"><span>${esc(navnFor(k.konkurrent))} vil også ha den – vær raske.</span></div>` : '')
@@ -642,7 +676,7 @@ body.kort #nestelapp small{ display:none; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   Object.assign(api, { fargeord, levertØyeblikk, start, vis, erÅpen: () => åpen, tilstand: () => S, sett: d => { S = SK.fraJSON(d) || S; settNavn(); tegn(true); }, ta, avslå, lever, avbryt, pris, nyeTilbud, steder,
     vurder, klar: klarTilLevering, steg: dt => { akk = 0; steg(Math.max(1, dt)); }, lagre, NØKKEL,
-    førsteKontrakt, lagerPlass, landLager, oppdragFor, forsvarVed, fred: byId => !!oppdragFor(byId), knappFor, fargeNavn, tråd: () => (S ? SK.trådSteg(S) : null), trådAktiv, oppdaterTråd: tråd, lapp, følgLapp, har, nivå: nivåNå,
+    førsteKontrakt, lagerPlass, landLager, marsj, marsjListe: () => MARSJ, oppdragFor, forsvarVed, fred: byId => !!oppdragFor(byId), knappFor, fargeNavn, tråd: () => (S ? SK.trådSteg(S) : null), trådAktiv, oppdaterTråd: tråd, lapp, følgLapp, har, nivå: nivåNå,
     rett: { kontraktTa: ta, kontraktAvslå: avslå, kontraktLever: id => lever(id), kontraktAvbryt: avbryt, kontraktPris: pris }, RIVALER, merke: (side, px) => (side === ID ? egetMerke(px || 40) : rivalMerke(side, px || 40)) });
   window.SelskapSpill = api;
 })();

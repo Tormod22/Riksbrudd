@@ -176,6 +176,12 @@ ok(S0.fristTekst({ frist: 839.6 }, 0) === '14 t 0 min igjen' && S0.fristTekst({ 
     const nøk = T9.tilbud.map(q => q.type + '|' + q.sted.navn + '|' + (q.type === 'eskorte' ? q.fra.navn : '')); ok(new Set(nøk).size === nøk.length && T9.tilbud.length > 0, 'ingen like tilbud: ' + nøk.join(', '));
     const h = T9.tilbud.find(q => q.type !== 'eskorte'); if (h) { S0.godta(T9, 'blå', h.id, 0); for (let i = 0; i < 8; i++) S0.lagTilbud(T9, 'blå', 900 + i, steder, S0.lagRand(i + 40));
       ok(!T9.tilbud.some(q => q.type === h.type && q.sted.navn === h.sted.navn), 'ikke samme jobb som en aktiv kontrakt (' + h.type + ' ' + h.sted.navn + ')'); } }
+  // (kritikerløkka r3, Ingrid: «Hold Byflaten i 10 timer», 19,3 km i luftlinje, marsj 35 km / 9,4 t gjennom Moelv, frist 20 t) – ⚠, ikke ✓
+  { const kb = { type: 'hold', hold: 10, timer: 20 }, mv = S0.marsjVurdering(kb, { km: 35.1, timer: 9.4, gjennom: ['Moelv (Mosevakt holder det)'] });
+    ok(/35,1 km/.test(mv.linje) && /9,4 t/.test(mv.linje) && /Moelv/.test(mv.linje) && /Fristen holder ikke/.test(mv.advarsel) && /gjennom Moelv/.test(mv.advarsel), 'marsjen mot Byflaten: ' + mv.linje + ' / ' + mv.advarsel);
+    ok(!S0.marsjVurdering(kb, { km: 8, timer: 2.2, gjennom: [] }).advarsel, 'kort marsj: ingen advarsel');
+    ok(/Fristen holder ikke/.test(S0.marsjVurdering({ type: 'hent', timer: 12 }, { km: 18, timer: 5 }).advarsel) && !S0.marsjVurdering({ type: 'hent', timer: 12 }, { km: 10, timer: 3 }).advarsel, 'hent: fram og tilbake');
+    ok(/ingen rute/.test(S0.marsjVurdering(kb, { ingen: true }).advarsel) && /A, B og C/.test(S0.marsjVurdering(kb, { km: 1, timer: .3, gjennom: ['A', 'B', 'C'] }).linje), 'ingen rute og lista over byene'); }
   // motangrep og rekruttering ved levering (med fast tilfeldighet)
   const T8 = S0.ny(L0); T8.sider.blå.sum.levert = 5; T8.sider.blå.rykte.pålitelig = 80; const ry = { id: 'r1', type: 'rydd', timer: 10, betaling: 1, bot: 1, sted: { navn: 'X', x: 0, y: 0 }, utløper: 99 };
   T8.tilbud.push(ry); S0.godta(T8, 'blå', 'r1', 0); const hv = S0.lever(T8, 'blå', ry, 1, () => .01); ok(hv.motangrep && hv.rekrutt, 'motangrep og rekruttering');

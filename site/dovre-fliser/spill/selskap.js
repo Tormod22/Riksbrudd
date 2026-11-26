@@ -269,6 +269,28 @@
       advarsel.push(`For svakt: ${tall(har.størsteLag)} mann mot et forsvar på ca. ${Math.round(tall(har.forsvar))}${har.forsvarTekst ? ' (' + har.forsvarTekst + ')' : ''}`);
     return { ok: !m.length, mangler: m, advarsel };
   }
+  // ---------- MARSJEN TIL STEDET (kritikerløkka r3, 26. nov) ----------
+  // Ingrid: «Hold Byflaten i 10 timer» sto som «19,3 km fra leiren» med «✓ Dere har det som trengs», men marsjen var 35 km / 9,4 t gjennom
+  // Moelv (Mosevakt), og fristen 20 t – i praksis tapt. Visningen regner ruta fra leiren (samme regel som ordre(): Terreng.ruteTil, utenom
+  // fiendtlige tettsteder når omvegen er god nok) og gir m = { km, timer, gjennom: ['Moelv (Mosevakt holder det)'], omveg, ingen, forLangt }.
+  // Claudes forslag: en marsj tar i praksis «slakk» ganger så lang tid som planen (hvil, motbakker, en kort stans); en ryddejobb trenger
+  // «kamp» timer ved sperra; en hentejobb går fram og tilbake.
+  REGLER.marsj = { slakk: 1.3, kamp: 1 };
+  const tNum = t => String(Math.round(t * 10) / 10).replace('.', ',');
+  const liste = L => (L.length <= 1 ? L.join('') : L.slice(0, -1).join(', ') + ' og ' + L[L.length - 1]);
+  // gir { linje, advarsel } – linje = «marsj ca. 35 km, ca. 9,4 t, gjennom Moelv (…)», advarsel = tekst når fristen ikke kan holdes (eller '')
+  function marsjVurdering(k, m) {
+    if (!k || !m) return { linje: '', advarsel: '' };
+    if (m.ingen) return { linje: 'ingen rute dit til fots fra leiren', advarsel: 'Troppen finner ingen rute dit til fots fra leiren (vann eller stengt terreng)' };
+    if (m.forLangt) return { linje: 'for langt for én marsj fra leiren', advarsel: 'Stedet er for langt unna for én marsj fra leiren' };
+    const M = REGLER.marsj, t = tall(m.timer), gj = (m.gjennom || []).filter(Boolean);
+    const linje = `marsj ca. ${tNum(tall(m.km))} km, ca. ${tNum(t)} t` + (gj.length ? `, gjennom ${liste(gj)}` : m.omveg ? ', utenom fiendtlige tettsteder' : '');
+    const tur = k.type === 'hent' ? 2 * t : t, trengs = tur * M.slakk + (k.type === 'hold' ? tall(k.hold) : k.type === 'rydd' ? M.kamp : 0);
+    let advarsel = '';
+    if (k.type !== 'eskorte' && trengs > tall(k.timer)) advarsel = k.type === 'hold' ? `Fristen holder ikke: marsjen tar ca. ${tNum(t)} t og holdet ${k.hold} t – fristen er ${k.timer} t` : k.type === 'hent' ? `Fristen holder ikke: fram og tilbake tar ca. ${tNum(tur)} t – fristen er ${k.timer} t` : `Fristen holder ikke: marsjen tar ca. ${tNum(t)} t – fristen er ${k.timer} t`;
+    if (gj.length) advarsel = (advarsel ? advarsel + '. ' : '') + `Ruta går gjennom ${liste(gj)} – speidere stopper der, og andre lag må slåss seg gjennom`;
+    return { linje, advarsel };
+  }
   const kravKort = k => { const K = kravFor(k), d = []; if (K.nivå > 1) d.push(`nivå ${K.nivå}`); if (K.menn) d.push(`lag på ${K.menn}+`); if (K.kjøretøy) d.push('kjøretøy'); return d.join(', '); };
 
   // ---------- godta, levere, bryte ----------
@@ -450,7 +472,7 @@
   }
 
   const api = { REGLER, SIDER, ORD, ny, side, endreRykte, ord, rykteTekst, typeVekter, giverVekter, antallTilbud, betaling, lagTilbud, tittel, kravTekst, bruttTekst, retningOrd,
-    godta, lever, bryt, avbryt, steg, dagSteg, nivå, nesteNivå, kravFor, kanTa, kravKort, førsteKontrakt, TRÅD, oppdaterTråd, trådSteg, lappFor, hardhendt, settPris, fristTekst, tilJSON, fraJSON, lagRand };
+    godta, lever, bryt, avbryt, steg, dagSteg, marsjVurdering, nivå, nesteNivå, kravFor, kanTa, kravKort, førsteKontrakt, TRÅD, oppdaterTråd, trådSteg, lappFor, hardhendt, settPris, fristTekst, tilJSON, fraJSON, lagRand };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Selskap = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
