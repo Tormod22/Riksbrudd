@@ -111,7 +111,7 @@ body:not(.gaar) #alarm.på > span:first-child{ white-space:normal; overflow:visi
 body:not(.gaar) #alarm.på > span:first-child small{ white-space:normal; }
 #alarm > .alinje{ flex:0 0 100%; display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; justify-content:center; font-size:13px; border-top:1px solid rgba(224,113,79,.25); padding-top:4px; }
 #alarm > .alinje button{ min-height:30px; } body.kort #alarm > .alinje .lang{ display:none; }
-body.gaar #alarm > .alinje:not(.ute){ display:none; } body.gaar #alarm.på:has(> .alinje.ute){ flex-wrap:wrap; }
+body.gaar #alarm > .alinje{ display:none; }
 body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5px 8px; } body.krig #alarm{ display:none; }
 body.gaar #alarm.på{ flex-wrap:nowrap; padding:3px 8px; gap:6px; font-size:12.5px; max-width:min(560px, calc(100vw - 16px)); } body.gaar #alarm > span:first-child{ min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:none; } body.gaar #alarm.fjern{ display:none; }
