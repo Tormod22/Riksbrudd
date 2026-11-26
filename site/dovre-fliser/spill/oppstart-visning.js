@@ -57,7 +57,10 @@
 @media (max-width:700px){ #leirvalg{ padding:8px 10px; } #leirvalg .fakta, #leirvalg .kai{ font-size:13px; } #leirvalg .stopp{ font-size:15px; } #leirvalg .flytt, #leirvalg .adv{ font-size:14px; } #leirvalg button{ min-height:44px; margin:5px 3px 0; } }
 #oppstart .to>.flaggboks{ flex:0 0 auto; position:sticky; top:0; }
 @media (max-width:700px){ #oppstart .to>.flaggboks{ order:-1; flex:1 1 100%; position:sticky; top:-17px; z-index:1; background:#16120c; text-align:center; padding:22px 0 6px; border-bottom:1px solid var(--rule); }
-  #oppstart .flaggboks h3{ display:none; } #oppstart .flaggboks canvas{ width:150px; height:100px; } }
+  #oppstart .flaggboks h3{ display:none; } #oppstart .flaggboks canvas{ width:150px; height:100px; }
+  /* (kritikerløkka 26. nov, Jonas: «flagget henger over overskriften Farge 3 når du ruller») flagget står fast øverst, mindre, og det som
+     ruller inn under det tones ut i panelets farge i stedet for å kuttes midt i en overskrift */
+  #oppstart .to>.flaggboks{ padding:20px 0 4px; box-shadow:0 14px 12px -2px #16120c; } #oppstart .flaggboks canvas{ width:120px; height:80px; } }
 #oppstart button.valg{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); cursor:pointer; min-height:40px; padding:4px 10px; }
 #oppstart button.valg.på{ border-color:var(--hover); background:#3a3022; box-shadow:inset 0 0 0 1px var(--hover); }
 #oppstart button.farge{ width:34px; height:34px; min-height:0; padding:0; border:2px solid #0006; cursor:pointer; }

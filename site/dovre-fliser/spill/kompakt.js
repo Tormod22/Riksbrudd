@@ -139,5 +139,16 @@ body.kort.tlfaktiv.tlfpanel #nestelapp{ display:none; }
     forrige = new Set(alle.filter(id => vises($(id))));
     const tp = forrige.size > 0; if (B.classList.contains('tlfpanel') !== tp) B.classList.toggle('tlfpanel', tp);
   } catch (x) { /* neste runde */ } }, REGLER.hver);
+  // NAVN I KANTEN (kritikerløkka 26. nov, Jonas: «Speidertropp 1» og «Kontrakt: Her…» ble kuttet i høyre kant på telefon): navnene som
+  // plasseres av spill/etikett.js, skyves inn så hele navnet står på skjermen (luft: Claudes forslag). Gjelder alle skjermer.
+  const KANT = 4;
+  function klampNavn() { const E = window.Etikett; if (!E || !E.tekst || E.tekst.__klamp) return !!(E && E.tekst && E.tekst.__klamp);
+    const orig = E.tekst;
+    const ny = function (g, t, x, y, retning, prio) {
+      if (g && g.canvas && isFinite(x) && typeof g.measureText === 'function') { const W = typeof VW !== 'undefined' ? VW : g.canvas.clientWidth || g.canvas.width, w = g.measureText(String(t)).width, a = g.textAlign;
+        if (W > 2 * KANT + w) { if (a === 'left' || a === 'start') x = Math.min(Math.max(x, KANT), W - KANT - w); else if (a === 'right' || a === 'end') x = Math.min(Math.max(x, KANT + w), W - KANT); else x = Math.min(Math.max(x, KANT + w / 2), W - KANT - w / 2); } }
+      return orig.call(this, g, t, x, y, retning, prio); };
+    ny.__klamp = true; E.tekst = ny; return true; }
+  if (!klampNavn()) { const t = setInterval(() => { if (klampNavn()) clearInterval(t); }, 500); }
   Object.assign(window.Kompakt, { test: false, REGLER, ENE, stripe: () => stripe.classList.contains('på') });
 })();

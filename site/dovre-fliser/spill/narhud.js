@@ -21,6 +21,11 @@
 #nhud .tilstand{ height:5px; margin-top:4px; }
 body.kort #nhud .helse{ left:auto; right:12px; bottom:auto; top:calc(var(--topp,44px) + 176px); width:118px; padding:4px 7px; } body.kort #nhud .helse .rad{ font-size:12px; } body.kort #nhud .helse .rad b{ font-size:14px; min-width:24px; }
 body.kort #nhud .vapen{ right:12px; bottom:auto; top:calc(var(--topp,44px) + 222px); min-width:118px; padding:4px 7px; } body.kort #nhud .vapen b{ font-size:21px; } body.kort #nhud .vapen span{ font-size:13px; } body.kort #nhud .felt{ display:none; }
+/* (kritikerløkka 26. nov, Jonas: «den gjennomsiktige helse- og våpenboksen tar midten av himmelen») stående telefon: helse og våpen står
+   nederst til venstre under styrespaken, side om side, og er mindre gjennomsiktige */
+body.kort.smal:not(.tlfligg) #nhud .helse{ right:auto; top:auto; left:calc(8px + env(safe-area-inset-left,0px)); bottom:calc(6px + env(safe-area-inset-bottom,0px)); width:112px; box-sizing:border-box; background:rgba(18,15,10,.82); }
+body.kort.smal:not(.tlfligg) #nhud .vapen{ right:auto; top:auto; left:calc(126px + env(safe-area-inset-left,0px)); bottom:calc(6px + env(safe-area-inset-bottom,0px)); min-width:0; width:118px; box-sizing:border-box; background:rgba(18,15,10,.82); }
+body.kort.smal:not(.tlfligg) #nhud .vapen .vbilde{ display:none; } body.kort.smal:not(.tlfligg) #nhud .vapen b{ font-size:18px; } body.kort.smal:not(.tlfligg) #nhud .vapen small{ font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 #nhud .vapen .vbilde{ display:block; width:86px; height:40px; margin:-4px 0 -2px auto; object-fit:contain; opacity:.92; } body.kort #nhud .vapen .vbilde{ width:60px; height:26px; }
 body.foto #nhud, body.foto #varsler{ display:none !important; }
 #varsler{ position:fixed; left:10px; top:calc(var(--topp,58px) + 8px); z-index:6; display:flex; flex-direction:column; gap:5px; align-items:flex-start; max-width:min(320px,70vw); }

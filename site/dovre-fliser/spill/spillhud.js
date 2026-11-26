@@ -211,9 +211,13 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
   tlfVær.onclick = e => { e.stopPropagation(); const v = $('sVaer'); if (v && v.parentElement) v.parentElement.click(); };
   { const c = document.createElement('style'); c.textContent = `#tlfvaer{ display:none; position:fixed; z-index:6; box-sizing:border-box; align-items:center; gap:4px; padding:2px 7px 2px 5px; overflow:hidden; white-space:nowrap;
   background:linear-gradient(180deg,#2a2215,#17120a); border:1px solid #5a4a2a; border-radius:3px; box-shadow:0 2px 5px rgba(0,0,0,.45); color:var(--ink,#e7dcc3); cursor:pointer; }
+/* (kritikerløkka 26. nov, Jonas: «− 6 305 kr» la seg over 3D-knappen) på telefon glir kasselappen (spill/flistips.js) ned under knapperaden */
+body.kort .pengelapp{ translate:0 var(--pengeflytt,0px); }
 #tlfvaer.på{ display:flex; } #tlfvaer b{ font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 #tlfvaer::before{ content:''; flex:none; width:1em; height:1em; background:#c9b26a; -webkit-mask:var(--ikon-vaer, none) center/contain no-repeat; mask:var(--ikon-vaer, none) center/contain no-repeat; }`; document.head.appendChild(c); }
   function visTlfVær() { const B = document.body, v = $('sVaer'), kn = document.querySelector('.top .knapper'), st = $('oppstart');
+    { const top = document.querySelector('.top'), p = $('sPenger'), f = B.classList.contains('kort') && top && p && p.getClientRects().length ? Math.max(0, Math.round(top.getBoundingClientRect().bottom - p.getBoundingClientRect().bottom)) + 'px' : '';
+      if (B.style.getPropertyValue('--pengeflytt') !== f) { if (f) B.style.setProperty('--pengeflytt', f); else B.style.removeProperty('--pengeflytt'); } }
     const på = B.classList.contains('kort') && B.classList.contains('smal') && !B.classList.contains('gaar') && !!v && !!kn && !(st && st.classList.contains('på')) && !!v.textContent.trim() && kn.getClientRects().length > 0;
     if (!på) { if (tlfVær.classList.contains('på')) tlfVær.classList.remove('på'); return; }
     const t = v.textContent.trim(); if (tvB.textContent !== t) tvB.textContent = t;
