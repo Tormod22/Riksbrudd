@@ -40,6 +40,10 @@ ok(LL.oppsummer(LL.tom(leir)) === null, 'ingen tidligere meldinger: ingen oppsum
   let B = LL.tom(leir); LL.legg(B, 'Brakke er bestilt.', 100); LL.legg(B, 'Ola Moen falt i kampen.', 560); LL.legg(B, 'Vaktlaget er sendt mot Otta.', 600);
   B = LL.les(LL.pakk(B), leir); B.økt += 1; const p = LL.oppsummer(B, LL.REGLER, 634);
   ok(p && !p.stille && p.antall === 2 && !p.viktige.some(v => /Brakke/.test(v.tekst)), 'bare meldingene fra de siste ' + LL.REGLER.nylig + ' minuttene før lagringen'); }
+// (R2-løkka) en levert kontrakt er viktig nok til velkomsten
+{ let A = LL.tom(leir); LL.legg(A, 'Røverne angriper leiren fra nord!', 1500); LL.legg(A, 'Kontrakt levert: Eskorter tankbilen. Kommunen betalte 2,7 mill. kr.', 1800);
+  A = LL.les(LL.pakk(A), leir); A.økt += 1; const o = LL.oppsummer(A, LL.REGLER, 1820);
+  ok(o && o.viktige.some(v => /Kontrakt levert/.test(v.tekst)), 'velkomsten tar med en levert kontrakt'); }
 { const D = require('../../site/dovre-fliser/spill/loggdemp.js').lag();
   ok(D.vurder('Spillform: Vanlig · Hold byen.', [], 0, true) === null && D.vurder('Ravnsund (rød) holder til i Rognan, 8 km nord for leiren.', [], 0, true) === null && D.vurder('Velkommen tilbake, Ivar. Har har 3 mill. kr i kassa.', [], 0, true) === null, 'omlasting: innledningen skrives ikke i loggen');
   ok(!!D.vurder('Spillform: Vanlig · Hold byen.', [], 0, false), 'nytt spill: innledningen skrives'); }
