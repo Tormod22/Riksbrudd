@@ -17,11 +17,13 @@
   const leir = () => { const S = window.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); return S && S.leir ? S : null; };
   // basen står i leiren (oppstart-visning.js flytter OLJE.BASER[0] dit)
   const baseILeiren = b => { const S = leir(); return !!(S && b && Math.hypot(b.x - S.leir.x, b.y - S.leir.y) < 60); };
+  // (runde 13) leirens navn plasseres før egne lag og samlelappen «Leiren: 3 lag ›» (som står under det)
+  // (kritikerløkka r2) står FØRST: basen i leiren kan hete det samme som selskapet, og regelen som skjuler basens navn tok da leirens navn
+  // (telefon: «leirens navn mangler»); og prioriteten er «viktig», så kjøretøynavn ved leiren ikke skyver det bort
+  E.regel(t => { const S = leir(), n = S && S.fraksjon && S.fraksjon.navn; return n && (t === n || t.startsWith(n + ' · ')) ? Math.max(P.leir, P.egne + .1, P.viktig || 0) : undefined; });
   E.regel(t => (t === '0 t olje' ? false : undefined));
   E.regel(t => { const b = window.OLJE && OLJE.BASER && OLJE.BASER[0]; return b && t === b.navn && baseILeiren(b) ? false : undefined; });
   E.regel(t => (t === 'Leiren her?' ? P.valgt : undefined));
-  // (runde 13) leirens navn plasseres før egne lag og samlelappen «Leiren: 3 lag ›» (som står under det)
-  E.regel(t => { const S = leir(), n = S && S.fraksjon && S.fraksjon.navn; return n && (t === n || t.startsWith(n + ' · ')) ? Math.max(P.leir, P.egne + .1) : undefined; });
 
   // (runde 8, krig: «Ravnsunds 3. lag · nå» lå oppå «… 4. lag») merkene tegnes hver for seg, men lag som står nær hverandre på skjermen
   // får én lapp (Krig.klynger: «Ravnsund: 2 lag · nå»), og en lapp som ville ligget oppå en annen meldt lapp, flyttes en linje ned

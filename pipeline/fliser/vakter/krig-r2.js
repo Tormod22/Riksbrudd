@@ -18,7 +18,8 @@ module.exports = { navn: 'krig-r2', kjør: async (pg, profil) => {
         ut.sterk = t[0].by.navn === 'Svak' && t[1].sterk === true && t[1].anbefalt === 36; }
       // (1) scenariobyen i Krig
       S0.regler = { vanskelighet: 'vanlig', utfordringer: [], scenario: 'hold' }; ScenarioSpill.settRegler(); if (ScenarioSpill.tilstand()) ScenarioSpill.tilstand().sc = { målId: id };
-      delete KT.vern[id]; StrategiSpill.åpne(); await new Promise(r => setTimeout(r, 300)); StrategiSpill.takt && StrategiSpill.takt();
+      // (fletting r2) andre vakter kan ha latt Dombås være vårt eller vernet gitt opp: start fra et nøytralt tettsted med bygdevern
+      delete KT.vern[id]; TETTSTEDER.delete(id); StrategiSpill.åpne(); await new Promise(r => setTimeout(r, 300)); StrategiSpill.takt && StrategiSpill.takt();
       const rad = document.querySelector('#krigscenario [data-scenby]'); ut.scenby = !!rad && rad.textContent.includes(by.e.navn);
       ut.scenKrav = !!rad && /Send minst \d+ mann/.test(rad.textContent); ut.scenSend = !!rad && !!rad.querySelector('[data-scensend]');
       ut.scenAvtale = !!rad && (!!rad.querySelector('[data-scenavtale]') || !(Krig.vernMenn(by.e.folk) > 0)); ut.fraLeiren = !!rad && /km fra leiren/.test(rad.textContent);
