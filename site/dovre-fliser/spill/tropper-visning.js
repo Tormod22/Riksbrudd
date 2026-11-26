@@ -69,9 +69,11 @@
   function gåOmBord(s, k) { return KOMMANDO({ type: 'omBord', lag: KOMMANDO.nid(s), kjøretøy: nidKj(k) }).ok; }
   function gåOmBordRett(s, k) { const f = TR.ombordFeil(s, k, Math.hypot(s.x - k.x, s.y - k.y), !!bærer(k)); if (f) { logg(`${s.navn}: ${f}`); return false; } s.ombord = k; s.sti = null; logg(`${s.navn} er om bord i ${k.navn}. Gi kjøretøyet ordre – troppen følger med.`); if (valgt === s) visPanel(); return true; }
   function gåAv(s) { if (!s.ombord) return; KOMMANDO({ type: 'gåAv', lag: KOMMANDO.nid(s) }); }
-  function gåAvRett(s) { if (!s.ombord) return; const k = s.ombord; s.ombord = null; delete s.ombordNavn; s.x = k.x + 6; s.y = k.y + 4; s.siktSkitten = true; logg(`${s.navn} har gått av ${k.navn}.`); if (valgt === s) visPanel(); skitten = true; }
+  // (kritikerløkka r2) går av der kjøretøyet står – er kjøretøyets plass ugyldig (NaN), der troppen sist var
+  function gåAvRett(s) { if (!s.ombord) return; const k = s.ombord; s.ombord = null; delete s.ombordNavn; delete s.kjørFeil;
+    const p = Number.isFinite(k.x) && Number.isFinite(k.y) ? [k.x + 6, k.y + 4] : Number.isFinite(s.x) && Number.isFinite(s.y) ? [s.x, s.y] : s.sistGyldig || k.sistGyldig || [s.x, s.y]; s.x = p[0]; s.y = p[1]; s.siktSkitten = true; logg(`${s.navn} har gått av ${k.navn}.`); if (valgt === s) visPanel(); skitten = true; }
   KROKER.sim.push(() => { for (const s of ENHETER) { if (s.ombordNavn && !s.ombord) { const k = (window.KJORETOY || []).find(q => q.navn === s.ombordNavn && q.side === 'blå'); if (k) s.ombord = k; delete s.ombordNavn; }
-      if (!s.ombord) continue; const k = s.ombord; if (!(window.KJORETOY || []).includes(k) || !levende(s)) { s.ombord = null; continue; } if (Math.hypot(s.x - k.x, s.y - k.y) > 2) { s.x = k.x; s.y = k.y; skitten = true; } s.sti = null; s.retning = k.retning || s.retning; } });
+      if (!s.ombord) continue; const k = s.ombord; if (!(window.KJORETOY || []).includes(k) || !levende(s)) { s.ombord = null; continue; } if (Number.isFinite(k.x) && Number.isFinite(k.y) && !(Math.hypot(s.x - k.x, s.y - k.y) <= 2)) { s.x = k.x; s.y = k.y; skitten = true; } s.sti = null; s.retning = k.retning || s.retning; } });
   const ombordKrok = s => { if (!s.ombord) return true; logg(`${s.navn} sitter i ${s.ombord.navn}: trykk «Kjør dit», eller la troppen gå av først.`); return false; };
   KROKER.kanOrdre.push(ombordKrok);
   // (R17 funn 15) «Marsjer» heter «Kjør dit» når troppen sitter på (index.html), og ordren går til kjøretøyet: det kjører langs vegene
@@ -80,7 +82,8 @@
   window.OMBORD_ORDRE = (s, X, Y) => {
     const k = s && s.ombord; if (!k) return false;
     if (!KROKER.kanOrdre.filter(f => f !== ombordKrok).every(f => f(s))) return true;
-    s.avstigning = { x: X, y: Y, navn: 'målet', t: tid };
+    if (!Number.isFinite(X) || !Number.isFinite(Y)) return true;
+    delete s.kjørFeil; s.avstigning = { x: X, y: Y, navn: 'målet', t: tid };
     if (!window.KOMMANDO || !window.Kommando) return false;
     KOMMANDO({ type: 'kjør', kjøretøy: Kommando.nid(k, window.KJORETOY || []), x: X, y: Y });
     logg(`${s.navn} kjører med ${k.navn} og går av ved målet.`); skitten = true; return true; };
@@ -92,8 +95,51 @@
     if (window.FlytSpill && FlytSpill.gruppe && FlytSpill.gruppe().length > 1) return false;
     modus = null; window.OMBORD_ORDRE(valgt, X, Y); visPanel(); skitten = true; return true; };
   ombordMål.mål = true; KROKER.trykk.unshift(ombordMål); if (KROKER.trykk3d) KROKER.trykk3d.unshift(ombordMål);
+
+  // ---------- når bilen ikke kommer fram (kritikerløkka r2, 26. nov) ----------
+  // Jonas: «Kjør dit» ga «kom ikke av gårde (finner ingen veg dit)» først etter 30 spillminutter, og så ingenting. Nå får troppen svaret
+  // med en gang kjøretøyet har prøvd (window.KJ_UTFALL i kjoretoy-visning.js): kjører den, er avstigningen «i gang» (strategi-visning.js
+  // lar troppen gå av når bilen står); står den alt der, går troppen av med en gang; finnes ingen veg, sier loggen det tydelig, og
+  // lagpanelet får «Gå av og marsjer dit» (s.kjørFeil = målet).
+  (window.KJ_UTFALL = window.KJ_UTFALL || []).push((k, r, X, Y) => {
+    const s = bærer(k); if (!s || !s.avstigning) return false; const a = s.avstigning;
+    if (!r.feil) { a.kjørt = true; delete s.kjørFeil; if (r.framme) { logg(`${s.navn}: ${k.navn} står alt ved ${a.navn} – troppen går av.`); return true; } return false; }
+    delete s.avstigning; s.kjørFeil = { x: a.x, y: a.y, navn: a.navn };
+    logg(`${k.navn} når ikke ${a.navn} med bil: ${String(r.feil).replace(/\.$/, '').replace(/^./, c => c.toLowerCase())}. Trykk «Gå av og marsjer dit» hos ${s.navn}, eller velg et mål ved en veg.`);
+    if (valgt === s) visPanel(); skitten = true; return true; });
+  function gåAvOgMarsjer(s) { const m = s.kjørFeil; if (!m) return; gåAv(s);
+    // gåAv går gjennom kommandolaget; ordren gis når troppen faktisk står på bakken
+    setTimeout(() => { if (s.ombord || !levende(s)) return; delete s.kjørFeil; try { const p = ordre(s, m.x, m.y); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ordren feilet */ } if (valgt === s) visPanel(); }, 50); }
+  KROKER.lagTekst.push(s => (s.ombord && s.kjørFeil ? `${s.ombord.navn} kommer ikke fram med bil` : null));
+  // Første «Kjør dit» henter vegkartet (opptil et halvt minutt). Med høy fart gikk 30 spillminutter før svaret kom, og strategi-visning.js
+  // ga opp («kom ikke av gårde») – så mens vegkartet hentes, venter avstigningen (a.t flyttes fram).
+  KROKER.sim.push(() => { if (window.VEGNETT) return; for (const s of ENHETER) { const a = s.avstigning; if (a && !a.kjørt && s.ombord) a.t = tid; } });
+
+  // ---------- mål i vann (kritikerløkka r2, Ingrid) ----------
+  // ordre() i index.html spør her når ruta ikke finnes: ligger målet i en rute man ikke kan gå i (vann), gis to forslag på land –
+  // nærmeste framkommelige rute (innen BREDD_SØK m), og første framkommelige rute på linja fra målet tilbake mot laget. BREDD_SØK er Claudes forslag.
+  const BREDD_SØK = 1500;
+  window.MÅL_PÅ_LAND = (v, sx, sy, X, Y) => {
+    if (!v || !v.K || typeof Terreng === 'undefined') return [];
+    const [ti, tj] = Terreng.rute(v, X, Y), inne = (i, j) => i >= 0 && j >= 0 && i < v.w && j < v.h, fram = (i, j) => inne(i, j) && Terreng.fart(v.K[j * v.w + i], v.V ? v.V[j * v.w + i] : 0) > 0;
+    if (fram(ti, tj)) return [];
+    const ut = [], n = Math.ceil(BREDD_SØK / v.r); let best = null, bd = Infinity;
+    for (let a = -n; a <= n; a++) for (let b = -n; b <= n; b++) { const d = a * a + b * b; if (d < bd && fram(ti + a, tj + b)) { bd = d; best = [ti + a, tj + b]; } }
+    if (best) ut.push(Terreng.senter(v, best[0], best[1]));
+    const L = Math.hypot(sx - X, sy - Y), steg = Math.max(1, Math.ceil(L / (v.r / 2)));
+    for (let q = 1; q <= steg; q++) { const x = X + (sx - X) * q / steg, y = Y + (sy - Y) * q / steg, [i, j] = Terreng.rute(v, x, y); if (fram(i, j)) { ut.push(Terreng.senter(v, i, j)); break; } }
+    return ut; };
+
+  // ---------- aldri NaN (kritikerløkka r2) ----------
+  // Et lag med x/y = NaN (fra et kjøretøy som mistet ruta) ødela garnisonen, krigskartet og lagringen. Siste gyldige plass huskes
+  // (s.sistGyldig) og settes tilbake; uten den: kjøretøyet laget sitter i, ellers leiren.
+  let nanMeldt = new Set();
+  KROKER.sim.push(() => { for (const s of ENHETER) { if (Number.isFinite(s.x) && Number.isFinite(s.y)) { s.sistGyldig = [s.x, s.y]; continue; }
+    const k = s.ombord, L = leir(), p = s.sistGyldig || (k && Number.isFinite(k.x) && Number.isFinite(k.y) ? [k.x, k.y] : L ? [L.x + 15, L.y + 15] : [kam.x, kam.y]);
+    s.x = p[0]; s.y = p[1]; s.sti = null; s.siktSkitten = true; skitten = true;
+    if (s.side === 'blå' && !nanMeldt.has(s)) { nanMeldt.add(s); logg(`${s.navn} mistet ruta og står der de sist var.`); } } });
   KROKER.lagTekst.push(s => (s.ombord ? `om bord i ${s.ombord.navn}` : s.fraFolk ? 'egen tropp' : null));
-  KROKER.lagKnapper.push((s, H) => { if (s.side !== 'blå' || s.karakter) return; if (s.ombord) { H.appendChild(knapp('Gå av', false, () => gåAv(s))); return; }
+  KROKER.lagKnapper.push((s, H) => { if (s.side !== 'blå' || s.karakter) return; if (s.ombord) { if (s.kjørFeil) { const b = knapp('Gå av og marsjer dit', false, () => gåAvOgMarsjer(s)); b.id = 'gaaavmarsj'; H.appendChild(b); } H.appendChild(knapp('Gå av', false, () => gåAv(s))); return; }
     if (!s.leirvakt && vedLeir(s)) { const b = knapp('Våpen og utstyr', false, () => endre(s)); b.id = 'utstyrknapp'; H.appendChild(b); }
     let best = null, bd = R.bord; for (const k of biler()) { if (bærer(k)) continue; const d = Math.hypot(s.x - k.x, s.y - k.y); if (d <= bd && TR.friske(s) <= TR.plass(k)) { bd = d; best = k; } } if (best) H.appendChild(knapp(`Gå om bord i ${best.navn}`, false, () => gåOmBord(s, best))); });
   (window.KJ_TEKST = window.KJ_TEKST || []).push(k => { const s = bærer(k); return s ? `frakter ${s.navn}` : null; });
@@ -244,7 +290,8 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
     const k = M.bil ? biler().find(q => q.type === M.bil && !bærer(q) && bilNær(q, L) && TR.plass(q) >= ider.length) : null; bil = k ? k.navn : '';
     if (!navn || /^\d+\. tropp$/.test(navn) || Object.values(TR.MALER).some(q => navn.startsWith(q.navn))) navn = `${M.navn} ${egne().filter(e => e.fraFolk).length + 1}`; vis(true); }
   function vis(tving) { if (!panel.classList.contains('på')) return; if (!tving && window.pekerNede && pekerNede(panel)) return; const a = document.activeElement; if (!tving && a && panel.contains(a) && /INPUT|SELECT/.test(a.tagName)) return; const ny = el('div'); ny.append(bygg()); if (!tving && ny.innerHTML === sist) return; sist = ny.innerHTML; const topp = panel.scrollTop, kr = [...panel.querySelectorAll('.kol')].map(k => k.scrollTop); panel.replaceChildren(...ny.childNodes); panel.scrollTop = topp; panel.querySelectorAll('.kol').forEach((k, i) => { k.scrollTop = kr[i] || 0; }); }
-  function åpne() { endrer = null; if (!navn) navn = `${egne().filter(e => e.fraFolk).length + 1}. tropp`; panel.classList.add('på'); sist = ''; vis(true); }
+  // (kritikerløkka r2, Ingrid) Selskapet og Tropper ligger på samme plass til venstre – Selskapet lukkes når Tropper åpnes
+  function åpne() { if (window.SelskapSpill && SelskapSpill.erÅpen && SelskapSpill.erÅpen()) { try { SelskapSpill.vis(false); } catch (e) { /* */ } } endrer = null; if (!navn) navn = `${egne().filter(e => e.fraFolk).length + 1}. tropp`; panel.classList.add('på'); sist = ''; vis(true); }
   setInterval(() => vis(false), 2000); window.addEventListener('keydown', e => { if (e.key === 'Escape' && panel.classList.contains('på')) lukk(); });
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e, knapp: k2 }) => { if (!folk() || !leir()) return; hode.append(e('h3', { 'data-fane': 'bygg' }, 'Tropper'));
     const boks = e('div', { klasse: 'tropper' }, e('small', { style: 'display:block;color:var(--ink-dim,#a99);margin-bottom:4px' }, 'Sett sammen egne tropper av folk fra leiren, med bevæpning og kjøretøy. Oppløs en tropp ved leiren for å få folkene hjem.'), k2('Lag ny tropp', åpne, { id: 'nytropp' }));

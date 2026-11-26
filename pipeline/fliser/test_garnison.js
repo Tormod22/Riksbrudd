@@ -7,6 +7,7 @@ const by = { e: { id: 1, navn: 'Testby', folk: 3000 }, bb: [0, 0, 2000, 2000],
   deler: [new Float64Array([0, 0, 2000, 0, 2000, 2000, 0, 2000]), new Float64Array([900, 900, 1100, 900, 1100, 1100, 900, 1100])] };
 const lag = (navn, x, y, side) => ({ navn, x, y, side, menn: Array.from({ length: 12 }, (_, i) => ({ navn: 'M' + i, rolle: i ? 'rifle' : 'lagfører', hp: 1 })) });
 assert(G.inni(by, 500, 500) && !G.inni(by, 1000, 1000) && !G.inni(by, 2500, 500), 'omriss med hull');
+assert(!G.inni(by, NaN, NaN) && !G.inni(by, NaN, 500) && !G.inni(by, null, undefined), 'NaN er aldri inni (kritikerløkka r2)');
 { const S = G.ny(), a = lag('A', 500, 500, 'blå'), f = lag('F', 1500, 1500, 'rød');
   let h = G.steg(S, [by], [a], 600); assert.equal(h[0].hva, 'inntar'); assert.equal(G.tilstand(S, 1).eier, null);
   h = G.steg(S, [by], [a], R.innta); assert(h.some(x => x.hva === 'inntatt' && x.side === 'blå')); assert.equal(G.tilstand(S, 1).eier, 'blå');

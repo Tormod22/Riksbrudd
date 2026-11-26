@@ -494,7 +494,7 @@ body.kort #nestelapp small{ display:none; }
     // (R1-løkka) eldre lagrede spill: de andre selskapene som ikke har gjort noe ennå, får sitt eget startrykte
     for (const id of Object.keys(SK.REGLER.rykte.sider)) { const q = S.sider[id], st = SK.REGLER.rykte.start; if (q && !q.sum.levert && Object.keys(st).every(k => q.rykte[k] === st[k])) Object.assign(q.rykte, SK.REGLER.rykte.sider[id]); }
     // (R18-A) et nytt spill (selskapet har aldri hatt en kontrakt) får den første kontrakten med en gang
-    if (S.nr === 0 && !S.tråd && auto()) førsteKontrakt();
+    if (S.nr === 0 && !S.tråd && auto()) førsteKontrakt(); else landLager();
     if (åpen) tegn(true);
   }
   // (R1-løkka 26. nov, kritikken: «den første kontrakten er en felle») nødlageret ligger i en låve F.avstand fra leiren – så nær at
@@ -512,12 +512,49 @@ body.kort #nestelapp small{ display:none; }
       if (fri(x, y)) return { x: Math.round(x), y: Math.round(y) }; }
     return { x: Math.round(L.x + Math.cos(v0) * F.avstand * .55), y: Math.round(L.y + Math.sin(v0) * F.avstand * .55) };
   }
+  // (kritikerløkka r2, 26. nov, Ingrid: «nødlageret lå midt i Glomma») lagerPlass over sjekker bare havet (høyde ≤ 1 moh.). Etterpå sjekkes
+  // terrengklassen (lagVindu, 32 m-ruter): nødlageret flyttes til nærmeste rute på fast mark – ikke vann, myr eller utenfor kartet, med
+  // fast mark rundt (LAND.kant) – helst på samme side av elva/vannet som leiren (LAND.vannStraff), nær en veg (LAND.veg), i samme retning fra leiren (så tittelen stemmer), og bare før noen har hentet
+  // det. Gjelder også lagrede spill (k.sted.land = sjekket). Tallene i LAND er Claudes forslag.
+  const LAND = { søk: 520, kant: 2, veg: 160, vegStraff: 450, retningStraff: 900, vannStraff: 700 };
+  let landJobb = null;
+  function landLager() { if (landJobb || !S || typeof lagVindu !== 'function' || typeof Terreng === 'undefined') return landJobb;
+    const k = [...S.tilbud, ...S.sider[ID].aktive].find(q => q && q.første && q.sted && q.sted.slag === 'lager' && !q.sted.land); if (!k) return null;
+    landJobb = (async () => { try {
+      const L = S.leir || (Sp() || {}).leir; if (!L) return; const x0 = k.sted.x, y0 = k.sted.y, R = LAND.søk + 200;
+      const v = await lagVindu([x0 - R, y0 - R, x0 + R, y0 + R], true); if (!v || !v.K) return;
+      const K = (i, j) => (i >= 0 && j >= 0 && i < v.w && j < v.h ? v.K[j * v.w + i] : 255);
+      const fast = (i, j) => { const c = K(i, j); return c !== 3 && c !== 255; };
+      const ok = (i, j) => { if (K(i, j) === 6 || !fast(i, j)) return false; for (let a = -LAND.kant; a <= LAND.kant; a++) for (let b = -LAND.kant; b <= LAND.kant; b++) if (!fast(i + a, j + b)) return false; return true; };
+      const vegNær = (i, j) => { const n = Math.ceil(LAND.veg / v.r); for (let a = -n; a <= n; a++) for (let b = -n; b <= n; b++) { const q = j + b, p = i + a; if (p >= 0 && q >= 0 && p < v.w && q < v.h && v.V && v.V[q * v.w + p] > 0) return true; } return false; };
+      // går linja fra stedet mot leiren over vann (innenfor vinduet)? da ligger stedet på andre siden av en elv eller et vann
+      const overVann = (x, y) => { const d = Math.hypot(L.x - x, L.y - y), n = Math.ceil(d / (v.r / 2)); for (let q = 1; q < n; q++) { const [i, j] = Terreng.rute(v, x + (L.x - x) * q / n, y + (L.y - y) * q / n); const c = K(i, j); if (c === 255) break; if (c === 3 && !(v.V && v.V[j * v.w + i] > 0)) return true; } return false; };
+      const [i0, j0] = Terreng.rute(v, x0, y0), ret0 = SK.retningOrd(x0 - L.x, y0 - L.y), n = Math.ceil(LAND.søk / v.r);
+      // står det alt på fast mark og nær en veg, blir det stående
+      let best = ok(i0, j0) && vegNær(i0, j0) && !overVann(x0, y0) ? { x: x0, y: y0, sk: 0 } : null;
+      const sk0 = (x, y) => (overVann(x, y) ? LAND.vannStraff : 0);
+      if (!best) for (let a = -n; a <= n; a++) for (let b = -n; b <= n; b++) { const i = i0 + a, j = j0 + b; if (!ok(i, j)) continue;
+        const [x, y] = Terreng.senter(v, i, j), d = Math.hypot(x - x0, y - y0); if (d > LAND.søk) continue;
+        const sk = d + (vegNær(i, j) ? 0 : LAND.vegStraff) + (SK.retningOrd(x - L.x, y - L.y) === ret0 ? 0 : LAND.retningStraff) + sk0(x, y);
+        if ((!best || sk < best.sk) && fri0(x, y)) best = { x, y, sk }; }
+      if (!best) { if (ok(i0, j0)) k.sted.land = 1; return; }
+      if (best.x !== x0 || best.y !== y0) { const dx = best.x - L.x, dy = best.y - L.y, ret = SK.retningOrd(dx, dy);
+        k.sted.x = Math.round(best.x); k.sted.y = Math.round(best.y); k.sted.d = Math.round(Math.hypot(dx, dy));
+        if (k.sted.retning && ret !== k.sted.retning) { k.sted.retning = ret; k.sted.navn = `låven ${ret} for leiren`; k.tittel = SK.tittel(k); } }
+      k.sted.land = 1; lagre(); sistHtml = ''; if (åpen) tegn(true); skitten = true;
+    } catch (e) { /* prøves igjen neste gang */ } finally { landJobb = null; } })();
+    return landJobb; }
+  // fri() fra lagerPlass (utenfor tettstedene og spillkartet) for et punkt
+  function fri0(x, y) { const F = SK.REGLER.første, byer = (typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || [], G = window.Garnison;
+    if (typeof OMRÅDE_OK === 'function' && !OMRÅDE_OK(x, y)) return false;
+    if (G && G.avstand) for (const by of byer) { if (!by.bb || x < by.bb[0] - F.utenfor || x > by.bb[2] + F.utenfor || y < by.bb[1] - F.utenfor || y > by.bb[3] + F.utenfor) continue; if (G.avstand(by, x, y) < F.utenfor) return false; }
+    return true; }
   // den første kontrakten: nødlageret (lagerPlass) for bygdelaget i nærmeste tettsted
   function førsteKontrakt(nullstill) {
     const s = Sp(); if (!s || !s.leir) return null; if (nullstill) { S = SK.ny(s.leir, {}); settNavn(); }
     const reserve = lagerPlass(s.leir);
     const k = SK.førsteKontrakt(S, ID, tid, steder(), reserve); if (!k) return null;
-    if (S.dag < 0) S.dag = dagNå(); lagre(); skitten = true;
+    if (S.dag < 0) S.dag = dagNå(); lagre(); skitten = true; landLager();
     if (!navigator.webdriver) setTimeout(() => logg(`${k.giver.navn} har en jobb til dere: ${k.tittel} (${kr(k.betaling)}). Trykk på lappen nederst.`), 1200);
     sistHtml = ''; if (åpen) tegn(true); return k;
   }
@@ -528,7 +565,7 @@ body.kort #nestelapp small{ display:none; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   Object.assign(api, { fargeord, start, vis, erÅpen: () => åpen, tilstand: () => S, sett: d => { S = SK.fraJSON(d) || S; settNavn(); tegn(true); }, ta, avslå, lever, avbryt, pris, nyeTilbud, steder,
     vurder, klar: klarTilLevering, steg: dt => { akk = 0; steg(Math.max(1, dt)); }, lagre, NØKKEL,
-    førsteKontrakt, lagerPlass, oppdragFor, forsvarVed, fred: byId => !!oppdragFor(byId), knappFor, fargeNavn, tråd: () => (S ? SK.trådSteg(S) : null), trådAktiv, oppdaterTråd: tråd, lapp, følgLapp, har, nivå: nivåNå,
+    førsteKontrakt, lagerPlass, landLager, oppdragFor, forsvarVed, fred: byId => !!oppdragFor(byId), knappFor, fargeNavn, tråd: () => (S ? SK.trådSteg(S) : null), trådAktiv, oppdaterTråd: tråd, lapp, følgLapp, har, nivå: nivåNå,
     rett: { kontraktTa: ta, kontraktAvslå: avslå, kontraktLever: id => lever(id), kontraktAvbryt: avbryt, kontraktPris: pris }, RIVALER, merke: (side, px) => (side === ID ? egetMerke(px || 40) : rivalMerke(side, px || 40)) });
   window.SelskapSpill = api;
 })();

@@ -53,6 +53,16 @@ const kjør = (kj, sek, steg = 5) => { let t = 0; while (kj.sti && t < sek) { K.
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../../site/dovre-fliser/spill/kjoretoy.js'), 'utf8'), k);
   assert.equal(typeof k.Kjoretoy.planlegg, 'function');
 }
+{ // (kritikerløkka r2) samme nærmeste node for kjøretøy og mål (et mål midt på en lenke): før tom rute og NaN-posisjon
+  const kj = K.ny({ navn: 'Midt', type: 'speiderbil', x: 100, y: 0 }), p = K.planlegg(kj, g, [300, 15]);
+  assert(!p.feil && p.meter > 150 && p.meter < 250, 'Kjører langs lenken til punktet nærmest målet: ' + JSON.stringify(p));
+  kjør(kj, 3600, 1); assert(Number.isFinite(kj.x) && Number.isFinite(kj.y), 'Aldri NaN'); const v = g.naermestePåVeg([300, 15], 3000); assert(Math.abs(v.y - 12) < .1, 'Punktet på vegen (A–B går via 500,20)'); assert(Math.hypot(kj.x - v.x, kj.y - v.y) < 1, 'Står på vegen ved målet: ' + kj.x + ',' + kj.y);
+  const fx = kj.x, q = K.planlegg(kj, g, [300, 13]); assert(q.framme && !kj.sti && kj.x === fx, 'Står alt ved målet: framme med en gang');
+  const u = K.ny({ navn: 'Ute', type: 'speiderbil', x: 500, y: 80 }), r = K.planlegg(u, g, [1500, 0]);
+  assert(!r.feil); kjør(u, 3600, 1); assert(Math.abs(u.x - 1500) < 1 && Math.abs(u.y) < 1, 'Fra terrenget inn på vegen og fram: ' + u.x);
+  const n = K.ny({ navn: 'NaN', type: 'speiderbil', x: 100, y: 0 }); n.x = NaN; assert(K.planlegg(n, g, [500, 0]).feil, 'Ukjent plass gir feil, ikke NaN-sti');
+  assert(K.planlegg(kj, g, [NaN, 0]).feil, 'Ugyldig mål gir feil');
+}
 console.log('ok – reisetid, fart, ferjeventing, kolonne, stopp, ingen veg og DOM-fri modul');
 
 if (process.argv[2]) {   // ekte vegnett: kravene i docs/plan-funksjoner.md (S2)
