@@ -9,7 +9,7 @@ module.exports = {
       const ut = {}, vent = ms => new Promise(r => setTimeout(r, ms)), S2 = window.Spill2D, LS = window.LeteSpill, ES = window.EventyrSpill, OS = window.OverlevSpill;
       if (!S2 || !LS || !ES || !OS || !OppstartSpill.tilstand() || !LeirSpill.tilstand()) return { mangler: true };
       const kar = ENHETER.find(e => e.karakter && levende(e)); if (!kar) return { mangler: true, hva: 'karakter' };
-      const k0 = { x: kar.x, y: kar.y, sti: kar.sti }, av0 = S2.uten3d(), L = LeirSpill.tilstand(), tre0 = L.lager.tre || 0, tf0 = OS.T().length, fe0 = ES.feller().length, t0 = ES.tellere();
+      const var3d = typeof på3d !== 'undefined' && på3d, k0 = { x: kar.x, y: kar.y, sti: kar.sti }, av0 = S2.uten3d(), L = LeirSpill.tilstand(), tre0 = L.lager.tre || 0, tf0 = OS.T().length, fe0 = ES.feller().length, t0 = ES.tellere();
       const I = UtstyrSpill.tilstand(), felle0 = I.ting.felle;
       try {
         // 1. 3D av: knappen borte, og slå3d åpner ikke 3D
@@ -46,11 +46,14 @@ module.exports = {
       // tilbake
       LS.lett().delete(8700001); if (LS.lukkFunn) LS.lukkFunn(); OS.giOpp(8700001); L.lager.tre = tre0; ES.feller().splice(fe0); if (felle0 === undefined) delete I.ting.felle; else I.ting.felle = felle0;
       kar.x = k0.x; kar.y = k0.y; kar.sti = k0.sti; S2.sett3d(av0);
+      // 3D var åpent før vakta: åpne det igjen (de neste vaktene trenger det) og vent til utsnittet er bygget
+      if (var3d && !på3d) { await slå3d(true); for (let n = 0; n < 1800 && (!på3d || !R3.ut || R3.bygger); n++) await vent(100); }
+      ut.tilbake3d = !var3d || (på3d && !!R3.ut);
       ut.tilbake = !LS.lett().has(8700001) && OS.T().length === tf0 && S2.uten3d() === av0;
       return ut;
     });
     if (d.mangler) return { ok: false, tekst: 'Spill2D/LeteSpill/EventyrSpill/OverlevSpill mangler eller spillet er ikke startet ' + JSON.stringify(d), data: d };
-    const krav = ['av', 'åpnerIkke', 'menyKnapp', 'på', 'klasse', 'starter', 'lett', 'panel', 'inne', 'gått', 'hopp', 'sikret', 'sover', 'våknet', 'felleKnapp', 'felle', 'sjekkKnapp', 'felt', 'tilbake'];
+    const krav = ['av', 'åpnerIkke', 'menyKnapp', 'på', 'klasse', 'starter', 'lett', 'panel', 'inne', 'gått', 'hopp', 'sikret', 'sover', 'våknet', 'felleKnapp', 'felle', 'sjekkKnapp', 'felt', 'tilbake', 'tilbake3d'];
     const feil = krav.filter(k => !d[k]); if (d.feil) feil.push('feil: ' + d.feil);
     return { ok: !feil.length, tekst: feil.length ? `${profil}: mangler ${feil.join(', ')}` : `${profil}: 3D av/på (knappen borte, åpner ikke), leting fra kartet (huskes, panelet står, målet «inne»), gangen teller (ikke hopp), sikre/sove/våkne ved huset, snarefelle fra karakteren og felte fiender`, data: d };
   },
