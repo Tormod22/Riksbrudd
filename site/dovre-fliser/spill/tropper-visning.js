@@ -111,6 +111,9 @@
     // gåAv går gjennom kommandolaget; ordren gis når troppen faktisk står på bakken
     setTimeout(() => { if (s.ombord || !levende(s)) return; delete s.kjørFeil; try { const p = ordre(s, m.x, m.y); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ordren feilet */ } if (valgt === s) visPanel(); }, 50); }
   KROKER.lagTekst.push(s => (s.ombord && s.kjørFeil ? `${s.ombord.navn} kommer ikke fram med bil` : null));
+  // Første «Kjør dit» henter vegkartet (opptil et halvt minutt). Med høy fart gikk 30 spillminutter før svaret kom, og strategi-visning.js
+  // ga opp («kom ikke av gårde») – så mens vegkartet hentes, venter avstigningen (a.t flyttes fram).
+  KROKER.sim.push(() => { if (window.VEGNETT) return; for (const s of ENHETER) { const a = s.avstigning; if (a && !a.kjørt && s.ombord) a.t = tid; } });
 
   // ---------- mål i vann (kritikerløkka r2, Ingrid) ----------
   // ordre() i index.html spør her når ruta ikke finnes: ligger målet i en rute man ikke kan gå i (vann), gis to forslag på land –
