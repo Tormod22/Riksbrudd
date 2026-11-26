@@ -521,7 +521,8 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
     // (runde 12, pakke 3d) til fots nær leiren viser flagget i 3D hvem som bor her – navnet hang midt i lufta ved stanga
     { const R = typeof R3 !== 'undefined' ? R3 : null; if (R && R.fot && R.ut && Math.hypot(S.leir.x - R.ut.cx - R.cam.position.x, S.leir.y - R.ut.cy - R.cam.position.y) < 150) return; }
     const p = proj3(S.leir.x, S.leir.y); if (!p) return;
-    g.save(); g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; const ny = window.Etikett ? Etikett.tekst(g, S.fraksjon.navn, p[0], p[1] + 18, 1) : p[1] + 18; g.strokeText(S.fraksjon.navn, p[0], ny); g.fillStyle = '#f2ead6'; g.fillText(S.fraksjon.navn, p[0], ny); g.restore();
+    // (fletting r1, telefon: kjøretøynavn ved leiren skjøv leirens navn bort) – leirens navn er viktig og går foran kjøretøy og egne lag
+    g.save(); g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.7)'; const ny = window.Etikett ? Etikett.tekst(g, S.fraksjon.navn, p[0], p[1] + 18, 1, Etikett.REGLER.prio.viktig) : p[1] + 18; g.strokeText(S.fraksjon.navn, p[0], ny); g.fillStyle = '#f2ead6'; g.fillText(S.fraksjon.navn, p[0], ny); g.restore();
   });
   // 3D: flaggstanga med ditt flagg som duk
   // (runde 12, pakke 3d, kritikken: «flaggstanga viser et flatt ikon i stedet for et ekte 3D-flagg») – stanga lages her (sokkel i betong,
