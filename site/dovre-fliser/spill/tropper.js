@@ -82,7 +82,22 @@
   const friske = lag => lag.menn.filter(m => m.hp > 0).length;
   // Kan troppen gå om bord? avstand i meter. Gir null når det går, ellers grunnen.
   function ombordFeil(lag, k, avstand, opptatt) { if (!plass(k)) return 'Kjøretøyet frakter ikke folk.'; if (opptatt) return 'Kjøretøyet frakter alt en tropp.'; if (friske(lag) > plass(k)) return `Det er bare plass til ${plass(k)} i ${k.navn}.`; if (avstand > R.bord) return `For langt unna (${Math.round(avstand)} m – må være innen ${R.bord} m).`; if (k.sti) return 'Kjøretøyet kjører.'; return null; }
-  const api = { VÅPEN, UTSTYR, MALER, foreslå, behold, leirEtter, advarsler, malTekst, tallOrd, pris, mister, utrust, pleie, egnet, R, ROLLER, opprett, oppløs, plass, friske, ombordFeil };
+  // ---------- LAGERET FOR TROPPENES UTSTYR (kritikerløkka r3, Ingrid: «å oppløse troppen kostet utstyret») ----------
+  // Når en tropp oppløses, legges kjøpte våpen (de levendes) og utstyret på lager i leiren: { våpen: { id: antall }, utstyr: { id: antall } }.
+  // En ny tropp tar det den trenger fra lageret først, og betaler bare resten.
+  const tomtLager = () => ({ våpen: {}, utstyr: {} });
+  function tilLager(lager, lag) { const L = lager || tomtLager(), inn = tomtLager();
+    for (const m of lag.menn || []) { if (!(m.hp > 0) || !m.valgt || !VÅPEN[m.valgt] || !(VÅPEN[m.valgt].pris > 0)) continue; L.våpen[m.valgt] = (L.våpen[m.valgt] || 0) + 1; inn.våpen[m.valgt] = (inn.våpen[m.valgt] || 0) + 1; }
+    for (const u of Object.keys(lag.utstyr || {})) { if (!lag.utstyr[u] || !UTSTYR[u]) continue; L.utstyr[u] = (L.utstyr[u] || 0) + 1; inn.utstyr[u] = 1; }
+    return { lager: L, inn }; }
+  // pris med lageret: { sum (kr å betale), fra: { våpen, utstyr } (det som tas fra lageret) } – ta = true trekker det fra lageret
+  function prisMedLager(våpen, utstyr, lager, ta) { const L = lager || tomtLager(), igjen = { våpen: { ...L.våpen }, utstyr: { ...L.utstyr } }, fra = tomtLager(); let sum = 0;
+    for (const v of våpen || []) { const p = (VÅPEN[v] && VÅPEN[v].pris) || 0; if (p > 0 && igjen.våpen[v] > 0) { igjen.våpen[v]--; fra.våpen[v] = (fra.våpen[v] || 0) + 1; } else sum += p; }
+    for (const u of utstyr || []) { const p = (UTSTYR[u] && UTSTYR[u].pris) || 0; if (p > 0 && igjen.utstyr[u] > 0) { igjen.utstyr[u]--; fra.utstyr[u] = 1; } else sum += p; }
+    if (ta && lager) { lager.våpen = igjen.våpen; lager.utstyr = igjen.utstyr; } return { sum, fra }; }
+  function lagerTekst(L) { const d = []; for (const [v, n] of Object.entries((L && L.våpen) || {})) if (n > 0) d.push(`${n} ${VÅPEN[v] ? VÅPEN[v].navn.toLowerCase() : v}`);
+    for (const [u, n] of Object.entries((L && L.utstyr) || {})) if (n > 0) d.push(`${n > 1 ? n + ' × ' : ''}${UTSTYR[u] ? UTSTYR[u].navn.toLowerCase() : u}`); return d.join(', '); }
+  const api = { VÅPEN, UTSTYR, MALER, tomtLager, tilLager, prisMedLager, lagerTekst, foreslå, behold, leirEtter, advarsler, malTekst, tallOrd, pris, mister, utrust, pleie, egnet, R, ROLLER, opprett, oppløs, plass, friske, ombordFeil };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Tropper = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

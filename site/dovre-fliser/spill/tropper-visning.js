@@ -27,6 +27,11 @@
   function bilGrunn(k, L) { if (k.oppdrag) return 'på oppdrag'; if (k.sti) return 'kjører'; const b = bærer(k); if (b) return `${b.navn} sitter i den`; if (k.hp <= 0) return 'ødelagt';
     if (L) { const d = Math.hypot(k.x - L.x, k.y - L.y); if (d > BIL_NÆR) return `${String(Math.round(d / 100) / 10).replace('.', ',')} km fra leiren – kjør den hjem først`; } return ''; }
   const lagre = () => { if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); if (window.LagringSpill && LagringSpill.lagre) LagringSpill.lagre(); };
+  // (kritikerløkka r3) lageret for troppenes utstyr, per leir i localStorage «riksbrudd-troppslager» (TR.tilLager / TR.prisMedLager)
+  const LAGER_NØKKEL = 'riksbrudd-troppslager';
+  const leirId = () => { const L = leir(); return L ? Math.round(L.x) + ',' + Math.round(L.y) : ''; };
+  function lesLager() { try { const d = JSON.parse(localStorage.getItem(LAGER_NØKKEL) || 'null'); if (d && d.leir === leirId() && d.lager) return { våpen: { ...(d.lager.våpen || {}) }, utstyr: { ...(d.lager.utstyr || {}) } }; } catch (e) { /* tomt */ } return TR.tomtLager ? TR.tomtLager() : { våpen: {}, utstyr: {} }; }
+  function lagreLager(L) { try { localStorage.setItem(LAGER_NØKKEL, JSON.stringify({ leir: leirId(), lager: L })); } catch (e) { /* fullt eller sperret */ } }
   let valgte = new Set(), navn = '', bev = 'standard', bil = '', sist = '', våpen = {}, utstyr = new Set(), malValgt = null;
   // (runde 8) hvem forslagene lar bli igjen og bygge (TR.behold), og advarslene når leiren mister byggerne eller kokken
   const holdIgjen = P => TR.behold ? TR.behold(P) : [];
@@ -43,17 +48,21 @@
   function opprettRett(side, ider, navnet, bevId, kjøretøy, o = {}) { const F = folk(), L = leir(); if (!F || !L) return { feil: 'Ingen leir.' }; const P = F.personer.filter(p => ider.includes(p.id)), r = TR.opprett(P, navnet); if (r.feil) return r;
     const k = kjøretøy || null; if (k && TR.plass(k) < r.menn.length) return { feil: `Det er bare plass til ${TR.plass(k)} i ${k.navn}.` };
     // våpen valgt mann for mann og utstyr til troppen betales samlet – ellers en ferdig bevæpning som før
-    const egen = o.våpen && Object.keys(o.våpen).length > 0, ut = (o.utstyr || []).filter(u => TR.UTSTYR[u]), sum = TR.pris(egen ? P.map(q => o.våpen[q.id] || 'rifle') : [], ut);
+    const egen = o.våpen && Object.keys(o.våpen).length > 0, ut = (o.utstyr || []).filter(u => TR.UTSTYR[u]), lager = TR.prisMedLager ? lesLager() : null, vl = egen ? P.map(q => o.våpen[q.id] || 'rifle') : [], sum = lager ? TR.prisMedLager(vl, ut, lager).sum : TR.pris(vl, ut);
     const B = !egen && window.Strid && Strid.BEVÆPNING[bevId], alt = sum + (B && B.pris > 0 ? B.pris : 0); if (alt > 0 && !(window.OppstartSpill && OppstartSpill.betal(alt))) return { feil: `Ikke råd til våpnene og utstyret (${alt.toLocaleString('nb-NO')} kr).` };
+    // (r3) det som fantes på lageret, tas derfra (gratis)
+    let fraLager = ''; if (lager) { const r0 = TR.prisMedLager(vl, ut, lager, true); fraLager = TR.lagerTekst(r0.fra); if (fraLager) lagreLager(lager); }
     F.personer = F.personer.filter(p => !ider.includes(p.id)); const v = tilfV() * 6.283, s = nyttLag(r.navn, k ? k.x : L.x + Math.cos(v) * 25, k ? k.y : L.y + Math.sin(v) * 25, side || 'blå'); s.menn = r.menn; s.leder = 0; s.fraFolk = true;
     if (egen) TR.utrust(s, Object.fromEntries(P.map(q => [q.id, o.våpen[q.id] || 'rifle']))); if (ut.length) { s.utstyr = {}; for (const u of ut) s.utstyr[u] = true; }
     if (window.StridSpill) { const st = StridSpill.regel(s); if (egen) { s.strid = { ...st, bev: 'egen' }; StridSpill.regel(s); } else if (B && bevId !== 'standard') { s.strid = { ...st, bev: bevId }; StridSpill.regel(s); } } if (k) s.ombord = k; if (o.mal) s.mal = o.mal; ENHETER.push(s);
     if (s.utstyr && s.utstyr.feltradio) { if (window.KontrollromSpill && KontrollromSpill.girRadio) KontrollromSpill.girRadio(s, 'felt'); else s.radio = 'felt'; } lagre(); skitten = true;
-    logg(`${r.navn} er satt opp: ${r.menn.length} fra leiren, ${r.menn[0].navn} leder` + (k ? `, om bord i ${k.navn}` : '') + '.'); return { lag: s }; }
+    logg(`${r.navn} er satt opp: ${r.menn.length} fra leiren, ${r.menn[0].navn} leder` + (k ? `, om bord i ${k.navn}` : '') + (fraLager ? `. Fra lageret: ${fraLager}` : '') + '.'); return { lag: s }; }
   function oppløs(s) { return kom({ type: 'troppOppløs', lag: KOMMANDO.nid(s), stille: true }); }
   function oppløsRett(s) { const F = folk(); if (!F) return { feil: 'Leiren har ingen folk-liste.' }; if (!vedLeir(s)) return { feil: `${s.navn} må stå innen ${R.nær} m fra leiren for å oppløses.` };
+    // (kritikerløkka r3, Ingrid: «å oppløse troppen kostet utstyret») kjøpte våpen og utstyr legges på lager i leiren
+    let påLager = ''; if (TR.tilLager) { const r0 = TR.tilLager(lesLager(), s); påLager = TR.lagerTekst(r0.inn); if (påLager) lagreLager(r0.lager); }
     const hjem = TR.oppløs(s, window.FolkRegler ? FolkRegler.OPPGAVER : []); for (const p of hjem) { p.id = F.neste++; F.personer.push(p); } const i = ENHETER.indexOf(s); if (i >= 0) ENHETER.splice(i, 1); if (valgt === s) { valgt = null; if (window.lukkPanel) lukkPanel(); }
-    lagre(); skitten = true; logg(`${s.navn} er oppløst: ${hjem.length} er tilbake i leiren (de står som «fri» i Folk).`); return { hjem: hjem.length }; }
+    lagre(); skitten = true; logg(`${s.navn} er oppløst: ${hjem.length} er tilbake i leiren (de står som «fri» i Folk).` + (påLager ? ` Utstyret er lagt på lager i leiren (${påLager}) – en ny tropp får det gratis.` : '')); return { hjem: hjem.length, påLager }; }
 
   // ---------- utstyret virker ----------
   KROKER.sikt.push(s => (s.utstyr && s.utstyr.kikkert ? TR.UTSTYR.kikkert.sikt : 1));
@@ -141,7 +150,23 @@
   KROKER.lagTekst.push(s => (s.ombord ? `om bord i ${s.ombord.navn}` : s.fraFolk ? 'egen tropp' : null));
   KROKER.lagKnapper.push((s, H) => { if (s.side !== 'blå' || s.karakter) return; if (s.ombord) { if (s.kjørFeil) { const b = knapp('Gå av og marsjer dit', false, () => gåAvOgMarsjer(s)); b.id = 'gaaavmarsj'; H.appendChild(b); } H.appendChild(knapp('Gå av', false, () => gåAv(s))); return; }
     if (!s.leirvakt && vedLeir(s)) { const b = knapp('Våpen og utstyr', false, () => endre(s)); b.id = 'utstyrknapp'; H.appendChild(b); }
-    let best = null, bd = R.bord; for (const k of biler()) { if (bærer(k)) continue; const d = Math.hypot(s.x - k.x, s.y - k.y); if (d <= bd && TR.friske(s) <= TR.plass(k)) { bd = d; best = k; } } if (best) H.appendChild(knapp(`Gå om bord i ${best.navn}`, false, () => gåOmBord(s, best))); });
+    let best = null, bd = R.bord; for (const k of biler()) { if (bærer(k)) continue; const d = Math.hypot(s.x - k.x, s.y - k.y); if (d <= bd && TR.friske(s) <= TR.plass(k)) { bd = d; best = k; } } if (best) { const b = knapp(`Gå om bord i ${best.navn}`, false, () => gåOmBord(s, best)); b.id = 'ombordknapp'; H.appendChild(b); return; }
+    // (kritikerløkka r3, Ingrid: «Speiderbil 1 ble stående ved låven – troppen kunne ikke gå om bord») et ledig eget kjøretøy lenger unne (innen
+    // HENT_BIL): «Hent Speiderbil 1» – troppen går dit og går om bord når den er framme (hentBilSteg)
+    if (s.hentBil) return; let hent = null, hd = HENT_BIL; for (const k of biler()) { if (bærer(k) || ENHETER.some(e => e !== s && e.hentBil === k.navn)) continue; const d = Math.hypot(s.x - k.x, s.y - k.y); if (d < hd && TR.friske(s) <= TR.plass(k)) { hd = d; hent = k; } }
+    if (hent) { const b = knapp(`Hent ${hent.navn} (${hd >= 1000 ? String(Math.round(hd / 100) / 10).replace('.', ',') + ' km' : Math.round(hd) + ' m'})`, false, () => hentBil(s, hent)); b.id = 'hentbilknapp'; b.title = `${s.navn} går til ${hent.navn} og går om bord`; H.appendChild(b); } });
+  KROKER.lagTekst.push(s => (s.hentBil && !s.ombord ? `går for å hente ${s.hentBil}` : null));
+  // Claudes forslag: et eget kjøretøy innen 3 km kan hentes til fots
+  const HENT_BIL = 3000;
+  async function hentBil(s, k) { if (!KROKER.kanOrdre.every(f => f(s))) return false; s.hentBil = k.navn; s.hentBilTid = tid;
+    try { await ordre(s, k.x, k.y); } catch (e) { /* ordren feilet */ }
+    if (!s.sti && Math.hypot(s.x - k.x, s.y - k.y) > R.bord) { delete s.hentBil; logg(`${s.navn} finner ingen rute til ${k.navn}.`); if (valgt === s) visPanel(); return false; }
+    s.hentBil = k.navn; s.hentBilSti = s.sti; logg(`${s.navn} går for å hente ${k.navn} og går om bord når de er framme.`); if (valgt === s) visPanel(); return true; }
+  KROKER.sim.push(() => { for (const s of ENHETER) { if (!s.hentBil) continue; const k = (window.KJORETOY || []).find(q => q.navn === s.hentBil && q.side === 'blå');
+    // en ny ordre (en annen rute enn den hentBil ga) avbryter hentingen
+    if (!k || !levende(s) || s.ombord || bærer(k) || (s.sti && s.hentBilSti && s.sti !== s.hentBilSti)) { delete s.hentBil; delete s.hentBilSti; continue; }
+    if (Math.hypot(s.x - k.x, s.y - k.y) <= R.bord && !k.sti) { delete s.hentBil; delete s.hentBilSti; s.sti = null; gåOmBord(s, k); continue; }
+    if (!s.sti && !s.planlegger && tid - (s.hentBilTid || 0) > 2) { delete s.hentBil; logg(`${s.navn} kom ikke helt fram til ${k.navn} (${Math.round(Math.hypot(s.x - k.x, s.y - k.y))} m unna). Gi en ny ordre nærmere bilen.`); if (valgt === s) visPanel(); } } });
   (window.KJ_TEKST = window.KJ_TEKST || []).push(k => { const s = bærer(k); return s ? `frakter ${s.navn}` : null; });
 
   // ---------- oppløs fra lagpanelet (runde 8, kritiker D: «ingen synlig måte å oppløse en tropp») ----------
@@ -156,7 +181,7 @@
     logg(`${s.navn} går hjem til leiren og oppløses når de er framme (en ny ordre avbryter det).`); if (valgt === s) visPanel(); return true; }
   KROKER.lagKnapper.push((s, H) => { if (!kanOppløses(s)) return; const n = TR.friske(s), nær = vedLeir(s), klar = spør && spør.s === s && performance.now() < spør.til;
     if (nær) { const b = knapp(klar ? `Bekreft: oppløs (${n} til leiren)` : 'Oppløs troppen', false, () => { if (spør && spør.s === s && performance.now() < spør.til) { spør = null; const r = oppløs(s); if (r.feil) logg(r.feil); if (window.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); return; }
-        spør = { s, til: performance.now() + BEKREFT_MS }; logg(`Trykk «Bekreft» for å oppløse ${s.navn}: de ${n} som lever, går tilbake til arbeid i leiren (som «fri» i Folk)${s.utstyr || s.menn.some(m => m.valgt && m.valgt !== 'rifle') ? '. Kjøpte våpen og utstyr følger ikke med' : ''}.`); visPanel();
+        spør = { s, til: performance.now() + BEKREFT_MS }; logg(`Trykk «Bekreft» for å oppløse ${s.navn}: de ${n} som lever, går tilbake til arbeid i leiren (som «fri» i Folk)${s.utstyr || s.menn.some(m => m.valgt && m.valgt !== 'rifle') ? '. Kjøpte våpen og utstyr legges på lager i leiren – en ny tropp får dem gratis' : ''}.`); visPanel();
         setTimeout(() => { if (spør && spør.s === s && performance.now() >= spør.til) { spør = null; if (valgt === s) visPanel(); } }, BEKREFT_MS + 50); });
       b.id = 'opplosknapp'; b.title = 'De som lever, går tilbake til arbeid i leiren'; if (klar) b.classList.add('oppløs-klar'); H.appendChild(b); return; }
     if (s.hjemOppløs) return; const b = knapp('Send hjem og oppløs', false, () => sendHjem(s)); b.id = 'opplosknapp'; b.title = `Troppen marsjerer hjem og oppløses innen ${R.nær} m fra leiren`; H.appendChild(b); });
@@ -266,7 +291,8 @@ body.smal #tropppanel, body.kort #tropppanel{ left:0; right:0; top:auto; bottom:
     kol2.append(el('h3', {}, 'Utstyr til troppen')); for (const [uid, U] of Object.entries(TR.UTSTYR)) { const på = utstyr.has(uid), rad = el('div', { klasse: 'u' + (på ? ' på' : ''), 'data-utstyr': uid, role: 'checkbox', 'aria-checked': String(på), tabindex: '0' }, el('span', { klasse: 'h' }, på ? '✓' : ''), el('span', {}, el('b', {}, U.navn), el('small', {}, U.tekst)), el('small', {}, U.pris.toLocaleString('nb-NO') + ' kr'));
       rad.onclick = () => { if (utstyr.has(uid)) utstyr.delete(uid); else utstyr.add(uid); vis(true); }; kol2.append(rad); }
     // oppsummering: pris, ildkraft mot et vanlig lag, og hva leiren mister
-    { const VP = P.filter(p => valgte.has(p.id)), egen = Object.keys(våpen).length > 0, vl = VP.map(p => våpen[p.id] || 'rifle'), B = !egen && window.Strid ? Strid.BEVÆPNING[bev] : null, sum = TR.pris(egen ? vl : [], [...utstyr]) + (B ? B.pris : 0), boks = el('div', { klasse: 'sum', id: 'troppsum' });
+    { const VP = P.filter(p => valgte.has(p.id)), egen = Object.keys(våpen).length > 0, vl = VP.map(p => våpen[p.id] || 'rifle'), B = !egen && window.Strid ? Strid.BEVÆPNING[bev] : null, lgr = TR.prisMedLager ? TR.prisMedLager(egen ? vl : [], [...utstyr], lesLager()) : null, sum = (lgr ? lgr.sum : TR.pris(egen ? vl : [], [...utstyr])) + (B ? B.pris : 0), boks = el('div', { klasse: 'sum', id: 'troppsum' });
+      { const fl = lgr && TR.lagerTekst(lgr.fra); if (fl) boks.append(el('div', {}, el('small', {}, `Fra lageret i leiren (gratis): ${fl}`))); }
       const kasse = window.OppstartSpill && OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0; boks.append(el('div', {}, 'Pris: ', el('b', {}, sum.toLocaleString('nb-NO') + ' kr'), sum > kasse ? el('span', { klasse: 'advar' }, ' – ikke råd') : ''));
       if (VP.length >= R.min && window.Strid && window.Terreng) { const prøve = TR.opprett(VP, 'x'); if (!prøve.feil) { if (egen) TR.utrust(prøve, Object.fromEntries(VP.map(q => [q.id, våpen[q.id] || 'rifle']))); else Strid.bevæpn(prøve.menn, bev); if (egen) Strid.bevæpn(prøve.menn, 'egen');
           const std = Array.from({ length: 12 }, (_, i) => ({ hp: 1, rolle: TR.ROLLER[i] })), kr = d => Strid.kraft(prøve.menn, d, {}, 1, Terreng.treffsjanse), ks = d => Strid.kraft(std, d, {}, 1, Terreng.treffsjanse), pst = d => (ks(d) > 0 ? Math.round(kr(d) / ks(d) * 100) : 0);
