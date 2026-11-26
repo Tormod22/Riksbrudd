@@ -131,7 +131,8 @@
   });
 
   // ---------- trykk: velg kolonne, eller velg mål når «Kjør til …» er på ----------
-  KROKER.trykk.push((X, Y) => {
+  // (kritikerløkka 26. nov) kroken setter mål («Kjør til …»): den får trykket også mens du velger mål (velgerMål i index.html)
+  const kjTrykk = (X, Y) => {
     if (modus === 'marsj' && valgt) return false;   // lagets marsjordre går foran
     if (valgtKj && kjørModus) { kjørModus = false; if (valgtKj.side === 'blå') KOMMANDO({ type: 'kjør', kjøretøy: nidKj(valgtKj), x: X, y: Y }); visKj(valgtKj); return true; }
     let best = null, bd = 22;
@@ -142,7 +143,10 @@
     if (best) { velg(best); return true; }
     if (valgtKj) { valgtKj = null; kjørModus = false; skitten = true; }
     return false;
-  });
+  };
+  kjTrykk.mål = true; KROKER.trykk.push(kjTrykk);
+  window.kjørModusPå = () => !!(valgtKj && kjørModus);
+  window.avbrytKjørModus = () => { if (!kjørModus) return; kjørModus = false; if (valgtKj) visKj(valgtKj); skitten = true; };
   function velg(k) { valgt = null; modus = null; valgtKj = k; kjørModus = false; visKj(k); skitten = true; }
   window.velgKjoretoy = velg;
   window.valgtKjoretoy = () => valgtKj;

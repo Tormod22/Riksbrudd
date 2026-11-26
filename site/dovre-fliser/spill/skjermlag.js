@@ -142,5 +142,6 @@ body.kort #alarm{ width:max-content; max-width:min(560px, calc(100vw - 16px)); b
     return !!(T && T.aktiv) || (typeof ENHETER !== 'undefined' && ENHETER.some(e => e.raid && e.menn && e.menn.some(m => m.hp > 0))) || !!(a && a.classList.contains('på') && !a.classList.contains('satt') && vises(a)); }
   function vent() { const v = aktiv() && venter(angrepPågår()).length > 0; if (document.body.classList.contains('angrepvent') !== v) document.body.classList.toggle('angrepvent', v); }
   setInterval(() => { try { vent(); lag(); underAlarm(); pause(); løft(); const l = løftet.size > 0; if (document.body.classList.contains('mkomloft') !== l) document.body.classList.toggle('mkomloft', l); } catch (e) { /* neste runde */ } }, 150);
-  Object.assign(Skjermlag, { lag, pause, løft, vent, angrepPågår, rekke: () => o.slice(), pauset: () => pauset, merke: () => merke.classList.contains('på'), løftet: () => [...løftet.keys()].map(e => e.id) });
+  // (kritikerløkka 26. nov) LØFT og SELV kan utvides av andre filer (kompakt.js legger til Selskapet m.fl.)
+  Object.assign(Skjermlag, { LØFT, lag, pause, løft, vent, angrepPågår, rekke: () => o.slice(), pauset: () => pauset, merke: () => merke.classList.contains('på'), løftet: () => [...løftet.keys()].map(e => e.id) });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

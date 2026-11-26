@@ -84,6 +84,14 @@
     if (!window.KOMMANDO || !window.Kommando) return false;
     KOMMANDO({ type: 'kjør', kjøretøy: Kommando.nid(k, window.KJORETOY || []), x: X, y: Y });
     logg(`${s.navn} kjører med ${k.navn} og går av ved målet.`); skitten = true; return true; };
+  // (kritikerløkka 26. nov, Jonas på telefon: «Kjør dit» + trykk i kartet ga bare «… trykk «Kjør dit»»). Med berøring tok marsjkroken i
+  // flyt.js trykket først (bekreftelsen «Gå / Avbryt»), og den spør KROKER.kanOrdre – der stopper ombordKrok enhver ordre til en tropp om
+  // bord. Denne kroken ligger foran og sender målet til kjøretøyet (OMBORD_ORDRE), både i 2D og 3D.
+  const ombordMål = (X, Y) => {
+    if (modus !== 'marsj' || !valgt || !valgt.ombord || valgt.side !== 'blå') return false;
+    if (window.FlytSpill && FlytSpill.gruppe && FlytSpill.gruppe().length > 1) return false;
+    modus = null; window.OMBORD_ORDRE(valgt, X, Y); visPanel(); skitten = true; return true; };
+  ombordMål.mål = true; KROKER.trykk.unshift(ombordMål); if (KROKER.trykk3d) KROKER.trykk3d.unshift(ombordMål);
   KROKER.lagTekst.push(s => (s.ombord ? `om bord i ${s.ombord.navn}` : s.fraFolk ? 'egen tropp' : null));
   KROKER.lagKnapper.push((s, H) => { if (s.side !== 'blå' || s.karakter) return; if (s.ombord) { H.appendChild(knapp('Gå av', false, () => gåAv(s))); return; }
     if (!s.leirvakt && vedLeir(s)) { const b = knapp('Våpen og utstyr', false, () => endre(s)); b.id = 'utstyrknapp'; H.appendChild(b); }
