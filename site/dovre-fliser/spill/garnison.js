@@ -43,7 +43,8 @@
     return { y0, h, n, L };
   }
   function inni(by, x, y) {
-    if (x < by.bb[0] || x > by.bb[2] || y < by.bb[1] || y > by.bb[3]) return false;
+    // (kritikerløkka r2) NaN/ugyldige tall er aldri inni (før: «Cannot read properties of undefined (reading 'length')» hvert sekund)
+    if (!(x >= by.bb[0] && x <= by.bb[2] && y >= by.bb[1] && y <= by.bb[3])) return false;
     const B = by.bånd || (by.bånd = bånd(by)), l = B.L[Math.max(0, Math.min(B.n - 1, Math.floor((y - B.y0) / B.h)))];
     let inn = false;
     for (let q = 0; q < l.length; q += 4) { const xi = l[q], yi = l[q + 1], xj = l[q + 2], yj = l[q + 3];

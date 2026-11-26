@@ -20,9 +20,21 @@
   const VERSJON = 1;
   const tall = (v, reserve = 0) => (Number.isFinite(+v) ? +v : reserve), mellom = (v, a, b) => Math.max(a, Math.min(b, v));
   const r1 = v => Math.round(v * 10) / 10;
+  // (kritikerløkka r2, 26. nov, Jonas: et lag og et kjøretøy fikk x/y = NaN, ble lagret som null, og fraJSON kastet dem – troppen var borte
+  // etter omlasting, og morgenmøtet sa at de fire «forlot gjengen»). Lagringen skriver aldri NaN: siste gyldige plass (sistGyldig), ellers
+  // kjøretøyet laget sitter i. Leses en eldre lagring med null, settes laget/kjøretøyet ved leiren i stedet for å slettes.
+  const fin = (x, y) => typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y);
+  function plass(e) { if (fin(e.x, e.y)) return [e.x, e.y]; if (Array.isArray(e.sistGyldig) && fin(e.sistGyldig[0], e.sistGyldig[1])) return e.sistGyldig;
+    const k = e.ombord; if (k && fin(k.x, k.y)) return [k.x, k.y]; if (k && Array.isArray(k.sistGyldig) && fin(k.sistGyldig[0], k.sistGyldig[1])) return k.sistGyldig; return null; }
+  // REGLER: hvor langt fra leirens midte et lag/kjøretøy uten kjent plass settes (meter) – Claudes forslag
+  const UKJENT_PLASS = 25;
+  // bare x = y = null (NaN lagret som JSON) settes ved leiren; mangler feltene helt, er linja ødelagt og hoppes over som før
+  function plassVedLeir(q, leir, n) { if (fin(q.x, q.y)) return q; if (q.x !== null || q.y !== null || !leir || !fin(leir.x, leir.y)) return null; const v = n * 1.1;
+    return { ...q, x: leir.x + Math.cos(v) * UKJENT_PLASS, y: leir.y + Math.sin(v) * UKJENT_PLASS, plassUkjent: true }; }
   // ---------- lagene ----------
   function pakkLag(s) {
-    const d = { navn: s.navn, x: r1(s.x), y: r1(s.y), leder: s.leder || 0, menn: s.menn.map(m => Object.assign({ navn: m.navn, rolle: m.rolle, hp: +(+m.hp).toFixed(3), loy: m.loy }, m.person ? { person: m.person } : {}, m.valgt ? { valgt: m.valgt } : {}, m.erf ? { erf: Math.round(m.erf * 10) / 10 } : {})) };
+    const p = plass(s) || [null, null];
+    const d = { navn: s.navn, x: p[0] === null ? null : r1(p[0]), y: p[1] === null ? null : r1(p[1]), leder: s.leder || 0, menn: s.menn.map(m => Object.assign({ navn: m.navn, rolle: m.rolle, hp: +(+m.hp).toFixed(3), loy: m.loy }, m.person ? { person: m.person } : {}, m.valgt ? { valgt: m.valgt } : {}, m.erf ? { erf: Math.round(m.erf * 10) / 10 } : {})) };
     if (s.fraFolk) d.fraFolk = true; if (s.utstyr) d.utstyr = s.utstyr; if (s.formasjon && s.formasjon !== 'kile') d.formasjon = s.formasjon; if (s.ombord && s.ombord.navn) d.ombord = s.ombord.navn;   // egne tropper (spill/tropper.js)
     if (s.speider) d.speider = true; if (s.ingeniør) d.ingeniør = true; if (s.nedgravd) d.nedgravd = true;
     if (s.radio) d.radio = s.radio; if (s.ammo !== undefined) d.ammo = +(+s.ammo).toFixed(3);
@@ -52,7 +64,8 @@
   }
   // ---------- kjøretøyene ----------
   function pakkKj(k) {
-    const d = { navn: k.navn, type: k.type, antall: k.antall, x: r1(k.x), y: r1(k.y), retning: +(+k.retning || 0).toFixed(3) };
+    const p = plass(k) || [null, null];
+    const d = { navn: k.navn, type: k.type, antall: k.antall, x: p[0] === null ? null : r1(p[0]), y: p[1] === null ? null : r1(p[1]), retning: +(+k.retning || 0).toFixed(3) };
     if (k.drivstoff !== undefined) d.drivstoff = +(+k.drivstoff).toFixed(4); if (k.forsyning) d.forsyning = r1(k.forsyning);
     // (22. nov) kjøreordren i gang: siste punkt på ruta (kolonner med oppdrag styres av sin egen modul og tas ikke med)
     const P = k.sti && !k.oppdrag && Array.isArray(k.sti.P) ? k.sti.P : null;
@@ -116,8 +129,8 @@
     try { const d = typeof t === 'string' ? JSON.parse(t) : t; if (!d || d.versjon !== VERSJON) return null;
       if (leir && (!d.leir || Math.round(leir.x) !== d.leir.x || Math.round(leir.y) !== d.leir.y)) return null;
       return { versjon: VERSJON, leir: d.leir || null, tid: Math.max(0, tall(d.tid, 0)), vær: d.vær && typeof d.vær === 'object' ? d.vær : null,
-        lag: (Array.isArray(d.lag) ? d.lag : []).filter(q => q && q.navn && Number.isFinite(q.x) && Number.isFinite(q.y)),
-        kjøretøy: (Array.isArray(d.kjøretøy) ? d.kjøretøy : []).filter(q => q && q.navn && q.type && Number.isFinite(q.x) && Number.isFinite(q.y)),
+        lag: (Array.isArray(d.lag) ? d.lag : []).filter(q => q && q.navn).map((q, n) => plassVedLeir(q, d.leir || leir, n)).filter(Boolean),
+        kjøretøy: (Array.isArray(d.kjøretøy) ? d.kjøretøy : []).filter(q => q && q.navn && q.type).map((q, n) => plassVedLeir(q, d.leir || leir, n + 7)).filter(Boolean),
         tettsteder: (Array.isArray(d.tettsteder) ? d.tettsteder : []).filter(q => Array.isArray(q) && q[0] !== undefined && q[0] !== null && typeof q[1] === 'string' && q[1]),
         infra: (Array.isArray(d.infra) ? d.infra : []).filter(k => typeof k === 'string' && /^[a-zæøå]+:.+/.test(k)),
         olje: Number.isFinite(d.olje) && d.olje >= 0 ? d.olje : null,

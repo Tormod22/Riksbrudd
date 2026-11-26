@@ -45,6 +45,13 @@ ok(LG.fraJSON('{"versjon":99}', leir) === null && LG.fraJSON('ødelagt', leir) =
 { const d3 = LG.fraJSON(JSON.stringify({ versjon: 1, leir: { x: 196400, y: 6898900 }, tid: -5, lag: [{ navn: 'x' }, null, { navn: 'ok', x: 1, y: 2, menn: [{ navn: 'A', hp: 7 }] }], kjøretøy: 'tull' }), leir);
   const s = LG.brukLag(nyttLag('ok', 0, 0), d3.lag[0]); ok(d3.tid === 0 && d3.lag.length === 1 && d3.kjøretøy.length === 0 && s.menn.length === 1 && s.menn[0].hp === 1 && s.leder === 0, 'ødelagte linjer hoppes over, og tallene holdes innenfor (hp 0–1, tid ≥ 0)'); }
 
+// (kritikerløkka r2) NaN lagres aldri: siste gyldige plass, ellers kjøretøyets; en eldre lagring med null settes ved leiren
+{ const s = nyttLag('Speidertropp 1', NaN, NaN); s.sistGyldig = [190300, 6898000]; const k = { navn: 'Speiderbil 1', type: 'speiderbil', antall: 1, x: NaN, y: NaN, retning: 0 };
+  const d = LG.pakkLag(s), dk = LG.pakkKj(k); ok(d.x === 190300 && d.y === 6898000 && dk.x === null && !JSON.stringify(d).includes('NaN'), 'laget lagres på siste gyldige plass, ikke NaN');
+  const s2 = nyttLag('B', NaN, NaN); s2.ombord = { x: 5, y: 6 }; ok(LG.pakkLag(s2).x === 5, 'uten sistGyldig: kjøretøyets plass');
+  const d4 = LG.fraJSON(JSON.stringify({ versjon: 1, leir: { x: 196400, y: 6898900 }, tid: 1, lag: [{ navn: 'Speidertropp 1', x: null, y: null, menn: [{ navn: 'Åse', hp: 1 }] }], kjøretøy: [{ navn: 'Speiderbil 1', type: 'speiderbil', antall: 1, x: null, y: null }] }), leir);
+  ok(d4.lag.length === 1 && Math.hypot(d4.lag[0].x - 196400, d4.lag[0].y - 6898900) < 30 && d4.kjøretøy.length === 1 && Number.isFinite(d4.kjøretøy[0].x), 'en lagring med null (NaN) leses med plass ved leiren, ikke slettet'); }
+
 // ---------- lagringsplasser og filer (runde 7) ----------
 { const P = LG.Plass, k1 = JSON.stringify({ versjon: 1, ferdig: true, leir, penger: 12345678, karakter: { navn: 'Kari' }, fraksjon: { navn: 'Hær <b>' } });
   const nøkler = { 'riksbrudd-k1': k1, 'riksbrudd-k2': '{"bygg":[1,2]}', 'riksbrudd-verden': tekst, 'riksbrudd-filter': 'vhs', 'riksbrudd-maler': '[1]', 'riksbrudd-plass-1': '{}' };

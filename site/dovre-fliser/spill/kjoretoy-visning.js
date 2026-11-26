@@ -107,28 +107,50 @@
     return true;
   };
 
+  // (kritikerløkka r2, 26. nov) kjørTil gir svaret ({ meter, sekunder } / { framme: true } / { feil }) og sier det til window.KJ_UTFALL
+  // (k, r, X, Y) – tropper-visning.js bruker det for en tropp om bord: går av ved målet, eller får «Gå av og marsjer dit» når bilen ikke
+  // kommer fram. Svarer en av dem true, har den sagt fra selv, og den vanlige linja i loggen droppes.
+  window.KJ_UTFALL = window.KJ_UTFALL || [];
   async function kjørTil(kj, X, Y) {
-    // et mindre spillkart (/rogaland, spill/omraade.js): ingen kjøring ut av området
-    if (window.OMRÅDE_OK && !OMRÅDE_OK(X, Y)) { logg(kj.navn + ': det ligger utenfor spillkartet.'); return; }
+    let r;
     try {
-      const g = await lastVegnett();
-      if (g.boks && !(X >= g.boks[0] && X <= g.boks[2] && Y >= g.boks[1] && Y <= g.boks[3])) { logg(`${kj.navn}: på telefon er bare vegene i området rundt leiren lastet (ca. ${Math.round(UTSNITT_HALV / 1000)} km hver veg) – velg et mål nærmere.`); return; }
-      const r = Kjoretoy.planlegg(kj, g, [X, Y]);
-      if (r.feil) { logg(kj.navn + ': ' + r.feil); return; }
-      logg(`${kj.navn}: ${nf.format(r.meter / 1000)} km, ca. ${tidTekst(r.sekunder)}${r.ferjer ? ', ' + r.ferjer + ' ferje' + (r.ferjer > 1 ? 'r' : '') : ''}.`);
-    } catch (e) { /* meldt i loggen */ } finally { if (valgtKj === kj) visKj(kj); skitten = true; }
+      if (!Number.isFinite(X) || !Number.isFinite(Y)) r = { feil: 'Ugyldig mål.' };
+      // et mindre spillkart (/rogaland, spill/omraade.js): ingen kjøring ut av området
+      else if (window.OMRÅDE_OK && !OMRÅDE_OK(X, Y)) r = { feil: 'det ligger utenfor spillkartet.' };
+      else {
+        const g = await lastVegnett();
+        if (g.boks && !(X >= g.boks[0] && X <= g.boks[2] && Y >= g.boks[1] && Y <= g.boks[3])) r = { feil: `på telefon er bare vegene i området rundt leiren lastet (ca. ${Math.round(UTSNITT_HALV / 1000)} km hver veg) – velg et mål nærmere.` };
+        else r = Kjoretoy.planlegg(kj, g, [X, Y]);
+      }
+    } catch (e) { r = { feil: 'fikk ikke hentet vegkartet.', nett: true }; }
+    let meldt = false;
+    for (const f of window.KJ_UTFALL) { try { if (f(kj, r, X, Y)) meldt = true; } catch (e) { console.error(e); } }
+    if (!meldt && !r.nett) logg(r.feil ? kj.navn + ': ' + r.feil : r.framme ? kj.navn + ' står alt ved målet.'
+      : `${kj.navn}: ${nf.format(r.meter / 1000)} km, ca. ${tidTekst(r.sekunder)}${r.ferjer ? ', ' + r.ferjer + ' ferje' + (r.ferjer > 1 ? 'r' : '') : ''}.`);
+    if (valgtKj === kj) visKj(kj); skitten = true;
+    return r;
   }
   window.kjørTil = kjørTil; window.visKjoretoy = k => visKj(k);
   // KOMMANDOLAGET (R17-4): «Kjør til …» og «Stopp» går gjennom window.KOMMANDO (spill/kommandoer.js: kjør, kjørStopp); kjøretøyet sendes
   // som nid. stoppRett er det kommandoen gjør.
   const nidKj = k => (window.Kommando ? Kommando.nid(k, KJ) : k.navn);
   window.KjoretoySpill = { stoppRett: k => { Kjoretoy.stopp(k); logg(k.navn + ' stopper.'); skitten = true; } };
+  // Husker siste gyldige plass (k.sistGyldig) og setter kjøretøyet tilbake dit hvis x/y har blitt NaN. Gir true når det rettet noe.
+  function gyldigPlass(k) {
+    if (Number.isFinite(k.x) && Number.isFinite(k.y)) { k.sistGyldig = [k.x, k.y]; return false; }
+    const p = k.sistGyldig || (window.OppstartSpill && OppstartSpill.tilstand().leir ? [OppstartSpill.tilstand().leir.x + 20, OppstartSpill.tilstand().leir.y] : [kam.x, kam.y]);
+    k.x = p[0]; k.y = p[1]; k.sti = null; if (!Number.isFinite(k.retning)) k.retning = 0;
+    if (k.side === 'blå') logg(`${k.navn} mistet ruta og står der den sist var.`); skitten = true; return true;
+  }
+  window.KjoretoyGyldig = gyldigPlass;
   const tidTekst = s => s < 3600 ? Math.max(1, Math.round(s / 60)) + ' min' : nf.format(s / 3600) + ' t';
 
   // ---------- simulering: tid i spillminutter (1 tid-enhet = 60 spillsekunder); 1× er sanntid ----------
   KROKER.sim.push(dt => {
     VEG_TLF.sjekk();
     for (const k of KJ) if (k.sti && !k.oppdrag) { if (Kjoretoy.steg(k, dt * 3600 / TIME)) { if (k.side === 'blå') logg(k.navn + ' er framme.'); if (valgtKj === k) visKj(k); } skitten = true; }
+    // (kritikerløkka r2) et kjøretøy får aldri NaN-posisjon: det settes tilbake til siste gyldige plass og stopper
+    for (const k of KJ) gyldigPlass(k);
     if (valgtKj && performance.now() - sistPanel > 1000 && !pekerNede(document.getElementById('panel'))) { sistPanel = performance.now(); visKj(valgtKj); }   // panelet hvert sekund
   });
 

@@ -32,8 +32,10 @@
     byer = S.område(L, alle.map(by => { const [x, y] = punkt(by); return { id: by.e.id, navn: by.e.navn, x, y, folk: by.e.folk || 0, ref: by }; }).filter(b => !window.OMRÅDE_OK || OMRÅDE_OK(b.x, b.y)), regionRegler()); return byer; }
   // STØRRE REGION (natt 18. nov): hver seier du velger «større region» etter, ganger radien med 1,6 og krever seks tettsteder til (Claudes forslag, spill/scenario.js)
   function regionRegler() { const n = meldt.nivå || 0, SR = (window.Scenario && Scenario.REGLER) || { regionFaktor: 1.6, regionMinst: 6 }; return n ? { ...S.REGLER, radius: S.REGLER.radius * SR.regionFaktor ** n, minst: S.REGLER.minst + SR.regionMinst * n, maksRadius: S.REGLER.maksRadius * SR.regionFaktor ** n } : S.REGLER; }
-  const egneLag = () => ENHETER.filter(e => e.side === 'blå' && !e.karakter && levende(e));
-  const fiender = () => ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e)).map(e => ({ x: e.x, y: e.y, navn: e.navn, side: e.side, styrke: window.Fraksjoner ? Fraksjoner.styrke(e) : 8 }));
+  // (kritikerløkka r2) lag og fiender med ugyldig plass (NaN) er ikke med i krigsbildet
+  const gyldig = e => Number.isFinite(e.x) && Number.isFinite(e.y);
+  const egneLag = () => ENHETER.filter(e => e.side === 'blå' && !e.karakter && levende(e) && gyldig(e));
+  const fiender = () => ENHETER.filter(e => e.side !== 'blå' && levende(e) && gyldig(e) && synlig(e)).map(e => ({ x: e.x, y: e.y, navn: e.navn, side: e.side, styrke: window.Fraksjoner ? Fraksjoner.styrke(e) : 8 }));
   const garnison = id => { const b = byer.find(q => q.id === id); return b ? G.lagI(b.ref, egneLag()).length : 0; };
   const iBy = s => byer.find(b => G.inni(b.ref, s.x, s.y));
   // lagene som kan sendes: uten ordre, og ikke eneste garnison i et eget tettsted (det skal holdes)
