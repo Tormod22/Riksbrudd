@@ -186,7 +186,16 @@
     const vern = sum(o.egne, q => (Number.isFinite(q.vern) ? q.vern : 1) * (q.menn || 0)) / egneMenn;
     const vår = vårT * (o.tårn ? S.tårn : 1) * egneMenn * egneMenn, deres = deresT * Math.max(.05, vern) * fiMenn * fiMenn;
     const q = deres > 0 ? vår / deres : Infinity, ord = q >= S.god ? 'god' : q >= S.usikker ? 'usikker' : 'dårlig';
-    return { q, ord, tekst: `Med dette forsvaret: ${ord} sjanse` + (ord === 'god' ? '' : ord === 'usikker' ? ' – flere lag hjemme, voller eller nedgravde lag hjelper' : ' – hold flere lag hjemme, grav dem ned og bygg voller') }; }
+    // (kritikerløkka r3, Jonas: «god sjanse», og så falt 2 av 4) – tapene sies ærlig: hvor mange av våre som trolig blir falne eller sårede
+    // (Forsvar.tapAnslag), og «god» betyr «god sjanse til å holde leiren», ikke «uten tap»
+    const T = tapAnslag(q, egneMenn), tapT = T.hi > 0 ? `regn med tap (trolig ${T.lo === T.hi ? T.hi : T.lo ? T.lo + '–' + T.hi : 'opptil ' + T.hi} av ${egneMenn} falne eller sårede)` : '';
+    return { q, ord, tap: T, tekst: ord === 'god' ? 'Med dette forsvaret: god sjanse til å holde leiren' + (tapT ? ', men ' + tapT : '')
+      : `Med dette forsvaret: ${ord} sjanse` + (ord === 'usikker' ? (tapT ? ', ' + tapT : '') + ' – flere lag hjemme, voller eller nedgravde lag hjelper' : ' – hold flere lag hjemme, grav dem ned og bygg voller') }; }
+  // Anslaget for tapene (Lanchesters kvadratlov, som sjanse()): røverne gir opp når en tredel er ute (Spillet.Trussel.HERJ.brudd), så vi taper
+  // andelen 1 − √(1 − (1 − (2/3)²) / q) av mennene; med q under 5/9 holder det ikke – da regnes alle. Spennet er ×0,6–×1,6 (kampen er
+  // tilfeldig, og de sårede teller med). Claudes forslag. Gir { andel, lo, hi } (antall menn).
+  function tapAnslag(q, menn) { if (!(menn > 0)) return { andel: 0, lo: 0, hi: 0 }; const k = 5 / 9, andel = !Number.isFinite(q) ? 0 : q <= k ? 1 : 1 - Math.sqrt(1 - k / q), t = andel * menn;
+    return { andel, lo: Math.min(menn, Math.floor(t * .6)), hi: andel > 0 ? Math.min(menn, Math.max(1, Math.ceil(t * 1.6))) : 0 }; }
   // ---------- (kritikerløkka r2, 26. nov, Ingrid: «i stilling mot nord/nordvest» mens røverne kom fra sør; «varslet fra vest», «sett 1,6 km sør») ----------
   // INNFARTEN: røverne starter 3–4 km unna, men ruta deres (vegene, dalene) kan svinge rundt og komme inn fra en helt annen kant. Retningen
   // som betyr noe for forsvaret, er der ruta kommer innenfor INNFART.radius m av leiren. sti: [[x, y] …] (ruta, slik ordre() lager den),
@@ -204,7 +213,7 @@
   function settTekst(o) { const ild = o.strid ? ` · i ildkamp med ${o.strid}` : '';
     if (o.strid) return `${o.avstand} unna${ild}`;
     return `${o.avstand} unna · ` + (o.venter ? 'de venter (trolig på mørket)' : `framme om ca. ${Math.max(1, Math.round(o.min || 0))} min`) + (o.hvem ? ` · ${o.hvem}` : ''); }
-  const api = { INNFART, innfart, ulik, settTekst, R, ETA, umulig, SJANSE, sjanse, retning, retningKort, klTekst, utTekst, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet, STATUS, glatt, spenn, sluttRapport,
+  const api = { tapAnslag, INNFART, innfart, ulik, settTekst, R, ETA, umulig, SJANSE, sjanse, retning, retningKort, klTekst, utTekst, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet, STATUS, glatt, spenn, sluttRapport,
     monoton, SNUDD, harSnudd, klokke, når, nedtelling };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Forsvar = api;

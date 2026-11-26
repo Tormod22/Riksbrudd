@@ -60,7 +60,12 @@
   // langt fram (REGLER.nesteMaks). Er den passert (klokka gikk videre i en annen fane), kommer bølgen straks (om REGLER.nesteSnart).
   function neste(d, o = {}) { if (!d || d.versjon !== VERSJON || d.aktiv || !Number.isFinite(d.neste)) return null;
     if (Number.isFinite(o.bølge) && Math.round(tall(d.bølge, -1)) !== o.bølge) return null; const t = tall(o.tid, NaN); if (!Number.isFinite(t)) return null;
-    if (d.neste - t > REGLER.nesteMaks) return null; return Math.max(t + REGLER.nesteSnart, d.neste); }
+    if (d.neste - t > REGLER.nesteMaks) return null;
+    // (kritikerløkka r3, Jonas: «Røverne drar ut om 11 t 39 min» ble «11 t 49 min» – klokka (lagring.js, «riksbrudd-verden») og tida for
+    // neste bølge lagres hver for seg og kan være fra ulike øyeblikk ved 600×; gikk klokka tilbake ved omlastingen, gikk nedtellingen opp).
+    // Nå: aldri mer igjen enn det som var igjen da tida ble lagret (d.tid er klokka i samme lagring som d.neste)
+    const rest = Number.isFinite(d.tid) ? d.neste - d.tid : Infinity;
+    return Math.max(t + REGLER.nesteSnart, Math.min(d.neste, t + rest)); }
   // Leser lagringen for bølgen «aktiv». Ødelagt, ukjent versjon, en annen bølge, eller eldre enn REGLER.maksAlder (o.tid = klokka nå)
   // gir null. Lagene som hører til bølgen (raid === aktiv), og de som gikk bort fra en eldre bølge (raid < 0), kommer med.
   function fraJSON(t, aktiv, o = {}) {

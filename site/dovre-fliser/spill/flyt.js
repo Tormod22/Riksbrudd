@@ -172,7 +172,7 @@
       fred: nylig(sistFred, ENHETER.filter(e => e.side !== 'blå' && levende(e) && synlig(e) && nærFiende(e, lag) && fredLag(e) && nyFredDag(e)), ENHETER.filter(e => e.side !== 'blå' && levende(e)), R.huskSett),
       bygg: L && rot.Leir ? (L.bygg || []).filter(b => Leir.ferdig(b)).length : 0,
       byggTall: L ? (L.bygg || []).length : 0, skadd: L ? (L.bygg || []).filter(b => b.hp !== undefined && b.hp < .5).length : 0,
-      alarm: ENHETER.some(e => e.raid && levende(e)) || !!(al && al.classList.contains('på') && !al.classList.contains('satt')),
+      alarm: ENHETER.some(e => e.raid > 0 && levende(e)) || !!(al && al.classList.contains('på') && !al.classList.contains('satt')),
       mål: rot.MaalSpill ? MaalSpill.ferdige().size : 0, tettsteder,
       // et kort midt på skjermen som venter på svar (hendelser i gjengen, flyktninger ved porten, seier, scenario)
       kort: kortOppe() };
@@ -222,7 +222,7 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   const NAVN = { sp1: '1×', sp2: '10×', sp3: '60×', sp4: '600×' }, sistAuto = {};
   // (R17, funn 10: «600× ble satt tilbake til 1× av seg selv, uten at det sto hvorfor ved fartsknappen») – en liten lapp rett under
   // fartsknappene sier hvorfor, til du trykker på en fartsknapp eller lappen selv, eller etter GRUNN_SEK sekunder (Claudes tall)
-  const GRUNN_SEK = 90, grunnLapp = el('div', { id: 'fartgrunn', role: 'status', title: 'Trykk for å lukke' }); document.body.append(grunnLapp);
+  const GRUNN_SEK = 90, GRUNN_SPILL = 20, grunnLapp = el('div', { id: 'fartgrunn', role: 'status', title: 'Trykk for å lukke' }); document.body.append(grunnLapp);
   let grunnTid = 0;
   function plasserGrunn() {
     const bs = [...document.querySelectorAll('.knapper [id^=sp]')].filter(b => b.offsetParent && b.getBoundingClientRect().width > 0);
@@ -251,11 +251,14 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     spoler = false; merk(); settFart(mål);
     const t = tekst.charAt(0).toUpperCase() + tekst.slice(1);
     const sted = liste.find(h => Number.isFinite(h.x) && Number.isFinite(h.y));
-    visKort((hva === 'spol' ? 'Stoppet: ' : `Senket farten til ${NAVN[mål]}: `) + t + '.', true, sted ? { x: sted.x, y: sted.y } : null);
+    // (kritikerløkka r3, Jonas: meldingen om 1× kom to ganger – «⏭ Senket farten …» og «⚠ Farten ble senket …») – ved automatisk
+    // nedbremsing står bare lappen ved fartsknappene (visGrunn); kortet med «Vis»/«Spol videre» er for ⏭
+    if (hva === 'spol') visKort('Stoppet: ' + t + '.', true, sted ? { x: sted.x, y: sted.y } : null);
+    else visGrunn(`Farten ble senket til ${NAVN[mål]}: ${tekst}. Du kan sette den opp igjen.`);
     // (runde 8) står grunnen alt øverst i loggen («Røverne er snart framme (ca. 9 min).»), skrives den ikke en gang til
     const nyLinje = !(typeof loggLinjer !== 'undefined' && liste.every(h => loggLinjer.slice(0, 3).some(l => l.toLowerCase().includes(h.tekst.toLowerCase()))));
     if (nyLinje) logg((hva === 'spol' ? 'Spolingen stoppet: ' : `Farten er senket til ${NAVN[mål]}: `) + tekst + '.');
-    if (hva === 'auto') visGrunn(`Farten ble senket til ${NAVN[mål]}: ${tekst}. Du kan sette den opp igjen.`);
+    grunnSpill = tid; if (!(rot.ForsvarSpill && ForsvarSpill.angrep && ForsvarSpill.angrep())) grunnAngrep = '';
   }
   function spol() {
     if (spoler) { spoler = false; merk(); settFart(R.sakteFart); return false; }
@@ -283,9 +286,23 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     innboks.push(h); if (innboks.length > 6) innboks.shift(); });
   window.addEventListener('riksbrudd-brann', () => { const B = rot.BRANNER || [], S = rot.OppstartSpill && OppstartSpill.tilstand(), n = S && S.leir ? B.filter(b => Math.hypot(b.x - S.leir.x, b.y - S.leir.y) < 3000).length : 0; if (n > branner && !branner) innboks.push({ type: 'brann', tekst: 'det brenner nær leiren' }); branner = n; });
   const autoPå = () => valg.auto && (!navigator.webdriver || api2.test === true);
+  // ---------- (kritikerløkka r3) ÉN NEDBREMSING PER ANGREP ----------
+  // Jonas: «Leiren angripes» senket farten kl. 06:09 mens røverne var ventet kl. 08–11; Ingrid: farten ble satt ned til 1× åtte ganger under
+  // ett angrep (bygg ferdig, røvere sett, 500 m, kampen begynt), og «Spol videre» gjaldt bare én hendelse. Nå: mens leiren angripes
+  // (ForsvarSpill.angrep) stopper ⏭ og senkes farten bare ÉN gang – første gang angriperne er sett, er under 500 m unna eller kampen
+  // begynner (ForsvarSpill.fase). Alt annet om angrepet (alarm, ildkamp, lag framme, bygg ferdig, tap) stopper ikke; et kort som venter
+  // på svar, ny dag og slutten på angrepet («angrepet er over») stopper som før. I testene uten FlytSpill.test: som før.
+  const ANGREP_TYPER = new Set(['alarm', 'kontakt', 'framme', 'bygg', 'tapt']), angrepStoppet = new Set();
+  let grunnAngrep = '', grunnSpill = -1e9;
+  function angrepFilter(h) { if (navigator.webdriver && api2.test !== true) return h; const FS = rot.ForsvarSpill, A = FS && FS.angrep ? FS.angrep() : null; if (!A) return h;
+    const f = FS.fase ? FS.fase() : null, ute = h.filter(q => !ANGREP_TYPER.has(q.type)), id = f && f.nøkkel ? f.nøkkel : A.id;
+    if (angrepStoppet.has(id) || !f || !(f.sett || f.nær || f.kamp)) return ute;
+    const q = h.find(q => q.type === 'alarm' && Number.isFinite(q.x)) || h.find(q => q.type === 'alarm' || q.type === 'kontakt');
+    if (!q) return ute; angrepStoppet.add(id); if (angrepStoppet.size > 30) angrepStoppet.delete(angrepStoppet.values().next().value); grunnAngrep = A.id;
+    return [{ ...q, type: 'alarm' }, ...ute]; }
   let roligMeldt = false;
   function rolig() { const k = ((6 + tid / 60) % 24 + 24) % 24, RR = R.rolig; if (!(k >= RR.fra || k < RR.til)) return false;
-    if (ENHETER.some(e => e.raid && levende(e))) return false; const FS = rot.ForsvarSpill, n = FS && FS.neste ? FS.neste() : null; if (FS && FS.angrep && FS.angrep()) return false; if (n && n.min < RR.bølge) return false;
+    if (ENHETER.some(e => e.raid > 0 && levende(e))) return false; const FS = rot.ForsvarSpill, n = FS && FS.neste ? FS.neste() : null; if (FS && FS.angrep && FS.angrep()) return false; if (n && n.min < RR.bølge) return false;
     const b = før; if (b && (Object.keys(b.marsj || {}).length || b.fiender || b.strid || b.alarm)) return false; return !kortOppe(); }
   KROKER.sim.push(() => {
     // køordrene: neste punkt når laget står stille, og «grav ned» etter det siste
@@ -301,11 +318,14 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     // (kritikerløkka r1) rolig natt: ⏭ går fortere (R.rolig), og ned til vanlig spolefart igjen når det ikke lenger er rolig
     if (spoler && (!navigator.webdriver || api2.test === true)) { const r = rolig(); if (r && tempo === 600) { tempo = R.rolig.tempo; if (!roligMeldt) { roligMeldt = true; visKort('Rolig natt – spoler raskere (3600×) til noe skjer eller det blir morgen.', false); } } else if (!r && tempo === R.rolig.tempo) tempo = 600; }
     else if (tempo === R.rolig.tempo) tempo = 600;
+    // (kritikerløkka r3, Jonas: «Farten ble senket til 1×: røverne er 500 m sørvest for leiren» sto lenge etter at det var feil) – lappen
+    // tas bort når angrepet den gjaldt er over, eller etter GRUNN_SPILL spillminutter (Claudes tall)
+    if (grunnLapp.classList.contains('på')) { const FS = rot.ForsvarSpill, A = FS && FS.angrep ? FS.angrep() : null; if ((grunnAngrep && (!A || A.id !== grunnAngrep)) || tid - grunnSpill > GRUNN_SPILL || tid < grunnSpill) { grunnAngrep = ''; skjulGrunn(); } }
     // (runde 13) banneret kan bli høyere etter at kortet ble plassert under det (en knapp til, ny linje) – plasser kortet på nytt
     if (kort.classList.contains('på')) plasserKort();
     if (!spoler && !(autoPå() && tempo > 1)) { før = null; innboks.length = 0; return; }
     const b = bilde(); if (!før) { før = b; innboks.length = 0; return; }
-    const h = F.hendelser(før, b).concat(innboks.splice(0)); før = b; if (!h.length) return;
+    const h = angrepFilter(F.hendelser(før, b).concat(innboks.splice(0))); før = b; if (!h.length) return;
     let st = spoler ? F.stopper(h, 'spol') : F.hviler(F.stopper(h, 'auto'), sistAuto, tid);
     // (kritikerløkka r1) en rolig natt stopper ikke ved midnatt («ny dag») – morgenmøtet kl. 06 stopper spolingen og sier hva som har skjedd
     if (spoler && rot.MorgenSpill && st.some(q => q.type === 'dag') && rolig()) st = st.filter(q => q.type !== 'dag');

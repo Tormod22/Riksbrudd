@@ -38,7 +38,9 @@
   const eieform = side => { const F = rot.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER[side]; return F ? F.eieform || F.navn + 's' : 'fiendens'; };
   const sidenavn = side => { const F = rot.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER[side]; return F ? F.navn : 'fienden'; };
   // RUNDE 14: røverne – samme tid og tekst som varselbrikken (ForsvarSpill.neste), eller angrepet som pågår
-  function raidNå() { const FS = rot.ForsvarSpill, SS = rot.SpilletSpill; if (!FS) return null; const Tt = SS && SS.T ? SS.T() : null, satt = !!(FS.erSatt && FS.erSatt());
+  // (kritikerløkka r3, Ingrid: «Lagene står i stilling» og «Ingen lag er nær leiren» samtidig) – «står i stilling» bare når et lag faktisk har
+  // en forsvarsplass (eller Leirvakta står)
+  function raidNå() { const FS = rot.ForsvarSpill, SS = rot.SpilletSpill; if (!FS) return null; const Tt = SS && SS.T ? SS.T() : null, satt = !!(FS.erSatt && FS.erSatt()) && (ENHETER.some(s => s.side === 'blå' && s.forsvar && levende(s)) || !!(FS.vakt && FS.vakt()));
     // (kritikerløkka r1) med det samme anslaget som banneret (ForsvarSpill.status)
     if (Tt && Tt.aktiv) { const st = FS.status ? FS.status() : null; return { aktiv: true, min: 0, nedtelling: 'nå', satt, tekst: 'Røverne angriper leiren' + (st && st.tekst ? ` (${st.tekst})` : ' nå') + (satt ? ' – lagene står i stilling.' : ' – sett lagene i stilling!') }; }
     const n = FS.neste ? FS.neste() : null; if (!n || !(n.min <= R.raid.linje)) return null;
@@ -411,7 +413,8 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     // folk som er ute for morgenmøtet, er fortsatt ute etter en omlasting (FolkSpill har lagret p.borte); de uten plan kommer hjem
     const f = F(); if (f) for (const q of f.personer) if (q.morgen && !S.planer.some(p => p.folk && p.folk.includes(q.id))) { if (q.borte === BORTE) delete q.borte; delete q.morgen; }
     // beskyttelsen gjelder etter en omlasting (spillet-visning.js regner neste bølge på nytt ved start)
-    const T = rot.SpilletSpill && SpilletSpill.T ? SpilletSpill.T() : null; if (T && S.vernTil && !T.aktiv && Number.isFinite(T.nesteSpill) && T.nesteSpill < S.vernTil) T.nesteSpill = S.vernTil;
+    const T = rot.SpilletSpill && SpilletSpill.T ? SpilletSpill.T() : null; // (kritikerløkka r3) flyttes nedtellingen, står det i loggen hvorfor (den skal aldri gå opp uten en grunn spilleren ser)
+    if (T && S.vernTil && !T.aktiv && Number.isFinite(T.nesteSpill) && T.nesteSpill < S.vernTil) { T.nesteSpill = S.vernTil; if (S.vernTil - tid > 1 && auto()) logg('Beskyttelsen dere betalte røverne for, gjelder fortsatt: neste angrep kommer ikke før den er ute.'); }
     if (!S.oppFør) S.oppFør = snapOppgjør();
     tapKart = null; lagKart = null; byKart = null; tapFra = performance.now() + TAP_VENT;
     klar = true; koblValg(); lagre(); vistNøkkel = ''; if (S.kort && !S.kort.ferdig && auto()) vis(); }

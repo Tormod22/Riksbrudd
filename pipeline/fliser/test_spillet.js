@@ -63,4 +63,9 @@ ok(Kamp.skade([{ avst: 50, menn: 6 }], null) > Kamp.skade([{ avst: 50, menn: 6 }
   ok(Math.abs(Math.hypot(W.x, W.y) - 1200) < 1 && dv > 1.1 && dv < 1.7, 'omvei: 1,2 km fra leiren, 60–100° fra startkanten');
   const sp = T2.speiderStart(leir, st, -1, .5, .5), d = Math.hypot(sp.x, sp.y); ok(d >= 2000 && d <= 2600 && sp.retning !== 'vest', 'speidere: nærmere og fra en annen kant (' + sp.retning + ')');
   ok(T2.herjet({ inne: 40, tyv: true }) && !T2.herjet({ inne: 40 }), 'tyver: raskere ute igjen'); }
+// (kritikerløkka r3) røvere som går lei: stille teller bare når laget har vært nær, ikke i leiren, ikke i kamp, ikke venter på mørket
+{ let q = { stille: 0 }; for (let i = 0; i < 70; i++) q.stille = Trussel.stilleSteg({ nærVært: true, stille: q.stille }, 1);
+  ok(Trussel.lei(q) && !Trussel.lei({ stille: 59 }), 'røvere: går lei etter 60 spillminutter utenfor leiren uten kamp');
+  ok(Trussel.stilleSteg({ nærVært: true, kamp: true, stille: 50 }, 1) === 0 && Trussel.stilleSteg({ nærVært: true, inne: true, stille: 50 }, 1) === 0, 'røvere: kamp eller leiren nullstiller');
+  ok(Trussel.stilleSteg({ nærVært: false, stille: 0 }, 5) === 0 && Trussel.stilleSteg({ nærVært: true, venter: true, stille: 7 }, 5) === 7, 'røvere: på vei eller venter på mørket teller ikke'); }
 console.log(feil ? feil + ' feil' : 'alle testene for spillet ok'); process.exit(feil ? 1 : 0);
