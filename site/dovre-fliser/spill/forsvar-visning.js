@@ -109,6 +109,9 @@
 #alarm.på{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; justify-content:center; } #alarm.satt.god{ background:#17200f; border-color:#8fb86a; } #alarm.god b{ color:#cfe8a8; } #alarm .rapport small{ color:#e7dcc3; } #alarm b{ color:#ffb49a; } #alarm small{ color:#d8b8a8; } #alarm button{ background:#4a1d14; border:1px solid #e0714f; color:#fff; min-height:36px; padding:2px 12px; font:inherit; font-size:14px; cursor:pointer; } #alarm button.rolig{ background:#2a2318; border-color:var(--rule,#4a4030); color:var(--ink,#e7dcc3); } #alarm.satt{ background:#1c170f; border-color:#c9b26a; }
 body:not(.gaar) #alarm.på > span:first-child{ white-space:normal; overflow:visible; text-overflow:clip; min-width:12em; }
 body:not(.gaar) #alarm.på > span:first-child small{ white-space:normal; }
+#alarm > .alinje{ flex:0 0 100%; display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; justify-content:center; font-size:13px; border-top:1px solid rgba(224,113,79,.25); padding-top:4px; }
+#alarm > .alinje button{ min-height:30px; } body.kort #alarm > .alinje .lang{ display:none; }
+body.gaar #alarm > .alinje:not(.ute){ display:none; } body.gaar #alarm.på:has(> .alinje.ute){ flex-wrap:wrap; }
 body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5px 8px; } body.krig #alarm{ display:none; }
 body.gaar #alarm.på{ flex-wrap:nowrap; padding:3px 8px; gap:6px; font-size:12.5px; max-width:min(560px, calc(100vw - 16px)); } body.gaar #alarm > span:first-child{ min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:none; } body.gaar #alarm.fjern{ display:none; }
@@ -213,9 +216,9 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     else if (r.length) { const st = status(); if (st && st.sist) alarm.append(kn('Vis', () => { if (typeof på3d !== 'undefined' && på3d) return; const q = status(); if (!q || !q.sist) return; kam.x = (q.sist.x + L.x) / 2; kam.y = (q.sist.y + L.y) / 2; kam.m = Math.max(1.5, Math.hypot(q.sist.x - L.x, q.sist.y - L.y) * 1.6 / Math.min(VW, VH)); skitten = true; }, { klasse: 'rolig' })); }
     ekstra(P, U, SL); }
   // ---------- (kritikerløkka r1) linjene under banneret: prognosen, karakteren ute, ⏭ ----------
-  const linje = (klasse, ...barn) => el('div', { klasse: 'linje ' + klasse, style: 'flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;justify-content:center' }, ...barn);
+  const linje = (klasse, ...barn) => el('div', { klasse: 'alinje ' + klasse }, ...barn);
   function ekstra(P, U, SL) {
-    if (P) alarm.append(linje('sjanse ' + P.ord, el('small', { style: `color:${P.ord === 'god' ? '#cfe8a8' : P.ord === 'usikker' ? '#f0d79a' : '#ffb49a'}` }, P.tekst)));
+    if (P) { const [kort, lang] = P.tekst.split(' – '); alarm.append(linje('sjanse ' + P.ord, el('small', { style: `color:${P.ord === 'god' ? '#cfe8a8' : P.ord === 'usikker' ? '#f0d79a' : '#ffb49a'}` }, kort, lang ? el('span', { klasse: 'lang' }, ' – ' + lang) : ''))); }
     if (U) alarm.append(linje('ute', el('small', { style: 'color:#ffd2b8' }, U.tekst), U.kan ? kn('Gå hjem', gåHjem, { klasse: 'rolig', id: 'gahjem' }) : ''));
     if (SL) { const v = SL.sted ? kn('Vis', () => { if (window.FlytSpill && FlytSpill.visSted) FlytSpill.visSted(SL.sted); }, { klasse: 'rolig' }) : '', sp = SL.medSpol ? kn('Spol videre', () => { stoppL = null; sistAlarm = ''; if (window.FlytSpill) FlytSpill.spol(); vis(); }, { klasse: 'rolig', id: 'alarmspol' }) : '';
       alarm.append(linje('stopp', el('small', {}, '⏭ ' + SL.tekst), v, sp)); } }
@@ -264,7 +267,7 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   function giRapport(id, u) { if (gitt.has(id)) return null; const k0 = kampStart.get(id);
     if (Number.isFinite(k0) && tid - k0 < KAMP.minst && auto()) { if (!ventRapport.has(id)) ventRapport.set(id, u); return null; }
     ventRapport.delete(id); return giRapportNå(id, u); }
-  function giRapportNå(id, u) { if (gitt.has(id)) return null; gitt.add(id); if (gitt.size > 40) gitt.delete(gitt.values().next().value);
+  function giRapportNå(id, u) { if (gitt.has(id)) return null; gitt.add(id); stoppL = null; if (gitt.size > 40) gitt.delete(gitt.values().next().value);
     const r = FO.sluttRapport({ ...tap(id), ...u }); logg(`${r.tittel}. ${r.tekst}`);
     // (kritikerløkka r1, Jonas: «angrepet ble avgjort mens jeg spolte, uten oppsummering») – kom det mens du spolte, står rapporten til du lukker den
     const spoltNå = spolt.has(id) || (typeof tempo !== 'undefined' && tempo >= AUTO.fart);
