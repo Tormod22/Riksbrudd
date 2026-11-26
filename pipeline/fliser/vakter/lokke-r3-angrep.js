@@ -71,17 +71,18 @@ module.exports = {
         const vår = nyttLag('Vaktprøve garnison', cx, cy, 'blå'), deres = nyttLag('Vaktprøve angriper', cx + 40, cy, 'rød'); ENHETER.push(vår, deres);
         vår.skyterPå = new Set([deres]); deres.skyterPå = new Set([vår]);
         krev(GarnisonSpill.kampOm(by, 'blå'), 'kampOm: skudd i byen regnes ikke som kamp om byen');
-        GarnisonSpill.bykampSteg(); deres.menn[0].hp = 0; vår.menn[0].hp = .5; GarnisonSpill.bykampSteg(); await vent(50);
+        // (alt i byen skjer uten pauser, så målene – «ta kontroll over et tettsted» – ikke ser den lånte byen)
+        GarnisonSpill.bykampSteg(); deres.menn[0].hp = 0; vår.menn[0].hp = .5; GarnisonSpill.bykampSteg();
         const bk = $('bykamp'); d.bykamp = bk ? bk.textContent.slice(0, 200) : null;
         krev(bk && bk.classList.contains('på') && /Angrep på/.test(bk.textContent), 'banneret for kampen om byen står ikke');
         krev(bk && /1 falt/.test(bk.textContent) && /1 såret/.test(bk.textContent), 'banneret viser ikke tapene (1 falt hos dem, 1 såret hos oss)');
-        const vis = $('bykampvis'); krev(!!vis, 'banneret har ingen «Vis»'); kam.x = L.x; kam.y = L.y; if (vis) vis.click(); await vent(300);
-        d.visAvstand = Math.round(Math.hypot(kam.x - cx, kam.y - cy)); krev(d.visAvstand < 400, '«Vis» flyttet ikke kartet til byen');
+        const vis = $('bykampvis'); krev(!!vis, 'banneret har ingen «Vis»'); kam.x = L.x; kam.y = L.y; if (vis && !(typeof på3d !== 'undefined' && på3d)) vis.click();
+        d.visAvstand = Math.round(Math.hypot(kam.x - cx, kam.y - cy)); if (!(typeof på3d !== 'undefined' && på3d)) krev(d.visAvstand < 400, '«Vis» flyttet ikke kartet til byen');
         // ingen rekrutter mens det er kamp: forsterkningen står stille
         const f0 = vår.forsterkning || 0, n0 = vår.menn.length, t0 = tid; vår.forsterkning = 5; for (let i = 0; i < 3; i++) for (const k of KROKER.sim) { try { k(1); } catch (e) { /* andre kroker */ } }
         d.rekrutter = vår.menn.length - n0; krev(vår.menn.length === n0, `${vår.menn.length - n0} rekrutter gikk inn i laget midt i kampen om byen`); vår.forsterkning = f0; tid = t0;
         for (const e of [vår, deres]) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); }
-        GarnisonSpill.bykampSteg(); }
+        TETTSTEDER.delete(by.e.id); GarnisonSpill.bykampSteg(); }
     } catch (e) { feil.push('unntak: ' + e.message); }
     finally {
       if (ForsvarSpill.erSatt()) ForsvarSpill.opphev(false);

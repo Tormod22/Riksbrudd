@@ -133,7 +133,7 @@
   bkCss.textContent = `#bykamp{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 54px); z-index:9; display:none; max-width:min(620px,94vw); padding:6px 10px; background:#2a120d; border:1px solid #e0714f; color:#f3e3d6; font-size:14px; box-shadow:0 4px 14px rgba(0,0,0,.5); gap:6px 10px; align-items:center; justify-content:center; flex-wrap:wrap; }
 #bykamp.på{ display:flex; } #bykamp b{ color:#ffb49a; } #bykamp small{ color:#e8d0c2; } #bykamp .tall{ display:block; color:#f0dfb4; }
 #bykamp button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); min-height:34px; padding:2px 12px; font:inherit; font-size:13.5px; cursor:pointer; }
-body.kort #bykamp{ top:calc(var(--topp,58px) + 42px); font-size:13px; padding:4px 8px; } body.krig #bykamp, body.gaar #bykamp, body.foto #bykamp{ display:none; }`;
+body.kort #bykamp{ top:calc(var(--topp,58px) + 42px); font-size:13px; padding:4px 8px; width:max-content; max-width:calc(100vw - 16px); box-sizing:border-box; } body.krig #bykamp, body.gaar #bykamp, body.foto #bykamp{ display:none; }`;
   document.head.appendChild(bkCss);
   const bk = document.createElement('div'); bk.id = 'bykamp'; bk.setAttribute('role', 'status'); document.body.appendChild(bk);
   let bkNøkkel = '', bkLukket = '';

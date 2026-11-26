@@ -200,7 +200,7 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
       tekst = `sist sett ${hvorK} ${klS} · ${varInne ? 'de har vært i leiren – ikke sett siden' : sp ? 'framme om ' + sp : 'kan være framme når som helst'}`; kort = `sist sett ${hvorK} ${klS}`; void hvor; }
     else if (varInne) { tekst = 'har vært i leiren – ikke sett siden'; kort = 'ikke sett siden de var i leiren'; }
     else { const n2 = min === null ? null : FO.når(tid, tid + min); tekst = n2 ? `ikke sett – kommer ${n2}` : 'ikke sett ennå – vakter, tårn og kameraer oppdager dem'; kort = n2 ? `ikke sett · ${n2.replace(/ \(.*\)$/, '')}` : 'ikke sett ennå'; }
-    return { id: A.id, røvere: A.røvere, hvem: A.navn, side: A.side || 'rød', antall: n, lag: r, sett: kj.length > 0, kjente: kj, nær, iLeiren, strid, sist, min, overskrift, tekst, kort, retning: retn(v) }; }
+    return { id: A.id, røvere: A.røvere, hvem: A.navn, side: A.side || 'rød', antall: n, lag: r, sett: kj.length > 0, kjente: kj, nær, iLeiren, strid, sist, min, overskrift, tekst, kort, retning: retn(v), varInne }; }
   // hvem som så dem: vakttårnet (Trussel.VARSEL.tårn), et kamera, vaktene, eller et lag
   function settAv(e) { const L = leir(), f = fsv(), V = window.Spillet && Spillet.Trussel && Spillet.Trussel.VARSEL; if (!L) return '';
     if (V && f.tårn && f.tårn.some(b => Number.isFinite(b.x) && Math.hypot(b.x - e.x, b.y - e.y) <= V.tårn)) return 'sett fra vakttårnet';
@@ -230,7 +230,7 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     // (body.gaar), er banneret én smal linje, og er ingen sett og de er over en time unna, står bare varselbrikka (klassen «fjern»)
     else { const st = status(); tekst = st.overskrift; liten = st.tekst; alarm.classList.toggle('fjern', !st.sett && !st.sist && st.min !== null && st.min > 60);
       // (på små skjermer uten forklaringen om tårn og kameraer, så banneret ikke blir høyt)
-      if (!st.sett && !st.sist && st.min !== null && !document.body.classList.contains('kort')) liten += ' – vakttårn og kameraer ser dem før de er framme'; }
+      if (!st.sett && !st.sist && st.min !== null && !st.varInne && !document.body.classList.contains('kort')) liten += ' – vakttårn og kameraer ser dem før de er framme'; }
     // (kritikerløkka r1) prognosen, din karakter ute, og ⏭-linja står i det samme banneret (Jonas: «tre bannere om samme angrep»)
     const st0 = r.length ? status() : null, P = r.length && st0 && !st0.iLeiren ? prognose() : null, U = r.length ? uteNå() : null, SL = stoppNå();
     const nøkkel = [tekst, liten, satt, P ? P.tekst : '', U ? U.tekst : '', SL ? SL.tekst : '', window.pekerNede && pekerNede(alarm)].join('|'); alarm.classList.add('på'); alarm.classList.toggle('satt', satt); if (nøkkel === sistAlarm) return; if (window.pekerNede && pekerNede(alarm)) return; sistAlarm = nøkkel;
@@ -287,7 +287,7 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     if (LS) for (const [bid, hp] of F0.bygg) { const q = LS.bygg.find(x => x.id === bid); if (!q || q.hp <= 0) { if (hp > 0) { ødelagt++; ødelagtNavn.push(q ? byggNavn(q) : 'et bygg'); } } else if (q.hp < hp - .01) { skadet++; skadetNavn.push(byggNavn(q)); skadetBygg.push(q.id); } }
     // (kritikerløkka r3, Ingrid: «Ingen tap hos oss», men Mari Bakken ble såret – nye folk i lagene underveis veide opp for de sårede i
     // telleren) – hver mann som var frisk ved starten og nå er såret, teller (navnTap), også når det kom nye til
-    const ute = F0.lag.filter(e => !levende(e) || (Array.isArray(e.menn) && Terreng.slattUt(e.menn)) || e.flykter || !ENHETER.includes(e)).length, N = navnTap(F0), sårede = Math.max(0, F0.friske - b.friske - falne, N.sår.length);
+    const ute = F0.lag.filter(e => !levende(e) || (Array.isArray(e.menn) && Terreng.slattUt(e.menn)) || (e.flykter && !e.lei) || (!ENHETER.includes(e) && !e.lei)).length, N = navnTap(F0), sårede = Math.max(0, F0.friske - b.friske - falne, N.sår.length);
     let deresFalne = 0, deresSåret = 0; for (const e of F0.lag) if (Array.isArray(e.menn)) for (const m of e.menn) { if (m.hp <= 0) deresFalne++; else if (m.hp < 1) deresSåret++; }
     return { falne, sårede, skadet, ødelagt, fiender: F0.lag.length, fienderUte: ute, skadetNavn, ødelagtNavn, skadetBygg, kom: F0.kom || '', deresFalne, deresSåret,
       falneNavn: N.falne.length === falne ? N.falne : null, sårNavn: N.sår.length === sårede ? N.sår : null }; }

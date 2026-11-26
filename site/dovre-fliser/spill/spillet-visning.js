@@ -144,7 +144,8 @@
     if (st === 'slått' || st === 'unna') { const b = Trussel.belønning(T.aktiv), f = F(), slapp = !!(window.KrigSpill && KrigSpill.slapp && KrigSpill.slapp(T.aktiv));
       // sabotører som fikk gjort sitt og slapp unna (spill/krig-visning.js): ingen belønning
       if (slapp) { if (f) f.moral = Math.max(0, f.moral - 5); rapport({ nr: T.aktiv, utfall: 'slapp', tapte: sumBytte(lag) }, 'Sabotørene slapp unna. Angrepet er over, men det ble ingen belønning denne gangen.', true); }
-      else { OppstartSpill.gi(b); if (f) f.moral = Math.min(100, f.moral + 5); rapport({ nr: T.aktiv, utfall: st, tok: `${kr(b)} fra røverne`, tapte: sumBytte(lag) }, st === 'unna' ? `Røverne har trukket seg unna – angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.` : `Angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.`, true); }
+      // (kritikerløkka r3) ga de siste opp og gikk (Trussel.lei), trakk røverne seg unna – de ble ikke slått ut
+      else { OppstartSpill.gi(b); if (f) f.moral = Math.min(100, f.moral + 5); rapport({ nr: T.aktiv, utfall: st === 'slått' && lag.some(e => e.lei && levende(e)) ? 'unna' : st, tok: `${kr(b)} fra røverne`, tapte: sumBytte(lag) }, st === 'unna' ? `Røverne har trukket seg unna – angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.` : `Angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.`, true); }
       // (kritikerløkka r3) lag som lever og har flyktet eller trukket seg, går sin vei (utSteg tar dem bort når de er langt nok unna) – de
       // forsvinner ikke midt i kartet; resten fjernes nå
       for (const e of lag) { if ((e.flykter || e.trekker) && levende(e) && !Terreng.slattUt(e.menn)) { e.raid = -T.aktiv; e.flykter = true; if (!Number.isFinite(e.trekkerFra)) e.trekkerFra = tid; if (!e.sti && !e.planlegger) bort(e); continue; }
