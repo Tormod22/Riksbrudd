@@ -1352,7 +1352,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
     // VAKT trærne står likt i 2D og 3D (brukeren 17. nov): hvert tre i 3D-utsnittet står på en plass fra kartets regel (treVed i
     // kartflis.js: 5 m-gitteret, «ekte» trær), og nær midten er ingen tynnet bort.
     // 18. nov: utsnittet her er ofte for stort for trær (S > 4200) – da brukes prøven fra Dombås-utsnittet (før prøvde vakta 0 trær og sa «ok»)
-    let tre2 = await pg.evaluate(TRE_PRØVE, null); if (tre2.utenTrær && treDombås && !treDombås.utenTrær) tre2 = { ...treDombås, fra: 'Dombås' };
+    let tre2 = await pg.evaluate(TRE_PRØVE, null); if ((tre2.utenTrær || !(tre2.antall > 20)) && treDombås && !treDombås.utenTrær && treDombås.antall > 20) tre2 = { ...treDombås, fra: 'Dombås', her: tre2.antall };   // (fletting r2) også når utsnittet her har for få trær til en prøve
     // (trær som vegetasjon3d/byhus setter i tillegg – einer, vier, gatetrær – står ikke på gitteret; de er få)
     const tre2ok = !tre2.uten && ((tre2.utenTrær && (tre2.S > 4200 || !tre2.vis)) || (tre2.antall > 20 && tre2.feil <= tre2.antall * .12 && tre2.ikkeEkte === 0));
     if (!tre2ok) { feil++; console.log(JSON.stringify(tre2)); }
