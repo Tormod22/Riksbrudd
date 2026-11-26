@@ -230,7 +230,7 @@
       else if (h.type === 'brutt') { const bot = Math.min(h.kr || 0, (Sp() && Sp().penger) || 0); if (bot > 0) OppstartSpill.betal(bot);
         const grunn = SK.bruttTekst(k) || (h.grunn === 'frist' ? 'fristen gikk ut' : 'dere avbrøt den');
         // (R1-løkka, kritikken: tre motstridende meldinger etter et brudd) den første kontrakten: ingen bot, og nye tilbud straks
-        if (k.første) { logg(`Kontrakt brutt (${grunn}): ${k.tittel}. Ingen bot for den første jobben, men ryktet fikk en ripe.`); rydd(k); const n = nyeTilbud();
+        if (k.første) { logg(h.grunn === 'avbrutt' ? `Dere ga opp den første kontrakten: ${k.tittel}. Det koster ingenting – ingen bot og ingen ripe i ryktet.` : `Kontrakt brutt (${grunn}): ${k.tittel}. Ingen bot for den første jobben, men ryktet fikk en ripe.`); rydd(k); const n = nyeTilbud();
           logg(n.length ? `${n.length} nye kontrakter står i Selskapet. Velg en dere har det som trengs til, og send et lag som er sterkt nok.` : 'Nye kontrakter kommer i morgen tidlig. Bygg opp leiren og troppene imens.'); }
         else { logg(`Kontrakt brutt (${grunn}): ${k.tittel}. Bot ${kr(bot)}.`); rydd(k); } }
       else if (h.type === 'rivalFørst') { logg(`${navnFor(h.rival)} kom først: ${k.tittel}. Kontrakten er tapt, men uten bot.`); rydd(k); }
@@ -296,9 +296,10 @@ body.kort #levertkort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }`;
     const mål = {}; for (const k of S.sider[ID].aktive) mål[k.id] = vurder(k);
     hendelser(SK.steg(S, ID, tid, d, mål));
     const dag = dagNå();
-    // (R18-A) mens den første kontrakten pågår, kommer ingen nye tilbud – én ting om gangen
-    const tidlig = S.tråd && !S.tråd.slutt && !S.tråd.gjort.includes('bygg');
-    if (dag !== S.dag && auto()) { S.dag = dag; hendelser(SK.dagSteg(S, tid)); const n = tidlig ? [] : nyeTilbud(); if (n.length) logg(`Selskapet: ${n.length} nye kontrakttilbud. Se «Selskapet».`); }
+    // (R18-A) mens den første kontrakten pågår, kom ingen nye tilbud – én ting om gangen. (kritikerløkka r3, Jonas: den første kontrakten
+    // kunne ikke fullføres, og «Ingen tilbud nå» sto både dag 2 og dag 3.) NÅ: første dag er det bare den første kontrakten, men HVER ny
+    // morgen kommer nye tilbud, også mens den første pågår.
+    if (dag !== S.dag && auto()) { S.dag = dag; hendelser(SK.dagSteg(S, tid)); const n = nyeTilbud(); if (n.length) logg(`Selskapet: ${n.length} nye kontrakttilbud. Se «Selskapet».`); }
     tråd();
     // (r3) nødlageret som ikke er sjekket mot kartet (kartet var ikke lastet), prøves igjen hvert 15. sekund
     if (performance.now() - landSist > 15000) landLager();
@@ -386,7 +387,10 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     return `<div class="kort aktiv${klarNå ? ' klar' : ''}" data-kontrakt="${k.id}"><b>${esc(k.tittel)}</b><div class="fra">${esc(typeNavn(k))} · ${esc(k.giver.navn)} · <span class="tall">${esc(SK.fristTekst(k, tid))}</span></div>`
       + `<p>${status}</p><div class="fram"><i style="width:${Math.round(Math.max(0, Math.min(1, andel)) * 100)}%"></i></div>`
       + `<div class="rad"><span>Betaling <span class="kr tall">${kr(k.betaling)}</span></span><span>Bot <span class="bot tall">${kr(k.bot)}</span></span></div>`
-      + `<div class="knapper">${klarNå ? `<button class="hoved" data-s="lever" data-id="${k.id}">Lever</button>` : ''}<button data-s="vis" data-id="${k.id}">Vis i kartet</button><button class="fare" data-s="avbryt" data-id="${k.id}">Avbryt (bot)</button></div></div>`;
+      // (kritikerløkka r3, Jonas: opplæringen sto fast på steg 3 av 6 i tre døgn) den første kontrakten kan gis opp uten bot og uten ripe i
+      // ryktet – opplæringen går videre til «Neste kontrakt»
+      + (k.første && !klarNå ? `<p class="tom">Kommer ikke troppen fram? Gi opp jobben – den første koster ingenting, og nye kontrakter står under.</p>` : '')
+      + `<div class="knapper">${klarNå ? `<button class="hoved" data-s="lever" data-id="${k.id}">Lever</button>` : ''}<button data-s="vis" data-id="${k.id}">Vis i kartet</button><button class="fare" data-s="avbryt" data-id="${k.id}">${k.første ? 'Gi opp (ingen bot)' : 'Avbryt (bot)'}</button></div></div>`;
   }
   function html() {
     if (!S) return `<button class="lukk" data-s="lukk" aria-label="Lukk">×</button><p class="tom">Selskapet kommer når leiren er lagt.</p>`;

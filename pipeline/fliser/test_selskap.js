@@ -169,8 +169,13 @@ ok(S0.fristTekst({ frist: 839.6 }, 0) === '14 t 0 min igjen' && S0.fristTekst({ 
   // høyere nivå betaler mer, prisstigningen også
   ok(S0.betaling('hold', { pålitelig: 50 }, 'vanlig', 5000, 6, 1.8) > S0.betaling('hold', { pålitelig: 50 }, 'vanlig', 5000, 6) && S0.betaling('hent', { pålitelig: 50 }, 'vanlig', 5000, 0, 1, 1.2) > S0.betaling('hent', { pålitelig: 50 }, 'vanlig', 5000, 0), 'nivå og prisstigning gir mer');
   // tilbudene får nivå; noen er fra neste nivå
-  const T7 = S0.ny(L0); let neste = 0; for (let i = 0; i < 20; i++) neste += S0.lagTilbud(T7, 'blå', i, steder.map(q => ({ ...q, x: q.x - 205000 + L0.x, y: q.y - 6900000 + L0.y })), S0.lagRand(i + 3)).filter(q => q.nivå === 2).length;
+  const T7 = S0.ny(L0); let neste = 0; for (let i = 0; i < 20; i++) neste += (T7.tilbud = [], S0.lagTilbud(T7, 'blå', i, steder.map(q => ({ ...q, x: q.x - 205000 + L0.x, y: q.y - 6900000 + L0.y })), S0.lagRand(i + 3))).filter(q => q.nivå === 2).length;
   ok(neste > 0 && T7.tilbud.every(q => q.nivå >= 1), 'låste tilbud fra neste nivå: ' + neste);
+  // (kritikerløkka r3, Ingrid) aldri to tilbud av samme type på samme sted, heller ikke når en slik kontrakt er aktiv
+  { const T9 = S0.ny(leir); for (let i = 0; i < 12; i++) S0.lagTilbud(T9, 'blå', i * 60, steder, S0.lagRand(i + 11));
+    const nøk = T9.tilbud.map(q => q.type + '|' + q.sted.navn + '|' + (q.type === 'eskorte' ? q.fra.navn : '')); ok(new Set(nøk).size === nøk.length && T9.tilbud.length > 0, 'ingen like tilbud: ' + nøk.join(', '));
+    const h = T9.tilbud.find(q => q.type !== 'eskorte'); if (h) { S0.godta(T9, 'blå', h.id, 0); for (let i = 0; i < 8; i++) S0.lagTilbud(T9, 'blå', 900 + i, steder, S0.lagRand(i + 40));
+      ok(!T9.tilbud.some(q => q.type === h.type && q.sted.navn === h.sted.navn), 'ikke samme jobb som en aktiv kontrakt (' + h.type + ' ' + h.sted.navn + ')'); } }
   // motangrep og rekruttering ved levering (med fast tilfeldighet)
   const T8 = S0.ny(L0); T8.sider.blå.sum.levert = 5; T8.sider.blå.rykte.pålitelig = 80; const ry = { id: 'r1', type: 'rydd', timer: 10, betaling: 1, bot: 1, sted: { navn: 'X', x: 0, y: 0 }, utløper: 99 };
   T8.tilbud.push(ry); S0.godta(T8, 'blå', 'r1', 0); const hv = S0.lever(T8, 'blå', ry, 1, () => .01); ok(hv.motangrep && hv.rekrutt, 'motangrep og rekruttering');
