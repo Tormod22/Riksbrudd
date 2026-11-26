@@ -35,6 +35,10 @@
     // (runde 13, kritikk G: «Speidertropp 1», «Gunn Kritiker (deg)» og «1. lastebilkolonne» oppå hverandre ved leiren) lag og kjøretøy
     // med merket innen r punkter fra leiren får én lapp («Leiren: 3 lag ›») når minst min av dem står der; lappen står dy under leiren
     samle: { r: 56, min: 2, dy: 47 },
+    // (kritikerløkka r3, Jonas: «Speiderbil 1» sto langt fra bilen og så ut til å ligge midt i fjorden) – et lag eller kjøretøy med merket
+    // utenfor skjermen får ikke navnet sitt klemt inn (de viktigste – fiender og det valgte – står med en pil mot merket), og et navn som
+    // er flyttet langt fra merket, får en tynn strek med pil mot det. pil = avstand (px) fra navnets kant til merket før streken tegnes.
+    pil: 26,
   };
   // (MAKS var 12: med lag og kjøretøy tett samlet ved leiren, sett langt ute, fikk ikke det 13. og 14. navnet plass – 13. nov)
   // rammen rundt en tekst med midten i x og grunnlinja i y (13 px skrift): litt luft på sidene
@@ -72,10 +76,15 @@
     // på andre siden av merket
     ut.push([L.x, L.y - d * (2 * 16 + h - 6)], [L.x, L.y - d * (2 * 16 + 2 * h - 6)]);
     return ut; }
-  function plasser(lapper, hindringer, R = REGLER) {
+  // merket til et lag eller kjøretøy (ca. 14 punkter under et navn som står over det, og omvendt)
+  const merkeAv = L => [L.x, L.y - (L.retning < 0 ? -1 : 1) * 14];
+  // skjerm = [bredde, høyde] (valgfri): merker utenfor skjermen (se REGLER.pil)
+  function plasser(lapper, hindringer, R = REGLER, skjerm) {
     const rek = lapper.slice().sort((a, b) => b.prio - a.prio || a.nr - b.nr), satt = [];
     const ledig = (r, utenTekst, minPrio) => !satt.some(q => over(r, q.ramme)) && !hindringer.some(o => (!utenTekst || !o.tekst) && over(r, o.r));
-    for (const L of rek) { L.vis = false; L.tvunget = false; L.sammen = null; const K = kandidater(L, R), h = L.h || LINJE;
+    const P0 = R.prio, enhet0 = L => !L.samling && (L.prio === P0.kjøretøy || L.prio === P0.egne || L.prio === P0.valgt || L.prio === P0.fiende);
+    const ute = L => { if (!skjerm || !enhet0(L)) return false; const [mx, my] = merkeAv(L); return mx < 0 || my < 0 || mx > skjerm[0] || my > skjerm[1]; };
+    for (const L of rek) { L.vis = false; L.tvunget = false; L.sammen = null; L.pil = null; L.ute = ute(L); if (L.ute && L.prio < R.tving) continue; const K = kandidater(L, R), h = L.h || LINJE;
       let funnet = null;
       for (const [x, y] of K) { const r = ramme(x, y, L.w, h); if (ledig(r, false)) { funnet = [x, y, r]; break; } }
       // de viktigste kan stå oppå kartnavnene (byer, bruer), men ikke oppå merker eller andre lag
@@ -85,7 +94,11 @@
       if (!funnet && L.prio >= R.tving) for (let k = R.linjer + 1; k <= R.linjer + R.ekstra && !funnet; k++) for (const d of [L.retning < 0 ? -1 : 1, L.retning < 0 ? 1 : -1]) { const y = L.y + d * k * h, r = ramme(L.x, y, L.w, h); if (ledig(r, true)) { funnet = [L.x, y, r]; break; } }
       if (!funnet && L.prio >= R.tving) { const r0 = ramme(L.x, L.y, L.w, h), q = satt.find(o => over(r0, o.ramme)); if (q) { L.sammen = q; continue; } funnet = [L.x, L.y, r0]; L.tvunget = true; }
       if (!funnet) continue;
-      L.vis = true; L.px = funnet[0]; L.py = funnet[1]; L.ramme = funnet[2]; satt.push(L); }
+      L.vis = true; L.px = funnet[0]; L.py = funnet[1]; L.ramme = funnet[2]; satt.push(L);
+      // langt fra merket (eller merket er utenfor skjermen): pil mot merket
+      if (enhet0(L) && R.pil) { let [mx, my] = merkeAv(L); if (skjerm) { mx = Math.max(2, Math.min(skjerm[0] - 2, mx)); my = Math.max(2, Math.min(skjerm[1] - 2, my)); }
+        const r = L.ramme, dx = Math.max(r[0] - mx, 0, mx - (r[0] + r[2])), dy = Math.max(r[1] - my, 0, my - (r[1] + r[3]));
+        if (L.ute || Math.hypot(dx, dy) > R.pil) L.pil = [mx, my]; } }
     // skjulte navn rett ved et navn som står (samme sted på skjermen, langt ute): «+3» etter det, så du vet at det er flere der
     // (bare lag og kjøretøy – ikke tettsteder, leiren, bygg og steder)
     const P = R.prio, enhet = p => p === P.kjøretøy || p === P.egne || p === P.valgt || p === P.fiende;
@@ -158,6 +171,12 @@
   function skrivTekst(g, t, x, y, fyll) { skriv(g, { t: String(t), font: g.font, align: g.textAlign }, x, y, fyll); }
   // tegnAlle(g, fortsett): plasserer og tegner navnene i køen (de minst viktige først, så de viktigste ligger øverst), og så det som
   // skal ligge øverst. fortsett = true: rammen er ikke ferdig (byggevisningen tegner navn i to omganger)
+  // en tynn strek fra navnets kant mot merket, med en liten pilspiss
+  function pil(g, L) { const r = L.ramme, [mx, my] = L.pil, sx = Math.max(r[0], Math.min(r[0] + r[2], mx)), sy = Math.max(r[1], Math.min(r[1] + r[3], my)), d = Math.hypot(mx - sx, my - sy); if (d < 6) return;
+    const ux = (mx - sx) / d, uy = (my - sy) / d, ex = mx - ux * 5, ey = my - uy * 5;
+    g.save(); g.globalAlpha = .85; g.lineCap = 'round'; g.strokeStyle = 'rgba(20,16,10,.8)'; g.lineWidth = 3; g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.stroke();
+    g.strokeStyle = L.fyll && typeof L.fyll === 'string' ? L.fyll : '#e7dcc3'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey);
+    g.moveTo(ex, ey); g.lineTo(ex - ux * 6 - uy * 3.5, ey - uy * 6 + ux * 3.5); g.moveTo(ex, ey); g.lineTo(ex - ux * 6 + uy * 3.5, ey - uy * 6 - ux * 3.5); g.stroke(); g.restore(); }
   function tegnAlle(g, fortsett) {
     // navn som tegneren aldri tegnet (ingen farge fanget), tas ut
     for (let i = kø.length - 1; i >= 0; i--) if (!kø[i].fyll && !kø[i].strek && g) kø.splice(i, 1);
@@ -168,8 +187,10 @@
       const L = { t, x: samleS.x, y: samleS.y + REGLER.samle.dy, w, h: LINJE, retning: 1, prio: REGLER.prio.egne, nr: -1, font: f.font, align: 'center', baseline: 'alphabetic', alpha: 1,
         fyll: '#f0d79a', strek: f.strek || 'rgba(20,16,10,.85)', bredde: f.bredde || 3, samling: true };
       kø.push(L); samlet = { L, n: s.n, navn: s.inne.map(q => q.t) }; } samleS = null; }
-    if (kø.length) { plasser(kø, hindre.concat(vist.map(L => ({ r: L.ramme, prio: L.prio, tekst: false })))); const rek = kø.filter(L => L.vis).sort((a, b) => a.prio - b.prio || a.nr - b.nr);
-      if (g) { g.save(); for (const L of rek) { g.font = L.font; g.textAlign = L.align || 'center'; g.textBaseline = L.baseline || 'alphabetic'; g.globalAlpha = L.alpha == null ? 1 : L.alpha;
+    const skjerm = g && g.canvas ? [typeof VW !== 'undefined' ? VW : g.canvas.clientWidth || innerWidth, typeof VH !== 'undefined' ? VH : g.canvas.clientHeight || innerHeight] : null;
+    if (kø.length) { plasser(kø, hindre.concat(vist.map(L => ({ r: L.ramme, prio: L.prio, tekst: false }))), REGLER, skjerm); const rek = kø.filter(L => L.vis).sort((a, b) => a.prio - b.prio || a.nr - b.nr);
+      if (g) { g.save(); for (const L of rek) { if (L.pil) pil(g, L);
+        g.font = L.font; g.textAlign = L.align || 'center'; g.textBaseline = L.baseline || 'alphabetic'; g.globalAlpha = L.alpha == null ? 1 : L.alpha;
         if (L.strek) { g.lineWidth = L.bredde || 3; g.lineJoin = 'round'; g.strokeStyle = L.strek; skriv(g, L, L.px, L.py, false); }
         g.fillStyle = L.fyll || '#e7dcc3'; skriv(g, L, L.px, L.py, true);
         if (L.flere > 0) { const t = '+' + L.flere, x0 = L.align === 'center' ? L.px + L.w / 2 + 4 : L.px + L.w + 4; g.save(); g.textAlign = 'left'; g.font = '600 11px ' + REGLER.tallSkrift; g.globalAlpha = .85;

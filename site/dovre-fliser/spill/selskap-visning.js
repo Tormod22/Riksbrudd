@@ -459,6 +459,8 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
       g.beginPath(); g.moveTo(x - 8, y - 6); g.lineTo(x + 8, y + 6); g.moveTo(x + 8, y - 6); g.lineTo(x - 8, y + 6); g.stroke();
       const d = L ? Math.hypot(k.sted.x - L.x, k.sted.y - L.y) : 0, t = `Nødlageret${d ? ' · ' + meter(d) : ''}`;
       const w = g.measureText(t).width + 12, ty = y - r - 12;
+      // (kritikerløkka r3, pakke skjerm: «Nødlageret · 900 m» lå under «Leiren: 2 lag …») – meldes til navnene, så de går utenom
+      if (window.Etikett && Etikett.hinder) Etikett.hinder(x - w / 2, ty - 12, w, 17);
       g.fillStyle = 'rgba(18,20,23,.88)'; g.fillRect(x - w / 2, ty - 12, w, 17); g.fillStyle = '#f2d68a'; g.fillText(t, x, ty + 1);
     } else if (L) { const [lx, ly] = P(L.x, L.y), t = 'Lever nødlageret her', w = g.measureText(t).width + 12;
       // (kritikerløkka r2, pakke skjerm: lappen lå oppå leirens navn) – meldes til navnene (Etikett), så leirens navn går utenom

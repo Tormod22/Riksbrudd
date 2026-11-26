@@ -127,12 +127,16 @@
   setInterval(() => { for (const d of document.querySelectorAll('.stats > div[title]')) if (FORKLAR[d.dataset.s || ((d.querySelector('b[id]') || {}).id)]) taTittel(d); if (viser && !viser.isConnected) skjul(); }, 700);
 
   // ---------- kassa: lapp når pengene endrer seg, og et lite blink i tallet ----------
-  let forrige = null, sistLapp = 0;
+  let forrige = null, sistLapp = 0; const KASSELAPP = { fort: 60, stor: 50000 };
   const kr = n => { const a = Math.abs(n); return (a >= 1e6 ? (a / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace('.', ',') + ' mill.' : Math.round(a).toLocaleString('nb-NO')) + ' kr'; };
   setInterval(() => { const S = window.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); if (!S || typeof S.penger !== 'number') { forrige = null; return; }
     const p = S.penger, b = $('sPenger'); if (forrige !== null && p !== forrige && b && b.getClientRects().length && Math.abs(p - forrige) >= 100) { const d = p - forrige, nå = performance.now();
       b.classList.remove('blink'); void b.offsetWidth; b.classList.add('blink');
-      if (nå - sistLapp > 500) { sistLapp = nå; const r = b.getBoundingClientRect(), l = document.createElement('div'); l.className = 'pengelapp ' + (d > 0 ? 'pluss' : 'minus'); l.textContent = (d > 0 ? '+ ' : '− ') + kr(d); l.style.left = Math.max(4, r.left - 6) + 'px'; l.style.top = r.bottom + 6 + 'px'; document.body.appendChild(l);
+      // (kritikerløkka r3, Jonas på telefon: «− 8 020 kr» og «− 6 262 kr» fløt fortsatt i hjørnet ved spoling) – når det går fort (fra 60×),
+      // er små beløp bare de faste utgiftene som trekkes underveis: da blinker bare tallet, og lappen kommer for store beløp (kjøp,
+      // betaling, bøter). Claudes forslag: KASSELAPP.fort = 60×, KASSELAPP.stor = 50 000 kr.
+      const fort = (typeof tempo !== 'undefined' && tempo >= KASSELAPP.fort) || !!(window.FlytSpill && FlytSpill.spoler && FlytSpill.spoler());
+      if (nå - sistLapp > 500 && (!fort || Math.abs(d) >= KASSELAPP.stor)) { sistLapp = nå; const r = b.getBoundingClientRect(), l = document.createElement('div'); l.className = 'pengelapp ' + (d > 0 ? 'pluss' : 'minus'); l.textContent = (d > 0 ? '+ ' : '− ') + kr(d); l.style.left = Math.max(4, r.left - 6) + 'px'; l.style.top = r.bottom + 6 + 'px'; document.body.appendChild(l);
         if (plasserLapp(l, r)) setTimeout(() => l.remove(), 1600); else l.remove(); } }
     forrige = p; }, 500);
   // (kritikerløkka r2, Jonas på telefon: «− 5 000 kr» la seg over lukkeknappen på banneret og over «Mer» i topplinja): lappen legges der den

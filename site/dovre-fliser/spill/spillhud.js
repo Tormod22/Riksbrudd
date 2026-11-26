@@ -79,6 +79,10 @@ body.spill #leirmeny .liste h4{ margin:6px 0 0; font-size:12px; letter-spacing:.
 body.spill #leirmeny .bygg.kort{ position:relative; align-items:center; text-align:center; gap:1px; padding:6px 4px 5px; min-height:0; }
 body.spill #leirmeny .bygg.kort .tegn{ display:none; }
 body.spill #leirmeny .bygg.kort[data-ikon]::before{ display:block; width:24px; height:24px; margin:0 auto 1px; color:#d9c27a; opacity:1; }
+/* (kritikerløkka r3, Ingrid: «byggelista hopper fortsatt» – Dieseltank gikk mellom y = 422 og 500) – ikonet over kortet kom først når
+   ikoner.js hadde merket kortet (data-ikon), etter at lista var tegnet på nytt; da ble hvert kort 25 px høyere og alt under seg nedover.
+   Plassen til ikonet holdes nå av alle kort fra første stund (et kort uten ikon får en tom plass like høy). */
+body.spill #leirmeny .bygg.kort:not([data-ikon])::before{ content:''; display:block; width:24px; height:24px; margin:0 auto 1px; }
 body.spill #leirmeny .bygg.kort > div{ width:100%; }
 body.spill #leirmeny .bygg.kort b{ font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 body.spill #leirmeny .bygg.kort .pris{ display:block; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -132,7 +136,11 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
   // «Mer»-knappen og raden den åpner (én for PC-linja, én for telefonraden)
   const kommer = document.createElement('div'); kommer.id = 'kommer'; const mkommer = document.createElement('div'); mkommer.id = 'mkommer'; document.body.append(kommer, mkommer); let komMerÅpen = false;
   const merKn = [bar, mbar].map(forelder => { const b = document.createElement('button'); b.dataset.k = 'mer'; b.className = 'kommer'; b.append(document.createTextNode('Mer')); b.setAttribute('aria-label', 'Flere kommandoer'); if (forelder === bar) b.dataset.tips = 'Mer|Flere kommandoer: region, sjø, verden og annet som ikke får plass i linja'; b.onclick = e => { e.stopPropagation(); åpneKomMer(!komMerÅpen); }; b.hidden = true; forelder.appendChild(b); return b; });
-  function åpneKomMer(på) { komMerÅpen = !!på; for (const b of merKn) b.classList.toggle('åpen', komMerÅpen); settKomMer(); }
+  // (kritikerløkka r3, Jonas: «Mer-menyen åpner seg oppå det åpne Samfunn-panelet») – et panel som Mer-lista ville ligget oppå, lukkes
+  // når lista åpnes (som når du trykker Leir eller Folk)
+  function åpneKomMer(på) { komMerÅpen = !!på; for (const b of merKn) b.classList.toggle('åpen', komMerÅpen); settKomMer();
+    if (komMerÅpen && window.Paneler && Paneler.åpne && Paneler.lukk) { const m = [kommer, mkommer].find(e => e.classList.contains('på')), r = m && m.getBoundingClientRect();
+      if (r && r.width) for (const id of Paneler.åpne()) { const q = document.getElementById(id), a = q && q.getBoundingClientRect(); if (a && a.left < r.right && a.right > r.left && a.top < r.bottom && a.bottom > r.top) Paneler.lukk(id); } } }
   function settKomMer() { const pc = bar.classList.contains('på'), tlf = mbar.classList.contains('på'); kommer.classList.toggle('på', komMerÅpen && pc && kommer.children.length > 0); mkommer.classList.toggle('på', komMerÅpen && tlf && mkommer.children.length > 0); }
   document.addEventListener('pointerdown', e => { if (komMerÅpen && !kommer.contains(e.target) && !mkommer.contains(e.target) && !merKn.includes(e.target)) åpneKomMer(false); });
   // tilleggene som finnes nå, flyttes inn i raden bak «Mer» når de er flere enn én (én alene står i linja)
