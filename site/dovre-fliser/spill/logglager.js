@@ -28,6 +28,9 @@
     ALDRI: /farten er|farten settes|spillform:|holder til (i|ved)|velkommen tilbake/i,
     // så mange spillminutter må ha gått i forrige økt før velkomstboksen vises
     minTid: 1,
+    // (løkka r1, kritiker J: «Velkommen tilbake» viste dag 1 12:50–13:12 da spillet sto på 16:34) bare meldinger fra de siste
+    // nylig spillminuttene før spillet ble lagret; er ingen så nye, vises bare den siste viktige meldingen (med klokkeslett)
+    nylig: 120,
     // stemningsmeldinger, tips og oppstartsmeldinger
     STØY: /^(Det klarner opp|Det skyer over|Det begynner å (regne|snø)|Tåka kommer sigende|Velkommen tilbake|Pengene:|Tips?:|Vil du|Fikk ikke hentet)|→|Riket har gått i oppløsning|Leiren er satt opp|ingen ferdige lag/,
   };
@@ -55,14 +58,18 @@
   // bare når spilltid har gått i den økta (ikke «06:00–06:00»), aldri «Farten er …» eller støy. De viktigste velges etter vekt (PRIORITET:
   // tettsteder, tap, angrep og valg først), og de vises i tidsrekkefølge – eldste først. antall = antall linjer som vises.
   function vekt(tekst, R = REGLER) { let v = 0; for (const [re, n] of R.PRIORITET) if (re.test(tekst)) v = Math.max(v, n); if (!v && R.VIKTIG.test(tekst)) v = 1; return v; }
-  function oppsummer(L, R = REGLER) {
+  // nå = spillminuttet spillet står på (det lagrede spillets klokke); uten nå regnes den siste meldingens tid
+  function oppsummer(L, R = REGLER, nå) {
     const mine = L.linjer.filter(q => q[2] === L.økt - 1); if (!mine.length) return null;
     const fra = mine[0][0], til = mine[mine.length - 1][0]; if (til - fra < R.minTid) return null;
-    const kandidater = mine.map((q, i) => ({ q, i, v: R.ALDRI.test(q[1]) || R.STØY.test(q[1]) ? 0 : vekt(q[1], R) })).filter(k => k.v > 0);
-    if (!kandidater.length) return null;
+    const slutt = Number.isFinite(+nå) && nå !== null && +nå >= til ? +nå : til;
+    const alle = mine.map((q, i) => ({ q, i, v: R.ALDRI.test(q[1]) || R.STØY.test(q[1]) ? 0 : vekt(q[1], R) })).filter(k => k.v > 0);
+    if (!alle.length) return null;
+    // bare det siste som skjedde: meldingene fra de siste R.nylig minuttene, ellers den nyeste viktige meldingen alene
+    let kandidater = alle.filter(k => k.q[0] >= slutt - R.nylig); const stille = !kandidater.length; if (stille) kandidater = [alle[alle.length - 1]];
     // høyest vekt først, nyeste først ved lik vekt; så tilbake i tidsrekkefølge (eldste øverst)
     const valgt = kandidater.sort((a, b) => b.v - a.v || b.i - a.i).slice(0, R.viktigeMaks).sort((a, b) => a.i - b.i);
-    return { fra: når(fra), til: når(til), antall: valgt.length, alle: mine.length, viktige: valgt.map(k => ({ ...når(k.q[0]), tekst: k.q[1] })) };
+    return { fra: når(valgt[0].q[0]), til: når(til), nå: når(slutt), stille, antall: valgt.length, alle: mine.length, viktige: valgt.map(k => ({ ...når(k.q[0]), tekst: k.q[1] })) };
   }
   // tittelen i velkomstboksen
   function tittel(o) { if (!o) return ''; const a = o.fra, b = o.til; return a.dag === b.dag ? `dag ${a.dag}, ${a.klokke}–${b.klokke}` : `dag ${a.dag} ${a.klokke} – dag ${b.dag} ${b.klokke}`; }
@@ -88,7 +95,7 @@
     // meldingene fra før det lagrede spillet var lest inn, har klokka 06:00 – de får klokka spillet står på nå
     const nå = typeof tid === 'number' && isFinite(tid) ? tid : 0; for (const [x, t, s] of venter) legg(L, x, Math.max(+t || 0, nå), s); venter = []; lagre();
     // RUNDE 14: velkomsten vises STRAKS (før kortene og morgenmøtet, som venter i kortkøen til den er lukket – høyst én modal om gangen)
-    const o = oppsummer(L); if (o && !vist && (!navigator.webdriver || API.test === true)) { vist = true; velkommen(o); }
+    const o = oppsummer(L, REGLER, nå); if (o && !vist && (!navigator.webdriver || API.test === true)) { vist = true; velkommen(o); }
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   window.addEventListener('pagehide', lagre);
@@ -131,7 +138,9 @@ body.kort #loggvelkommen{ top:calc(var(--topp,44px) + 4px); font-size:13px; padd
     // et kort i køen (hendelse, folket) som alt står oppe, viker og kommer straks etter velkomsten
     if (rot.Kortkø && Kortkø.vik) Kortkø.vik();
     const b = el('div', 'på'); b.id = 'loggvelkommen'; b.setAttribute('role', 'dialog'); b.setAttribute('aria-label', 'Velkommen tilbake');
-    b.append(el('h3', '', 'Velkommen tilbake'), el('small', '', `Dette skjedde sist du spilte (${tittel(o)}) – ${o.antall === 1 ? 'den viktigste meldingen' : `de ${o.antall} viktigste meldingene`}, eldste først. Spillet sto stille mens du var borte.`));
+    // (løkka r1) klokka spillet står på, og bare det siste som skjedde – hver melding med dag og klokkeslett
+    const n = o.nå || o.til, hva = o.stille ? 'Det siste som skjedde – etter det var det stille til spillet ble lagret' : o.antall === 1 ? 'Det siste som skjedde' : 'Det siste som skjedde, eldste først';
+    b.append(el('h3', '', 'Velkommen tilbake'), el('small', '', `Spillet står på dag ${n.dag} kl. ${n.klokke} (det sto stille mens du var borte). ${hva}:`));
     const ul = el('ul'); for (const v of o.viktige) { const li = el('li'); li.append(el('i', '', `dag ${v.dag} ${v.klokke}`), document.createTextNode(v.tekst)); ul.appendChild(li); } b.appendChild(ul);
     const rad = el('div', 'rad'); rad.append(kn('Hele loggen', () => { lukkVelkommen(false); visHele(true); }, 'loggvelkommen-hele'), kn('Fortsett', () => lukkVelkommen(true), 'loggvelkommen-ok')); b.appendChild(rad);
     document.body.appendChild(b);

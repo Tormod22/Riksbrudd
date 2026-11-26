@@ -237,7 +237,11 @@ body.smal #karakterark, body.kort #karakterark{ left:0; right:0; top:auto; botto
     // tillegg fra andre moduler (spill/eventyr-visning.js: historie, skader, hund, håndverk, kart): window.KARAKTERARK.push((f, { el, knapp, måler }) => …)
     for (const fn of rot.KARAKTERARK || []) { try { fn(f, { el, knapp, måler }); } catch (e) { console.error(e); } }
     f.append(el('h3', {}, 'Så langt')); const dag = Math.floor((typeof tid !== 'undefined' ? tid : 0) / (24 * TIME)) + 1, lett = rot.LeteSpill && LeteSpill.antall ? LeteSpill.antall() : 0;
-    for (const [a, b] of [['Dager', String(dag)], ['Gått til fots', T.gått >= 1000 ? `${String(Math.round(T.gått / 100) / 10).replace('.', ',')} km` : `${Math.round(T.gått)} m`], ['Hus gjennomsøkt', String(lett)]]) f.append(el('div', { klasse: 'rad' }, el('span', {}, a), el('small', {}, b)));
+    // (løkka r1, kritiker I: «Gått til fots: 0 m» etter 1,9 km i kartet) T.gått teller bare skrittene i 3D; eventyrets teller (spill/eventyr-visning.js,
+    // også det karakteren går i 2D-kartet via spill/spill2d.js) er samme tall som historien og målene bruker – det største av de to vises
+    let ev = 0; try { ev = rot.EventyrSpill && EventyrSpill.tellere ? +EventyrSpill.tellere().gått || 0 : 0; } catch (e) { ev = 0; }
+    const gått = Math.max(T.gått || 0, ev);
+    for (const [a, b] of [['Dager', String(dag)], ['Gått til fots', gått >= 1000 ? `${String(Math.round(gått / 100) / 10).replace('.', ',')} km` : `${Math.round(gått)} m`], ['Hus gjennomsøkt', String(lett)]]) f.append(el('div', { klasse: 'rad' }, el('span', {}, a), el('small', {}, b)));
     f.append(el('div', { klasse: 'tips' }, 'I leiren drikker, spiser og hviler du av deg selv. Ute blir du tørst og sulten av å gå: ta med vann i feltflaska og rasjoner, drikk ved et vann, og sov i et hus du har sikret. Når du går, viser knappen «Utenfra» (V) deg selv i tredjeperson.'));
     return f; }
   function vis(tving) { if (!åpen || !klar) return; if (!tving && rot.pekerNede && pekerNede(panel)) return; const ny = el('div'); ny.append(bygg()); if (!tving && ny.innerHTML === sistHtml) return; sistHtml = ny.innerHTML; const topp = panel.scrollTop; panel.replaceChildren(...ny.childNodes); panel.scrollTop = topp; }

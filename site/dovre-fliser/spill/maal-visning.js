@@ -22,7 +22,9 @@
     return { bygg, bestilt, diesel: L.drivstoff || 0, strøm: !!(siste && siste.prod > 0 && (bygg.aggregat || bygg.solcelle)), folk: L.folk && L.folk.personer ? L.folk.personer.length : 0, tre: (L.lager && L.lager.tre) || 0,
       hogd: R && R.hogd ? R.hogd.filter(h => !(h.andel < 1)).length : 0, revet: R && R.revet ? R.revet.length : 0, tettsteder, går, andel, vunnet, garnison,
       inne: (går3d && !!(window.Interior3d && Interior3d.inne(R3_.bane.x, R3_.bane.y))) || (window.LeteSpill ? LeteSpill.antall() > 0 : false), lett: window.LeteSpill ? LeteSpill.antall() : 0,
-      matDøgn: L.folk && L.folk.personer && L.folk.personer.length ? (L.folk.mat || 0) / L.folk.personer.length : 0 };
+      matDøgn: L.folk && L.folk.personer && L.folk.personer.length ? (L.folk.mat || 0) / L.folk.personer.length : 0,
+      // (løkka r1) prisen i alt som byggelista viser (LeirSpill.totalPris)
+      pris: (k => ({ kontrollrom: k, tekst: { kontrollrom: k > 0 && window.Leir && Leir.kroner ? Leir.kroner(k) : '' } }))(LeirSpill.totalPris ? LeirSpill.totalPris('kontrollrom') || 0 : 0) };
   }
   function sjekk(stille) {
     const T = bilde(); if (!T) return [];
@@ -44,13 +46,18 @@
     neste.onclick = () => { if (window.LeirSpill && LeirSpill.fane) LeirSpill.fane('mål'); };
     // (R18-A) den første kontrakten er den røde tråden: mens den pågår, står kontraktens neste steg øverst (målene kommer etterpå)
     const SS = window.SelskapSpill, l = SS && SS.trådAktiv && SS.trådAktiv() ? SS.lapp() : null;
+    // (løkka r1, kritiker I: for mange mål på en gang) med spill/neste.js står det samme her som i Neste-lappen: «Nå: …» (det viktigste
+    // av kontraktene, opplæringen, scenariet og målene); hele lista står øverst i fanen Mål
+    const NS = window.NesteSpill, nå = NS && NS.aktiv && NS.aktiv() ? NS.liste()[0] : null;
+    if (nå) { const t = el('div', { klasse: 'nestemaal fast', title: nå.hjelp || '' }, el('small', {}, `Nå (${nå.navn.toLowerCase()}): `), el('b', {}, nå.tekst));
+      t.onclick = () => { if (nå.l0 && SS && SS.følgLapp) SS.følgLapp(); else if (nå.trykk) nå.trykk(); }; hode.appendChild(t); } else
     if (l) { const t = el('div', { klasse: 'nestemaal fast', id: 'nestekontrakt', title: l.hjelp || '' }, el('small', {}, 'Første kontrakt – neste steg: '), el('b', {}, l.tekst));
       t.onclick = () => SS.følgLapp(); hode.appendChild(t); } else
     hode.appendChild(neste);
     hode.appendChild(el('h3', {}, 'Mål'));
     Maal.KAPITLER.forEach((k, i) => { if (k.krig && !s.krigÅpen) return; const gjort = k.mål.filter(m => ferdige.has(m.id)).length;
       const d = el('div', { klasse: 'maalkap' + (i === s.kapittel ? ' nå' : '') }, el('b', {}, `${i + 1}. ${k.navn}`), el('small', {}, ` ${gjort} av ${k.mål.length}`));
-      for (const m of k.mål) d.appendChild(el('div', { klasse: 'maal' + (ferdige.has(m.id) ? ' ok' : '') }, el('span', { klasse: 'hake' }, ferdige.has(m.id) ? '✓' : '○'), el('span', {}, m.tekst, ferdige.has(m.id) ? '' : el('small', {}, m.hjelp))));
+      for (const m of k.mål) d.appendChild(el('div', { klasse: 'maal' + (ferdige.has(m.id) ? ' ok' : '') }, el('span', { klasse: 'hake' }, ferdige.has(m.id) ? '✓' : '○'), el('span', {}, m.tekst, ferdige.has(m.id) ? '' : el('small', {}, Maal.hjelpNå(m, T)))));
       hode.appendChild(d); });
   });
   const css = document.createElement('style');

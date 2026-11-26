@@ -136,7 +136,7 @@
   function kobling(h) {
     const k = h.k;
     try { if (k.sted && k.sted.slag === 'tettsted' && k.sted.id != null && window.Garnison && typeof TETTSTEDER !== 'undefined' && Garnison.tilstand(TETTSTEDER, k.sted.id).eier === ID) {
-      const ekstra = Math.round(k.betaling * SK.REGLER.egetSted / 10000) * 10000; if (ekstra > 0) { OppstartSpill.gi(ekstra); logg(`${k.sted.navn} er deres: folket la til ${kr(ekstra)}.`); } } } catch (e) { /* krigskartet er ikke klart */ }
+      const ekstra = Math.round(k.betaling * SK.REGLER.egetSted / 10000) * 10000; if (ekstra > 0) { OppstartSpill.gi(ekstra); logg(`${k.sted.navn} er deres: folket la til ${kr(ekstra)} i dag (engangsbeløp)` + ((t => (t ? `. Deretter gir ${k.sted.navn} ${t} i skatt` : ''))(window.RegionSpill && RegionSpill.inntektTekst ? RegionSpill.inntektTekst(k.sted.id) : '')) + '.'); } } } catch (e) { /* krigskartet er ikke klart */ }
     if (h.nivåOpp) logg(`Nytt nivå for selskapet: ${h.nivåOpp.nr} «${h.nivåOpp.navn}». Større og bedre betalte kontrakter er låst opp.`);
     if (h.rekrutt && auto()) { try { const F = window.FolkSpill && FolkSpill.tilstand(), Lr = window.LeirSpill && LeirSpill.tilstand();
       if (F && Lr && window.FolkRegler) { const r = FolkRegler.rekrutter(F, Lr, () => true); if (!r.feil && r.person) logg(`${r.person.navn} (${r.person.yrke}) hørte om ${egetNavn()} og vil bli med – gratis.`); } } catch (e) { /* uten folk */ } }
@@ -390,7 +390,10 @@ body.kort #nestelapp small{ display:none; }
   document.head.appendChild(lappCss);
   const lappEl = document.createElement('div'); lappEl.id = 'nestelapp'; lappEl.setAttribute('role', 'button'); lappEl.setAttribute('aria-live', 'polite');
   lappEl.innerHTML = '<small>Neste</small><b></b><span class="gå" aria-hidden="true">›</span>'; document.body.appendChild(lappEl);
-  lappEl.addEventListener('click', e => { e.stopPropagation(); følgLapp(); });
+  // (løkka r1, pakke økonomi) spill/neste.js velger hva lappen viser (kontrakten, opplæringen, scenariet, målene) – trykket gjør det som står
+  let vistLapp = null;
+  lappEl.addEventListener('click', e => { e.stopPropagation(); const v = vistLapp, så = e.target && e.target.closest && e.target.closest('.saa');
+    if (v && så && v.såTrykk) v.såTrykk(); else if (v && v.trykk) v.trykk(); else følgLapp(); });
   const synligEl = e => { if (!e) return false; const c = getComputedStyle(e), r = e.getBoundingClientRect(); return c.display !== 'none' && c.visibility !== 'hidden' && r.height > 0 && r.width > 0; };
   let pekt = null;
   function pekPå(l) {
@@ -403,11 +406,13 @@ body.kort #nestelapp small{ display:none; }
     if (m === pekt) return; if (pekt) pekt.classList.remove('traadpek'); pekt = m; if (m) m.classList.add('traadpek');
   }
   function plasserLapp() {
-    const b = document.body, l = (auto() && !gjest()) ? lapp() : null;
+    const b = document.body, l0 = (auto() && !gjest()) ? lapp() : null;
+    let l = l0; try { if (window.NesteSpill && NesteSpill.velg) l = NesteSpill.velg(l0); } catch (e) { l = l0; } vistLapp = l;
     const bar = [document.getElementById('kommando'), document.getElementById('mkom')].find(e => e && e.classList.contains('på') && synligEl(e));
     const vis = !!(l && bar && !b.classList.contains('gaar') && !b.classList.contains('foto'));
     lappEl.classList.toggle('på', vis); pekPå(vis || åpen ? l : null); if (!vis) return;
     const t = lappEl.querySelector('b'); if (t.textContent !== l.tekst) { t.textContent = l.tekst; lappEl.title = l.hjelp || l.tekst; }
+    { const så = l.så || ''; let i = lappEl.querySelector('i.saa'); if (så && !i) { i = document.createElement('i'); i.className = 'saa'; t.after(i); } if (i && i.textContent !== så) { i.textContent = så; i.hidden = !så; } }
     let topp = bar.getBoundingClientRect().top; for (const id of ['opplaering', 'kommer', 'mkommer']) { const e = document.getElementById(id); if (e && e.classList.contains('på') && synligEl(e)) topp = Math.min(topp, e.getBoundingClientRect().top); }
     const bunn = Math.round(window.innerHeight - topp + 6) + 'px'; if (lappEl.style.bottom !== bunn) lappEl.style.bottom = bunn;
   }

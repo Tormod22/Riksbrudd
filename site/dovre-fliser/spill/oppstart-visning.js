@@ -469,7 +469,7 @@ body.kort:not(.smal) #leirvalg button{ min-height:36px; margin:5px 4px 0 0; }
     if (ny) { kam.x = L.x; kam.y = L.y; skitten = true;
       logg(`${S.karakter.navn} (${O.BAKGRUNNER[S.karakter.bakgrunn].navn.toLowerCase()}) leder ${S.fraksjon.navn}. Leiren er satt opp, og dere har ${O.kroner(S.penger)}.`);
       if (S.utenLag) logg('Du har ingen ferdige lag – bare Vaktlaget (4 mann). Lag troppene selv av folkene dine: Leir → Tropper → «Lag ny tropp».');
-      if (S.lettStart) logg('Råd: bygg brakke, dieseltank og aggregat først, så en tropp og et vakttårn. Kjøp mat i Folk-panelet før den tar slutt (den rekker noen få døgn), eller bygg drivhus. Kontrollrommet (9 mill. kr) kan vente.'); }
+      if (S.lettStart) logg('Råd: bygg brakke, dieseltank og aggregat først, så en tropp og et vakttårn. Kjøp mat i Folk-panelet før den tar slutt (den rekker noen få døgn), eller bygg drivhus. Kontrollrommet (' + (window.LeirSpill && LeirSpill.totalPris && LeirSpill.totalPris('kontrollrom') > 0 ? Leir.kroner(LeirSpill.totalPris('kontrollrom')) + ' i alt' : 'ca. 9 mill. kr') + ') kan vente.'); }
     else { logg(`Velkommen tilbake, ${S.karakter.navn}. ${S.fraksjon.navn} har ${O.kroner(S.penger)} i kassa.`);
       // Et lagret spill åpnet før med hele landet i bildet (200 km-målestokk), og leiren var en prikk. Nå står kartet over leiren.
       // Ikke i testene (kontrollskriptet regner med startbildet), og ikke når adressen selv sier hvor kartet skal stå.

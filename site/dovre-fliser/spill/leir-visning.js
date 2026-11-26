@@ -196,7 +196,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   // delene i fanene: rekkefølge, og hvilke som er lagt sammen til du åpner dem (Claudes forslag)
   const FANEREKKE = ['bygg', 'lager', 'plan', 'mål'], DELREKKE = { bygg: [/^Byggelag/, /^Strøm$/, /^Byggesett/, /^Forsvar/, /^Tropper/, /^Kameravakt/, /^Sjøen/, /^Strømnett/],
     lager: [/^Penger inn/, /^Materialer$/, /^Oversikt/, /^Materialer fra verden/, /^Markedet/, /^Region/, /^Sjø/, /^Våpen/], plan: [/^Planlegg/],
-    mål: [/^Oppdrag/, /^Mål$/, /^Trusselen/, /^Ukas|^Scenario/, /^Etterretning/, /^Vær og verden/, /^Samfunn/, /^Dagbok/, /^Venner/, /tid og flyt/, /spillform/, /^Opplæring/] };
+    mål: [/^Nå$/, /^Oppdrag/, /^Mål$/, /^Trusselen/, /^Ukas|^Scenario/, /^Etterretning/, /^Vær og verden/, /^Samfunn/, /^Dagbok/, /^Venner/, /tid og flyt/, /spillform/, /^Opplæring/] };
   const DEL_LUKKET = /^(Forsvar|Tropper|Strømnett|Byggesett|Kameravakt|Sjøen|Våpen og utstyr|Markedet|Venner|Etterretning|Vær og verden|Mål · |Opplæring|Region|Samfunn)/;
   let DELVALG = {}; try { DELVALG = JSON.parse(localStorage.getItem('riksbrudd-leirdeler') || '{}') || {}; } catch (e) { DELVALG = {}; }
   const delNøkkel = t => t.replace(/[\d(].*$/, '').replace(/[:·\s]+$/, '').trim() || t.trim();
