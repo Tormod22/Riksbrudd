@@ -69,6 +69,16 @@
     brutt: menn => { const n = (menn || []).length; return n > 0 && menn.filter(m => m.hp < 1).length >= Math.ceil(n * Trussel.HERJ.brudd); },
     // har laget herjet lenge nok? q: { inne (spillminutter innenfor radius) }
     herjet: q => (q.inne || 0) >= (q.tyv ? Trussel.PLAN.tyver.min : Trussel.HERJ.min),
+    // (kritikerløkka r3, Jonas: «sist sett i leiren kl. 11:29 · kan være framme når som helst» i over to timer – ett røverlag sto 600 m
+    // nordøst for leiren og gjorde ingenting, og bølgen ble aldri avsluttet) RØVERE SOM GÅR LEI: et lag som er kommet innen «nær» meter
+    // av leiren (eller har vært i kamp), men så har stått utenfor leiren uten å skyte eller bli skutt på i «min» spillminutter til sammen,
+    // gir opp og går sin vei (flykter – bølgen regnes da som slått tilbake). Lag som venter på mørket, teller ikke. Claudes forslag.
+    LEI: { nær: 1000, min: 60 },
+    // q: { stille (spillminutter utenfor leiren uten kamp siden laget sist var i leiren eller i kamp) }
+    lei: q => (q.stille || 0) >= Trussel.LEI.min,
+    // ett steg for ett lag: e = { nærVært (har vært innen LEI.nær), inne (i leiren nå), kamp (skyter eller blir skutt på nå), venter
+    // (venter på mørket), stille } – gir det nye tallet for stille
+    stilleSteg: (e, dt) => (!e.nærVært || e.venter ? (e.stille || 0) : e.inne || e.kamp ? 0 : (e.stille || 0) + Math.max(0, dt || 0)),
     // hva ett lag tar med seg. h: { penger, lager: { tre, betong, stål }, diesel, mat } – det som finnes. Gir det samme med mengdene som
     // tas (penger i hele 1000 kr, materialer i tideler, diesel og mat i hele).
     bytte(h) { const H = Trussel.HERJ, l = h.lager || {}, ut = { penger: Math.floor(Math.min((h.penger || 0) * H.penger.andel, H.penger.tak) / 1000) * 1000, lager: {}, diesel: Math.floor((h.diesel || 0) * H.diesel), mat: Math.floor((h.mat || 0) * H.mat) };

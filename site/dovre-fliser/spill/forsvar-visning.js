@@ -83,10 +83,23 @@
   // (kritikerløkka r2, Ingrid: «i stilling mot nord/nordvest» mens røverne kom fra sør) – ikke sett: der RUTA deres kommer inn mot leiren
   // (Forsvar.innfart), ikke startstedet (ruta kan svinge rundt en ås og komme inn fra en annen kant); uten rute startstedet. Ingen røvere
   // og ingen kjent kant: NaN (ukjent – forsvaret står da i ring rundt leiren).
-  const kommerFra = e => { const L = leir(); return (FO.innfart && L && FO.innfart(e.sti, L, e.seg || 0)) || e.innfart || e.fra || e; };
+  // (kritikerløkka r3, Jonas: «fra sørøst … sist sett 1,8 km SV», loggen «sørvest», og retningen skiftet sørvest → øst → sørøst) – ÉN kilde:
+  // der de er nå (sett utenfor leiren), ellers der de sist ble sett (det banneret skriver som «sist sett»), ellers kanten ruta deres kommer
+  // inn fra – den samme e.innfart som varselet i loggen brukte (spillet-visning.js), regnet av hovedlagene (ikke speiderne fra en annen kant).
+  // Er de inne i leiren eller sist sett der, står den forrige retningen.
+  const kommerFra = e => { const L = leir(); return e.innfart || (FO.innfart && L && FO.innfart(e.sti, L, e.seg || 0)) || e.fra || e; };
   const retn = v => (Number.isFinite(v) ? FO.retning(v) : 'ukjent kant');
-  function retningMotFienden() { const L = leir(), r0 = røvere(); if (r0.length) { const k = r0.filter(e => kjent(e) && Math.hypot(e.x - L.x, e.y - L.y) > R.mot.inne), r = k.length ? k.map(e => ({ x: e.x, y: e.y })) : r0.some(e => kjent(e)) ? (Number.isFinite(sistV) ? null : r0.filter(e => kjent(e)).map(e => ({ x: e.x, y: e.y }))) : r0.map(kommerFra); if (!r) return sistV;
-      const x = r.reduce((a, e) => a + e.x, 0) / r.length, y = r.reduce((a, e) => a + e.y, 0) / r.length; sistV = Math.atan2(y - L.y, x - L.x); } return sistV; }
+  // den siste egne observasjonen av angriperne i dette angrepet (kartet, radioen, etterretningen, eller det banneret selv så): { x, y, tid }
+  function sisteObs(r) { let s = null; const t0 = fra && Number.isFinite(fra.t) ? fra.t - 1 : -Infinity;
+    for (const e of r) { const q = sistSettAv(e); if (q && q.tid >= t0 && q.tid <= tid && (!s || q.tid > s.tid)) s = q; }
+    if (est && est.sistSett && est.sistSett.tid >= t0 && (!s || est.sistSett.tid > s.tid)) s = est.sistSett; return s; }
+  function retningMotFienden() { const L = leir(), r0 = røvere(); if (!r0.length || !L) return sistV;
+    const ute = p => Math.hypot(p.x - L.x, p.y - L.y) > R.mot.inne, k = r0.filter(e => kjent(e));
+    let r = null;
+    if (k.some(ute)) r = k.filter(ute).map(e => ({ x: e.x, y: e.y }));
+    else if (k.length) { if (Number.isFinite(sistV)) return sistV; r = k.map(e => ({ x: e.x, y: e.y })); }
+    else { const s = sisteObs(r0); if (s && ute(s)) r = [s]; else if (s && Number.isFinite(sistV)) return sistV; else { const h = r0.some(e => !e.prøver) ? r0.filter(e => !e.prøver) : r0; r = h.map(kommerFra); } }
+    const x = r.reduce((a, e) => a + e.x, 0) / r.length, y = r.reduce((a, e) => a + e.y, 0) / r.length; if (Math.hypot(x - L.x, y - L.y) > 1) sistV = Math.atan2(y - L.y, x - L.x); return sistV; }
   function leirvakt(plass) { const F = folk(), L = leir(); if (!F || vakt || !window.FolkRegler) return null; const vakter = F.personer.filter(p => p.oppgave === 'vakt' && FolkRegler.arbeidsfør(p)), n = FO.vaktStørrelse(vakter.length); if (!n) return null;
     const s = nyttLag('Leirvakta', plass ? plass.x : L.x + 12, plass ? plass.y : L.y, 'blå'); s.menn = vakter.slice(0, n).map((p, i) => ({ navn: p.navn, rolle: i === 0 ? 'lagfører' : 'rifle', hp: 1, loy: p.lojal || .7, person: p.id })); s.leder = 0; s.leirvakt = true; s.strid = { ...HOLD, bev: 'standard' }; s.forsvar = plass || { x: s.x, y: s.y, voll: false };
     ENHETER.push(s); vakt = s; return s; }
@@ -174,6 +187,7 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     else { const harRute = r.some(e => e.sti && e.timerIgjen > 0), tidlig = r.some(e => Number.isFinite(e.startTid) && tid - e.startTid < RUTE_FRIST);
       const m = FO.monoton(est.v === null ? null : { v: est.v, t: est.t }, rå, tid, est.v === null || (harRute && !est.rute && tidlig));
       est.v = m ? m.v : null; est.t = tid; if (harRute) est.rute = true; }
+    const varInne = r.some(e => (e.inne || 0) > 0) || !!(sist && Math.hypot(sist.x - L.x, sist.y - L.y) <= R.mot.inne);
     const min = est.v, iLeiren = kj.length > 0 && nær <= R.mot.inne, syn = kj.find(e => synlig(e)), hvem = syn ? settAv(syn) : '', v = retningMotFienden(), n = r.length;
     const overskrift = A.røvere ? `Angrep: ${n === 1 ? 'ett røverlag' : n + ' røverlag'} fra ${retn(v)}` : `Angrep: ${A.navn} med ${n === 1 ? 'ett lag' : n + ' lag'} fra ${retn(v)}`;
     let tekst, kort;
@@ -182,7 +196,9 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     else if (sist) { const ds = Math.hypot(sist.x - L.x, sist.y - L.y), m2 = Math.max(1, Math.round(tid - sist.tid)), sp = FO.spenn(min), hvor = ds <= R.mot.inne ? 'i leiren' : `${km(ds)} ${FO.retning(Math.atan2(sist.y - L.y, sist.x - L.x))} for leiren`;
       // (runde 14) med klokkeslett: «sist sett 3,5 km N kl. 08:53»
       const hvorK = ds <= R.mot.inne ? 'i leiren' : `${km(ds)} ${FO.retningKort ? FO.retningKort(Math.atan2(sist.y - L.y, sist.x - L.x)) : ''}`.trim(), klS = FO.klTekst ? FO.klTekst(sist.tid) : `for ${m2} min siden`;
-      tekst = `sist sett ${hvorK} ${klS} · ${sp ? 'framme om ' + sp : 'kan være framme når som helst'}`; kort = `sist sett ${hvorK} ${klS}`; void hvor; }
+      // (kritikerløkka r3, Jonas) har de alt vært i leiren (eller ble sist sett der), sier banneret ikke «kan være framme når som helst»
+      tekst = `sist sett ${hvorK} ${klS} · ${varInne ? 'de har vært i leiren – ikke sett siden' : sp ? 'framme om ' + sp : 'kan være framme når som helst'}`; kort = `sist sett ${hvorK} ${klS}`; void hvor; }
+    else if (varInne) { tekst = 'har vært i leiren – ikke sett siden'; kort = 'ikke sett siden de var i leiren'; }
     else { const n2 = min === null ? null : FO.når(tid, tid + min); tekst = n2 ? `ikke sett – kommer ${n2}` : 'ikke sett ennå – vakter, tårn og kameraer oppdager dem'; kort = n2 ? `ikke sett · ${n2.replace(/ \(.*\)$/, '')}` : 'ikke sett ennå'; }
     return { id: A.id, røvere: A.røvere, hvem: A.navn, side: A.side || 'rød', antall: n, lag: r, sett: kj.length > 0, kjente: kj, nær, iLeiren, strid, sist, min, overskrift, tekst, kort, retning: retn(v) }; }
   // hvem som så dem: vakttårnet (Trussel.VARSEL.tårn), et kamera, vaktene, eller et lag
@@ -205,7 +221,8 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     if (inne.length) { alarm.style.top = Math.round(Math.max(...inne) + 6) + 'px'; if (!treff()) return 'under'; }
     alarm.style.top = 'auto'; alarm.style.bottom = 'calc(8px + env(safe-area-inset-bottom,0px))'; return 'nede'; }
   function vis() { const svar = vis0(); plasserAlarm(); return svar; }
-  function vis0() { const L = leir(), r = røvere(); if (!r.length) alarm.classList.remove('fjern'); if (L && !r.length && !satt && rapportNå && visRapport()) return; if (L && !r.length && !satt && skade && visSkade()) return; if (!L || (!r.length && !satt)) { alarm.classList.remove('på'); sistAlarm = ''; return; }
+  function vis0() { const L = leir(), r = røvere(); if (!r.length) alarm.classList.remove('fjern'); if (L && !r.length && !satt && rapportNå && visRapport()) return;
+    if (rapportNå && rapportNå.vist && (r.length || satt)) rapportNå = null; if (L && !r.length && !satt && skade && visSkade()) return; if (!L || (!r.length && !satt)) { alarm.classList.remove('på'); sistAlarm = ''; return; }
     const sett2 = r.filter(e => kjent(e)), nær = sett2.length ? Math.min(...sett2.map(e => Math.hypot(e.x - L.x, e.y - L.y))) : 0, v = retningMotFienden(); let tekst, liten;
     if (!r.length && øv) { tekst = 'Øvelse: forsvaret er satt'; liten = Number.isFinite(v) ? `mot ${FO.retning(v)}` : 'i ring rundt leiren'; }
     else if (!r.length) { const n = neste(); tekst = 'Forsvaret er satt'; liten = n ? n.tekst.replace(/^Røverne/, 'røverne') : 'lagene venter i stillingene'; const P = prognose(); if (P) liten += ' · ' + P.tekst.replace(/^Med dette forsvaret: /, ''); }
@@ -265,7 +282,9 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     const LS = window.LeirSpill && LeirSpill.tilstand(), falne = Math.max(0, b.falne - F0.falne);
     let skadet = 0, ødelagt = 0; const skadetNavn = [], ødelagtNavn = [], skadetBygg = [];
     if (LS) for (const [bid, hp] of F0.bygg) { const q = LS.bygg.find(x => x.id === bid); if (!q || q.hp <= 0) { if (hp > 0) { ødelagt++; ødelagtNavn.push(q ? byggNavn(q) : 'et bygg'); } } else if (q.hp < hp - .01) { skadet++; skadetNavn.push(byggNavn(q)); skadetBygg.push(q.id); } }
-    const ute = F0.lag.filter(e => !levende(e) || (Array.isArray(e.menn) && Terreng.slattUt(e.menn)) || e.flykter || !ENHETER.includes(e)).length, N = navnTap(F0), sårede = Math.max(0, F0.friske - b.friske - falne);
+    // (kritikerløkka r3, Ingrid: «Ingen tap hos oss», men Mari Bakken ble såret – nye folk i lagene underveis veide opp for de sårede i
+    // telleren) – hver mann som var frisk ved starten og nå er såret, teller (navnTap), også når det kom nye til
+    const ute = F0.lag.filter(e => !levende(e) || (Array.isArray(e.menn) && Terreng.slattUt(e.menn)) || e.flykter || !ENHETER.includes(e)).length, N = navnTap(F0), sårede = Math.max(0, F0.friske - b.friske - falne, N.sår.length);
     let deresFalne = 0, deresSåret = 0; for (const e of F0.lag) if (Array.isArray(e.menn)) for (const m of e.menn) { if (m.hp <= 0) deresFalne++; else if (m.hp < 1) deresSåret++; }
     return { falne, sårede, skadet, ødelagt, fiender: F0.lag.length, fienderUte: ute, skadetNavn, ødelagtNavn, skadetBygg, kom: F0.kom || '', deresFalne, deresSåret,
       falneNavn: N.falne.length === falne ? N.falne : null, sårNavn: N.sår.length === sårede ? N.sår : null }; }
@@ -278,7 +297,7 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     const r = FO.sluttRapport({ ...tap(id), ...u }); logg(`${r.tittel}. ${r.tekst}`);
     // (kritikerløkka r1, Jonas: «angrepet ble avgjort mens jeg spolte, uten oppsummering») – kom det mens du spolte, står rapporten til du lukker den
     const spoltNå = spolt.has(id) || (typeof tempo !== 'undefined' && tempo >= AUTO.fart);
-    if (auto()) { const t0 = tap(id); rapportNå = { ...r, til: spoltNå ? Infinity : performance.now() + 150000, bygg: t0.skadetBygg || [], sår: (t0.sårede || 0) + (t0.falne || 0) }; hend('annet', 'angrepet er over'); } sistAlarm = ''; vis(); return r; }
+    if (auto()) { const t0 = tap(id); rapportNå = { ...r, tid, til: spoltNå ? Infinity : performance.now() + 150000, bygg: t0.skadetBygg || [], sår: (t0.sårede || 0) + (t0.falne || 0) }; hend('annet', 'angrepet er over'); } sistAlarm = ''; vis(); return r; }
   // fra spill/spillet-visning.js når en røverbølge er over: { nr, utfall: 'slått' | 'unna' | 'herjet' | 'slapp', tok, tapte }
   function slutt(u) { return giRapport('r' + u.nr, { hvem: 'Røverne', ...u }); }
   // angrepet er over uten at spillet.js meldte det (en motstanders angrepsgruppe, eller en bølge uten melding)
@@ -286,7 +305,11 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     const F0 = fra && fra.id === id ? fra : null, ES = window.EskaleringSpill && EskaleringSpill.S ? EskaleringSpill.S() : null, side = F0 && F0.side;
     const f = ES && ES.ferdig ? ES.ferdig.slice().reverse().find(q => q.leir && q.side === side && (!F0 || q.t >= F0.t)) : null, T0 = tap(id);
     giRapport(id, { hvem: F0 ? F0.navn : 'Fienden', utfall: f ? f.utfall : T0.fiender && T0.fienderUte >= T0.fiender ? 'oppgitt' : 'ferdig' }); }
-  function visRapport() { const r = rapportNå; if (!r || performance.now() > r.til) { rapportNå = null; return false; }
+  // (kritikerløkka r3, Ingrid: resultatbanneret for bølge 2 kom tilbake ved et senere angrep, 14 spilltimer etter) – rapporten står til du
+  // lukker den, men bare til banneret trenger plassen til noe annet etter at rapporten er vist, og høyst RAPPORT_SPILL spillminutter
+  // (Claudes tall)
+  const RAPPORT_SPILL = 240;
+  function visRapport() { const r = rapportNå; if (!r || performance.now() > r.til || (Number.isFinite(r.tid) && (tid - r.tid > RAPPORT_SPILL || tid < r.tid))) { rapportNå = null; return false; } r.vist = true;
     const LS = window.LeirSpill && LeirSpill.tilstand(), sk = LS && window.Leir ? FO.skadet(repListe(LS)) : { n: 0 }, ventende = LS ? repListe(LS).filter(q => !q.opptatt && q.hp < FO.R.rep.varsel) : [];
     const SL = stoppNå(), nøkkel = ['rapport', r.tittel, ventende.length, SL ? SL.tekst : ''].join('|'); alarm.classList.add('på'); alarm.classList.add('satt'); alarm.classList.toggle('god', !!r.god); if (nøkkel === sistAlarm || (window.pekerNede && pekerNede(alarm))) return true; sistAlarm = nøkkel;
     // (skadevarselet etter angrepet står i rapporten når rapporten ikke alt sier det)
@@ -511,6 +534,9 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     est = { id: o.id, v: o.v, t: o.t, minNær: Number.isFinite(o.minNær) ? o.minNær : Infinity, sett: !!o.sett, rute: !!o.rute }; sistAlarm = ''; return true; }
   // (kritikerløkka r1) kampen om leiren pågår: den har begynt (kampStart), eller angriperne er nærmere enn KAMP.nær – da spoler ⏭ ikke i 600× (flyt.js)
   function kampPågår() { const A = angrep(), L = leir(); if (!A || !L) return false; if (kampStart.has(A.id)) return true; return A.lag.some(e => !e.trekker && !e.flykter && Math.hypot(e.x - L.x, e.y - L.y) <= KAMP.nær); }
-  window.ForsvarSpill = { AR, prognose, ventetBølge, uteNå, gåHjem, stoppLinje, kampPågår, bannerOppe: () => alarm.classList.contains('på') && !!alarm.getClientRects().length, øvelse: () => øv, kamp14: { KAMP, kampStart, ventRapport }, beredskap, sett, autoForsvar, AUTO, opphev, gjenopprett, anslagTilstand, settAnslag, neste, kjent, anslag, status, angrep, slutt, rapport: () => rapportNå, lukkRapport: () => { rapportNå = null; vis(); }, erSatt: () => satt, vakt: () => vakt, vis, retning: () => sistV, settRetning: v => { sistV = v; },
+  // (kritikerløkka r3) hvor langt angrepet er kommet – flyt.js senker farten én gang per angrep, først når angriperne er sett, er under
+  // KAMP.nær m unna eller kampen har begynt
+  const fase = () => { const A = angrep(); return A ? { id: A.id, sett: settMeldt === A.id, nær: nærMeldt === A.id, kamp: kampStart.has(A.id) } : null; };
+  window.ForsvarSpill = { fase, AR, prognose, ventetBølge, uteNå, gåHjem, stoppLinje, kampPågår, bannerOppe: () => alarm.classList.contains('på') && !!alarm.getClientRects().length, øvelse: () => øv, kamp14: { KAMP, kampStart, ventRapport }, beredskap, sett, autoForsvar, AUTO, opphev, gjenopprett, anslagTilstand, settAnslag, neste, kjent, anslag, status, angrep, slutt, rapport: () => rapportNå, lukkRapport: () => { rapportNå = null; vis(); }, erSatt: () => satt, vakt: () => vakt, vis, retning: () => sistV, settRetning: v => { sistV = v; },
     test: false, motSteg, motFerdig, hjemSteg, herjere, repSteg, reparerAlle, repPå, settRep, etterAngrep, skade: () => skade, lukkSkade: () => { skade = null; vis(); } };
 })();

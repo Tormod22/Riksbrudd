@@ -38,7 +38,9 @@
   const eieform = side => { const F = rot.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER[side]; return F ? F.eieform || F.navn + 's' : 'fiendens'; };
   const sidenavn = side => { const F = rot.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER[side]; return F ? F.navn : 'fienden'; };
   // RUNDE 14: røverne – samme tid og tekst som varselbrikken (ForsvarSpill.neste), eller angrepet som pågår
-  function raidNå() { const FS = rot.ForsvarSpill, SS = rot.SpilletSpill; if (!FS) return null; const Tt = SS && SS.T ? SS.T() : null, satt = !!(FS.erSatt && FS.erSatt());
+  // (kritikerløkka r3, Ingrid: «Lagene står i stilling» og «Ingen lag er nær leiren» samtidig) – «står i stilling» bare når et lag faktisk har
+  // en forsvarsplass (eller Leirvakta står)
+  function raidNå() { const FS = rot.ForsvarSpill, SS = rot.SpilletSpill; if (!FS) return null; const Tt = SS && SS.T ? SS.T() : null, satt = !!(FS.erSatt && FS.erSatt()) && (ENHETER.some(s => s.side === 'blå' && s.forsvar && levende(s)) || !!(FS.vakt && FS.vakt()));
     // (kritikerløkka r1) med det samme anslaget som banneret (ForsvarSpill.status)
     if (Tt && Tt.aktiv) { const st = FS.status ? FS.status() : null; return { aktiv: true, min: 0, nedtelling: 'nå', satt, tekst: 'Røverne angriper leiren' + (st && st.tekst ? ` (${st.tekst})` : ' nå') + (satt ? ' – lagene står i stilling.' : ' – sett lagene i stilling!') }; }
     const n = FS.neste ? FS.neste() : null; if (!n || !(n.min <= R.raid.linje)) return null;

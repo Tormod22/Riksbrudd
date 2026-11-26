@@ -68,13 +68,17 @@
     const ruter = nye.filter(e => e.sti && e.timerIgjen > 0).map(e => e.timerIgjen * 60), min = ruter.length ? Math.min(...ruter) : Trussel.anslag(s.meter, 0);
     // (kritikerløkka r2, Ingrid: bølge 2 ble varslet «fra vest», men sett «1,6 km sør») – kanten i varselet er der ruta deres kommer inn mot
     // leiren (Forsvar.innfart), ikke startstedet: det er der de dukker opp, og der «Forsvar leiren» setter lagene
-    { const FI = window.Forsvar, inn = FI && FI.innfart ? nye.map(e => FI.innfart(e.sti, leir)).filter(Boolean) : [];
-      if (inn.length) { const x = inn.reduce((a, p) => a + p.x, 0) / inn.length, y = inn.reduce((a, p) => a + p.y, 0) / inn.length; for (const e of nye) e.innfart = FI.innfart(e.sti, leir) || e.innfart; s = { ...s, retning: Spillet.retning(x - leir.x, y - leir.y) }; } }
+    // (kritikerløkka r3, Ingrid: varselet sa «2 røverlag fra sør», banneret «3 røverlag fra sørøst») – kanten regnes av hovedlagene (ikke
+    // speiderne fra en annen kant), og tallet er alle lagene, som i banneret (ForsvarSpill.status bruker de samme e.innfart)
+    { const FI = window.Forsvar, hoved = nye.some(e => !e.prøver) ? nye.filter(e => !e.prøver) : nye;
+      for (const e of nye) { const p = FI && FI.innfart ? FI.innfart(e.sti, leir) : null; if (p) e.innfart = p; }
+      const inn = hoved.map(e => e.innfart).filter(Boolean);
+      if (inn.length) { const x = inn.reduce((a, p) => a + p.x, 0) / inn.length, y = inn.reduce((a, p) => a + p.y, 0) / inn.length; s = { ...s, retning: Spillet.retning(x - leir.x, y - leir.y) }; } }
     // (19. nov, etter kritikken) angrepsbanneret sier det samme (retning, avstand, anslag) – på telefon sto beskjeden tre steder samtidig,
     // så den går bare til loggen her, ikke i et eget varsel midt på skjermen
     // (kritikerløkka r1, Ingrid: tre ulike tider i banneret og loggen) – loggen sier det samme som banneret: når de trolig er framme (Forsvar.når)
     const FO = window.Forsvar, når = FO && FO.når ? FO.når(tid, tid + min) : null;
-    logg(Trussel.varsel(nr, n, s) + (når ? ` De er ${når.replace(/^trolig /, 'trolig framme ')}.` : ` Ventet om ca. ${Math.max(5, Math.round(min / 5) * 5)} min.`) + (Trussel.PLAN_TEKST && Trussel.PLAN_TEKST[plan] ? ' ' + Trussel.PLAN_TEKST[plan] : '')); skitten = true; meny(); return true; }
+    logg(Trussel.varsel(nr, nye.length, s) + (når ? ` De er ${når.replace(/^trolig /, 'trolig framme ')}.` : ` Ventet om ca. ${Math.max(5, Math.round(min / 5) * 5)} min.`) + (Trussel.PLAN_TEKST && Trussel.PLAN_TEKST[plan] ? ' ' + Trussel.PLAN_TEKST[plan] : '')); skitten = true; meny(); return true; }
   // (kritikerløkka r2) OMVEIEN: framme ved punktet (eller stått stille nær det) – videre mot leiren
   KROKER.sim.push(() => { if (!klar || !T || !T.aktiv || !auto() || !S() || !S().leir) return; const leir = S().leir;
     for (const e of ENHETER) if (e.omvei && e.raid === T.aktiv && levende(e) && !e.planlegger && !e.trekker && !e.flykter) { const d = Math.hypot(e.x - e.omvei.x, e.y - e.omvei.y);
@@ -85,6 +89,12 @@
     // (kjøring 7: røverne sto like utenfor 150 m, men innen 120 m av byggene, og skadet dem i timevis uten å telle som «inne» –
     // nå teller også de som skader bygg: HERJER i leir-visning.js)
     for (const e of ENHETER) if (e.raid === T.aktiv && !e.trekker && levende(e) && !Terreng.slattUt(e.menn) && (Math.hypot(e.x - leir.x, e.y - leir.y) <= Trussel.HERJ.radius || (window.HERJER && HERJER.has(e)))) e.inne = (e.inne || 0) + dt; });
+  // (kritikerløkka r3, Jonas) RØVERE SOM GÅR LEI (Trussel.LEI): minutter hvert lag har stått utenfor leiren uten kamp etter at det kom nær
+  const iKampNå = e => !!((e.skyterPå && [...e.skyterPå].some(b => b && b.side === 'blå')) || ENHETER.some(s => s.side === 'blå' && s.skyterPå && s.skyterPå.has(e)));
+  KROKER.sim.push(dt => { if (!klar || !T || !T.aktiv || !auto() || !S() || !S().leir || !Trussel.stilleSteg) return; const leir = S().leir;
+    for (const e of ENHETER) { if (e.raid !== T.aktiv || e.trekker || e.flykter || !levende(e)) continue; const d = Math.hypot(e.x - leir.x, e.y - leir.y);
+      if (d <= Trussel.LEI.nær) e.leiNær = true; const kamp = iKampNå(e); if (kamp) e.leiNær = true;
+      e.stille = Trussel.stilleSteg({ nærVært: !!e.leiNær, inne: d <= Trussel.HERJ.radius || !!(window.HERJER && HERJER.has(e)), kamp, venter: !!e.venterNatt, stille: e.stille }, dt); } });
   // laget tar byttet (kassa, lageret, dieselen og maten) og marsjerer bort fra leiren
   function trekkUt(e) { const leir = S().leir, LS = L(), f = F(), H = Trussel.HERJ;
     const b = Trussel.bytte({ penger: S().penger, lager: LS ? LS.lager : {}, diesel: LS ? LS.drivstoff : 0, mat: f ? f.mat : 0 });
@@ -116,7 +126,9 @@
     if (auto()) for (const e of lag) { if (e.trekker || e.flykter || !levende(e) || Terreng.slattUt(e.menn)) continue;
       // en tredel ute (Trussel.brutt): røverne gir opp og flykter (bølgen kan da bli slått tilbake); ellers: har de herjet lenge nok, tar de byttet
       if (Trussel.brutt(e.menn)) { e.flykter = true; e.trekkerFra = tid; e.venterNatt = false; bort(e); if (synlig(e)) logg(`${e.navn} gir opp og flykter – for mange av dem er falt eller såret.`); }
-      else if (Trussel.herjet(e)) trekkUt(e); }
+      else if (Trussel.herjet(e)) trekkUt(e);
+      // (kritikerløkka r3) har stått utenfor leiren uten å angripe lenge: gir opp og går sin vei
+      else if (Trussel.lei && Trussel.lei(e)) { e.flykter = true; e.lei = true; e.trekkerFra = tid; e.venterNatt = false; bort(e); logg(`${e.navn} har gitt opp angrepet og trekker seg unna.`); } }
     // (18. nov) bølgen er over når røverne er slått ut ELLER har holdt seg unna leiren en halv spilltime (Trussel.ferdig)
     // (runde 4) … eller når de som er igjen, har trukket seg ut med byttet ('herjet': ingen belønning)
     // (19. nov) røverne starter 3–4 km unna: et lag som ennå ikke har vært nær leiren, er «på vei» og teller ikke som unna (høyst VARSEL.kommerMaks)
@@ -133,7 +145,10 @@
       // sabotører som fikk gjort sitt og slapp unna (spill/krig-visning.js): ingen belønning
       if (slapp) { if (f) f.moral = Math.max(0, f.moral - 5); rapport({ nr: T.aktiv, utfall: 'slapp', tapte: sumBytte(lag) }, 'Sabotørene slapp unna. Angrepet er over, men det ble ingen belønning denne gangen.', true); }
       else { OppstartSpill.gi(b); if (f) f.moral = Math.min(100, f.moral + 5); rapport({ nr: T.aktiv, utfall: st, tok: `${kr(b)} fra røverne`, tapte: sumBytte(lag) }, st === 'unna' ? `Røverne har trukket seg unna – angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.` : `Angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.`, true); }
-      for (const e of lag) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); if (typeof valgt !== 'undefined' && valgt === e && window.lukkPanel) lukkPanel(); } T.aktiv = 0; T.borteFra = null; planlegg(); skriv('riksbrudd-trussel', T); skitten = true; meny(); return; }
+      // (kritikerløkka r3) lag som lever og har flyktet eller trukket seg, går sin vei (utSteg tar dem bort når de er langt nok unna) – de
+      // forsvinner ikke midt i kartet; resten fjernes nå
+      for (const e of lag) { if ((e.flykter || e.trekker) && levende(e) && !Terreng.slattUt(e.menn)) { e.raid = -T.aktiv; e.flykter = true; if (!Number.isFinite(e.trekkerFra)) e.trekkerFra = tid; if (!e.sti && !e.planlegger) bort(e); continue; }
+        const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); if (typeof valgt !== 'undefined' && valgt === e && window.lukkPanel) lukkPanel(); } T.aktiv = 0; T.borteFra = null; planlegg(); skriv('riksbrudd-trussel', T); skitten = true; meny(); return; }
     // røvere som står stille langt fra leiren, får ordren på nytt (ikke lag som er slått ut – de har trukket seg unna)
     for (const e of lag) if (levende(e) && !Terreng.slattUt(e.menn) && !e.trekker && !e.flykter && !e.sti && !e.planlegger && Math.hypot(e.x - leir.x, e.y - leir.y) > 160 && tilfV() < .03) ordre(e, leir.x + (tilfV() - .5) * 80, leir.y + (tilfV() - .5) * 80, true); }
 
@@ -285,7 +300,8 @@
     logg(`${h.tekst(å.navn, å.navn2, Number.isFinite(å.kl) ? å.kl : ((6 + tid / 60) % 24 + 24) % 24)} – ${h.valg[i].t.replace(/ \(.*\)$/, '').toLowerCase()}.${ut}`); H.åpen = null; const w = 18 + tilfV() * 10; H.nesteSpill = tid + w * 60; H.nesteEkte = ekte + (14 + tilfV() * 8) * 60; skriv('riksbrudd-hendelser', H);
     if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); visHendelse(); meny(); }
   // kortkøen (samfunn-visning.js): ett kort om gangen, med pause mellom
-  function hendelseSteg() { if (!H || H.åpen || !auto()) return; if (window.Kortkø && !Kortkø.ledig() && (tid >= H.nesteSpill || ekte >= H.nesteEkte)) return; if (tid >= H.nesteSpill || ekte >= H.nesteEkte) { H.nesteSpill = H.nesteEkte = Infinity; if (!hendelse()) { H.nesteSpill = tid + 600; H.nesteEkte = ekte + 600; } } }
+  // (kritikerløkka r3, Ingrid: resultatet av røverangrepet og hendelseskortet lå oppå hverandre) – et nytt kort venter til rapporten er lukket
+  function hendelseSteg() { if (!H || H.åpen || !auto()) return; if (window.ForsvarSpill && ForsvarSpill.rapport && ForsvarSpill.rapport()) return; if (window.Kortkø && !Kortkø.ledig() && (tid >= H.nesteSpill || ekte >= H.nesteEkte)) return; if (tid >= H.nesteSpill || ekte >= H.nesteEkte) { H.nesteSpill = H.nesteEkte = Infinity; if (!hendelse()) { H.nesteSpill = tid + 600; H.nesteEkte = ekte + 600; } } }
 
   // (folkene som figurer i leiren ligger i spill/folk3d.js)
 
