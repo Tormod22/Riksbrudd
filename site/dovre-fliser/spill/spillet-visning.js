@@ -146,9 +146,9 @@
       if (slapp) { if (f) f.moral = Math.max(0, f.moral - 5); rapport({ nr: T.aktiv, utfall: 'slapp', tapte: sumBytte(lag) }, 'Sabotørene slapp unna. Angrepet er over, men det ble ingen belønning denne gangen.', true); }
       // (kritikerløkka r3) ga de siste opp og gikk (Trussel.lei), trakk røverne seg unna – de ble ikke slått ut
       else { OppstartSpill.gi(b); if (f) f.moral = Math.min(100, f.moral + 5); rapport({ nr: T.aktiv, utfall: st === 'slått' && lag.some(e => e.lei && levende(e)) ? 'unna' : st, tok: `${kr(b)} fra røverne`, tapte: sumBytte(lag) }, st === 'unna' ? `Røverne har trukket seg unna – angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.` : `Angrepet er slått tilbake! Dere tok ${kr(b)} fra røverne.`, true); }
-      // (kritikerløkka r3) lag som lever og har flyktet eller trukket seg, går sin vei (utSteg tar dem bort når de er langt nok unna) – de
-      // forsvinner ikke midt i kartet; resten fjernes nå
-      for (const e of lag) { if ((e.flykter || e.trekker) && levende(e) && !Terreng.slattUt(e.menn)) { e.raid = -T.aktiv; e.flykter = true; if (!Number.isFinite(e.trekkerFra)) e.trekkerFra = tid; if (!e.sti && !e.planlegger) bort(e); continue; }
+      // (kritikerløkka r3) lag som lever og ga opp uten å bli slått (Trussel.lei), går sin vei (utSteg tar dem bort når de er langt nok
+      // unna) – de forsvinner ikke midt i kartet; resten fjernes nå som før
+      for (const e of lag) { if (e.lei && levende(e) && !Terreng.slattUt(e.menn)) { e.raid = -T.aktiv; e.flykter = true; if (!Number.isFinite(e.trekkerFra)) e.trekkerFra = tid; if (!e.sti && !e.planlegger) bort(e); continue; }
         const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); if (typeof valgt !== 'undefined' && valgt === e && window.lukkPanel) lukkPanel(); } T.aktiv = 0; T.borteFra = null; planlegg(); skriv('riksbrudd-trussel', T); skitten = true; meny(); return; }
     // røvere som står stille langt fra leiren, får ordren på nytt (ikke lag som er slått ut – de har trukket seg unna)
     for (const e of lag) if (levende(e) && !Terreng.slattUt(e.menn) && !e.trekker && !e.flykter && !e.sti && !e.planlegger && Math.hypot(e.x - leir.x, e.y - leir.y) > 160 && tilfV() < .03) ordre(e, leir.x + (tilfV() - .5) * 80, leir.y + (tilfV() - .5) * 80, true); }

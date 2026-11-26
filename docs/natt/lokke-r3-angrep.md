@@ -7,7 +7,8 @@ Rettet etter Jonas Bakke og Ingrid Sæther (docs/kritikk/2026-11-26-r3-*.md). Al
   er kommet innen 1 km av leiren (eller har vært i kamp), men så har stått utenfor leiren uten å skyte eller bli skutt på i 60 spillminutter
   til sammen, gir opp (`e.flykter`, `e.lei`) – «Røvere 2.3 har gitt opp angrepet og trekker seg unna.» Venter på mørket teller ikke.
   Telleren (`e.stille`, `e.leiNær`) går i en KROKER.sim i spillet-visning.js; bare `auto()` (ikke i testene).
-- Når bølgen er over (slått/unna), fjernes ikke lenger levende lag som har flyktet/trukket seg: de får `raid = -bølge`, går bort (`bort`), og
+- Når bølgen er over (slått/unna), fjernes ikke lenger levende lag som ga opp på denne måten (`e.lei`; lag som flyktet etter tap, fjernes
+  som før – vakta «balanse» krever det): de får `raid = -bølge`, går bort (`bort`), og
   `utSteg` tar dem ut når de er 1,8 km unna eller etter 90 min (som herjerne før). flyt.js teller bare `raid > 0` som angrep.
 - Ga de siste opp, står det i rapporten «slått tilbake – røverne trakk seg unna», og de regnes ikke som «slått ut» (forsvar-visning.js tap()).
 - Banneret sier aldri «kan være framme når som helst» om røvere som alt har vært i leiren (`e.inne > 0` eller sist sett i leiren):
@@ -35,7 +36,7 @@ Rettet etter Jonas Bakke og Ingrid Sæther (docs/kritikk/2026-11-26-r3-*.md). Al
   `ForsvarSpill.fase()` sier sett, under 500 m eller kampen har begynt. «Leiren angripes» før noen har sett dem senker ikke farten. Etter den ene
   stoppen gjelder «Spol videre» resten av angrepet; et kort som venter, ny dag og «angrepet er over» stopper som før. Nøkkelen er angrepet +
   starttidspunkt + løpenummer (et nytt spill i samme side har bølge 1 igjen); startAngrep nullstiller det som er husket om samme id.
-- Automatisk nedbremsing gir bare lappen ved fartsknappene (eller en linje i angrepsbanneret når det står) – ikke også «⏭ Senket farten …».
+- Automatisk nedbremsing gir bare lappen ved fartsknappene – ikke også kortet «⏭ Senket farten …».
 - Lappen («⚠ Farten ble senket …») tas bort når angrepet den gjaldt er over, eller etter 20 spillminutter (`GRUNN_SPILL`).
 
 ## 5. Prognose og rapport (MIDDELS)
@@ -59,7 +60,8 @@ Rettet etter Jonas Bakke og Ingrid Sæther (docs/kritikk/2026-11-26-r3-*.md). Al
 test_spillet.js, test_forsvar.js, test_flyt.js, test_morgen.js, test_skjermlag.js, test_forsvar_kamp.js, test_forsvar_oppgjor.js,
 test_garnison.js, test_eskalering.js, test_trussel_lagring.js – grønne.
 Ny vakt `pipeline/fliser/vakter/lokke-r3-angrep.js` (PC ca. 5 s, mobil ca. 5,3 s, tåler to kjøringer etter hverandre). Feil lagt inn med vilje
-(Trussel.lei av, fasen alltid «sett») → vakta fant sju feil. Vaktene angrep, morgen, kamp og krig er kjørt på nytt: ok.
+(Trussel.lei av, fasen alltid «sett») → vakta fant sju feil. Vaktene angrep, morgen, kamp, krig, balanse, r17-ui, lokke-r2-angrep3d (3D av), regnskap, spillform og ui er kjørt på nytt: ok
+(balanse og r17-ui feilet på et mellomsteg og er rettet: lag som flyktet etter tap fjernes som før, og fartslappen vises alltid).
 
 ## Fellesfiler
 - `spill/trussel-lagring.js` (etter beskjed fra koordinatoren): bare `neste()`.

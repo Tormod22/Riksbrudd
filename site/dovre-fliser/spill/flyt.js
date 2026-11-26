@@ -252,10 +252,8 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     const t = tekst.charAt(0).toUpperCase() + tekst.slice(1);
     const sted = liste.find(h => Number.isFinite(h.x) && Number.isFinite(h.y));
     // (kritikerløkka r3, Jonas: meldingen om 1× kom to ganger – «⏭ Senket farten …» og «⚠ Farten ble senket …») – ved automatisk
-    // nedbremsing står bare lappen ved fartsknappene (visGrunn); kortet med «Vis»/«Spol videre» er for ⏭. Står angrepsbanneret, blir
-    // grunnen en linje der (med «Vis»), ikke en lapp i tillegg.
+    // nedbremsing står bare lappen ved fartsknappene (visGrunn); kortet med «Vis»/«Spol videre» er for ⏭
     if (hva === 'spol') visKort('Stoppet: ' + t + '.', true, sted ? { x: sted.x, y: sted.y } : null);
-    else if (alarmOppe() && rot.ForsvarSpill && ForsvarSpill.stoppLinje && ForsvarSpill.stoppLinje({ tekst: `Farten er satt ned til ${NAVN[mål]}: ${t}`, medSpol: false, sted: sted ? { x: sted.x, y: sted.y } : null })) { /* linja i banneret */ }
     else visGrunn(`Farten ble senket til ${NAVN[mål]}: ${tekst}. Du kan sette den opp igjen.`);
     // (runde 8) står grunnen alt øverst i loggen («Røverne er snart framme (ca. 9 min).»), skrives den ikke en gang til
     const nyLinje = !(typeof loggLinjer !== 'undefined' && liste.every(h => loggLinjer.slice(0, 3).some(l => l.toLowerCase().includes(h.tekst.toLowerCase()))));
