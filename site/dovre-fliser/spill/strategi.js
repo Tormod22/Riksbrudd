@@ -85,14 +85,16 @@
       let lag = null, km = Infinity; for (const s of egne || []) { const d = avst(s, b) / 1000; if (d < km) { km = d; lag = s; } }
       const forsvar = (fiender || []).filter(f => avst(f, b) <= 2500).reduce((a, f) => a + (f.styrke || 0), 0);
       const mann = mannFor(b.folk), minst = minstFor(b.folk), nære = (egne || []).filter(s => avst(s, b) <= R.marsj).sort((p, q) => avst(p, b) - avst(q, b));
-      const flere = []; let har = 0; for (const s of nære) { if (mann && har >= mann) break; flere.push(s); har += mennI(s); }
-      const nok = !minst || har >= minst, ettLag = !minst || (lag && mennI(lag) >= minst);
+      // (R2-løkka) det kjente forsvaret: lagene som sendes sammen, skal også være flere enn det (anbefalt), ikke bare nå inntakets krav
+      let kjent = 0; if (forsvarAv) { try { kjent = Math.max(0, Math.round(+forsvarAv(b) || 0)); } catch (x) { kjent = 0; } }
+      const anb = anbefalt(minst, kjent), mål = Math.max(mann, anb);
+      const flere = []; let har = 0; for (const s of nære) { if (mål && har >= mål) break; flere.push(s); har += mennI(s); }
+      const nok = !minst || har >= minst, ettLag = !anb || (lag && mennI(lag) >= anb);
       const poeng = Math.sqrt(1 + b.folk) / (4 + (km === Infinity ? 60 : km)) * (e ? .8 : 1.15) / (1 + forsvar / 8) * (nok ? 1 : .25) * (ettLag ? 1 : .7);
       const grunn = forsvar > 0 ? 'forsvart' : e ? 'fiendens, uten kjent forsvar' : 'nøytralt', tapt = nyligTapt(b, tap, R);
       // alle lagene innen marsjavstand (ikke bare dem som trengs for full fart) mot det kjente forsvaret
-      let kjent = 0; if (forsvarAv) { try { kjent = Math.max(0, Math.round(+forsvarAv(b) || 0)); } catch (x) { kjent = 0; } }
       const alle = Math.floor(nære.reduce((a, s) => a + mennI(s), 0)), sterk = kjent > 0 && kjent >= alle;
-      ut.push({ by: b, eier: e, km, lag, forsvar, kjent, sterk, anbefalt: anbefalt(minst, kjent), innen: km * 1000 <= R.marsj, poeng: poeng * (tapt ? R.tap.faktor : 1) * (sterk ? R.sterk : 1), grunn, mann, minst, har: Math.floor(har), nok, ettLag, tapt, flere: nok && !ettLag ? flere : lag ? [lag] : [] }); }
+      ut.push({ by: b, eier: e, km, lag, forsvar, kjent, sterk, anbefalt: anb, innen: km * 1000 <= R.marsj, poeng: poeng * (tapt ? R.tap.faktor : 1) * (sterk ? R.sterk : 1), grunn, mann, minst, har: Math.floor(har), nok, ettLag, tapt, flere: nok && !ettLag ? flere : lag ? [lag] : [] }); }
     // det dere har mann nok til, står først (en storby dere ikke kan ta ennå, kommer etter); steder der dere nylig tapte et lag, etter
     // de andre dere har mann nok til; steder der forsvaret er for sterkt for det dere har, regnes som steder dere ikke har mann nok til
     const rang = t => (t.nok && !t.sterk ? 2 : 0) + (t.tapt ? 0 : 1);
