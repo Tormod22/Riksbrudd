@@ -150,6 +150,12 @@ body.kort.tlfaktiv.tlfpanel #nestelapp{ display:none; }
       return orig.call(this, g, t, x, y, retning, prio); };
     ny.__klamp = true; E.tekst = ny; return true; }
   if (!klampNavn()) { const t = setInterval(() => { if (klampNavn()) clearInterval(t); }, 500); }
+  // (kritikerløkka r2, Jonas: «Nattskift · 2 lag, 1 kjøretøy» ble kuttet i venstre kant av krigskartet) – navnet ble flyttet til siden av
+  // merket (Etikett.kandidater), ut over kanten. Kantene av skjermen meldes nå inn som hindringer hver ramme, så et navn bare flyttes dit
+  // det står helt på skjermen (2D og 3D). KANT er luften (Claudes forslag).
+  function kanter() { const E = window.Etikett; if (!E || !E.hinder || !E.aktiv || !E.aktiv()) return; const W = typeof VW !== 'undefined' ? VW : innerWidth, H = typeof VH !== 'undefined' ? VH : innerHeight, U = 4000;
+    E.hinder(-U, -U, U + KANT, H + 2 * U); E.hinder(W - KANT, -U, U, H + 2 * U); E.hinder(-U, -U, W + 2 * U, U + KANT); E.hinder(-U, H - KANT, W + 2 * U, U); }
+  if (typeof KROKER !== 'undefined') { if (KROKER.tegn) KROKER.tegn.push(kanter); if (KROKER.tegn3d) KROKER.tegn3d.push(kanter); }
   // NESTE-LAPPEN OG VARSLENE (kritikerløkka r2, Jonas: «Neste-lappen dekker fortsatt varsellappene nede til venstre» – «Røverne drar ut om …»,
   // «Svartebørsen …», i 2D og i 3D-oversikten på telefon). Varslene (spill/narhud.js) står over nordpila og målestokken, lappen
   // (spill/selskap-visning.js) over bunnmenyen; i 3D er nordpila borte, og da gled varslene ned bak lappen. Nå skyves varslene opp over
