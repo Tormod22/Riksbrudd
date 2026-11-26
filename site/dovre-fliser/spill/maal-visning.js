@@ -46,6 +46,11 @@
     neste.onclick = () => { if (window.LeirSpill && LeirSpill.fane) LeirSpill.fane('mål'); };
     // (R18-A) den første kontrakten er den røde tråden: mens den pågår, står kontraktens neste steg øverst (målene kommer etterpå)
     const SS = window.SelskapSpill, l = SS && SS.trådAktiv && SS.trådAktiv() ? SS.lapp() : null;
+    // (løkka r1, kritiker I: for mange mål på en gang) med spill/neste.js står det samme her som i Neste-lappen: «Nå: …» (det viktigste
+    // av kontraktene, opplæringen, scenariet og målene); hele lista står øverst i fanen Mål
+    const NS = window.NesteSpill, nå = NS && NS.aktiv && NS.aktiv() ? NS.liste()[0] : null;
+    if (nå) { const t = el('div', { klasse: 'nestemaal fast', title: nå.hjelp || '' }, el('small', {}, `Nå (${nå.navn.toLowerCase()}): `), el('b', {}, nå.tekst));
+      t.onclick = () => { if (nå.l0 && SS && SS.følgLapp) SS.følgLapp(); else if (nå.trykk) nå.trykk(); }; hode.appendChild(t); } else
     if (l) { const t = el('div', { klasse: 'nestemaal fast', id: 'nestekontrakt', title: l.hjelp || '' }, el('small', {}, 'Første kontrakt – neste steg: '), el('b', {}, l.tekst));
       t.onclick = () => SS.følgLapp(); hode.appendChild(t); } else
     hode.appendChild(neste);

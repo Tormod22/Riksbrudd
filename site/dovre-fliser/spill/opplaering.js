@@ -114,7 +114,9 @@ body.kort #opplaering{ background:linear-gradient(180deg,#2a2114,#17120a); } bod
 /* RUNDE 12: liggende telefon – lagt sammen er ruta en smal brikke (nummer, tittel, +) nede til venstre over bunnmenyen; hele brikka kan trykkes */
 body.kort.tlfligg #opplaering.sammen:not(.liten){ right:auto; width:max-content; max-width:min(380px, calc(100vw - 130px)); cursor:pointer; pointer-events:auto; }
 body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-@media (prefers-reduced-motion:reduce){ #opplaering.på, #oppring{ animation:none; } }`;
+@media (prefers-reduced-motion:reduce){ #opplaering.på, #oppring{ animation:none; } }
+/* LØKKA R1: steget står i Neste-lappen (spill/neste.js) – ruta vises bare når den er foldet ut fra lappen */
+body.nesteen #opplaering.ilapp{ display:none; }`;
   document.head.appendChild(css);
   const boks = document.createElement('div'); boks.id = 'opplaering'; boks.setAttribute('role', 'status'); const ring = document.createElement('div'); ring.id = 'oppring'; document.body.append(boks, ring);
   // RUNDE 12: liggende telefon – trykk hvor som helst på den smale brikka åpner steget (som +)
@@ -174,7 +176,7 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
   // –/+ oppe til høyre: legg ruta sammen til én linje (huskes for alle spill)
   function fold() { const f = document.createElement('button'); f.id = 'oppfold'; f.textContent = foldetNå ? '+' : '–'; f.setAttribute('aria-label', foldetNå ? 'Vis hele opplæringen' : 'Legg sammen opplæringen'); f.title = f.getAttribute('aria-label');
     // lagt sammen av seg selv (Senere, lenge, angrep): + viser det igjen nå uten å endre valget ditt; ellers bytter + / – valget (huskes)
-    f.onclick = e => { e.stopPropagation(); const nå0 = Opplaering.neste(T);
+    f.onclick = e => { e.stopPropagation(); if (iLapp() && utvidet) { utvidet = null; sistSteg = null; kjør(); return; } const nå0 = Opplaering.neste(T);
       if (liggTlf() && !sammen) { åpnetLigg = foldetNå ? (nå0 ? nå0.id : 'slutt') : null; if (foldetNå) { utsatt = null; stegFra = { id: stegFra && stegFra.id, ms: performance.now(), tid: spilltid() }; oppeAngrep = angrepNå(); } sistSteg = null; kjør(); return; }
       if (foldetNå && !sammen) { utsatt = null; stegFra = { id: stegFra && stegFra.id, ms: performance.now(), tid: spilltid() }; oppeAngrep = angrepNå(); }
       else { sammen = !sammen; skriv('riksbrudd-opplaering-sammen', sammen ? '1' : null); if (!sammen) { utsatt = null; oppeAngrep = angrepNå(); if (stegFra) stegFra = { id: stegFra.id, ms: performance.now(), tid: spilltid() }; } }
@@ -194,7 +196,27 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
   // til du trykker + (da vises hele steget til det er gjort eller du trykker –). åpnetLigg = steget du har åpnet. Gjelder bare liggende telefon.
   let åpnetLigg = null;
   const liggTlf = () => document.body.classList.contains('kort') && window.innerWidth > window.innerHeight * 1.2;
-  function kjør() { kjørInn(); try { ved(); } catch (e) { /* neste runde */ } }
+  function kjør() { kjørInn(); try { ved(); } catch (e) { /* neste runde */ } try { iLappSteg(); } catch (e) { /* neste runde */ } }
+  // LØKKA R1 (26. nov, kritiker I: «to lapper til nederst – Mer forsvar før dag 4, Reparer byggene … la Neste-lappen være den eneste
+  // lappen»): med spill/neste.js (NesteSpill.aktiv – ikke i testene) står ikke ruta som en egen lapp. Steget står i Neste-lappen
+  // (lappInfo), og et trykk på lappen folder ut ruta med teksten og knappene (utvid); – eller et nytt trykk legger den inn igjen.
+  // Ringen som peker på knappen, står som før. utvidet = id-en til steget som er foldet ut ('gjort'/'slutt' for de to andre visningene).
+  let utvidet = null, info = null;
+  const iLapp = () => !!(rot.NesteSpill && NesteSpill.aktiv && NesteSpill.aktiv());
+  const visId = () => { if (gjortKø.length) return 'gjort'; const s = Opplaering.neste(T); return s ? s.id : 'slutt'; };
+  function iLappSteg() {
+    if (!iLapp()) { boks.classList.remove('ilapp'); info = null; utvidet = null; return; }
+    if (!boks.classList.contains('på')) { info = null; boks.classList.remove('ilapp'); return; }
+    const id = visId(), s = Opplaering.neste(T), g = gjortKø.length ? STEG.find(x => x.id === gjortKø[0]) : null;
+    if (utvidet && utvidet !== id) { utvidet = null; sistSteg = null; }
+    const kv = s && !g ? Opplaering.krav(s, sisteBilde, true) : '';
+    info = g ? { id, tekst: '✓ ' + g.tittel + ' – gjort', hjelp: 'Opplæringen går videre om et øyeblikk.' }
+      : !s ? { id, tekst: 'Opplæringen er ferdig – videre etter målene i Leir → Mål', hjelp: '' }
+      : { id, tekst: `Opplæring ${Opplaering.nr(T)}/${STEG.length}: ${s.tittel}` + (kv ? ' · ' + kv : ''), hjelp: s.tekst, utsatt: utsatt === s.id || Opplaering.lenge(stegFra, { ms: performance.now(), tid: spilltid() }) };
+    boks.classList.toggle('ilapp', !utvidet);
+    if (!utvidet) document.body.classList.remove('oppliten');
+  }
+  function utvid(på) { if (!iLapp()) return false; const id = visId(); utvidet = (på === undefined ? !utvidet : på) ? id : null; if (utvidet) { utsatt = null; stegFra = { id: stegFra && stegFra.id, ms: performance.now(), tid: spilltid() }; } sistSteg = null; kjør(); return !!utvidet; }
   function ved() { const b = document.body, W = window.innerWidth, ligg = b.classList.contains('kort') && W > window.innerHeight * 1.2, på = boks.classList.contains('på') && boks.classList.contains('liten');
     const meny = på && ligg ? MENYER.map($).find(e => synlig(e) && e.classList.contains('på')) || MENYER.map($).find(e => synlig(e)) : null;
     const nullstill = () => { if (!b.classList.contains('oppved')) return; for (const k of ['left', 'right', 'top', 'bottom', 'max-width', 'width']) boks.style.removeProperty(k); b.classList.remove('oppved'); };
@@ -249,7 +271,7 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
     const nå = { ms: performance.now(), tid: spilltid() }; if (!stegFra || stegFra.id !== s.id) { stegFra = { id: s.id, ms: nå.ms, tid: nå.tid }; if (utsatt !== s.id) utsatt = null; }
     if (åpnetLigg && åpnetLigg !== s.id) åpnetLigg = null;
     const lengeNå = Opplaering.lenge(stegFra, nå);
-    foldetNå = sammen || utsatt === s.id || lengeNå || (angrep && !oppeAngrep) || (liggTlf() && åpnetLigg !== s.id);
+    foldetNå = !(utvidet === s.id && iLapp()) && (sammen || utsatt === s.id || lengeNå || (angrep && !oppeAngrep) || (liggTlf() && åpnetLigg !== s.id));
     tegn(s); boks.classList.add('på'); liten(tlf && meny);
     const m = pekPå(s), inni = e => { const p = e && e.closest && e.closest('#leirmeny, #folkmeny, #tropppanel'); if (!p) return true; const a = e.getBoundingClientRect(), b = p.getBoundingClientRect(); return a.bottom > b.top + 4 && a.top < b.bottom - 4; };
     // (runde 8) ringen tegnes ikke rundt noe som er rullet ut av menyen (den sto over bunnmenyen)
@@ -263,7 +285,7 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el, knapp }) => { hode.appendChild(el('h3', { 'data-fane': 'mål' }, 'Opplæring'));
     const ferdig = Opplaering.ferdig(T), tekst = av ? 'Opplæringen er slått av.' : ferdig ? 'Opplæringen er ferdig.' : `Steg ${Opplaering.nr(T)} av ${STEG.length}: ${Opplaering.neste(T).tittel}.`;
     hode.appendChild(el('div', { klasse: 'rad' }, el('span', {}, tekst), knapp(av ? 'Slå på' : ferdig ? 'Ta den en gang til' : 'Slå av', () => { if (av) slå(true); else if (ferdig) { T = tom(); T.leir = leirNøkkel() || undefined; lagre(); sistSteg = null; kjør(); } else slå(false); }))); });
-  const API = { test: false, angrepTest: undefined, foldet: () => foldetNå, tilstand: () => T, av: () => av, slå, kjør, last, bilde, gjort: () => gjortKø.slice(), sammen: () => sammen, VIS_GJORT, vises: () => boks.classList.contains('på'), ring: () => ring.classList.contains('på'), hopp: () => { const id = Opplaering.hopp(T); lagre(); kjør(); return id; },
+  const API = { test: false, angrepTest: undefined, lappInfo: () => info, utvid, utvidet: () => utvidet, foldet: () => foldetNå, tilstand: () => T, av: () => av, slå, kjør, last, bilde, gjort: () => gjortKø.slice(), sammen: () => sammen, VIS_GJORT, vises: () => boks.classList.contains('på'), ring: () => ring.classList.contains('på'), hopp: () => { const id = Opplaering.hopp(T); lagre(); kjør(); return id; },
     nullstill: () => { T = tom(); T.leir = leirNøkkel() || undefined; skriv(NØKKEL, null); sistSteg = null; gjortKø = []; gjortTil = 0; kjør(); },
     // (runde 8, for vakten) gå rett til steget id: stegene foran regnes som gjort, uten «✓ Gjort»-køen; lagres ikke
     tilSteg: id => { const i = STEG.findIndex(q => q.id === id); if (i < 0) return false; T.gjort = STEG.slice(0, i).map(q => q.id); T.hoppet = []; T.slutt = false; gjortKø = []; gjortTil = 0; utsatt = null; stegFra = null; sistSteg = null; kjør(); return true; } };
