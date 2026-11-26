@@ -37,4 +37,11 @@ ok(m[0] === K.RUTINE && !K.meldinger({ x: 0, y: 0 }, { marsj: true, ute: 0 }, { 
   ok(/feltradioen når 8 km \(bygg radiomast\)/.test(K.utenKontakt('felt', 0, 12000)) && /oppgrader radiomasten til nivå 2/.test(K.utenKontakt('felt', N[0], 20000)) && /nivå 3/.test(K.utenKontakt('felt', N[1], 38000))
     && /for langt/.test(K.utenKontakt('felt', N[2], 50000)), 'uten kontakt, feltradio: rådet er å bygge masten eller oppgradere den («' + K.utenKontakt('felt', N[0], 20000) + '»)');
   ok(/terrenget står i veien/.test(K.utenKontakt('felt', N[0], 9000)), 'innen rekkevidde, men uten kontakt: terrenget («' + K.utenKontakt('felt', N[0], 9000) + '»)'); }
+// (R3-løkka) radiorådet: masten nevnes for lag med feltradio, aldri som råd til et lag med håndradio
+{ const h = K.radioRåd({ hånd: ['Vaktlaget'], felt: [], mast: 15000, feltNår: 15000, avstand: 12000, terreng: false, mål: 'Gjøvik' });
+  ok(/Vaktlaget har håndradio/.test(h) && /Gi laget feltradio \(1 mill\. kr/.test(h) && /så langt som leirens radio \(15 km\)/.test(h) && !/radiomast \(Leir|radiomast hjelper$|kraftigere radiomast/.test(h), 'håndradio: gi laget feltradio, ikke bygg mast («' + h + '»)');
+  const f = K.radioRåd({ hånd: [], felt: ['Speidertropp'], mast: 15000, feltNår: 6000, avstand: 12000, terreng: true });
+  ok(/kraftigere radiomast/.test(f) && !/håndradio/.test(f), 'feltradio og terrenget i veien: masten hjelper («' + f + '»)');
+  const b = K.radioRåd({ hånd: ['A'], felt: ['B'], mast: 0, feltNår: 8000, avstand: 12000 });
+  ok(/A har håndradio/.test(b) && /Feltradioen til B når bare 8 km/.test(b), 'blandet: hvert lag får sitt råd («' + b + '»)'); }
 process.exit(feil ? 1 : 0);

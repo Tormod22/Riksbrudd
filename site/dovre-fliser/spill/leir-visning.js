@@ -371,10 +371,12 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   }
   const avbryt = () => { plassering = null; banner.classList.remove('på'); skisse3d(); skitten = true; };
   const hellingTekst = p => typeof på3d !== 'undefined' && på3d ? 'I 2D-kartet ser du hvor det er flatt nok (grønt) og for bratt (rødt).'
-    : kam.m <= HellingVis.REGLER.maksM ? `Bakken for ${LB.BYGG[p.type].navn.toLowerCase()}: grønt = flatt, gult = skrått (grunnmur), rødt = for bratt.` : 'Zoom inn for å se i kartet hvor det er flatt nok.';
+    : kam.m <= HellingVis.REGLER.maksM ? `Bakken for ${LB.BYGG[p.type].navn.toLowerCase()}: grønt = flatt, gult = skrått (${LB.følgerBakken && LB.følgerBakken(p.type) ? 'følger bakken, ingen grunnmur' : 'grunnmur'}), rødt = for bratt.` : 'Zoom inn for å se i kartet hvor det er flatt nok.';
   // (21. nov) teksten om fargene følger zoomen: zoomer du inn etter at banneret kom, byttes «Zoom inn …» ut med forklaringen av fargene
   setInterval(() => { const h = banner.classList.contains('på') && banner.querySelector('.hellingtekst'), p = plassering; if (!h || !p || !p.type || !LB.BYGG[p.type]) return;
-    const t = hellingTekst(p); if (h.textContent !== t) h.textContent = t; }, 400);
+    const t = hellingTekst(p); if (h.textContent !== t) h.textContent = t;
+    // (R3-løkka, pakke «økonomi»: bålplassen ble tilbudt for 75 000 kr og bestilt for 72 000 – hogsten la inn tre mens banneret sto) prisen følger lageret
+    if (!p.mal && !p.flytt && p.mat && !p.feil && !banner.querySelector('#byggja') && !(window.pekerNede && pekerNede(banner)) && matPris(p.mat) !== p.matPris) prøv(); }, 400);
   function visBanner(tekst, kan, ekstra) {
     banner.innerHTML = ''; banner.classList.add('på'); banner.append(el('div', {}, tekst)); if (ekstra) banner.append(el('small', {}, ekstra));
     const p = plassering;
@@ -400,7 +402,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       // mangler materialer, kan «Bygg her» bare svare «Mangler materialer» (og kjøpeknappen ble borte): vis bare kjøpeknappen da
       if (kan && (kan !== 'mat' || (p && p.flytt))) banner.append(knapp(p && p.flytt ? 'Flytt hit' : 'Bygg her', bekreft));
       // (runde 8, kritikken: loggen sa «Brakke bestilt: 4 mill. kr» mens knappen sa «5 mill. kr i alt») – det materialene faktisk kostet, huskes til loggen
-      if (kan === 'mat') banner.append(knapp(`Kjøp materialene og bygg: ${LB.kroner((p.pris || 0) + p.matPris)} i alt`, function kjøpOgBygg() { { const q = måSpørre(p, true); if (q) return spør(p, q, kjøpOgBygg); } const før = OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0;
+      if (kan === 'mat') banner.append(knapp(`Kjøp materialene og bygg: ${LB.kroner((p.pris || 0) + p.matPris)} i alt`, function kjøpOgBygg() { if (matPris(p.mat) !== p.matPris) return prøv(); { const q = måSpørre(p, true); if (q) return spør(p, q, kjøpOgBygg); } const før = OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0;
         if (kjøpManglende(p.mat)) { p.kjøpt = Math.max(0, før - (OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0)); bekreft(); } }, { title: `Arbeid ${LB.kroner(p.pris || 0)} + materialer ${LB.kroner(p.matPris)}` }));
       if (kan && p && !p.flytt) banner.append(knapp('Legg i planen', () => { p.plan = true; bekreft(); }));
     }
@@ -495,7 +497,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       : `${p.pid ? 'Skisse: ' : p.plan ? 'Planlegg ' : ''}${B.navn}: ${LB.kroner(k.pris + (harMat ? 0 : p.matPris))}${harMat ? ` (${delNavn(p.type, true)})` : ` i alt (${delNavn(p.type)} ${LB.kroner(k.pris)} + materialer ${LB.kroner(p.matPris)})`}, byggelagene dine bygger det – ferdig om ${tidTekst(k.timer * 60 + rs.min)}` + (B.linje ? ` (${Math.round(LB.lengde(p.punkter, p.lukket))} m${p.lukket ? ', lukket ring' : ''})` : '') + (p.festet ? ' – festet i gjerdet' : '') + '.');
     const plass = !B.linje ? `${mål(p.type)}` + (p.avstand !== null && p.avstand !== undefined ? ` · ${String(Math.round(p.avstand * 10) / 10).replace('.', ',')} m til ${navnPå(p.nabo)}` : '') + (p.linjer && p.linjer.length ? ' · på linje' : '') : null;
     // (runde 8) skrå grunn: hvor høy grunnmuren blir (samme regel som hellingskartet: over halve grensa = gult)
-    const br = !B.linje && !p.feil && v.høyde && LB.bratt ? LB.bratt(b, v.høyde) : null, mur = br && br.n > 1 && window.Helling && br.d > Helling.REGLER.flatAndel * br.grense ? `skrå grunn: ${Math.round(br.d)} m grunnmur` : null;
+    const br = !B.linje && !p.feil && v.høyde && LB.bratt ? LB.bratt(b, v.høyde) : null, mur = br && br.n > 1 && window.Helling && br.d > Helling.REGLER.flatAndel * br.grense && !(LB.følgerBakken && LB.følgerBakken(p.type)) ? `skrå grunn: ${Math.round(br.d)} m grunnmur` : null;
     const ekstra = [!p.feil && rs.full > 0 ? LB.reiseTekst(rs) : null, plass, mur, !p.feil && !p.flytt && !p.plan && matTekst(p.mat) ? `Materialer: ${matTekst(p.mat)}` + (harMat ? ' (på lageret)' : ` – kjøpes for ${LB.kroner(p.matPris)} (eller hogg og riv selv)`) : null].filter(Boolean).join(' · ') || null;
     visBanner(tekst, p.feil ? false : (harMat || p.plan) ? true : 'mat', ekstra); skisse3d(); skitten = true;
   }

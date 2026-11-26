@@ -281,7 +281,9 @@
       const andre = felt.find(q => rekkeviddeTil(q.lag, a.by).r >= d);
       if (andre) kn2.append(knapp(`Send ${andre.navn} i stedet (feltradio)`, () => { advarsel = null; send(a.by, andre.lag, { likevel: true }); }, { 'data-advarsel': 'annet' }));
       else for (const q of felt.slice(0, 2)) { const R2 = rekkeviddeTil(q.lag, a.by); boks.append(el('small', { klasse: 'tillegg', 'data-naarikke': q.navn }, `${q.navn} (feltradio) når heller ikke fram (${R2.terreng ? 'terreng: ' + km(R2.r / 1000) : km(R2.r / 1000)}).`)); }
-      if (feltR.r < d) boks.append(el('small', { klasse: 'tillegg' }, feltR.terreng ? `Terrenget står i veien: selv feltradio rekker bare ${km(feltR.r / 1000)} hit. En høyere eller kraftigere radiomast (Leir → radiomast) hjelper, eller ta et tettsted på vegen – garnisonen der melder seg over radioen i tettstedet.` : `Selv feltradio når bare ${km(feltR.r / 1000)} nå – bygg ut radiomasten (Leir → radiomast) for å nå ${a.by.navn}.`)); }
+      // (R3-løkka, pakke «økonomi»: masten hjelper bare lag med feltradio – rådet lages i Kontrollrom.radioRåd)
+      if (feltR.r < d && KRR() && KRR().radioRåd && k.mast) boks.append(el('small', { klasse: 'tillegg', 'data-radioraad': '' }, KRR().radioRåd({ hånd: hånd.map(q => q.navn), felt: a.ute.filter(q => !hånd.includes(q)).map(q => q.navn), mast: k.mast(), feltNår: feltR.r, avstand: d, terreng: !!feltR.terreng, mål: a.by.navn })));
+      else if (feltR.r < d) boks.append(el('small', { klasse: 'tillegg' }, feltR.terreng ? `Terrenget står i veien: selv feltradio rekker bare ${km(feltR.r / 1000)} hit. En høyere eller kraftigere radiomast (Leir → radiomast) hjelper, eller ta et tettsted på vegen – garnisonen der melder seg over radioen i tettstedet.` : `Selv feltradio når bare ${km(feltR.r / 1000)} nå – bygg ut radiomasten (Leir → radiomast) for å nå ${a.by.navn}.`)); }
     kn2.append(knapp('Avbryt', () => { advarsel = null; vis(true); visFlyt(); }, { 'data-advarsel': 'avbryt' }));
     boks.append(kn2); return boks; }
 

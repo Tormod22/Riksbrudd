@@ -251,4 +251,9 @@ ok(L0.fraJSON('tull') === null, 'ødelagt lagring gir null');
   const port = Object.keys(L0.BYGG).find(t => L0.BYGG[t].port);
   ok(!port || L0.kanBygge(LV, { type: port, x: 0, y: 1000, ret: 0 }, kv) === null, 'porten kan stå i vegen (' + port + ')');
   ok(L0.kanBygge(LV, { type: 'brakke', x: 0, y: 1000, ret: 0 }, { klasse: () => 2 }) === null, 'uten vegdata: som før'); }
+// (R3-løkka) små og åpne ting følger bakken: ingen grunnmur under bålplassen
+{ const skrå = (x, y) => x * .6, bål = { type: 'bålplass', x: 0, y: 0, ret: 0 }, brakke = { type: 'brakke', x: 0, y: 0, ret: 0 };
+  const gB = L0.grunn(bål, skrå), gK = L0.grunn(brakke, skrå);
+  ok(gB.forskjell === 0 && gB.topp === 0 && gB.bakke && L0.følgerBakken("bålplass") && !L0.følgerBakken("brakke"), `bålplassen følger bakken (topp ${gB.topp}, ingen grunnmur)`);
+  ok(gK.forskjell > 3 && gK.topp > 0, `brakka i samme skråning står på grunnmur (${Math.round(gK.forskjell * 10) / 10} m)`); }
 process.exit(feil ? 1 : 0);

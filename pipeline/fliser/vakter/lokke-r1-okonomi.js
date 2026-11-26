@@ -38,7 +38,7 @@ module.exports = { navn: 'løkka r1: én lapp, like tall og tekster', kjør: asy
       const byer = RegionSpill.status ? [...RegionSpill.status().keys()] : [];
       if (byer.length) { const id = byer[0], a = RegionSpill.inntekt(id), b = RegionSpill.girFor(id); krev(a && b && Math.abs((a.penger || 0) - (b.penger || 0)) < 1, 'inntekten spriker for et tettsted du holder'); }
       const g = Region.inntekt(1000, 'bygd', { strøm: true, rute: 'truet' }), g0 = Region.grunn(1000, 'bygd');
-      krev(Math.abs(g.penger - g0.penger * .5) < 1, 'prognosen tar ikke med at handelsruta er truet'); krev(Region.krRund(39761) === 40000, 'kronene rundes ikke likt');
+      krev(Math.abs(g.penger - g0.penger * .5 * (1 - (Region.REGLER.forvaltning || 0))) < 1, 'prognosen tar ikke med at handelsruta er truet'); krev(Region.krRund(39761) === 40000, 'kronene rundes ikke likt');
       // 4) loggdemping: 22 like meldinger flyttes ikke øverst 22 ganger, og «lastet nødlageret» står én gang
       { const D = LoggDemp.lag(), linjer = []; let vist = 0; for (let i = 0; i < 22; i++) { const r = D.vurder('Leiesoldater 1: Under ild!', linjer, i); if (r) { vist++; if (r.fjern >= 0) linjer.splice(r.fjern, 1); linjer.unshift(r.tekst); } }
         krev(vist <= 5, 'loggen viser «Under ild» ' + vist + ' ganger av 22');

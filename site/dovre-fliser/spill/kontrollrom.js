@@ -41,6 +41,21 @@
       : nivå < 0 ? 'for langt for radioen' : mast ? `oppgrader radiomasten til nivå ${nivå + 1}` : `bygg radiomast${nivå > 0 ? ` og oppgrader den til nivå ${nivå + 1}` : ''}`;
     return `${km(avstand)} fra leiren – ${n}en når ${km(r)} (${råd})`;
   }
+  // (R3-løkka 26. nov, kritikken: «Advarselen for Vaktlaget (håndradio) sa ‹En høyere eller kraftigere radiomast hjelper›. Jeg bygde masten,
+  // men Vaktlaget hadde fortsatt ingen radiokontakt») Rådet når lag ikke når fram: masten forlenger bare FELTRADIOEN – et lag med håndradio
+  // når 3 km uansett. o = { hånd: [navn på lag med håndradio], felt: [navn på lag med feltradio], mast (leirens radio, som i rekkevidde()),
+  // feltNår (meter feltradioen rekker dit, med terrenget), avstand, terreng (true når terrenget står i veien), mål (stedsnavn) }. Gir tekst.
+  function radioRåd(o = {}) {
+    const H = o.hånd || [], F = o.felt || [], fr = rekkevidde('felt', o.mast), når = Number.isFinite(o.feltNår) ? o.feltNår : fr, ut = [];
+    const liste = n => (n.length > 1 ? n.slice(0, -1).join(', ') + ' og ' + n[n.length - 1] : n[0] || 'laget');
+    const pris = RADIO.felt.pris >= 1e6 ? `${String(RADIO.felt.pris / 1e6).replace('.', ',')} mill. kr` : `${Math.round(RADIO.felt.pris / 1000)} 000 kr`;
+    if (H.length) { let t = `${liste(H)} har håndradio (${km(RADIO.hånd.meter)}) – en radiomast hjelper ikke håndradio. Gi ${H.length > 1 ? 'lagene' : 'laget'} feltradio (${pris} per lag) – da når ${H.length > 1 ? 'de' : 'det'} så langt som leirens radio (${km(fr)}).`;
+      if (Number.isFinite(o.avstand) && når < o.avstand) t += o.terreng ? ` Hit rekker likevel selv feltradio bare ${km(når)}, fordi terrenget står i veien: ta et tettsted på vegen – garnisonen der melder seg over radioen.` : ` Hit (${km(o.avstand)}) trengs i tillegg en større radiomast (Leir → radiomast).`;
+      ut.push(t); }
+    if (F.length && Number.isFinite(o.avstand) && når < o.avstand) ut.push(o.terreng ? `Terrenget står i veien: ${H.length ? 'feltradioen til ' + liste(F) : 'selv feltradio'} rekker bare ${km(når)} hit. En høyere eller kraftigere radiomast (Leir → radiomast) hjelper lag med feltradio, eller ta et tettsted på vegen – garnisonen der melder seg over radioen i tettstedet.`
+      : `${H.length ? 'Feltradioen til ' + liste(F) : 'Selv feltradio'} når bare ${km(når)} nå – bygg ut radiomasten (Leir → radiomast) for å nå ${o.mål || 'fram'}.`);
+    return ut.join(' ');
+  }
   // Står terrenget i veien? profil: høyder (moh.) i like store steg fra A til B; hA og hB er antennenes høyde (moh.). Jordkrumningen
   // (med radiohorisont, k = 4/3) senker punktene midt på linjen.
   function blokkert(profil, hA, hB, avstand) {
@@ -90,7 +105,7 @@
     if (ut.length) sistMeldt.pos = t;
     return ut;
   }
-  const api = { RADIO, LEIR, REGLER, RUTINE, rekkevidde, leirRadio, km, forklaring, utenKontakt, blokkert, kontakt, modus, innsyn, batteri, retning, meldinger };
+  const api = { RADIO, LEIR, REGLER, RUTINE, rekkevidde, leirRadio, km, forklaring, utenKontakt, radioRåd, blokkert, kontakt, modus, innsyn, batteri, retning, meldinger };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Kontrollrom = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

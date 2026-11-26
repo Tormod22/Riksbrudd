@@ -503,13 +503,21 @@
     if (!MATERIALER[type] || !(mengde > 0)) return 0;
     const m = Math.max(0, Math.min(mengde, lagerplass(L) - (L.lager[type] || 0))); L.lager[type] = (L.lager[type] || 0) + m; return m;
   }
-  function grunn(b, høyde) { const z = [...hjørner(b), [b.x, b.y]].map(([x, y]) => høyde(x, y)).filter(v => v !== null && v !== undefined && v === v); if (!z.length) return { topp: 0, bunn: 0, forskjell: 0 }; const topp = Math.max(...z), bunn = Math.min(...z); return { topp, bunn, forskjell: topp - bunn }; }
+  // (R3-løkka 26. nov, kritikken: «Bålplassen fikk ‹skrå grunn: 4 m grunnmur›, og i 3D står bålet oppå en svart blokk høyere enn en mann»)
+  // Små og åpne ting har ingen grunnmur – de FØLGER BAKKEN: de står i bakkens høyde midt under seg (som før grunnmuren kom), og
+  // grunn() gir forskjell 0 for dem. Lista er Claudes forslag; et bygg kan også ha bakke: true i BYGG.
+  const FØLGER_BAKKEN = new Set(['bålplass', 'flaggstang', 'flaggrekke', 'skilt', 'sandsekkvoll', 'gassflasker', 'jerrykanner', 'skytebane', 'hinderløype', 'parkering', 'kameramast']);
+  const følgerBakken = type => !!(type && (FØLGER_BAKKEN.has(type) || (BYGG[type] && BYGG[type].bakke)));
+  function grunn(b, høyde) {
+    if (b && følgerBakken(b.type)) { let m = høyde(b.x, b.y); if (m === null || m === undefined || m !== m) { const z = hjørner(b).map(([x, y]) => høyde(x, y)).filter(v => v !== null && v !== undefined && v === v); m = z.length ? z.reduce((a, v) => a + v, 0) / z.length : 0; }
+      return { topp: m, bunn: m, forskjell: 0, bakke: true }; }
+    const z = [...hjørner(b), [b.x, b.y]].map(([x, y]) => høyde(x, y)).filter(v => v !== null && v !== undefined && v === v); if (!z.length) return { topp: 0, bunn: 0, forskjell: 0 }; const topp = Math.max(...z), bunn = Math.min(...z); return { topp, bunn, forskjell: topp - bunn }; }
   // (runde 12, kritiker F: materialene til brakka kostet 974 195 kr i banneret, 974 293 kr i byggemenyen og 975 000 kr i loggen) –
   // ÉN regel for det som må kjøpes: det som mangler på lageret, rundet OPP til 0,1 (slik kjøpMateriale selger), og prisen er summen av
   // det kjøpMateriale tar for hvert av dem. Prisen flytter seg da bare når lageret får (eller mister) en hel tidel.
   function manglerMat(L, mat) { const ut = {}; for (const [k, v] of Object.entries(mat || {})) { const m = Math.ceil(Math.max(0, (+v || 0) - ((L && L.lager && L.lager[k]) || 0)) * 10 - 1e-6) / 10; if (m > 0 && MATERIALER[k]) ut[k] = m; } return ut; }
   function manglerPris(L, mat) { return Object.entries(manglerMat(L, mat)).reduce((s, [k, m]) => s + Math.round(m * MATERIALER[k].pris), 0); }
-  const api = { vedlikehold, manglerMat, manglerPris, grunn, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, påKartveg, VEGBREDDE, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
+  const api = { vedlikehold, manglerMat, manglerPris, grunn, følgerBakken, FØLGER_BAKKEN, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, påKartveg, VEGBREDDE, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
     skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, selgMateriale, lagerplass,
     PRISDEL, harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, bratt, brattGrense, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

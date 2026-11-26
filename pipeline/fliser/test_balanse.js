@@ -138,6 +138,21 @@ ok(SB.kasse > SB.etterStart, `med én kontrakt i døgnet vokser kassa: ${mill(SB
   const v1 = Leir.vedlikehold(SA.L).perDøgn, v2 = Leir.vedlikehold(L2).perDøgn;
   ok(v2 > 1.8 * v1, `vedlikeholdet vokser med leiren: startleiren ${mill(v1)}, med fire bygg til ${mill(v2)} per døgn`); }
 
+// ---------- (R3-løkka 26. nov) tettstedene: verdt å holde, men ikke en pengemaskin ----------
+// Kritikken: «Gjøvik gir 1,5–1,7 mill. kr i skatt per døgn mot 0,39 mill. kr i faste utgifter, og kassa steg fra 11,8 til 15,5 mill. med ti
+// døde». Oppdraget: et tettsted skal være verdt å holde, men ikke gi mer enn ca. én middels kontrakt per døgn for en mellomstor by.
+// Middels kontrakt = «hent person» med startryktet 8 km unna (Claudes valg: midt mellom eskorte og rydd/hold). Mellomstor by = 20 000.
+{ const Region = require('../../site/dovre-fliser/spill/region.js'), r = Selskap.REGLER.rykte.start;
+  const middels = Selskap.betaling('hent', r, 'vanlig', KONTRAKT.meter, 0), garnison = 12 * FolkR.lønnPerDøgn(1, 1);
+  // lojaliteten en garnison holder den på (vanlig skatt + garnison), strøm og åpen rute
+  const st = { loj: Region.lojMål({ skatt: 'vanlig', strøm: true, garnison: true }), skatt: 'vanlig', strøm: true, rute: 'åpen' };
+  const full = Region.gir(20000, 'by', { ...st, holdt: 99 }).penger, første = Region.gir(20000, 'by', { ...st, holdt: 0 }).penger;
+  ok(full <= middels, `en by på 20 000 med full skatt gir ${mill(full)} per døgn til leiren – høyst én middels kontrakt (hent person ${mill(middels)})`);
+  ok(full >= 3 * garnison, `… og er verdt å holde: minst tre ganger lønna til en garnison på 12 (${mill(garnison)} per døgn)`);
+  ok(første <= .4 * middels, `det første døgnet gir byen bare ${mill(første)} (skatten kommer gradvis)`);
+  const smått = Region.gir(1500, 'bygd', { ...st, holdt: 99 }).penger;
+  ok(smått < garnison, `en bygd på 1500 gir ${mill(smått)} i skatt – mindre enn en full garnison koster (den holdes for varene og ruta)`); }
+
 // ---------- knappe ressurser (R18: «hver kule og hver førstehjelpspakke skal telle», med Silent Hill som stemning) ----------
 // Prisene på våpen og ammunisjon eies av spor C (utstyr.js) – her sjekkes bare mengdene du starter med og finner.
 { const Lut = require('../../site/dovre-fliser/spill/lut.js'), Int = require('../../site/dovre-fliser/spill/interior.js');
