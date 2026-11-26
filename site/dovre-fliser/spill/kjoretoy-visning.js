@@ -164,6 +164,10 @@
       const p = Kjoretoy.posisjon(k, i * Kjoretoy.TYPER[k.type].avstand), d = Math.hypot(p.x - X, p.y - Y) / kam.m;
       if (d < bd) { bd = d; best = k; }
     }
+    // (kritikerløkka r3, Ingrid: «merket "Speiderbil 1" reagerer ikke på trykk») trykk på navnet velger også kjøretøyet: navnene som ble
+    // tegnet i siste ramme (Etikett.tegnet(), skjermpunkter) – trykket gjøres om til skjermen (kartet er sentrert på kam)
+    if (!best && window.Etikett && Etikett.tegnet && typeof VW !== 'undefined') { const sx = VW / 2 + (X - kam.x) / kam.m, sy = VH / 2 - (Y - kam.y) / kam.m;
+      for (const L of Etikett.tegnet()) { const r = L.ramme; if (!r || sx < r[0] - 4 || sx > r[0] + r[2] + 4 || sy < r[1] - 4 || sy > r[1] + r[3] + 4) continue; const k = KJ.find(q => q.navn === L.t && ses(q)); if (k) { best = k; break; } } }
     if (best) { velg(best); return true; }
     if (valgtKj) { valgtKj = null; kjørModus = false; skitten = true; }
     return false;
