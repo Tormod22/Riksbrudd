@@ -16,4 +16,14 @@ ok(L.tekst({ tomt: true }) === 'Huset var tomt – noen har vært her før.' && 
   ok(L.tekst({ tomt: true, person: true }) === 'Huset var tømt for alt av verdi.', 'tomt hus med en overlevende får egen tekst'); }
 ok(L.funn('ukjent', 100, 4) && typeof L.funn('ukjent', 100, 4).mat === 'number', 'ukjent klasse regnes som bolig');
 ok(L.hvor({ mat: 17 }, { mat: 63 }) === 'Lagt i leiren: rasjonene i leirens matlager (63 i alt) – ikke i sekken din.' && L.hvor({ tomt: true }) === '', '(runde 12) funnet sier hvor det havnet');
+// (løkka r1, kritiker J) en setning med stemning per funn: fast per bygg, etter type og funn, 20–40 setninger
+{ let n = 0; for (const g of Object.values(L.STEMNING)) for (const a of Object.values(g)) n += a.length;
+  ok(n >= 20 && n <= 40, 'mellom 20 og 40 stemningssetninger (' + n + ')');
+  const f = L.funn('låve', 120, 11), a = L.stemning('låve', 11, f), b = L.stemning('låve', 11, f);
+  ok(a && a === b && /[.!?]$/.test(a), 'samme bygg gir samme setning: ' + a);
+  ok(L.STEMNING.bolig.tomt.includes(L.stemning('hus', 7, { tomt: true })), 'et tomt hus får en setning om at det er tomt');
+  ok(L.STEMNING.bolig.mat.includes(L.stemning('hus', 7, { mat: 4, penger: 20000 })), 'mat i en bolig gir en setning om mat');
+  ok(!!L.stemning('ukjent', 3, { diesel: 10 }), 'ukjent byggtype får likevel en setning');
+  const m = L.medStemning('Du fant 4 rasjoner og 20 000 kr. Lagt i leiren: pengene i kassa.', 'Kjøkkenbenken er ryddet.');
+  ok(m === 'Du fant 4 rasjoner og 20 000 kr. Kjøkkenbenken er ryddet. Lagt i leiren: pengene i kassa.' && /^Du fant/.test(m), 'setningen står etter den første, meldingen begynner fortsatt med «Du fant»'); }
 console.log(feil ? feil + ' FEIL' : 'alle letetestene ok'); process.exit(feil ? 1 : 0);

@@ -24,7 +24,7 @@ body.kort #inneknapper{ bottom:calc(226px + env(safe-area-inset-bottom,0px)); ga
 #funnpanel{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 90px); z-index:8; display:none; width:min(440px,92vw); max-height:calc(100vh - var(--topp,58px) - 190px); overflow:auto; box-sizing:border-box; padding:10px 14px 12px;
   background:rgba(24,20,13,.96); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:15px; }
 #funnpanel.på{ display:block; } #funnpanel h3{ margin:0 28px 6px 0; font-size:18px; color:#f0e2b0; } #funnpanel h4{ margin:8px 0 2px; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-dim,#a99); font-weight:600; }
-#funnpanel ul{ margin:0; padding:0 0 0 2px; list-style:none; } #funnpanel li{ padding:2px 0; } #funnpanel li b{ color:#f0e2b0; } #funnpanel li small{ color:var(--ink-dim,#a99); } #funnpanel p{ margin:4px 0; }
+#funnpanel p.stemning{ font-style:italic; color:#d9c99a; margin:0 0 6px; } #funnpanel ul{ margin:0; padding:0 0 0 2px; list-style:none; } #funnpanel li{ padding:2px 0; } #funnpanel li b{ color:#f0e2b0; } #funnpanel li small{ color:var(--ink-dim,#a99); } #funnpanel p{ margin:4px 0; }
 #funnpanel .kn{ display:flex; gap:8px; margin-top:10px; } #funnpanel .kn button{ flex:1; min-height:40px; background:#2a2318; border:1px solid var(--rule,#4a4030); color:var(--ink,#e7dcc3); font:inherit; font-size:15px; cursor:pointer; } #funnpanel .kn button.hoved{ border-color:#c9b26a; color:#f0e2b0; }
 #funnpanel .x{ position:absolute; right:4px; top:2px; background:none; border:0; color:inherit; font-size:22px; min-width:36px; min-height:36px; cursor:pointer; }
 #innehint{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 90px); z-index:7; display:none; width:min(460px,92vw); box-sizing:border-box; padding:8px 12px; background:rgba(24,20,13,.94); border:1px solid #8fa86a; color:var(--ink,#e7dcc3); font-size:14px; cursor:pointer; }
@@ -76,6 +76,7 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
     const navn = P.leir ? 'Bygget' : NAVN[P.bygg.kl] || 'Bygget', ny = [];
     const x = lagEl('button', '×', 'x'); x.type = 'button'; x.setAttribute('aria-label', 'Lukk'); x.onclick = lukkFunn; ny.push(x);
     ny.push(lagEl('h3', d.tittel || `${navn} er gjennomsøkt`));
+    if (d.stemning) ny.push(lagEl('p', d.stemning, 'stemning'));
     const leir = []; for (const m of ['mat', 'tre', 'betong', 'stål', 'diesel', 'penger']) { const n = d.fikk && d.fikk[m]; if (n > 0) { const li = lagEl('li'); li.append(lagEl('b', `${tall2(n)} ${NAVN2[m](n)}`), lagEl('small', ` → ${DIT[m]}`)); leir.push(li); } }
     if (d.tomt) ny.push(lagEl('p', d.tomt));
     if (leir.length) { ny.push(lagEl('h4', d.hentet ? 'Hentet til leiren' : 'Til leiren (ikke i sekken)')); const ul = lagEl('ul'); ul.append(...leir); ny.push(ul); }
@@ -132,8 +133,11 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
     const mistet = ['tre', 'betong', 'stål', 'diesel'].filter(m => f[m] > 0 && fikk[m] < f[m] - 1e-6);
     { const p = lett.get(P.bygg.i), rest = {}; for (const m of mistet) rest[m] = Math.round((f[m] - (fikk[m] || 0)) * 10) / 10; if (p && mistet.length) { p[2] = rest; lagre(); } }
     const noe = fikk.mat || fikk.tre || fikk.betong || fikk.stål || fikk.diesel || fikk.penger;
-    const res = { i2d: !!o.i2d, fikk, tomt: f.tomt ? Leting.tekst(f) : '', igjen: mistet.length ? igjen(f, fikk, mistet) + ' Det ligger der til dere har plass.' : '', sekken: [], person: '' };
-    const melding = f.tomt ? Leting.tekst(f) : (noe ? Leting.tekst(fikk) + hvorTekst(fikk) : 'Du fant noe, men det var ikke plass til det i leiren.') + (mistet.length ? ' ' + igjen(f, fikk, mistet) + ' Det ligger der til dere har plass.' : '');
+    // (løkka r1, kritiker J) en kort setning om stedet, fast per bygg (Leting.stemning), i panelet og etter første setning i meldingen
+    const st = Leting.stemning ? Leting.stemning(P.bygg.kl, P.bygg.i, f) : '';
+    const res = { i2d: !!o.i2d, fikk, stemning: st, tomt: f.tomt ? Leting.tekst(f) : '', igjen: mistet.length ? igjen(f, fikk, mistet) + ' Det ligger der til dere har plass.' : '', sekken: [], person: '' };
+    const melding0 = f.tomt ? Leting.tekst(f) : (noe ? Leting.tekst(fikk) + hvorTekst(fikk) : 'Du fant noe, men det var ikke plass til det i leiren.') + (mistet.length ? ' ' + igjen(f, fikk, mistet) + ' Det ligger der til dere har plass.' : '');
+    const melding = Leting.medStemning ? Leting.medStemning(melding0, st) : melding0;
     // resultatet står midt på skjermen i fem sekunder (loggen er liten på telefon), og i loggen
     // våpen, ammunisjon og førstehjelp går i sekken din (spill/utstyr.js)
     // (18. nov kveld) med beholderne (spill/lut-visning.js) ligger våpen, ammunisjon, mat og utstyr i skapene og skuffene i stedet –

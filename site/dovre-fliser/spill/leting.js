@@ -54,7 +54,61 @@
     if (f.mat > 0) d.push('rasjonene i leirens matlager' + (Number.isFinite(tot.mat) ? ` (${tall(Math.round(tot.mat))} i alt)` : ''));
     if (f.tre > 0 || f.betong > 0 || f.stål > 0) d.push('materialene på lageret'); if (f.diesel > 0) d.push('dieselen på tankene'); if (f.penger > 0) d.push('pengene i kassa');
     if (!d.length) return ''; return 'Lagt i leiren: ' + (d.length > 1 ? d.slice(0, -1).join(', ') + ' og ' + d[d.length - 1] : d[0]) + (f.mat > 0 ? ' – ikke i sekken din' : '') + '.'; }
-  const api = { KLASSER, OVERLEVENDE, funn, tid, tekst, hvor };
+  // (løkka r1, kritiker J: «Funnet i låven var tamt: 4 rasjoner, 20 000 kr») – én kort setning om stedet, fast per bygg (samme bygg gir
+  // samme setning), etter byggtypen og det som ble funnet. Nøkternt, i samme ånd som lappene i spill/spor.js. Setningene er Claudes forslag.
+  // STEMNING[gruppe][slag] = setninger; slag = det viktigste som ble funnet (mat, penger, diesel, tre, stål), «tomt» eller «alt» (reserve)
+  const STEMNING = {
+    bolig: {
+      mat: ['Kjøkkenbenken er ryddet, men i kjelleren står det sylteglass på rad.', 'Bak hermetikken i spiskammeret står en pappeske ingen har åpnet.',
+        'Kjøleskapet står åpent og tomt. Fryseboksen i boden var glemt.', 'Noen har stablet boksmat under trappa og lagt et teppe over.'],
+      penger: ['I en skoeske i klesskapet ligger en konvolutt merket «strømregninga».', 'Pengene lå i en kakeboks øverst i kjøkkenskapet.'],
+      diesel: ['I garasjen står en dunk diesel bak sommerdekkene.'],
+      tre: ['Vedkassa ved ovnen er full, og bak huset ligger det plank under en presenning.'],
+      alt: ['Sengene er oppredd. Det ser ut som de reiste i ro og mak.'],
+      tomt: ['Skuffene er trukket ut og tømt på gulvet.', 'Døra sto på gløtt. Det eneste som er igjen, er gardinene.',
+        'Kjøkkenskapene står åpne. Noen tok alt og hadde dårlig tid.'] },
+    hytte: {
+      mat: ['Hytteboka ligger på bordet. Siste innførsel er fra påsken, og i boden står det fortsatt boksmat.'],
+      tre: ['Vedskjulet er fullt. Noen har stablet det pent til en vinter som aldri kom.'],
+      alt: ['Det lukter kald røyk. På peishylla står et bilde av en familie på ski.'],
+      tomt: ['Vinduet ved døra er knust, og skapene står tomme.'] },
+    gård: {
+      mat: ['Under høyet ligger det sekker med poteter og korn.', 'I melkerommet står det kasser med mat ingen rakk å hente.'],
+      diesel: ['Traktoren står tom, men kannene i hjørnet er fulle.'],
+      stål: ['Bak verktøyveggen ligger stålprofiler og en rull med netting.'],
+      tre: ['Det ligger materialer på loftet, lagt til side til et tilbygg.'],
+      alt: ['Det knirker i takbjelkene. Redskapene henger fortsatt på plass.'],
+      tomt: ['Båsene er tomme, og døra slår i vinden. Dyra er borte.'] },
+    butikk: {
+      mat: ['Hyllene foran er tomme, men lageret bak var låst og urørt.', 'Kassaapparatet er brutt opp. I kjølerommet bak lå det kartonger ingen så.'],
+      tomt: ['Det er glasskår over hele gulvet. Hyllene er tømt helt inn til veggen.'] },
+    offentlig: {
+      mat: ['Kantina er tom, men nødlageret i kjelleren er urørt.', 'Tegningene henger fortsatt på veggen. Kjøkkenet hadde et lite lager.'],
+      penger: ['I personalrommet står en pengekasse med kontanter fra en innsamling.'],
+      alt: ['Oppslagstavla er full av beskjeder om stengte dager. Den siste er skrevet for hånd.'],
+      tomt: ['Pultene står i rader. Alt annet er båret ut.', 'Medisinskapene er brutt opp og tømt.'] },
+    industri: {
+      stål: ['Hallen er stille. Ved porten ligger stål og bordkledning på paller.'],
+      diesel: ['Truckene står parkert på rekke. Tanken bak hallen har fortsatt diesel i bunnen.'],
+      mat: ['Øverst i pallereolene står det fortsatt varer ingen nådde.'],
+      alt: ['Stemplingsuret viser fortsatt samme dag. Hjelmene henger på knaggene.'],
+      tomt: ['Portene er brutt opp, og hallen er ribbet for alt som kunne bæres.'] },
+    kirke: {
+      penger: ['Kollektbøssa står urørt ved døra. Ingen ville ta den.'],
+      alt: ['Det står lys på alteret, brent helt ned.'],
+      tomt: ['Benkene er tomme. Noen har sovet her og gått videre.'] },
+  };
+  const GRUPPE = { hus: 'bolig', leil: 'bolig', hytte: 'hytte', låve: 'gård', uthus: 'gård', butikk: 'butikk', kontor: 'offentlig', skole: 'offentlig', sykehus: 'offentlig', terminal: 'offentlig',
+    industri: 'industri', lager: 'industri', hangar: 'industri', kirke: 'kirke' };
+  // hva som teller mest i et funn (den første som er med)
+  const VIKTIGST = ['mat', 'penger', 'diesel', 'tre', 'stål', 'betong'];
+  function stemning(kl, i, f) {
+    const G = STEMNING[GRUPPE[kl] || 'bolig'] || STEMNING.bolig, slag = !f || f.tomt ? 'tomt' : (VIKTIGST.find(k => f[k] > 0 && G[k]) || 'alt');
+    const L = G[slag] || G.alt || STEMNING.bolig.alt; return L[Math.floor(hash(i, 777) * L.length)] || '';
+  }
+  // setter stemningen inn etter den første setningen i en melding («Du fant … . <stemning> Lagt i leiren …»)
+  const medStemning = (melding, st) => { if (!st) return melding; const m = String(melding), k = m.search(/[.!?](\s|$)/); return k < 0 ? m + ' ' + st : m.slice(0, k + 1) + ' ' + st + m.slice(k + 1); };
+  const api = { KLASSER, OVERLEVENDE, STEMNING, funn, tid, tekst, hvor, stemning, medStemning };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Leting = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
