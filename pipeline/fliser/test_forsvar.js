@@ -14,6 +14,21 @@ const lag = [{ x: 1050, y: 1004, navn: 'a' }, { x: 900, y: 1000, navn: 'b' }], F
 assert.strictEqual(F.fordel(lag, [S[0]]).length, 1, 'ikke flere lag enn plasser');
 assert.ok(Math.abs(F.ankomst(1300 * 1.3) - 21.67) < .01); assert.strictEqual(F.vaktStørrelse(1), 0); assert.strictEqual(F.vaktStørrelse(5), 5); assert.strictEqual(F.vaktStørrelse(30), 12);
 assert.strictEqual(F.rapport({ fiender: 2, fienderUte: 2, falne: 1, sårede: 2, bygg: 1 }), 'alle 2 røverlag er slått ut, vi har 1 falne og 2 sårede, 1 bygg ble skadet.'); assert.ok(/ingen tap/.test(F.rapport({ fiender: 1, fienderUte: 1, falne: 0, sårede: 0, bygg: 0 })));
+// (kritikerløkka r2) innfarten: ruta starter i vest, svinger rundt og kommer inn fra sør – kanten er sør
+{ const L = { x: 0, y: 0 }, sti = [[-3500, 0], [-2000, -1500], [-200, -2500], [0, -1500], [0, -700], [0, -100], [0, 0]];
+  const p = F.innfart(sti, L); assert.deepStrictEqual(p, { x: 0, y: -700 }, 'første punkt innenfor 800 m'); assert.strictEqual(F.retning(Math.atan2(p.y, p.x)), 'sør');
+  assert.strictEqual(F.retning(Math.atan2(sti[0][1], sti[0][0])), 'vest', 'startstedet var vest');
+  assert.deepStrictEqual(F.innfart(sti, L, 5), { x: 0, y: -100 }, 'fra s.seg'); assert.strictEqual(F.innfart(null, L), null); assert.strictEqual(F.innfart([[5000, 0], [4000, 0]], L).x, 4000, 'aldri innenfor: siste punkt');
+  // ukjent kant: ring rundt leiren
+  const ring = F.stillinger(L, NaN, 4); assert.strictEqual(ring.length, 4); assert.ok(ring.every(q => q.ring && Math.abs(Math.hypot(q.x, q.y) - F.R.radius) < 1e-6));
+  assert.ok(ring.some(q => q.y < -10) && ring.some(q => q.y > 10) && ring.some(q => q.x > 10) && ring.some(q => q.x < -10), 'alle kanter');
+  assert.ok(F.ulik(0, Math.PI) && !F.ulik(0, .3) && F.ulik(NaN, 1) && !F.ulik(NaN, NaN) && !F.ulik(3.1, -3.1), 'ulik');
+  // i ildkamp: ingen ankomsttid
+  assert.strictEqual(F.settTekst({ avstand: '750 m', strid: 'Vaktlaget', min: 17 }), '750 m unna · i ildkamp med Vaktlaget');
+  assert.ok(!/framme/.test(F.settTekst({ avstand: '750 m', strid: 'Vaktlaget', min: 17 })));
+  assert.strictEqual(F.settTekst({ avstand: '1,2 km', strid: '', min: 16.4, hvem: 'sett fra vakttårnet' }), '1,2 km unna · framme om ca. 16 min · sett fra vakttårnet');
+  assert.strictEqual(F.settTekst({ avstand: '2 km', venter: true }), '2 km unna · de venter (trolig på mørket)'); }
+console.log('ok   forsvar: innfart, ring, ulik kant og teksten i ildkamp');
 console.log('ok   forsvar: beredskap, stillinger, fordeling, ankomst, leirvakt og rapport');
 // (runde 4) mot røverne i leiren: hvert lag mot nærmeste røver, 50 m fra den på sin egen side
 { const M = F.motHerjere([{ x: 1300, y: 1000 }, { x: 1000, y: 700 }], [{ x: 1100, y: 1000 }, { x: 1000, y: 950 }], leir);

@@ -27,6 +27,8 @@
     for (const s of sekker.filter(s => vinkel(s) <= R.sektor && Math.hypot(s.x - leir.x, s.y - leir.y) <= 200).sort((a, b) => vinkel(a) - vinkel(b))) { if (ut.length >= n) break;
       // rett bak vollen sett fra fienden (10 m nærmere leiren)
       const a = Math.atan2(s.y - leir.y, s.x - leir.x), d = Math.max(0, Math.hypot(s.x - leir.x, s.y - leir.y) - 8); ut.push({ x: leir.x + Math.cos(a) * d, y: leir.y + Math.sin(a) * d, voll: true }); }
+    // (kritikerløkka r2, Ingrid: «i stilling mot nord» før noen visste hvor røverne kom fra) ukjent retning (v er ikke et tall): en ring rundt leiren
+    if (!Number.isFinite(v)) { const igjen0 = n - ut.length; for (let i = 0; i < igjen0; i++) { const a = Math.PI / 2 + i * 2 * Math.PI / igjen0; ut.push({ x: leir.x + Math.cos(a) * R.radius, y: leir.y + Math.sin(a) * R.radius, voll: false, ring: true }); } return ut; }
     const igjen = n - ut.length, steg = R.mellom / R.radius; for (let i = 0; i < igjen; i++) { const k = (i % 2 ? 1 : -1) * Math.ceil(i / 2) * steg + (igjen % 2 ? 0 : steg / 2), a = v + k; ut.push({ x: leir.x + Math.cos(a) * R.radius, y: leir.y + Math.sin(a) * R.radius, voll: false }); }
     return ut; }
   // Fordeler lagene på stillingene: plassene tas i rekkefølge (vollene står først), og hver plass får det nærmeste ledige laget.
@@ -185,7 +187,24 @@
     const vår = vårT * (o.tårn ? S.tårn : 1) * egneMenn * egneMenn, deres = deresT * Math.max(.05, vern) * fiMenn * fiMenn;
     const q = deres > 0 ? vår / deres : Infinity, ord = q >= S.god ? 'god' : q >= S.usikker ? 'usikker' : 'dårlig';
     return { q, ord, tekst: `Med dette forsvaret: ${ord} sjanse` + (ord === 'god' ? '' : ord === 'usikker' ? ' – flere lag hjemme, voller eller nedgravde lag hjelper' : ' – hold flere lag hjemme, grav dem ned og bygg voller') }; }
-  const api = { R, ETA, umulig, SJANSE, sjanse, retning, retningKort, klTekst, utTekst, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet, STATUS, glatt, spenn, sluttRapport,
+  // ---------- (kritikerløkka r2, 26. nov, Ingrid: «i stilling mot nord/nordvest» mens røverne kom fra sør; «varslet fra vest», «sett 1,6 km sør») ----------
+  // INNFARTEN: røverne starter 3–4 km unna, men ruta deres (vegene, dalene) kan svinge rundt og komme inn fra en helt annen kant. Retningen
+  // som betyr noe for forsvaret, er der ruta kommer innenfor INNFART.radius m av leiren. sti: [[x, y] …] (ruta, slik ordre() lager den),
+  // fra: indeksen ruta er kommet til (s.seg). Gir { x, y } (første punkt på ruta innenfor radius), eller null uten rute.
+  // Claudes forslag: 800 m (omtrent der vaktene og et vakttårn ser dem).
+  const INNFART = { radius: 800 };
+  function innfart(sti, leir, fra = 0, radius = INNFART.radius) {
+    if (!Array.isArray(sti) || sti.length < 2 || !leir) return null;
+    for (let i = Math.max(0, fra | 0); i < sti.length; i++) { const p = sti[i]; if (p && Math.hypot(p[0] - leir.x, p[1] - leir.y) <= radius) return { x: p[0], y: p[1] }; }
+    const p = sti[sti.length - 1]; return p ? { x: p[0], y: p[1] } : null; }
+  // to retninger (radianer) skiller seg med mer enn grense (radianer)
+  const ulik = (a, b, grense = Math.PI / 3) => { if (!Number.isFinite(a) || !Number.isFinite(b)) return Number.isFinite(a) !== Number.isFinite(b); let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return Math.abs(d) > grense; };
+  // (kritikerløkka r2, Jonas: «750 m unna · framme om ca. 17 min · i ildkamp», og tida økte 9 → 17 min) – teksten for angripere som er sett:
+  // i ildkamp står det ingen ankomsttid (de er alt her). o: { avstand (tekst), strid (navnet på laget de skyter med, eller ''), venter, min, hvem }
+  function settTekst(o) { const ild = o.strid ? ` · i ildkamp med ${o.strid}` : '';
+    if (o.strid) return `${o.avstand} unna${ild}`;
+    return `${o.avstand} unna · ` + (o.venter ? 'de venter (trolig på mørket)' : `framme om ca. ${Math.max(1, Math.round(o.min || 0))} min`) + (o.hvem ? ` · ${o.hvem}` : ''); }
+  const api = { INNFART, innfart, ulik, settTekst, R, ETA, umulig, SJANSE, sjanse, retning, retningKort, klTekst, utTekst, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet, STATUS, glatt, spenn, sluttRapport,
     monoton, SNUDD, harSnudd, klokke, når, nedtelling };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Forsvar = api;

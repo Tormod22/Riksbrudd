@@ -54,6 +54,10 @@
     // (19. nov) anslaget i varselet: tida ruta deres tar (venter høyst 3 s på ruta), ellers Trussel.anslag – så varselet og banneret sier det samme
     if (planer.length) await Promise.race([Promise.all(planer), new Promise(r => setTimeout(r, 3000))]);
     const ruter = nye.filter(e => e.sti && e.timerIgjen > 0).map(e => e.timerIgjen * 60), min = ruter.length ? Math.min(...ruter) : Trussel.anslag(s.meter, 0);
+    // (kritikerløkka r2, Ingrid: bølge 2 ble varslet «fra vest», men sett «1,6 km sør») – kanten i varselet er der ruta deres kommer inn mot
+    // leiren (Forsvar.innfart), ikke startstedet: det er der de dukker opp, og der «Forsvar leiren» setter lagene
+    { const FI = window.Forsvar, inn = FI && FI.innfart ? nye.map(e => FI.innfart(e.sti, leir)).filter(Boolean) : [];
+      if (inn.length) { const x = inn.reduce((a, p) => a + p.x, 0) / inn.length, y = inn.reduce((a, p) => a + p.y, 0) / inn.length; for (const e of nye) e.innfart = FI.innfart(e.sti, leir) || e.innfart; s = { ...s, retning: Spillet.retning(x - leir.x, y - leir.y) }; } }
     // (19. nov, etter kritikken) angrepsbanneret sier det samme (retning, avstand, anslag) – på telefon sto beskjeden tre steder samtidig,
     // så den går bare til loggen her, ikke i et eget varsel midt på skjermen
     // (kritikerløkka r1, Ingrid: tre ulike tider i banneret og loggen) – loggen sier det samme som banneret: når de trolig er framme (Forsvar.når)
