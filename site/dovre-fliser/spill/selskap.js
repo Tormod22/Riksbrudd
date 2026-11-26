@@ -116,7 +116,9 @@
   const ord = (k, v) => ORD[k][Math.min(4, Math.floor(mellom(v, 0, 100) / 20.0001))];
   // én setning om hva folk sier om selskapet
   function rykteTekst(r) {
-    const d = [ord('pålitelig', r.pålitelig), ord('hardhendt', r.hardhendt), ord('billig', r.billig)];
+    // (R1-løkka) «dere er holder ord» -> «dere er til å stole på»
+    const SETNING = { 'bryter ord': 'ikke til å stole på', 'holder ord': 'til å stole på' };
+    const d = [ord('pålitelig', r.pålitelig), ord('hardhendt', r.hardhendt), ord('billig', r.billig)].map(o => SETNING[o] || o);
     return `Folk sier dere er ${d[0]}, ${d[1]} og ${d[2]}.`;
   }
 
