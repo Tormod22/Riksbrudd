@@ -34,8 +34,15 @@ const RAMME = {
   // … og drifta skal likevel ta minst 2 % av startpengene på ti døgn (ellers betyr diesel og mat ingenting)
   driftTiDøgnMinst: .02 * START,
   // en vanlig kontrakt skal betale 1–15 døgn med drift (sommer): verdt å ta, men ikke så mye at én kontrakt løser alt
-  // (R1-løkka 26. nov) øvre grense 15 -> 20: modellen har ikke lønna med (ca. 0,1 mill. i døgnet), så drifta her er lavere enn i spillet
+  // (R1-løkka 26. nov) øvre grense 15 -> 20. (R2-løkka) Lønna og vedlikeholdet er nå med i drifta; en rolig eskorte gir ca. to døgn
   kontraktDøgn: [1, 20],
+  // (R2-løkka 26. nov, kritikken: «to ufarlige eskorter betalte 2,7 og 3,6 mill. kr for 20 min kjøring, kassa vokste til 20,8 mill. uten at
+  // jeg måtte prioritere») en rolig eskorte skal betale høyst så stor del av en farlig jobb (eskorte med bakhold, hold i 6 timer) …
+  roligMaks: .5,
+  // … og med én kontrakt i døgnet skal kassa vokse med høyst denne delen av startpengene på ti døgn (før: 56 %)
+  vekstTiDøgnMaks: .45,
+  // de faste utgiftene (lønn + vedlikehold) skal være minst halvparten av drifta om sommeren – det er dem leiren må prioritere etter
+  fasteAndel: .5,
   // med én kontrakt i døgnet skal kassa vokse, og et nytt grunnbygg skal koste 2–20 døgn med kontrakter (plan-r18.md, spor A:
   // «betaling gir neste steg i leiren») – kortere, og pengene betyr ingenting; lengre, og kontraktene føles meningsløse
   // (R1-løkka 26. nov, oppdraget: «øk kontraktenes betaling slik at én kontrakt dekker omtrent ett grunnbygg» – kritikken: kontraktene
@@ -62,9 +69,9 @@ function kjør(årstid, medKontrakter) {
   const dieselPris = () => Marked.pris(M, 'diesel', 3000), matPris = () => Marked.pris(M, 'mat', FolkR.R.matPris);
   const fyllDiesel = mål => { const l = Math.max(0, Math.min(mål, Leir.kapasitet ? Leir.kapasitet(L) : mål) - L.drivstoff); const kr = Math.round(l * dieselPris()); if (betal(kr)) L.drivstoff += l; return kr; };
   startKr += fyllDiesel(500);
-  const etterStart = kasse, dager = []; let drift = 0, inn = 0, rykte = { ...Selskap.REGLER.rykte.start };
+  const etterStart = kasse, dager = []; let drift = 0, faste = 0, inn = 0, rykte = { ...Selskap.REGLER.rykte.start };
   for (let d = 0; d < 10; d++) {
-    let dDrift = 0;
+    let dDrift = 0, dFaste = 0;
     for (let h = 0; h < 24; h++) {
       const sol = h >= 6 && h < 20 ? 1 : 0;
       Leir.steg(L, 60, sol);
@@ -73,17 +80,20 @@ function kjør(årstid, medKontrakter) {
       const B = FolkR.behov(F, L, { årstid });
       if (B.dager < 3) { const n = Math.ceil(B.spiser * 5); const kr = Math.round(n * matPris()); if (betal(kr)) { F.mat += n; dDrift += kr; } }
     }
+    // (R2-løkka 26. nov) lønna (brukerens 15 000 kr per person per døgn, med inflasjonen) og vedlikeholdet av byggene (Leir.vedlikehold)
+    // er med i modellen – før var drifta her bare diesel og mat, og kassa så sterkere ut enn i spillet
+    { const lønn = FolkR.lønnPerDøgn(F.personer.length, M.infl), vedl = Leir.vedlikehold(L).perDøgn; if (betal(lønn + vedl)) { dDrift += lønn + vedl; dFaste += lønn + vedl; } }
     let dInn = 0;
     if (medKontrakter) for (let k = 0; k < KONTRAKT.perDøgn; k++) {
       const typ = KONTRAKT.typer[(d + k) % KONTRAKT.typer.length];
       dInn += Selskap.betaling(typ, rykte, 'vanlig', KONTRAKT.meter, KONTRAKT.holdTimer);
       rykte.pålitelig = Math.min(100, rykte.pålitelig + Selskap.REGLER.levert.pålitelig);
     }
-    kasse += dInn; inn += dInn; drift += dDrift; Marked.steg(M, rng);
+    kasse += dInn; inn += dInn; drift += dDrift; faste += dFaste; Marked.steg(M, rng);
     dager.push({ d: d + 1, kasse, drift: dDrift, inn: dInn, folk: F.personer.length, moral: Math.round(F.moral) });
     if (VIS) console.log(`  ${årstid} ${medKontrakter ? 'B' : 'A'} døgn ${d + 1}: kassa ${mill(kasse)}, drift ${mill(dDrift)}, inn ${mill(dInn)}, folk ${F.personer.length}, moral ${Math.round(F.moral)}`);
   }
-  return { startKr, etterStart, kasse, drift, inn, dager, infl: M.infl, folk: F.personer.length };
+  return { startKr, etterStart, kasse, drift, faste, inn, dager, infl: M.infl, folk: F.personer.length, L };
 }
 
 // ---------- startleiren ----------
@@ -94,7 +104,7 @@ function kjør(årstid, medKontrakter) {
 // ---------- A: ti døgn uten inntekt ----------
 const SA = kjør('sommer', false), VA = kjør('vinter', false);
 const dS = SA.drift / 10, dV = VA.drift / 10;
-ok(dS >= RAMME.driftSommer[0] && dS <= RAMME.driftSommer[1], `drift om sommeren: ${mill(dS)} per døgn (diesel og mat; ramme ${mill(RAMME.driftSommer[0])}–${mill(RAMME.driftSommer[1])})`);
+ok(dS >= RAMME.driftSommer[0] && dS <= RAMME.driftSommer[1], `drift om sommeren: ${mill(dS)} per døgn (diesel, mat, lønn og vedlikehold; ramme ${mill(RAMME.driftSommer[0])}–${mill(RAMME.driftSommer[1])})`);
 ok(dV >= RAMME.driftVinter[0] && dV <= RAMME.driftVinter[1] && dV > dS, `drift om vinteren: ${mill(dV)} per døgn – mer enn om sommeren (fyring; ramme ${mill(RAMME.driftVinter[0])}–${mill(RAMME.driftVinter[1])})`);
 ok(SA.kasse > RAMME.minstEtterTiDøgn && VA.kasse > RAMME.minstEtterTiDøgn, `uten inntekt klarer leiren ti døgn: ${mill(SA.etterStart)} etter start -> ${mill(SA.kasse)} (sommer) / ${mill(VA.kasse)} (vinter)`);
 ok(SA.drift >= RAMME.driftTiDøgnMinst, `drifta på ti døgn (${mill(SA.drift)}) merkes: minst ${mill(RAMME.driftTiDøgnMinst)}`);
@@ -116,6 +126,17 @@ ok(SB.kasse > SB.etterStart, `med én kontrakt i døgnet vokser kassa: ${mill(SB
   for (let i = 0; i < 200; i++) { const o = Oppdrag.lag({ x: 0, y: 0 }, i + 2, rng, 0); if (o.type === 'hent') hentMaks = Math.max(hentMaks, o.gir.penger); if (o.type === 'post') postMaks = Math.max(postMaks, o.gir.penger / o.fiender); }
   ok(hentMaks <= en, `oppdraget «hent» betaler høyst ${mill(hentMaks)} – ikke mer enn en eskorte`);
   ok(postMaks <= 2.5 * en, `en røverpost betaler høyst ${mill(postMaks)} per røverlag (høyst 2,5 eskorter)`); }
+
+// ---------- R2-løkka: betaling etter risiko, drift som vokser med leiren ----------
+{ const r = Selskap.REGLER.rykte.start, rolig = Selskap.betaling('eskorte', r, 'vanlig', KONTRAKT.meter, 0), bakhold = Math.round(rolig * Selskap.REGLER.RISIKO.bakhold.faktor),
+    hold = Selskap.betaling('hold', r, 'vanlig', KONTRAKT.meter, 6);
+  ok(rolig <= RAMME.roligMaks * bakhold && rolig <= RAMME.roligMaks * hold, `en rolig eskorte (${mill(rolig)}) betaler høyst ${RAMME.roligMaks * 100} % av en eskorte med bakhold (${mill(bakhold)}) og av å holde et sted i 6 t (${mill(hold)})`);
+  const vekst = (SB.kasse - SB.etterStart) / START;
+  ok(vekst <= RAMME.vekstTiDøgnMaks, `med én kontrakt i døgnet vokser kassa med ${Math.round(vekst * 100)} % av startpengene på ti døgn (høyst ${RAMME.vekstTiDøgnMaks * 100} %) – pengene må prioriteres`);
+  ok(SA.faste / SA.drift >= RAMME.fasteAndel, `lønn og vedlikehold er ${Math.round(SA.faste / SA.drift * 100)} % av drifta om sommeren (${mill(SA.faste / 10)} av ${mill(SA.drift / 10)} per døgn)`);
+  const L2 = JSON.parse(JSON.stringify(SA.L)); for (const t of ['brakke', 'verksted', 'sykestue', 'vakttårn']) L2.bygg.push({ id: L2.neste++, type: t, igjen: 0, pris: Leir.kostnad(t).pris, nivå: 1, hp: 1 });
+  const v1 = Leir.vedlikehold(SA.L).perDøgn, v2 = Leir.vedlikehold(L2).perDøgn;
+  ok(v2 > 1.8 * v1, `vedlikeholdet vokser med leiren: startleiren ${mill(v1)}, med fire bygg til ${mill(v2)} per døgn`); }
 
 // ---------- knappe ressurser (R18: «hver kule og hver førstehjelpspakke skal telle», med Silent Hill som stemning) ----------
 // Prisene på våpen og ammunisjon eies av spor C (utstyr.js) – her sjekkes bare mengdene du starter med og finner.

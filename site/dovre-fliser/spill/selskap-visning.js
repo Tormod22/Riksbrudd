@@ -234,9 +234,15 @@
           logg(n.length ? `${n.length} nye kontrakter står i Selskapet. Velg en dere har det som trengs til, og send et lag som er sterkt nok.` : 'Nye kontrakter kommer i morgen tidlig. Bygg opp leiren og troppene imens.'); }
         else { logg(`Kontrakt brutt (${grunn}): ${k.tittel}. Bot ${kr(bot)}.`); rydd(k); } }
       else if (h.type === 'rivalFørst') { logg(`${navnFor(h.rival)} kom først: ${k.tittel}. Kontrakten er tapt, men uten bot.`); rydd(k); }
-      else if (h.type === 'angrep') { const b = bilFor(k); if (b) { const v = (window.Tilfeldig ? Tilfeldig.verden() : .5) * Math.PI * 2, a = nyttLag(`${navnFor(h.rival)}, angrepslag`, b.x + Math.cos(v) * 700, b.y + Math.sin(v) * 700, h.rival);
-        a.menn.length = 6; a.angrepslag = true; a.kontrakt = k.id; ENHETER.push(a); try { ordre(a, b.x, b.y, true); } catch (e) { /* uten ordre */ }
-        logg(`${navnFor(h.rival)} angriper ${k.bil}! Beskytt bilen.`); } }
+      else if (h.type === 'angrep') { const b = bilFor(k); if (b) {
+        // (R2-løkka 26. nov, kritikken: «bilen ble meldt angrepet, men kontrakten ble levert uten at noe skjedde – ordet eskorte betyr
+        // ingenting») bakholdet ligger FORAN bilen langs ruta (Claudes forslag: 60 % av det som er igjen, høyst 900 m, 90 m til siden), seks
+        // bevæpnede mann som venter i stilling og skyter på bilen når den kommer (enheter-visning.js: lag skyter på kjøretøy innen 600 m).
+        // Et lag om bord eller i forkant kan slå dem ut; uten eskorte kan bilen gå tapt – og da er kontrakten brutt.
+        const dx = k.sted.x - b.x, dy = k.sted.y - b.y, d = Math.hypot(dx, dy) || 1, fram = Math.min(900, d * .6), side = ((window.Tilfeldig ? Tilfeldig.verden() : .5) < .5 ? -1 : 1) * 90;
+        const ax = b.x + dx / d * fram - dy / d * side, ay = b.y + dy / d * fram + dx / d * side, a = nyttLag(`${navnFor(h.rival)}, bakhold`, ax, ay, h.rival);
+        a.menn.length = 6; a.angrepslag = true; a.kontrakt = k.id; a.ingenAI = true; try { if (window.Strid && Strid.bevæpn) Strid.bevæpn(a, 'lett'); } catch (e) { /* uten stridsregler */ } ENHETER.push(a);
+        logg(`${navnFor(h.rival)} ligger i bakhold ${meter(fram)} foran ${k.bil}! Send et lag for å rydde vegen, eller kjør en annen veg – uten eskorte kan bilen gå tapt.`); } }
       else if (h.type === 'rivalTok') { /* stille: står i oversikten */ }
     }
     if (ut.length) { lagre(); skitten = true; }

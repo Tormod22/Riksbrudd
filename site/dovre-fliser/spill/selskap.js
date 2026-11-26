@@ -42,7 +42,9 @@
     // eller en uke med lønn og drift (ca. 0,25 mill. i døgnet). Nivåfaktoren (opptil × 2,4) gjør de store kontraktene verdt 4–6 mill.
     // Startpengene (40 mill.) er brukerens valg og er ikke endret. test_balanse.js sjekker rammene.
     TYPER: {
-      eskorte: { navn: 'Eskorte', betaling: 1600000, timer: 10, hardhendt: 0, givere: ['firma', 'bygd', 'by'] },
+      // (R2-løkka 26. nov, kritikken: «to ufarlige eskorter betalte 2,7 og 3,6 mill. kr for 20 min kjøring») betaling etter risiko og
+      // innsats: grunnbetalingen gjelder en ROLIG rute (1 600 000 -> 700 000); en rute med meldt bakhold betaler × RISIKO.bakhold.faktor
+      eskorte: { navn: 'Eskorte', betaling: 700000, timer: 10, hardhendt: 0, givere: ['firma', 'bygd', 'by'] },
       hold: { navn: 'Hold', betaling: 2100000, holdTimer: [4, 10], ekstraTimer: 10, hardhendt: 1, givere: ['by', 'bygd', 'firma'] },
       rydd: { navn: 'Rydd vegsperre', betaling: 1900000, timer: 14, hardhendt: 4, givere: ['firma', 'by'] },
       hent: { navn: 'Hent person', betaling: 1250000, timer: 12, hardhendt: -2, givere: ['bygd', 'by', 'firma'] },
@@ -54,6 +56,11 @@
     // de andre selskapene: sjansen per døgn for at de tar et åpent tilbud; andelen tilbud med en konkurrent; når konkurrenten er
     // ferdig (andel av fristen); sjansen for at konkurrenten angriper eskorten din
     rival: { tarPerDag: .35, konkurrent: .35, førstEtter: .55, angrep: .45, angrepVed: .35 },
+    // RISIKO PÅ ESKORTENE (R2-løkka 26. nov, Claudes forslag): hvert eskortetilbud sier om ruta er rolig eller har meldt bakhold.
+    // bakhold.andel = andelen nye eskorter med meldt bakhold (alltid når et annet selskap holder et av stedene); faktor = på betalingen;
+    // angrep = sjansen for at bakholdet faktisk kommer når kontrakten er tatt. En rolig rute kan også overraske (rolig.angrep).
+    // Gamle lagrede eskorter uten risiko bruker rival.angrep som før.
+    RISIKO: { bakhold: { andel: .45, faktor: 2.6, angrep: .85 }, rolig: { angrep: .08 } },
     // ---------- R18-A: DEN RØDE TRÅDEN (23. nov, brukeren: «det må være én tydelig rød tråd») – alle tallene er Claudes forslag ----------
     // Den første kontrakten: hent forsyninger i et tettsted (eller en bru) nær leiren. Stedet: nærmest ønsket avstand innenfor min–maks;
     // finnes ingen, legger visningen et forsyningslager reserve meter fra leiren. Fristen er romslig (1× er sanntid).
@@ -173,7 +180,9 @@
       const giver = giverSlag === 'firma' ? { slag: 'firma', navn: velg(FIRMA, r) } : giverSlag === 'by' ? { slag: 'by', navn: `Kommunen i ${kommune.navn}`, by: kommune.id === undefined ? null : kommune.id }
         : { slag: 'bygd', navn: `Bygdelaget i ${sted.navn}`, by: sted.slag !== 'bru' && sted.id !== undefined ? sted.id : null };
       const meter = Math.hypot(sted.x - L.x, sted.y - L.y) + (fra ? Math.hypot(fra.x - sted.x, fra.y - sted.y) : 0);
-      const kr = betaling(typ, R, sd.pris, meter, hold, kNivå.faktor, o.infl);
+      // eskorte: rolig rute eller meldt bakhold (alltid bakhold når et annet selskap holder et av stedene)
+      const risiko = typ === 'eskorte' ? ([fra, sted].some(q => q && q.eier && q.eier !== id) || r() < REGLER.RISIKO.bakhold.andel ? 'bakhold' : 'rolig') : null;
+      const kr = betaling(typ, R, sd.pris, meter, hold, kNivå.faktor, o.infl) * (risiko === 'bakhold' ? REGLER.RISIKO.bakhold.faktor : 1);
       // vegsperra står litt utenfor stedet (visningen flytter den til nærmeste veg)
       const v = r() * Math.PI * 2, sperre = typ === 'rydd' ? { x: Math.round(sted.x + Math.cos(v) * 900), y: Math.round(sted.y + Math.sin(v) * 900) } : null;
       const andreSider = SIDER.filter(q => q !== id);
@@ -181,7 +190,7 @@
       const k = { id: 'k' + (++S.nr), type: typ, giver, status: 'tilbud', tilbudt: Math.round(nå), utløper: Math.round(nå + REGLER.tilbudVarer), timer, hold, betaling: kr,
         bot: avrund(kr * REGLER.bot), sted: { navn: sted.navn, x: Math.round(sted.x), y: Math.round(sted.y), slag: sted.slag || 'tettsted', id: sted.id === undefined ? null : sted.id },
         fra: fra ? { navn: fra.navn, x: Math.round(fra.x), y: Math.round(fra.y) } : null, last, person, sperre, konkurrent, side: null, for: id, nivå: kNivå.nr };
-      if (typ === 'eskorte') { const holdt = [fra, sted].filter(q => q && q.eier && q.eier !== id); if (holdt.length) k.fare = holdt.map(q => ({ navn: q.navn, eier: q.eier })); }
+      if (typ === 'eskorte') { const holdt = [fra, sted].filter(q => q && q.eier && q.eier !== id); if (holdt.length) k.fare = holdt.map(q => ({ navn: q.navn, eier: q.eier })); k.risiko = risiko; k.betaling = avrund(k.betaling); k.bot = avrund(k.betaling * REGLER.bot); }
       k.tittel = tittel(k); nye.push(k);
     }
     S.tilbud.push(...nye);
@@ -203,7 +212,9 @@
   function kravTekst(k) {
     const N = REGLER.nær;
     if (k.type === 'eskorte') return `${k.giver.navn} trenger ${k.last === 'tankbil' ? 'diesel' : 'varer'} fram. Bilen står ved ${k.fra.navn}. Kjør den til ${k.sted.navn} (innen ${N.fram} m) før fristen. Mister du bilen, er kontrakten brutt.`
-      + (k.fare && k.fare.length ? ` Obs: ${k.fare.map(q => q.navn).join(' og ')} holdes av et annet selskap – regn med kamp der.` : '');
+      + (k.fare && k.fare.length ? ` Obs: ${k.fare.map(q => q.navn).join(' og ')} holdes av et annet selskap – regn med kamp der.` : '')
+      + (k.risiko === 'bakhold' ? ' Det er meldt om bakhold langs ruta: send et lag med bilen eller i forkant. Derfor betaler jobben godt.'
+        : k.risiko === 'rolig' ? ' Ruta regnes som rolig, så betalingen er lav.' : '');
     if (k.type === 'hold') return `Ha et eget lag innen ${N.hold} m av ${k.sted.navn}, uten fiender der, i til sammen ${k.hold} timer før fristen.` + (vernetVet(k) ? ' Bygdevernet der vet om jobben og slipper dere inn.' : '');
     if (k.type === 'rydd') return `Et væpnet lag har sperret vegen ved ${k.sted.navn}. Slå det ut før fristen.`;
     if (k.type === 'forsyning') return k.sted.retning
@@ -254,7 +265,8 @@
     if (har) { const kt = kanTa(S.tilbud[i], har, sd); if (!kt.ok) return { ok: false, grunn: 'Dere mangler: ' + kt.mangler.join(' og ') + '.', mangler: kt.mangler }; }
     const k = S.tilbud.splice(i, 1)[0], r = rand || tilf;
     Object.assign(k, { status: 'aktiv', side: id, godtatt: Math.round(nå), frist: Math.round(nå + k.timer * 60), framdrift: 0, pris: sd.pris });
-    if (k.type === 'eskorte' && r() < REGLER.rival.angrep) k.angrep = SIDER.filter(q => q !== id)[Math.floor(r() * 2)];
+    const RS = REGLER.RISIKO, pA = k.risiko === 'bakhold' ? RS.bakhold.angrep : k.risiko === 'rolig' ? RS.rolig.angrep : REGLER.rival.angrep;
+    if (k.type === 'eskorte' && r() < pA) k.angrep = SIDER.filter(q => q !== id)[Math.floor(r() * 2)];
     sd.aktive.push(k); return { ok: true, k };
   }
   function avslutt(S, id, k, status) { const sd = side(S, id); sd.aktive = sd.aktive.filter(q => q.id !== k.id); k.status = status; sd.ferdige.unshift(k); sd.ferdige.length = Math.min(sd.ferdige.length, 12); }

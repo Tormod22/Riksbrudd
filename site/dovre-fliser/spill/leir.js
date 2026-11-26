@@ -71,6 +71,19 @@
     reise: { fri: 300, kmt: 10 },
     salg: .5 };   // det du får for overskudd av materialer, som andel av innkjøpsprisen (Claudes tall, 16. nov)   // utposter: meter fra leirens midte uten reisetid, og byggelagets fart i km/t (luftlinje)
 
+  // LØPENDE DRIFT (R2-løkka 26. nov, kritikken: «økonomien biter bare første dag – kassa vokste uten at jeg måtte prioritere»).
+  // Claudes forslag: hvert ferdig bygg koster REGLER.vedlikehold av det det kostet å bygge (grunnprisen + oppgraderingene, b.pris) per
+  // døgn i vedlikehold, reservedeler og slitasje. Startleiren (ca. 15 mill. kr i grunnpris) koster da ca. 150 000 kr i døgnet – omtrent
+  // som lønna til ti personer. Bygg som er slått av, koster halvparten. Trekkes hver spilltime i spill/penger-visning.js.
+  REGLER.vedlikehold = .01; REGLER.vedlikeholdAv = .5;
+  // { perDøgn (kr), antall (bygg), bygg: [{ id, navn, kr }] (dyrest først) }
+  function vedlikehold(L) {
+    const ut = { perDøgn: 0, antall: 0, bygg: [] }; if (!L || !Array.isArray(L.bygg)) return ut;
+    for (const b of L.bygg) { const B = BYGG[b.type]; if (!B || !(b.igjen <= 0)) continue; const grunn = Number.isFinite(b.pris) && b.pris > 0 ? b.pris : (B.pris || 0);
+      const kr = grunn * REGLER.vedlikehold * (b.av ? REGLER.vedlikeholdAv : 1); if (!(kr > 0)) continue; ut.perDøgn += kr; ut.antall++; ut.bygg.push({ id: b.id, navn: B.navn, kr: Math.round(kr) }); }
+    ut.perDøgn = Math.round(ut.perDøgn); ut.bygg.sort((a, b) => b.kr - a.kr); return ut;
+  }
+
   function ny() { return { versjon: 2, bygg: [], neste: 1, nesteJobb: 1, drivstoff: 0, lager: { tre: 0, betong: 0, stål: 0 }, plan: [], nestePlan: 1 }; }
   const lengde = (P, lukket) => { let l = 0; const Q = lukket ? [...P, P[0]] : P; for (let i = 1; i < Q.length; i++) l += Math.hypot(Q[i][0] - Q[i - 1][0], Q[i][1] - Q[i - 1][1]); return l; };
   // Pris, tid og materialer for et bygg (gjerdet etter lengden). bonus.bygg (ingeniør) gjør byggingen raskere.
@@ -496,7 +509,7 @@
   // det kjøpMateriale tar for hvert av dem. Prisen flytter seg da bare når lageret får (eller mister) en hel tidel.
   function manglerMat(L, mat) { const ut = {}; for (const [k, v] of Object.entries(mat || {})) { const m = Math.ceil(Math.max(0, (+v || 0) - ((L && L.lager && L.lager[k]) || 0)) * 10 - 1e-6) / 10; if (m > 0 && MATERIALER[k]) ut[k] = m; } return ut; }
   function manglerPris(L, mat) { return Object.entries(manglerMat(L, mat)).reduce((s, [k, m]) => s + Math.round(m * MATERIALER[k].pris), 0); }
-  const api = { manglerMat, manglerPris, grunn, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, påKartveg, VEGBREDDE, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
+  const api = { vedlikehold, manglerMat, manglerPris, grunn, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, påKartveg, VEGBREDDE, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
     skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, selgMateriale, lagerplass,
     PRISDEL, harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, bratt, brattGrense, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
