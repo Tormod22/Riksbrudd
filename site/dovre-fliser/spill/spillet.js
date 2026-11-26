@@ -176,12 +176,15 @@
     // RUNDE 14 (kritiker J: kortet sa ikke hva som var i kassa, og loggen hadde ingen sum): innholdet står i kortet (sum: kroner, Claudes forslag)
     { id: 'funn', sum: 8e5, tekst: n => `${n} fant en nedgravd kasse bak leiren. I den ligger kontanter, sølvtøy og sigaretter – verdt ca. 800 000 kr.`,
       valg: [{ t: 'Del med alle (folket får verdiene – bedre moral)', v: { moral: 6 }, logg: 'Verdiene for ca. 800 000 kr ble delt ut i leiren.' }, { t: 'Legg det i kassa (+800 000 kr)', v: { penger: 8e5, moral: -2 }, logg: '800 000 kr er lagt i kassa.' }] },
-    { id: 'tyveri', tekst: () => 'Noen har forsynt seg av matlageret i natt.', valg: [{ t: 'Sett ut nattevakt (folk blir slitne)', v: { moral: -2, mat: -2 } }, { t: 'La det passere', v: { mat: -6 } }], krav: f => f.mat > 8 },
+    // (kritikerløkka r1, Jonas: «… i natt» klokka 16:55) – tredje argument er klokka (timer 0–24) da kortet kom; teksten følger den
+    { id: 'tyveri', tekst: (n, m, kl) => `Noen har forsynt seg av matlageret ${Hendelser.når(kl)}.`, valg: [{ t: 'Sett ut nattevakt (folk blir slitne)', v: { moral: -2, mat: -2 } }, { t: 'La det passere', v: { mat: -6 } }], krav: f => f.mat > 8 },
     { id: 'fest', tekst: () => 'Folk vil feire at leiren står. Det koster litt mat.', valg: [{ t: 'Ja, la dem feire', v: { mat: -8, moral: 10 } }, { t: 'Ikke nå', v: { moral: -3 } }], krav: f => f.mat > 12 },
     { id: 'handel', tekst: () => 'En omreisende handelsmann tilbyr 20 rasjoner til god pris.', valg: [{ t: 'Kjøp (30 000 kr)', v: { penger: -3e4, mat: 20 } }, { t: 'Nei takk', v: {} }] },
   ];
   const Hendelser = {
     LISTE: HENDELSER,
+    // når noe skjedde, sett fra klokka kortet kom: «i natt» (kl. 22–11), «i løpet av dagen» (11–18), «i kveld» (18–22); uten klokke «i natt»
+    når: kl => (!Number.isFinite(kl) ? 'i natt' : kl >= 11 && kl < 18 ? 'i løpet av dagen' : kl >= 18 && kl < 22 ? 'i kveld' : 'i natt'),
     // velg en hendelse som passer nå (f: { folk, mat, penger }), aldri den samme to ganger på rad
     velg(rng, f, sist) { const mulige = HENDELSER.filter(h => h.id !== sist && (!h.krav || h.krav(f))); return mulige[Math.floor(rng() * mulige.length)] || null; },
     // kan valget tas? (penger og mat må finnes)

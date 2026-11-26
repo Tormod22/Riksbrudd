@@ -82,7 +82,17 @@
   // (runde 14, kritiker J: «Mosevakts lastebil er under ild fra fienden» om en kamp mellom motstanderne) – andre siders kamper:
   // «Mosevakt og Ravnsund sloss ved Vikeså.» (aldri «fienden»). a, b = navnene på sidene, sted = stedTekst
   const andreTekst = (a, b, sted) => `${a} og ${b} sloss${sted ? ' ' + sted : ''}.`;
-  const api = { REGLER, BØLGE, bølgeLag, bølgeMenn, andreTekst, bølgeMenn, steg, stedTekst, fiendeTekst, tekst, årsak, medÅrsak, sluttTekst, km };
+  // ---------- (kritikerløkka r1, Ingrid: «Leiesoldater 1: Under ild! (×17)» og «Radiomasten fanget opp samband … (×5)») LOGGDEMPING ----------
+  // Meldinger som gjentar seg under en kamp, står bare når noe er nytt: «Under ild!» fra samme lag høyst én gang per DEMP.underIld spillminutter,
+  // og den samme avlyttingen (samme lag og samme sted – tallene regnes ikke med) høyst én gang per DEMP.samband. Claudes forslag.
+  const DEMP = { underIld: 60, samband: 180 };
+  // demp(t): { n (nøkkelen), v (vinduet i spillminutter) } for meldinger som dempes, ellers null
+  function demp(t) { t = String(t || ''); let m = /^(?:📻 )?(.+?): Under ild!$/.exec(t); if (m) return { n: 'ild|' + m[1], v: DEMP.underIld };
+    if (/^Radiomasten fanget opp samband: /.test(t)) return { n: 'samband|' + t.replace(/[\d\s.,]*\d/g, '#'), v: DEMP.samband }; return null; }
+  // holdTilbake(sist, t, nå): sist = Map nøkkel -> spillminutt. true = meldingen holdes tilbake (og sist oppdateres når den slipper gjennom)
+  function holdTilbake(sist, t, nå) { const k = demp(t); if (!k) return false; const s0 = sist.get(k.n); if (s0 !== undefined && nå >= s0 && nå - s0 < k.v) return true;
+    sist.set(k.n, nå); if (sist.size > 300) sist.delete(sist.keys().next().value); return false; }
+  const api = { REGLER, BØLGE, DEMP, demp, holdTilbake, bølgeLag, bølgeMenn, andreTekst, bølgeMenn, steg, stedTekst, fiendeTekst, tekst, årsak, medÅrsak, sluttTekst, km };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.KampVarsel = api;
   if (typeof document === 'undefined' || typeof KROKER === 'undefined') return;
@@ -222,6 +232,11 @@
   // navnet på en side i loggen: fraksjonen, «røverne» for røverlag
   const sideNavn = (side, lag) => (lag && lag.raid ? 'røverne' : rot.Fraksjoner && Fraksjoner.FRAKSJONER[side] ? Fraksjoner.FRAKSJONER[side].navn : 'en annen gruppe');
   const andre = (a, b, x, y) => { const t = KV.andreTekst(sideNavn(a.side, a), sideNavn(b.side, b), KV.stedTekst(stedFor(x, y))); return t.charAt(0).toUpperCase() + t.slice(1); };
+  // loggdempingen kobles på LoggDemp.vurder (spill/loggdemp.js) når den finnes – også om den lastes etter denne fila
+  const dempSist = new Map();
+  function kobleDemp() { const LD = rot.LoggDemp; if (!LD || typeof LD.vurder !== 'function' || LD.vurder.angrepDemp) return;
+    const før = LD.vurder, ny = function (t, linjer, nå) { if (holdTilbake(dempSist, t, +nå || 0)) return null; return før.apply(this, arguments); }; ny.angrepDemp = true; LD.vurder = ny; }
+  kobleDemp(); rot.addEventListener('riksbrudd-spill', () => setTimeout(kobleDemp, 0)); KROKER.sim.push(kobleDemp);
   rot.KampSpill = { test: false, andre, sideNavn, kamper: () => [...kamper].map(([s, K]) => ({ lag: s.navn, ...K })), ferdige: () => ferdige.slice(), sjekk, stedFor, fiendeFor,
     nullstill: () => { kamper.clear(); ferdige.length = 0; } };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -19,6 +19,7 @@
     // gått to spilltimer (autoHvile, i spillminutter). Spolingen (⏭) stopper fortsatt på 1× som før. Claudes forslag.
     autoHvile: { bygg: 120, kort: 60 },
     spolFart: 'sp4',     // farten det spoles i (600×)
+    kampFart: 'sp2',     // (kritikerløkka r1) farten ⏭ spoler i mens kampen om leiren pågår (10×)
     visSek: 9,           // sekunder kortet «Stoppet: …» står
     // RUNDE 8 (20. nov, kritikeren på telefon: «⏭ stopper omtrent hver spilltime på småting – 22 trykk for ett døgn»): ⏭ stopper bare for det
     // som krever spilleren. En fiende i sikte stopper bare når den er nærmere enn fiendeNær meter fra leiren eller et eget lag, og den samme
@@ -205,6 +206,8 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   function visSted(p) { if (!p) return; const gå = () => { kam.x = p.x; kam.y = p.y; kam.m = Math.min(Math.max(kam.m, 1.5), 6); skitten = true; };
     if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function' && !(typeof R3 !== 'undefined' && R3 && R3.fot)) { Promise.resolve(slå3d(false)).then(gå, gå); } else gå(); }
   function visKort(tekst, medSpol, sted) {
+    // (kritikerløkka r1, Jonas: «tre bannere om samme angrep samtidig») – står angrepsbanneret, blir stoppbeskjeden en linje i banneret
+    if (alarmOppe() && (!navigator.webdriver || api2.test === true) && rot.ForsvarSpill && ForsvarSpill.stoppLinje && ForsvarSpill.stoppLinje({ tekst, medSpol, sted })) { kort.classList.remove('på'); return; }
     kort.replaceChildren(el('span', {}, '⏭ ', el('b', {}, tekst)));
     if (sted) { const v = el('button', { id: 'flytvis' }, 'Vis'); v.onclick = () => visSted(sted); kort.append(v); }
     if (medSpol) { const b = el('button', {}, 'Spol videre'); b.onclick = () => spol(); kort.append(b); }
@@ -255,7 +258,12 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     // RUNDE 8 (PC-kritikeren: et hendelseskort sto åpent fra dag 3 16:52 til dag 4 05:06 mens ⏭ spolte): et kort som venter på svar,
     // stopper spolingen – også når det alt står oppe når du trykker ⏭
     if (kortOppe() && (!navigator.webdriver || api2.test === true)) { visKort('Svar på kortet først – spillet står på pause til du svarer.', false); return false; }
-    kort.classList.remove('på'); før = bilde(); spoler = true; merk(); settFart(R.spolFart); return true;
+    // (kritikerløkka r1, Jonas: «⏭ ga ingen tilbakemelding da morgenmøtet holdt spillet – klokka sto på 06:00») – morgenmøtet venter på svar
+    { const m = document.getElementById('morgenkort'); if (m && m.classList.contains('på') && m.getClientRects().length && (!navigator.webdriver || api2.test === true)) { visKort('Morgenmøtet venter på svaret ditt – spillet står til du har valgt.', false); m.classList.remove('kortblink'); void m.offsetWidth; m.classList.add('kortblink'); return false; } }
+    kort.classList.remove('på'); før = bilde(); spoler = true; merk();
+    // (kritikerløkka r1, Jonas: «angrepet ble avgjort uten at jeg så det») – mens kampen om leiren pågår, spoler ⏭ bare i 10× (R.kampFart)
+    if (rot.ForsvarSpill && ForsvarSpill.kampPågår && ForsvarSpill.kampPågår() && (!navigator.webdriver || api2.test === true)) { settFart(R.kampFart); visKort('Kampen om leiren pågår – spoler i 10× så du ser den. ⏭ stopper når angrepet er over.', false); return true; }
+    settFart(R.spolFart); return true;
   }
   if (spolKnapp) spolKnapp.onclick = () => spol();
   // en annen fartsknapp avbryter spolingen
@@ -496,7 +504,7 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   (rot.KOMMANDO_TILLEGG = rot.KOMMANDO_TILLEGG || []).push({ k: 'allelag', navn: 'Velg lag', tittel: 'Velg alle lagene dine som er i bildet (eller Shift + dra en ramme)', fins: () => egne().length > 1 && !(typeof R3 !== 'undefined' && R3 && R3.fot), på: () => gruppe.length > 1, trykk: () => { if (gruppe.length > 1) velg([]); else if (i3d()) velgIBildet3d(); else velgIBildet(); },
     ikon: '<circle cx="7" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><circle cx="12" cy="16" r="3"/><rect x="2" y="2" width="20" height="20" fill="none" stroke-dasharray="3 2"/>' });
 
-  const api2 = { test: false, spol, spoler: () => spoler, bilde, sistStopp: () => sistStopp, valg: () => valg, settAuto: v => { valg.auto = !!v; lagre(); }, velg, velgIBildet, gruppe: () => gruppe.slice(), giOrdre, forhånd, forhTekst,
+  const api2 = { test: false, spol, visSted, spoler: () => spoler, bilde, sistStopp: () => sistStopp, valg: () => valg, settAuto: v => { valg.auto = !!v; lagre(); }, velg, velgIBildet, gruppe: () => gruppe.slice(), giOrdre, forhånd, forhTekst,
     utkast: () => utkast, utfør, iRamme3d, velgIBildet3d, skjerm3d: (X, Y) => (i3d() ? skjerm3d(X, Y) : null), peker3: () => peker3, køModus: v => { if (v !== undefined) { køModus = !!v; modus = køModus ? 'marsj' : null; } return køModus; }, trykk,
     stopp, fartGrunn: () => (grunnLapp.classList.contains('på') ? grunnLapp.textContent : ''), skjulFartGrunn: () => skjulGrunn() };
   rot.FlytSpill = api2;

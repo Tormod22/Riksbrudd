@@ -104,7 +104,10 @@
     const T = { slått: `${hva} er slått tilbake`, unna: rø ? `${hva} er slått tilbake – røverne trakk seg unna` : `${hva} er slått tilbake`, herjet: rø ? `${hva}: røverne herjet i leiren og dro med byttet` : `${hva}: de herjet i leiren`,
       slapp: `${hva}: sabotørene slapp unna`, oppgitt: `${hva} er slått tilbake – ${u.hvem} ga opp`, ferdig: `${u.hvem} trakk seg bort fra leiren etter angrepet` };
     const god = u.utfall === 'slått' || u.utfall === 'unna' || u.utfall === 'oppgitt', d = [];
+    // (kritikerløkka r1, Jonas: «ingen oppsummering av hvem som kom, falt eller vant») hvem som kom, og tapene hos dem
+    if (u.kom) d.push(`Det kom ${u.kom}.`);
     if (u.tok) d.push(`Dere tok ${u.tok}.`); if (u.tapte) d.push(`De tok ${u.tapte}.`);
+    if (u.deresFalne || u.deresSåret) d.push(`Hos dem: ${[u.deresFalne ? u.deresFalne + ' falt' : '', u.deresSåret ? u.deresSåret + ' såret' : ''].filter(Boolean).join(' og ')}.`);
     if (u.fiender > 0) d.push(rø ? (u.fienderUte >= u.fiender ? (u.fiender === 1 ? 'Røverlaget ble slått ut.' : `Alle ${u.fiender} røverlag ble slått ut.`) : u.fienderUte > 0 ? `${u.fienderUte} av ${u.fiender} røverlag ble slått ut.` : '')
       : (u.fienderUte > 0 ? `${u.fienderUte} av ${u.fiender} lag fra ${u.hvem} ble slått ut.` : ''));
     // (runde 12, kritiker E: «1 såret. 1 bygg skadet» uten navn) – med navnene når de finnes: u.falneNavn, u.sårNavn, u.skadetNavn, u.ødelagtNavn
@@ -158,7 +161,31 @@
   const klTekst = t => { const k = klokke(t), h = Math.floor(k.time), m = Math.floor((k.time - h) * 60 + 1e-6); return `kl. ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`; };
   // brikka før bølgen drar ut: «Røverne drar ut om 3 t 20 min» – «under 1 min» står aldri her (de er ikke på vei ennå): da «drar ut nå»
   const utTekst = min => (!Number.isFinite(min) || min < 1 ? 'Røverne drar ut nå' : `Røverne drar ut om ${nedtelling(min)}`);
-  const api = { R, retning, retningKort, klTekst, utTekst, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet, STATUS, glatt, spenn, sluttRapport,
+  // ---------- (kritikerløkka r1, 26. nov, Ingrid: «framme om ca. 1 min» mens røverne var 1,8 km unna) ANSLAG SOM ER UMULIG ----------
+  // Nedtellingen kan bare minke (monoton), men står røverne lenger unna enn de kan rekke på den tida som er igjen – selv i full fart –,
+  // er nedtellingen feil og byttes med det nye anslaget. Claudes forslag: ETA.maksFart = m/s ingen røvere går fortere enn i terrenget.
+  const ETA = { maksFart: 2 };
+  // umulig(pred, meter): pred = minutter igjen i nedtellingen, meter = avstanden nå. true = de kan ikke være framme så fort.
+  const umulig = (pred, meter, E = ETA) => Number.isFinite(pred) && Number.isFinite(meter) && pred < meter / E.maksFart / 60;
+  // ---------- (kritikerløkka r1, Ingrid: «fire leiesoldater + Leirvakta + vakttårn tapte mot ett røverlag – gi en forhåndsvurdering») ----------
+  // SJANSEN for forsvaret, regnet med de samme treffsjansene som kampen (Terreng.treffsjanse via treff(m) per mann) og Lanchesters
+  // kvadratlov (styrken vokser med antall menn i annen): vår = sum treff per runde · menn · vern (nedgravd/voll: de tar færre treff),
+  // deres = det samme for angriperne. o: { egne: [{ treff (sum per runde), menn, vern (0–1, andelen treff de tar) }], fiender: [{ treff, menn }],
+  //   tårn (bemannet vakttårn: lagene ser og treffer bedre) }. Gir { q (forholdet), ord: 'god' | 'usikker' | 'dårlig', tekst }.
+  // Tallene er Claudes forslag (SJANSE).
+  const SJANSE = { god: 1.6, usikker: .85, tårn: 1.15, avstand: 200 };
+  function sjanse(o, S = SJANSE) {
+    const sum = (l, f) => l.reduce((a, q) => a + f(q), 0);
+    const egneMenn = sum(o.egne || [], q => q.menn || 0), fiMenn = sum(o.fiender || [], q => q.menn || 0);
+    if (!fiMenn) return { q: Infinity, ord: 'god', tekst: 'Med dette forsvaret: god sjanse' };
+    if (!egneMenn) return { q: 0, ord: 'dårlig', tekst: 'Med dette forsvaret: dårlig sjanse – ingen soldater hjemme' };
+    // ildkraft per mann (snitt) og vernet (snitt, vektet med menn)
+    const vårT = sum(o.egne, q => q.treff || 0) / egneMenn, deresT = sum(o.fiender, q => q.treff || 0) / fiMenn;
+    const vern = sum(o.egne, q => (Number.isFinite(q.vern) ? q.vern : 1) * (q.menn || 0)) / egneMenn;
+    const vår = vårT * (o.tårn ? S.tårn : 1) * egneMenn * egneMenn, deres = deresT * Math.max(.05, vern) * fiMenn * fiMenn;
+    const q = deres > 0 ? vår / deres : Infinity, ord = q >= S.god ? 'god' : q >= S.usikker ? 'usikker' : 'dårlig';
+    return { q, ord, tekst: `Med dette forsvaret: ${ord} sjanse` + (ord === 'god' ? '' : ord === 'usikker' ? ' – flere lag hjemme, voller eller nedgravde lag hjelper' : ' – hold flere lag hjemme, grav dem ned og bygg voller') }; }
+  const api = { R, ETA, umulig, SJANSE, sjanse, retning, retningKort, klTekst, utTekst, beredskap, stillinger, fordel, ankomst, vaktStørrelse, rapport, motHerjere, velgReparasjon, skadet, STATUS, glatt, spenn, sluttRapport,
     monoton, SNUDD, harSnudd, klokke, når, nedtelling };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Forsvar = api;
