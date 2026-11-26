@@ -39,7 +39,8 @@
   const sidenavn = side => { const F = rot.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER[side]; return F ? F.navn : 'fienden'; };
   // RUNDE 14: røverne – samme tid og tekst som varselbrikken (ForsvarSpill.neste), eller angrepet som pågår
   function raidNå() { const FS = rot.ForsvarSpill, SS = rot.SpilletSpill; if (!FS) return null; const Tt = SS && SS.T ? SS.T() : null, satt = !!(FS.erSatt && FS.erSatt());
-    if (Tt && Tt.aktiv) return { aktiv: true, min: 0, nedtelling: 'nå', satt, tekst: 'Røverne angriper leiren nå' + (satt ? ' – lagene står i stilling.' : ' – sett lagene i stilling!') };
+    // (kritikerløkka r1) med det samme anslaget som banneret (ForsvarSpill.status)
+    if (Tt && Tt.aktiv) { const st = FS.status ? FS.status() : null; return { aktiv: true, min: 0, nedtelling: 'nå', satt, tekst: 'Røverne angriper leiren' + (st && st.tekst ? ` (${st.tekst})` : ' nå') + (satt ? ' – lagene står i stilling.' : ' – sett lagene i stilling!') }; }
     const n = FS.neste ? FS.neste() : null; if (!n || !(n.min <= R.raid.linje)) return null;
     return { aktiv: false, min: n.min, nedtelling: n.nedtelling, satt, tekst: n.tekst + '.' + (satt ? ' Lagene står i stilling.' : '') }; }
   // RUNDE 14: egne friske soldater (uten deg selv og Leirvakta) og egne tettsteder – for krisehjelpen
@@ -228,6 +229,8 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
   document.addEventListener('click', e => { const b = e.target && e.target.closest ? e.target.closest(FARTKNAPPER.map(id => '#' + id).join(',')) : null;
     if (!b || !auto() || !kort.classList.contains('på') || !kort.getClientRects().length) return;
     e.preventDefault(); e.stopImmediatePropagation(); ønsketFart = b.id;
+    // (kritikerløkka r1, Jonas: «⏭ ga ingen tilbakemelding når morgenmøtet holder spillet – klokka står på 06:00») – si det med ord
+    if (rot.FlytSpill && FlytSpill.visKort) FlytSpill.visKort(b.id === 'nesteh' ? 'Morgenmøtet venter på svaret ditt – ⏭ spoler videre når du har valgt.' : 'Morgenmøtet venter på svaret ditt – farten du valgte, gjelder når du har svart.', false);
     const m = document.getElementById('kortpause'); if (m) { m.classList.remove('blink'); void m.offsetWidth; m.classList.add('blink'); }
     if (typeof tempo !== 'undefined' && tempo > 0) { const p = document.getElementById('sp0'); if (p) p.click(); } }, true);
   function etterSvar() { const id = ønsketFart; ønsketFart = null; if (!id || !auto()) return;
@@ -242,7 +245,9 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     // RUNDE 14 (kritiker I): røverne står i første linje – med samme tid som varselet – og «Forsvar leiren nå» er første valg
     const rd = raidNå(); if (rd) kort.append(el('div', { klasse: 'mraid', id: 'morgenraid' }, '⚠ ' + rd.tekst));
     if (rd && !rd.satt && (rd.aktiv || rd.min <= R.raid.forsvar) && K.steg === 0 && !K.valg.some(v => v.id === 'forsvar'))
-      K.valg.unshift({ id: 'forsvar', t: 'Forsvar leiren nå', følge: `Alle lag innen 3 km går i stilling mot røverne og graver seg ned. Folk på vakt blir Leirvakta. ${rd.aktiv ? 'Røverne angriper nå.' : 'Røverne kommer om ' + rd.nedtelling + '.'}` });
+      { // (kritikerløkka r1) forhåndsvurderingen (ForsvarSpill.prognose) står i valget, og tida er når de drar ut – som brikka og banneret
+        const P = rot.ForsvarSpill && ForsvarSpill.prognose ? ForsvarSpill.prognose() : null;
+        K.valg.unshift({ id: 'forsvar', t: 'Forsvar leiren nå', følge: `Alle lag innen 3 km går i stilling mot røverne og graver seg ned. Folk på vakt blir Leirvakta. ${rd.aktiv ? 'Røverne angriper nå.' : 'Røverne drar ut om ' + rd.nedtelling + '.'}${P ? ' ' + P.tekst.split(' – ')[0] + ' i dag.' : ''}` }); }
     // RUNDE 13: hele døgnet (.mdogn) og én linje (.msum) med det viktigste: tapene, ellers det første «I går», ellers første linje
     const rap = K.steg === 0 ? (K.rapport || []) : [];
     if (rap.length) { const sum = rap.find(r => /^Tapt siden/.test(r)) || rap.find(r => /^Tap i lagene/.test(r)) || rap.find(r => /^I går/.test(r)) || rap[0], b = knappEl('Vis hele døgnet ›', '', () => fold(false), 'mfold');

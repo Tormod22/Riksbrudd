@@ -64,3 +64,12 @@ console.log('ok   forsvar (runde 13): anslaget går ikke baklengs, «ikke sett �
   A.strictEqual(F.klTekst(173), 'kl. 08:53'); A.strictEqual(F.retningKort(Math.PI / 2), 'N'); A.strictEqual(F.utTekst(0.4), 'Røverne drar ut nå');
   A.ok(!/under 1 min/.test(F.utTekst(0.2)), 'aldri «under 1 min» før de er på vei'); A.ok(F.STATUS.sistSettLang >= 120, 'sist sett står lenge nok');
   console.log('ok   forsvar (runde 14): sist sett med klokkeslett, «drar ut nå»'); }
+// (kritikerløkka r1) sjansen for forsvaret, umulig nedtelling, «hvem kom» og tapene hos dem i rapporten
+{ const F = require('../../site/dovre-fliser/spill/forsvar.js'), A = require('assert');
+  const sterk = F.sjanse({ egne: [{ treff: .2, menn: 6, vern: .5 }], fiender: [{ treff: .07, menn: 4 }], tårn: true }), svak = F.sjanse({ egne: [{ treff: .13, menn: 4, vern: 1 }], fiender: [{ treff: .27, menn: 6 }] });
+  A.strictEqual(sterk.ord, 'god'); A.strictEqual(svak.ord, 'dårlig'); A.ok(/^Med dette forsvaret: dårlig sjanse/.test(svak.tekst));
+  A.strictEqual(F.sjanse({ egne: [], fiender: [{ treff: .1, menn: 4 }] }).ord, 'dårlig', 'ingen soldater hjemme'); A.strictEqual(F.sjanse({ egne: [{ treff: .1, menn: 4 }], fiender: [] }).ord, 'god');
+  A.ok(F.umulig(1, 1800), '1 min igjen på 1,8 km er umulig'); A.ok(!F.umulig(20, 1800), '20 min på 1,8 km går');
+  const r = F.sluttRapport({ hvem: 'Røverne', nr: 1, utfall: 'slått', kom: 'ett røverlag på 4 mann fra nordvest', deresFalne: 2, deresSåret: 1 });
+  A.ok(/Det kom ett røverlag på 4 mann fra nordvest\./.test(r.tekst) && /Hos dem: 2 falt og 1 såret\./.test(r.tekst), r.tekst);
+  console.log('ok   forsvar (kritikerløkka r1): sjansen, umulig nedtelling, hvem kom og tapene hos dem'); }

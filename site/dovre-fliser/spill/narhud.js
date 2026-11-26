@@ -219,7 +219,9 @@ body.kort.tlfligg.gaar:not(.kjorer) #nhud .vapen b{ font-size:16px; } body.kort.
     // (runde 8, krig: «angrepsinformasjonen motsier seg selv») brikka bruker den samme statusen som banneret (ForsvarSpill.status: sett nå,
     // sist sett, eller et anslag som spenn) – og gjelder også et angrep på leiren fra en motstander, ikke bare røverne
     const FS = window.ForsvarSpill && ForsvarSpill.status ? ForsvarSpill.status() : null;
-    if (FS) { const mål = FS.sett ? FS.kjente.reduce((a, e) => (Math.hypot(e.x - leir.x, e.y - leir.y) < Math.hypot(a.x - leir.x, a.y - leir.y) ? e : a)) : FS.sist;
+    // (kritikerløkka r1, Jonas: «tre bannere om samme angrep») – står angrepsbanneret, er brikka den samme beskjeden: den står ikke da
+    if (FS && window.ForsvarSpill.bannerOppe && ForsvarSpill.bannerOppe() && forSpiller()) { /* banneret sier det */ }
+    else if (FS) { const mål = FS.sett ? FS.kjente.reduce((a, e) => (Math.hypot(e.x - leir.x, e.y - leir.y) < Math.hypot(a.x - leir.x, a.y - leir.y) ? e : a)) : FS.sist;
       ut.push({ i: 'varsel', k: 'fare', t: FS.røvere ? `Angrep: ${FS.antall} røverlag` : `Angrep: ${FS.hvem}`, s: FS.kort, f: () => (mål ? gåTil(mål.x, mål.y, 4) : false) || logg(`${FS.overskrift}: ${FS.tekst}.`) }); }
     else if (SS && SS.T() && SS.T().aktiv) { const lag = ENHETER.filter(e => e.raid === SS.T().aktiv && levende(e)); if (lag.length) { const d = Math.min(...lag.map(e => Math.hypot(e.x - leir.x, e.y - leir.y))), nær = lag.reduce((a, e) => (Math.hypot(e.x - leir.x, e.y - leir.y) < Math.hypot(a.x - leir.x, a.y - leir.y) ? e : a));
         // (runde 8, telefonkritikeren: brikken sa «10,0 km fra leiren» mens banneret sa «ikke sett ennå» og røverne var 720 m unna) – avstanden

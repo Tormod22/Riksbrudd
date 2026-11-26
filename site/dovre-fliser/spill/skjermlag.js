@@ -70,6 +70,8 @@ body :is(#hendelse, #samfunnkort, #morgenkort).på{ animation:kortinn .2s ease-o
    tom grå boks under banneret der kortet dekket «Vis») */
 body.spill #alarm.på{ flex-wrap:nowrap; max-width:min(980px, calc(100vw - 150px)); } body.spill #alarm > *{ flex:none; } body.spill #alarm > span:first-child{ flex:0 1 auto; min-width:0; }
 #alarm > :empty:not(button){ display:none; }
+/* (kritikerløkka r1) linjene under banneret (prognosen, «du står ute», ⏭) står på egne rader – da brytes raden også på PC */
+body.spill #alarm.på:has(> .alinje){ flex-wrap:wrap; } body.spill #alarm > .alinje{ flex:0 0 100%; }
 /* telefon: banneret sto i en smal stripe (left:50 % gir bare halve bredden å krympe i) */
 body.kort #alarm{ width:max-content; max-width:min(560px, calc(100vw - 16px)); box-sizing:border-box; }`;
   document.head.appendChild(css);

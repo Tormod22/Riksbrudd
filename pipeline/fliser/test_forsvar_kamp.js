@@ -28,3 +28,10 @@ console.log('ok   forsvar-kamp: én kamp per ildkamp, navn, fiende, sted og års
   A.strictEqual(KV.bølgeLag(2, 1, { soldater: 2, faktor: 1 }).n, 1, 'for få soldater: som før');
   A.strictEqual(KV.andreTekst('Mosevakt', 'Ravnsund', 'ved Vikeså'), 'Mosevakt og Ravnsund sloss ved Vikeså.'); A.ok(!/fienden/.test(KV.andreTekst('A', 'B', '')));
   console.log('ok   forsvar-kamp (runde 14): bølge 2 er større enn bølge 1, andre siders kamper'); }
+// (kritikerløkka r1) loggdempingen: «Under ild!» per lag og den samme avlyttingen står bare når noe er nytt
+{ const KV = require('../../site/dovre-fliser/spill/forsvar-kamp.js'), A = require('assert'), m = new Map();
+  A.ok(!KV.holdTilbake(m, '📻 Leiesoldater 1: Under ild!', 10)); A.ok(KV.holdTilbake(m, '📻 Leiesoldater 1: Under ild!', 20)); A.ok(!KV.holdTilbake(m, '📻 Vaktlaget: Under ild!', 20));
+  A.ok(!KV.holdTilbake(m, '📻 Leiesoldater 1: Under ild!', 10 + KV.DEMP.underIld)); A.ok(!KV.holdTilbake(m, 'Leiesoldater 1 er framme.', 21));
+  const s1 = 'Radiomasten fanget opp samband: Ravnsunds 1. lag samler seg i Sandbumoen. Omtrentlig sted er merket i kartet.';
+  A.ok(!KV.holdTilbake(m, s1, 0)); A.ok(KV.holdTilbake(m, s1, 30)); A.ok(!KV.holdTilbake(m, s1.replace('samler seg i Sandbumoen', 'marsjerer mot Otta'), 30));
+  console.log('ok   forsvar-kamp (kritikerløkka r1): loggdempingen'); }
