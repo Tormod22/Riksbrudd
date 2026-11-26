@@ -49,7 +49,10 @@
     akk += dt * 3600 / TIME; if (akk < 60) return;   // ett steg per spillminutt
     holdStilling();
     const sek = akk; akk = 0;
-    const hendelser = G.steg(S, byer(), ENHETER, sek);
+    // (R2-løkka 26. nov, kritikken: «Kamp om Elverum: ingen tar tettstedet mens begge sider er der» i over et døgn) et lag som bare går
+    // gjennom tettstedet (målet ligger utenfor – f.eks. røvere på vei mot leiren), sperrer ikke for en side som står der: det regnes ikke
+    // med når en annen side har lag som står i stedet
+    const hendelser = G.steg(S, byer(), holdere(), sek);
     // (runde 14) bygdevernet holder dine lag ute: inntaket står på null, og «Våre lag tar …» skrives ikke (det sto samtidig med «vil ikke slippe dere inn»)
     if (gAuto()) for (const by of byer()) { const t = S.get(by.e.id); if (t && t.inntar && t.inntar.side === 'blå' && !t.eier && vernHer(by)) t.inntar.sek = 0; }
     for (const h of hendelser) {
@@ -59,13 +62,14 @@
       const forFå = h.hva === 'inntar' && blå && !isFinite(G.tidMed(G.mann(G.lagI(h.by, ENHETER.filter(s => s.side === 'blå'))), h.by.e.folk));
       if (h.hva === 'inntar' && !forFå && (blå || synlig(ENHETER.find(s => s.side === h.side && G.inni(h.by, s.x, s.y)) || {}))) {
         if (performance.now() - (LOGG.get(h.by.e.id) || -1e9) > 5000) { LOGG.set(h.by.e.id, performance.now()); logg(blå ? `${G.lagI(h.by, ENHETER.filter(s => s.side === 'blå')).filter(s => !passerer(s, h.by)).map(s => s.navn).join(' og ') || 'Et lag'} har gått inn i ${navn}. Står laget der i ca. ${tidTekst(G.tidMed(G.mann(G.lagI(h.by, ENHETER.filter(s => s.side === 'blå'))), h.by.e.folk))} uten fiender, blir stedet ditt.` : `${hvem(h.side)} er i ${navn}!`); } }
-      // (19. nov) store tettsteder trenger flere mann: si fra når laget er for lite
-      if (h.hva === 'forFå' && blå) logg(`For få til å ta ${navn} (${nf.format(h.by.e.folk || 0)} innb.): det trengs minst ${h.trengs} mann, dere har ${Math.floor(h.har)}. Send flere lag.`);
+      // (19. nov) store tettsteder trenger flere mann: si fra når laget er for lite (R2-løkka: meldt i forFåSteg under, med alle lagene)
+      if (h.hva === 'forFå' && blå) forFåMeld(h.by, true);
       // (runde 7) et tettsted du holdt, er tapt: si det tydelig (motstanderne angriper nå garnisonene dine)
       if (h.hva === 'inntatt') logg(blå ? `${navn} er vårt.` + ((g => g.length ? ` ${g.join(', ')} er garnison.` : ' Laget som tok det, er på vei videre – stedet har ingen garnison.')(G.lagI(h.by, ENHETER.filter(s => s.side === 'blå')).filter(s => !passerer(s, h.by)).map(s => s.navn))) : h.fra === 'blå' ? `Vi har mistet ${navn} – ${hvem(h.side)} har tatt det.` : `${hvem(h.side)} har tatt ${navn}${h.fra && h.fra !== h.side ? ' fra ' + hvem(h.fra) : ''}.`);
-      if (h.hva === 'strid') logg(`Kamp om ${navn}: ingen tar tettstedet mens begge sider er der.`);
+      if (h.hva === 'strid') stridMeld(h.by);
       skitten = true;
     }
+    forFåSteg();
     const b = window.OLJE && OLJE.BASER[0];
     for (const by of byer()) { const t = S.get(by.e.id); if (!t || !t.eier) continue;
       const strøm = strømFor(by);
@@ -79,6 +83,31 @@
       k.skade = Math.max(0, k.skade - .1 * sek / 3600 * (strømFor(by) ? 1 : R.strøm.uten));
       if (!k.skade && k.side === 'blå') logg(`${k.navn} er reparert på verkstedet i ${by.e.navn}.`); }
   });
+
+  // ---------- (R2-løkka 26. nov) LAGENE I ET TETTSTED REGNES SAMMEN – OG HVEM SOM SPERRER ----------
+  // lagene som regnes med i inntaket: alle, unntatt lag som bare går gjennom et tettsted der en annen side har lag som står
+  function holdere() { const B = byer(); return ENHETER.filter(s => { if (!s.sti || !s.sti.length) return true; const by = B.find(b => s.x >= b.bb[0] && s.x <= b.bb[2] && s.y >= b.bb[1] && s.y <= b.bb[3] && G.inni(b, s.x, s.y));
+    if (!by || !passerer(s, by)) return true; return !ENHETER.some(q => q !== s && q.side !== s.side && levende(q) && !(q.sti && passerer(q, by)) && G.inni(by, q.x, q.y)); }); }
+  // «Vaktlaget og 2. tropp»
+  const liste = L => (L.length <= 1 ? (L[0] ? L[0].navn : 'Laget') : L.slice(0, -1).map(q => q.navn).join(', ') + ' og ' + L[L.length - 1].navn);
+  // ETT tall for hva et sted krever (Strategi.anbefalt): det inntaket krever, og mer enn bygdevernet når det står
+  const trengs = by => { let v = 0; try { const T = window.KrigSpill && KrigSpill.T && KrigSpill.T(); v = T && T.vern && T.vern[by.e.id] > 0 ? T.vern[by.e.id] : 0; } catch (e) { v = 0; }
+    return window.Strategi && Strategi.anbefalt ? Strategi.anbefalt(G.minstFor(by.e.folk || 0), v) : Math.max(G.minstFor(by.e.folk || 0), v ? v + 1 : 0); };
+  // for få til å ta stedet: én melding med alle egne lag i stedet og summen; ny melding når summen endrer seg (et lag til kommer fram)
+  const FORFÅ = new Map();
+  function forFåMeld(by, ny) { const her = G.lagI(by, ENHETER.filter(s => s.side === 'blå' && !s.karakter)), har = Math.floor(G.mann(her)), n = trengs(by);
+    if (!ny && FORFÅ.get(by.e.id) === har) return; FORFÅ.set(by.e.id, har); if (!her.length) return;
+    logg(`For få til å ta ${by.e.navn} (${nf.format(by.e.folk || 0)} innb.): ${her.length > 1 ? liste(her) + ' har til sammen' : her[0].navn + ' har'} ${har} mann der, det trengs minst ${n}. Send flere lag.`); }
+  function forFåSteg() { for (const [id] of FORFÅ) { const t = S.get(id); if (!t || !t.forFå || !t.inntar || t.inntar.side !== 'blå') FORFÅ.delete(id); }
+    for (const by of byer()) { const t = S.get(by.e.id); if (t && t.forFå && t.inntar && t.inntar.side === 'blå' && FORFÅ.has(by.e.id)) forFåMeld(by, false); } }
+  // to sider i stedet: si hvem den andre siden er (og om dere ser dem), høyst én gang i timen per sted så lenge det er de samme lagene
+  const STRID = new Map();
+  function stridMeld(by) { const inne = ENHETER.filter(s => levende(s) && !s.karakter && G.inni(by, s.x, s.y)), andre = inne.filter(s => s.side !== 'blå');
+    if (!inne.some(s => s.side === 'blå')) { if (andre.some(s => synlig(s))) logg(`Kamp om ${by.e.navn}: ingen tar tettstedet mens begge sider er der.`); return; }
+    const nøkkel = andre.map(s => s.navn).sort().join('|'), f = STRID.get(by.e.id); if (f && f.n === nøkkel && tid - f.t < 60) return; STRID.set(by.e.id, { n: nøkkel, t: tid });
+    const sett = andre.filter(s => { try { return synlig(s); } catch (e) { return false; } }), usett = andre.length - sett.length;
+    const hvemT = [sett.length ? liste(sett) + (sett[0].raid ? ' (røvere)' : sett.every(q => q.side === sett[0].side) ? ` (${hvem(sett[0].side)})` : '') : '', usett ? `${usett === 1 ? 'et lag' : usett + ' lag'} dere ikke ser` : ''].filter(Boolean).join(' og ');
+    logg(`Kamp om ${by.e.navn}: ${hvemT || 'en fiende'} står også i tettstedet. Ingen tar det før den ene siden er slått ut eller har trukket seg.`); }
 
   // ---------- panelene ----------
   KROKER.lagTekst.push(s => { const by = byFor(s); if (!by) return null; const t = G.tilstand(S, by.e.id);

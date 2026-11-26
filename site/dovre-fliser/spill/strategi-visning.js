@@ -42,7 +42,7 @@
   function bilde() { const B = område(); if (!B.length) return null; const st = S.stilling(B, eierAv), led = ledige(), fri = led.filter(l => !l.holder), fi = fiender();
     // (runde 12) forslagene bruker lag du har kontakt med; har du ingen, foreslås de andre (med grå knapp og forklaring)
     const medK = fri.filter(l => l.kontakt), kand = medK.length ? medK : fri.length ? fri : led;
-    return { byer: B, st, ut: S.utfall(st, undefined, auto() && typeof tid === 'number' ? tid : undefined), trekk: S.trekk('blå', B, eierAv, kand, fi, undefined, { liste: meldt.tap || [], nå: typeof tid === 'number' ? tid : 0 }), trusler: S.trusler('blå', B, eierAv, garnison, fi), fronter: S.fronter(B, eierAv), fiender: fi, ledige: led }; }
+    return { byer: B, st, ut: S.utfall(st, undefined, auto() && typeof tid === 'number' ? tid : undefined), trekk: S.trekk('blå', B, eierAv, kand, fi, undefined, { liste: meldt.tap || [], nå: typeof tid === 'number' ? tid : 0 }, b => (eierAv(b.id) === 'blå' ? 0 : kjentForsvar(b).mann)), trusler: S.trusler('blå', B, eierAv, garnison, fi), fronter: S.fronter(B, eierAv), fiender: fi, ledige: led }; }
 
   // ---------- radioen (runde 12, PC-kritiker F) ----------
   // «Vaktlaget ble sendt 8 km til Løkken uten advarsel, og etterpå når ingen ordre fram»: før et lag sendes ut av radiorekkevidden,
@@ -152,7 +152,9 @@
     advarsel = null; valgtBy = by; vis(true); skitten = true; }
   function speidRapport(s, by) { const v = vern(by), fs = fiender().filter(f => Math.hypot(f.x - by.x, f.y - by.y) <= 3000), deler = [];
     if (v) deler.push(v.mann > 0 ? `bygdevernet har ${v.mann} mann` : vernTekst(v)); if (fs.length) deler.push(`${fs.length === 1 ? fs[0].navn : fs.length + ' fiendelag'} (ca. ${Math.round(fs.reduce((a, f) => a + (f.styrke || 0), 0))} mann)`);
-    const råd = v && v.mann > 0 ? ` Gjør en avtale (${kroner(v.pris)}) i Krig, eller send flere enn ${v.mann} mann.` : fs.length ? ' Send en større styrke.' : ' Veien er fri.';
+    // (R2-løkka) ett tall: det inntaket krever og mer enn forsvaret (Strategi.anbefalt) – samme tall som i Krig og i loggen
+    const anb = S.anbefalt(G.minstFor(by.folk || 0), (v && v.mann > 0 ? v.mann : 0) + Math.round(fs.reduce((a, f) => a + (f.styrke || 0), 0)));
+    const råd = v && v.mann > 0 ? ` Gjør en avtale (${kroner(v.pris)}) i Krig, eller send minst ${anb} mann.` : fs.length ? ` Send minst ${anb} mann.` : ' Veien er fri.';
     return `${s.navn} ved ${by.navn}: ${deler.length ? deler.join(', ') : 'ingen forsvar å se'}.` + råd; }
   function meldSpeid(s) { const by = område().find(b => b.id === s.speid.id) || s.speid, t = speidRapport(s, by); if (kontakt(s)) { logg('📻 ' + t); delete s.speid; } else s.speid.venter = t; }
   let speidAkk = 0;
@@ -180,10 +182,19 @@
     const sider = [...new Set(fi.map(f => f.side))].map(q => fraksjon(q).navn).join(' og ');
     if (fi.length) return `${s.navn} er ved ${by.navn}, men ${e && e !== 'blå' ? 'byen holdes av' : 'der står'} ${fi.length === 1 ? '1 lag' : fi.length + ' lag'} (${mann} mann${sider ? ', ' + sider : ''})` +
       (fr ? ` – ${fr}.` : mann >= har ? ` – laget (${har} mann) er for svakt til å ta byen. Send flere lag, eller trekk laget tilbake.` : ' – laget tar ikke byen før de er slått.');
-    if (v && v.mann > 0) return `${s.navn} er ved ${by.navn}, men bygdevernet (${v.mann} mann) slipper ikke laget inn. Gjør en avtale (${kroner(v.pris)}) i Krig, eller send flere mann.`;
-    if (t.forFå || (t.inntar === null && G.inni(by.ref, s.x, s.y) && !G.fart(G.mann(G.lagI(by.ref, egneLag())), by.folk))) return `${s.navn} er i ${by.navn}, men er for få til å ta det: det trengs minst ${G.minstFor(by.folk)} mann. Send flere lag.`;
+    // (R2-løkka 26. nov, kritikken: «Vaktlaget er i Elverum, men er for få … 2. tropp er i Elverum, men er for få» – to meldinger, og ingen
+    // sa hvor mange de var til sammen) alle egne lag ved stedet nevnes i én melding, med summen av mennene inne i tettstedet (de som teller
+    // for inntaket), lagene som står utenfor kanten, og ett tall for hva som trengs (Strategi.anbefalt: inntaket og mer enn bygdevernet)
+    const L = samletVed(by), anb = S.anbefalt(G.minstFor(by.folk), v && v.mann > 0 ? v.mann : 0);
+    const utenfor = L.ute.length ? ` ${liste(L.ute)} står utenfor tettstedet og teller ikke – gi ${L.ute.length > 1 ? 'dem' : 'laget'} ordre inn til midten.` : '';
+    if (v && v.mann > 0) return `${liste(L.alle)} ${L.alle.length > 1 ? 'er' : 'er'} ved ${by.navn}, men bygdevernet (${v.mann} mann) slipper ikke ${L.alle.length > 1 ? 'lagene' : 'laget'} inn. Gjør en avtale (${kroner(v.pris)}) i Krig, eller send minst ${anb} mann – dere har ${L.har} der.` + utenfor;
+    if (t.forFå || (t.inntar === null && G.inni(by.ref, s.x, s.y) && !G.fart(L.har, by.folk))) return `${L.inne.length ? liste(L.inne) : s.navn} ${L.inne.length > 1 ? 'er' : 'er'} i ${by.navn}, men ${L.inne.length > 1 ? 'de er' : 'laget er'} for få til å ta det: ${L.inne.length > 1 ? 'til sammen ' : ''}${L.har} mann, og det trengs minst ${anb}.` + utenfor + ' Send flere lag.';
     if (!G.inni(by.ref, s.x, s.y)) return `${s.navn} står utenfor ${by.navn} og tar det ikke herfra – gi laget ordre inn til midten.`;
     return null; }
+  // egne lag ved tettstedet (inne i det, eller innen FRAM.nær meter fra kanten) som står stille: { alle, inne, ute, har (mann inne) }
+  function samletVed(by) { const alle = egneLag().filter(s => !s.sti && !s.ombord && by.ref && (G.inni(by.ref, s.x, s.y) || Math.hypot(by.x - s.x, by.y - s.y) <= byRadius(by) + FRAM.nær));
+    const inne = alle.filter(s => G.inni(by.ref, s.x, s.y)); return { alle, inne, ute: alle.filter(s => !inne.includes(s)), har: Math.floor(G.mann(G.lagI(by.ref, egneLag()))) }; }
+  const liste = L => (L.length <= 1 ? (L[0] ? L[0].navn : 'Laget') : L.slice(0, -1).map(q => q.navn).join(', ') + ' og ' + L[L.length - 1].navn);
   let framAkk = 0;
   KROKER.sim.push(dt => { framAkk += dt; if (framAkk < 1) return; framAkk = 0; if (!auto()) return; const B = område(); if (!B.length) return;
     for (const s of egneLag()) { if (s.sti || s.planlegger || s.ombord || s.leirvakt || s.speid) { if (s.sti) s.framVed = null; continue; }
@@ -192,6 +203,8 @@
       if (!s.framVed || s.framVed.id !== by.id) { s.framVed = { id: by.id, t: tid, meldt: false }; continue; }
       if (s.framVed.meldt || tid - s.framVed.t < FRAM.vent) continue;
       const g = hvorforIkkeTar(s, by); if (!g) continue; s.framVed.meldt = true; logg(g);
+      // de andre lagene ved samme sted er nevnt i meldingen: de melder ikke det samme én gang til
+      for (const q of samletVed(by).alle) if (q !== s) { if (!q.framVed || q.framVed.id !== by.id) q.framVed = { id: by.id, t: tid, meldt: true }; else q.framVed.meldt = true; }
       try { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'annet', tekst: g.replace(/\.$/, ''), x: by.x, y: by.y } })); } catch (e) { /* uten flyt */ } } });
   KROKER.lagTekst.push(s => (s.framVed && s.framVed.meldt && !s.sti && eierAv(s.framVed.id) !== 'blå' ? 'venter ved ' + ((område().find(b => b.id === s.framVed.id) || {}).navn || 'tettstedet') + ' – tar det ikke (se loggen)' : null));
   KROKER.lagTekst.push(s => (s.speid && s.speid.venter ? 'har en speidermelding som venter på radiokontakt' : s.speid ? 'speider mot ' + s.speid.navn : null));
@@ -332,6 +345,7 @@ body.kort #krig .side{ margin:2px 0; } body.kort #krig .side .n{ font-size:13px;
 body.kort.tlfligg #krig:not(.inn) .side{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; } body.kort.tlfligg #krig .side .n{ flex:0 0 64%; } body.kort.tlfligg #krig .side .stolpe{ flex:1; margin-top:0; } body.kort.tlfligg #krig .side small.tillegg{ flex:0 0 100%; }
 body.kort #krig .by .kn button{ min-height:30px; padding:0 9px; } body.kort #krig .by{ padding:6px 8px; }
 #krig .advarsel .fare{ margin-top:3px; font-size:13px; line-height:1.3; } #krig .advarsel .fare.alvor{ color:#ffcf8a; } #krig .rad small.forsvar{ color:#e8b27a; } #krig .rad small.radio{ color:#e8a46a; }
+#krig .scenby{ margin-top:5px; padding-top:5px; border-top:1px solid #4a3d22; } #krig .scenby .kn{ display:flex; flex-wrap:wrap; gap:6px; margin-top:5px; }
 #krig .scen{ border:1px solid #6d5b34; background:#221c12; padding:5px 8px; margin:4px 0 6px; font-size:13px; line-height:1.3; } #krig .scen b{ color:#f0c878; } #krig .scen small{ display:block; color:var(--ink-dim,#a99); font-size:12.5px; }
 #krig .forkl{ display:grid; grid-template-columns:26px 1fr; gap:3px 6px; align-items:center; font-size:12.5px; color:var(--ink-dim,#a99); margin-top:4px; } #krig .forkl canvas{ width:24px; height:20px; }
 #krigvarsel{ position:fixed; left:50%; top:calc(var(--topp,58px) + 64px); transform:translateX(-50%); z-index:36; display:none; width:min(440px,94vw); max-height:70vh; overflow:auto; padding:10px 12px; background:#2a1d0e; border:1px solid #e0a050; color:var(--ink,#e7dcc3); font-size:14px; box-shadow:0 6px 24px rgba(0,0,0,.5); }
@@ -367,12 +381,29 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
     tre: 'Tettstedene teller: hold tre samtidig. Prosenten under gjelder ikke scenariet.',
     lyn: 'Krigen ER målet: hold 60 % av folket i området.',
   };
-  function scenarioBoks() { let sc = null; try { sc = window.ScenarioSpill && ScenarioSpill.scenario ? ScenarioSpill.scenario() : null; } catch (e) { sc = null; } const id = scenarioId(); if (!sc || !id) return null;
-    const SC = window.Scenario && Scenario.SCENARIER && Scenario.SCENARIER[id], dager = SC ? SC.dager : 0, dag = Math.min(dager || 99, Math.floor((typeof tid === 'number' ? tid : 0) / 1440) + 1);
+  function scenarioBoks(T0) { let sc = null; try { sc = window.ScenarioSpill && ScenarioSpill.scenario ? ScenarioSpill.scenario() : null; } catch (e) { sc = null; } const id = scenarioId(); if (!sc || !id) return null;
+    const T = T0 || bilde(), SC = window.Scenario && Scenario.SCENARIER && Scenario.SCENARIER[id], dager = SC ? SC.dager : 0, dag = Math.min(dager || 99, Math.floor((typeof tid === 'number' ? tid : 0) / 1440) + 1);
     const status = sc.status === 'vunnet' ? ' – klart!' : sc.status === 'tapt' ? ' – tapt' : dager ? ` – dag ${dag} av ${dager}` : '';
     if (/^Dag \d+ av \d+\. /.test(sc.tekst || '')) sc = { ...sc, tekst: sc.tekst.replace(/^Dag \d+ av \d+\. /, '') };
     const frist = sc.status === 'pågår' && sc.igjen > 0 && window.Scenario && Scenario.fristTekst ? ` (${Scenario.fristTekst(Math.round(sc.igjen / 10) * 10)})` : '';
-    return el('div', { klasse: 'scen', id: 'krigscenario' }, el('b', {}, `Scenario: ${sc.navn}${status}`), el('div', {}, (sc.tekst || '') + frist), el('small', {}, KRIGEN_TELLER[id] || '')); }
+    const boks = el('div', { klasse: 'scen', id: 'krigscenario' }, el('b', {}, `Scenario: ${sc.navn}${status}`), el('div', {}, (sc.tekst || '') + frist), el('small', {}, KRIGEN_TELLER[id] || ''));
+    { const rad = scenarioBy(sc, T); if (rad) boks.append(rad); } return boks; }
+  // (R2-løkka 26. nov, kritikken: «Scenariet sier "Ta Elverum", radioen sier "Gjør en avtale (8 mill. kr) i Krig", men Krig → Neste trekk viser
+  // ikke Elverum») byen i «Hold byen» står øverst i Krig med forsvaret, hvor mange mann som trengs (ett tall, Strategi.anbefalt), hvor
+  // mange dere har innen marsjavstand, og knappene «Send …» og «Gjør avtale» – det loggen og radioen henviser til, finnes her.
+  function scenarioBy(sc, T) { if (!T || !sc || sc.status !== 'pågår' || sc.mål == null || scenarioId() !== 'hold') return null;
+    const by = T.byer.find(b => String(b.id) === String(sc.mål)); if (!by) return null; const e = eierAv(by.id), L0 = leir();
+    const rad = el('div', { klasse: 'scenby', 'data-scenby': by.id }, el('b', {}, by.navn), el('small', {}, ` ${tall(by.folk)} innb. · ${e === 'blå' ? 'ditt' : e ? fraksjon(e).eieform : 'nøytralt'}` + (L0 ? ` · ${km(Math.hypot(by.x - L0.x, by.y - L0.y) / 1000)} fra leiren` : '')));
+    if (e === 'blå') { const g = garnison(by.id); rad.append(el('small', { klasse: 'tillegg' }, g ? `Garnison: ${g} lag. Hold byen.` : 'Ingen garnison – send et lag dit, ellers kan byen tas.')); return rad; }
+    const t = T.trekk.find(q => q.by.id === by.id), v = vern(by), fl = forsvarLinje({ eier: e, by }), anb = t ? t.anbefalt : S.anbefalt(G.minstFor(by.folk), v && v.mann > 0 ? v.mann : 0);
+    if (fl) rad.append(el('small', { klasse: 'tillegg', 'data-forsvar': by.id }, fl + '.'));
+    { const her = G.lagI(by.ref, egneLag()), inne = Math.floor(G.mann(her)); rad.append(el('small', { klasse: 'tillegg', 'data-krav': by.id }, `Send minst ${anb} mann` + (t ? ` – dere har ${t.har} innen ${S.REGLER.marsj / 1000} km` : '') + (inne ? `, ${inne} er alt i byen (${her.map(q => q.navn).join(', ')})` : '') + '.')); }
+    const k = el('div', { klasse: 'kn' });
+    if (t) { const uk = t.lag && t.lag.kontakt === false, n = t.flere && t.flere.length > 1 ? t.flere.length : 0;
+      k.append(knapp(!t.lag ? 'Ingen ledige lag' : n ? `Send ${n} lag` : `Send ${t.lag.navn}`, () => send(by), Object.assign({ klasse: forSvak(t) || t.sterk ? 'rød' : 'hoved', 'data-scensend': by.id }, t.lag && t.innen && !uk ? {} : { disabled: '' }, uk ? { title: hvorforIkke(t.lag.lag) } : {}))); }
+    if (v && v.mann > 0) k.append(knapp(`Gjør avtale (${kroner(v.pris)})`, () => { if (avtale(by)) { sist = ''; vis(true); } }, { 'data-scenavtale': by.id, title: 'Bygdevernet slipper dere inn uten kamp' }));
+    k.append(knapp('Vis', () => { valgtBy = by; kam.x = by.x; kam.y = by.y; vis(true); skitten = true; }));
+    rad.append(k); return rad; }
   // hva tettstedet forsvares med (bygdevernet eller fiender dere har sett)
   // (runde 14) forsvaret i mann (kjentForsvar) og fredstiden; t.svak = forsvaret er minst like stort som lagene som ville gått
   function forsvarLinje(t) { const v = !t.eier ? vern(t.by) : null, deler = []; if (v && !(v.mann > 0)) deler.push(vernTekst(v)); const k = t.eier === 'blå' ? null : kjentForsvar(t.by);
@@ -404,7 +435,7 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
         if (e !== 'blå' && t && t.lag && t.innen && t.lag.kontakt !== false) st0.append(knapp(`Send ${t.lag.navn}`, () => send(b), { klasse: 'hoved' })); }
       st0.append(knapp('Vis mer', () => skjul(false), { title: 'Vis hele panelet' })); f.append(st0); }
     { const ab = advarselBoks(T); if (ab) f.append(ab); }
-    { const sb = scenarioBoks(); if (sb) f.append(sb); }
+    { const sb = scenarioBoks(T); if (sb) f.append(sb); }
     f.append(el('div', { klasse: 'maal' }, scenarioTeller() ? 'Krigen: hold ' : 'Mål: hold ', el('b', {}, S.prosent(R.seier) + ' %'), ` av folket i ${st.byer === 1 ? 'det ene tettstedet' : `de ${st.byer} tettstedene`} i området (${Math.round(T.byer.radius / 1000)} km rundt leiren). Du har `, el('b', {}, S.prosent(st.sider.blå.andel) + ' %'), '.' + (T.ut.forTidlig ? ` Krigen avgjøres tidligst dag ${Math.floor(T.ut.fra / 1440) + 1}.` : '')));
     for (const side of ['blå', 'rød', 'grønn']) { const m = st.sider[side]; if (!m) continue;
       f.append(el('div', { klasse: 'side', 'data-side': side }, el('div', { klasse: 'n' }, el('b', {}, side === 'blå' ? fraksjon('blå').navn + ' (du)' : fraksjon(side).navn), el('small', {}, `${m.byer} tettsted${m.byer === 1 ? '' : 'er'} · ${S.prosent(m.andel)} %`)),
@@ -427,7 +458,7 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
     f.append(el('h3', {}, 'Neste trekk'));
     const topp = T.trekk.slice(0, 4); if (!topp.length) f.append(el('div', { klasse: 'tips' }, 'Du holder alle tettstedene i området.'));
     topp.forEach((t, i) => f.append(el('div', { klasse: 'rad', 'data-trekk': t.by.id }, el('div', {}, i < 3 ? el('span', { klasse: 'nr' }, String(i + 1)) : '', el('b', {}, t.by.navn),
-      el('small', {}, `${t.eier ? fraksjon(t.eier).eieform : 'nøytralt'}${t.forsvar > 0 ? ', forsvart' : ''} · ${tall(t.by.folk)} innb.` + (t.lag ? ` · ${km(t.km)} fra ${t.lag.navn}` : '') + (S.kravTekst(t) ? ' · ' + S.kravTekst(t) : '')),
+      el('small', {}, `${t.eier ? fraksjon(t.eier).eieform : 'nøytralt'}${t.forsvar > 0 ? ', forsvart' : ''} · ${tall(t.by.folk)} innb.` + (L0 ? ` · ${km(Math.hypot(t.by.x - L0.x, t.by.y - L0.y) / 1000)} fra leiren` : '') + (S.kravTekst(t) ? ' · ' + S.kravTekst(t) : '') + (t.sterk ? ` · for sterkt for det dere har nå (send minst ${t.anbefalt} mann)` : '')),
       // (runde 13) hva stedet forsvares med, og om laget havner utenfor radioen (med terrenget) – før du trykker «Send»
       forsvarLinje(t) ? el('small', { klasse: 'forsvar', 'data-forsvar': t.by.id }, forsvarLinje(t)) : '',
       t.tapt ? el('small', { klasse: 'forsvar', 'data-tapt': t.by.id }, S.tapTekst(t, tid) + '.') : '',

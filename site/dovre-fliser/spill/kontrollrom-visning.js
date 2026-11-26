@@ -129,6 +129,23 @@
       if (Math.floor(t) % 5 === 0) lagre(); }
   });
 
+  // ---------- (R2-løkka 26. nov) VARSEL VED MARSJORDREN: LAGET MISTER RADIOKONTAKTEN UNDERVEIS ----------
+  // Kritikken: «Vaktlaget mistet radiokontakten på vei til en by 6,7 km unna, og jeg hørte ikke fra det på åtte timer» – ingenting sa fra
+  // da ordren ble gitt. Nå sier loggen det når ruta går ut av radioens rekkevidde fra leiren (luftlinje; terrenget kan gjøre den kortere),
+  // og hvor langt ut på marsjen det skjer. Bare for ordre spilleren gir (ikke stille ordre), og ikke for garnisoner i egne tettsteder.
+  (KROKER.rute = KROKER.rute || []).push((s, v, r, X, Y, stille) => {
+    if (stille || !aktiv() || !s || s.side !== 'blå' || s.karakter || !r || !r.sti || r.sti.length < 2) return null;
+    const S = spill(), L = S && S.leir; if (!L) return null; const rm = K.rekkevidde(s.radio || 'hånd', mast());
+    let gått = 0; for (let i = 1; i < r.sti.length; i++) { const [ax, ay] = r.sti[i - 1], [bx, by] = r.sti[i], d = Math.hypot(bx - ax, by - ay);
+      if (Math.hypot(bx - L.x, by - L.y) > rm) { let lo = 0, hi = 1; for (let k = 0; k < 12; k++) { const m = (lo + hi) / 2; if (Math.hypot(ax + (bx - ax) * m - L.x, ay + (by - ay) * m - L.y) > rm) hi = m; else lo = m; }
+        const etter = gått + d * hi, felt = (s.radio || 'hånd') === 'felt', n = felt ? 'feltradioen' : 'håndradioen';
+        const råd = !felt ? 'feltradio (Tropper → laget) eller en radiomast gir lengre rekkevidde' : 'en radiomast, eller et høyere nivå på masten, gir lengre rekkevidde';
+        logg(`Merk: ${s.navn} mister radiokontakten etter ca. ${K.km(Math.max(100, Math.round(etter / 100) * 100))} av marsjen – ${n} når ${K.km(rm)} fra leiren (kortere bak åser). Ute av kontakt kan laget ikke få nye ordre; ${råd}.`);
+        return null; }
+      gått += d; }
+    return null; });
+  // «for 5 min siden», «for 2 t 10 min siden»
+  const siden = m => { m = Math.max(0, Math.round(m)); return m < 1 ? 'nå nettopp' : m < 60 ? `for ${m} min siden` : `for ${Math.floor(m / 60)} t${m % 60 ? ' ' + (m % 60) + ' min' : ''} siden`; };
   // ---------- kartet: egne lag «sist meldt» ----------
   KROKER.tegn.push((g, vx0, vy1) => {
     if (!aktiv()) return;
@@ -137,7 +154,8 @@
       g.save(); g.globalAlpha = .75; g.fillStyle = sidefarge('blå', 'farge'); g.strokeStyle = '#e7dcc3'; g.setLineDash([3, 2]); g.lineWidth = 1.3;
       g.beginPath(); g.rect(x - 11, y - 8, 22, 16); g.fill(); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
       g.font = 'italic 12px "Cormorant Garamond",serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,16,10,.85)';
-      const t = `${s.navn} · ${I.kontakt ? 'meldt' : 'ingen kontakt, sist'} ${klokkeslett(p.tid)}`; const ty = window.Etikett ? Etikett.tekst(g, t, x, y - 13, -1) : y - 13; g.strokeText(t, x, ty); g.fillStyle = '#e7dcc3'; g.fillText(t, x, ty); g.restore(); }
+      // (R2-løkka) lag med kontakt vises der de er; her står bare de uten kontakt – med hvor lenge siden de sist meldte seg
+      const t = `${s.navn} · ${I.kontakt ? 'meldt' : 'ingen kontakt, sist meldt'} ${klokkeslett(p.tid)}` + (I.kontakt ? '' : ` (${siden(tid - p.tid)})`); const ty = window.Etikett ? Etikett.tekst(g, t, x, y - 13, -1) : y - 13; g.strokeText(t, x, ty); g.fillStyle = '#e7dcc3'; g.fillText(t, x, ty); g.restore(); }
     if (deg) { const [x, y] = tilSkjerm(deg.x, deg.y, vx0, vy1); g.save(); g.strokeStyle = '#f0d79a'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 14, 0, 6.283); g.stroke(); g.restore(); }
   });
 

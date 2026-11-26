@@ -364,7 +364,9 @@
       if (opp) { const fredet = inne.filter(s => s.side === 'blå'); if (fredet.length) { inne = inne.filter(s => s.side !== 'blå'); const nøkkel = by.e.id + ':' + opp.id;
         if (!oppdragMeldt.has(nøkkel)) { oppdragMeldt.add(nøkkel); logg(`Bygdevernet i ${by.e.navn} slipper ${fredet[0].navn} inn – dere er her på oppdrag for ${opp.giver.navn}.`); } } if (!inne.length) continue; }
       const id = by.e.id, blå = inne.some(s => s.side === 'blå'); if (T.vern[id] === undefined) { T.vern[id] = K.vernMenn(by.e.folk);
-        if (blå) logg(`Bygdevernet i ${by.e.navn} (${T.vern[id]} mann) vil ikke slippe dere inn. Gjør en avtale (Leir → Mål, ${kr(K.vernPris(by.e.folk))}) eller ta stedet med makt.`); lagre(); }
+        // (R2-løkka) avtalen gjøres i Krig (tettstedets boks og scenariets by) – Leir → Mål hadde den ikke; ett tall for styrken (Strategi.anbefalt)
+        if (blå) { const anb = window.Strategi && Strategi.anbefalt ? Strategi.anbefalt(Garnison.minstFor ? Garnison.minstFor(by.e.folk) : 0, T.vern[id]) : T.vern[id] + 1;
+          logg(`Bygdevernet i ${by.e.navn} (${T.vern[id]} mann) vil ikke slippe dere inn. Gjør en avtale i Krig (${kr(K.vernPris(by.e.folk))}), eller ta stedet med minst ${anb} mann.`); } lagre(); }
       // en avtale gjelder bare dine lag; har vernet gitt opp eller gjort avtale, slipper alle inn
       if (T.vern[id] > 0) vernAktive.push({ by, inne }); }
     vernAkk += min; if (vernAkk < Terreng.KAMPRUNDE_MIN) return; vernAkk = 0;
@@ -403,6 +405,20 @@
       return r2; }
     const nøkkel = s.navn + '|' + gj.map(b => b.navn).join(','); if ((advart.get(nøkkel) || -1e9) > tid - 10) return null; advart.set(nøkkel, tid);
     logg(`Advarsel: ${s.navn} sin rute går gjennom ${byTekst(gj)} – det finnes ingen god omveg. Gjør en avtale først (Krig), send et sterkere lag, eller gi ordren i etapper utenom.`);
+    return null; });
+  // (R2-løkka 26. nov, kritikken: «Speidertroppen stoppet 4 km før Elverum uten forvarsel») en speidertropp som får ordre inn i et forsvart
+  // tettsted (bygdevern som står, eller fiender dere ser der), stopper før stedet (spill/strategi-visning.js) – nå sier loggen det
+  // allerede når ordren gis, og hvordan troppen kan sendes inn likevel.
+  KROKER.rute.push((s, v, r, X, Y, stille) => {
+    const SS = window.StrategiSpill; if (stille || !auto() || !s || s.side !== 'blå' || !SS || !SS.speider || !SS.speider(s) || !r || !r.sti || !window.Garnison) return null;
+    let B = []; try { B = SS.område() || []; } catch (e) { B = []; }
+    for (const by of B) { if (!by.ref || by.id === s.speidLikevel || Garnison.inni(by.ref, s.x, s.y)) continue; const bb = by.ref.bb;
+      if (!r.sti.some(([x, y]) => x > bb[0] && x < bb[2] && y > bb[1] && y < bb[3] && Garnison.inni(by.ref, x, y))) continue;
+      let vn = null; try { vn = SS.vern ? SS.vern(by) : null; } catch (e) { vn = null; }
+      const fi = ENHETER.filter(e => e.side !== 'blå' && levende(e) && !e.karakter && Math.hypot(e.x - by.x, e.y - by.y) <= 2500 && (() => { try { return synlig(e); } catch (x) { return false; } })());
+      if (!(vn && vn.mann > 0) && !fi.length) continue;
+      logg(`Merk: ${s.navn} er speidere og stopper før ${by.navn} (${vn && vn.mann > 0 ? `bygdevernet har ${vn.mann} mann` : `${fi.length === 1 ? '1 fiendelag' : fi.length + ' fiendelag'} sett der`}) – speidere går ikke inn i et forsvart sted, de melder hva som står der. Skal troppen inn: Krig → ${by.navn} → «Send likevel».`);
+      break; }
     return null; });
   api.fiendtligeByer = fiendtligeByer; api.ruteGjennom = (sti, unntak) => K.gjennomByer(sti, fiendtligeByer(unntak || []), Garnison.inni);
   api.vernAvtale = id => { const by = byer().find(b => b.e.id === id); if (!by || !(T.vern[id] > 0)) return false; const p = K.vernPris(by.e.folk);

@@ -156,6 +156,10 @@
       const typ = vektet(typeVekter(R), r), giverSlag = vektet(giverVekter(R, typ), r), T = REGLER.TYPER[typ];
       let sted = velg(byer.length ? byer : iNærheten, r), fra = null, timer = T.timer, hold = 0, person = null, last = null;
       if (typ === 'hold' && bruer.length && r() < .55) sted = velg(bruer, r);
+      // (R2-løkka 26. nov, pakke «krig», kritikken: «"Hold Løten i 7 timer" lover at bygdevernet slipper dere inn – i Mosevakts hovedsete med
+      // en garnison på 35–50») heller ikke andre jobber legges i et tettsted et annet selskap holder, når det finnes andre; ellers sier
+      // kravteksten det ærlig (k.fare), og bygdevernet nevnes ikke (det finnes ikke i et sted et selskap holder)
+      if (typ !== 'eskorte' && sted.slag !== 'bru' && sted.eier && sted.eier !== id) { const fri = byer.filter(q => !q.eier || q.eier === id); if (fri.length) sted = velg(fri, r); }
       if (typ === 'eskorte') {
         // fra et sted til et annet (minst 2 km mellom), eller fra leiren når det bare finnes ett sted.
         // (R1-løkka 26. nov, kritikken: «eskorte fra Ravnsunds hovedsete til Mosevakts hovedsete uten kommentar») steder et annet
@@ -182,6 +186,7 @@
         bot: avrund(kr * REGLER.bot), sted: { navn: sted.navn, x: Math.round(sted.x), y: Math.round(sted.y), slag: sted.slag || 'tettsted', id: sted.id === undefined ? null : sted.id },
         fra: fra ? { navn: fra.navn, x: Math.round(fra.x), y: Math.round(fra.y) } : null, last, person, sperre, konkurrent, side: null, for: id, nivå: kNivå.nr };
       if (typ === 'eskorte') { const holdt = [fra, sted].filter(q => q && q.eier && q.eier !== id); if (holdt.length) k.fare = holdt.map(q => ({ navn: q.navn, eier: q.eier })); }
+      else if (sted.eier && sted.eier !== id && sted.slag !== 'bru') k.fare = [{ navn: sted.navn, eier: sted.eier }];
       k.tittel = tittel(k); nye.push(k);
     }
     S.tilbud.push(...nye);
@@ -198,18 +203,20 @@
     return `Hent ${k.person} i ${k.sted.navn}`;
   }
   // (R1-løkka) jobben er for bygda/kommunen i tettstedet selv: bygdevernet der slipper lagene inn mens kontrakten er aktiv
-  const vernetVet = k => !!(k.giver && k.giver.slag !== 'firma' && k.sted && k.sted.slag === 'tettsted' && k.giver.by != null && k.giver.by === k.sted.id);
+  const vernetVet = k => !!(k.giver && k.giver.slag !== 'firma' && k.sted && k.sted.slag === 'tettsted' && k.giver.by != null && k.giver.by === k.sted.id && !(k.fare && k.fare.length));
   // kravet med enkle ord
   function kravTekst(k) {
     const N = REGLER.nær;
     if (k.type === 'eskorte') return `${k.giver.navn} trenger ${k.last === 'tankbil' ? 'diesel' : 'varer'} fram. Bilen står ved ${k.fra.navn}. Kjør den til ${k.sted.navn} (innen ${N.fram} m) før fristen. Mister du bilen, er kontrakten brutt.`
       + (k.fare && k.fare.length ? ` Obs: ${k.fare.map(q => q.navn).join(' og ')} holdes av et annet selskap – regn med kamp der.` : '');
-    if (k.type === 'hold') return `Ha et eget lag innen ${N.hold} m av ${k.sted.navn}, uten fiender der, i til sammen ${k.hold} timer før fristen.` + (vernetVet(k) ? ' Bygdevernet der vet om jobben og slipper dere inn.' : '');
-    if (k.type === 'rydd') return `Et væpnet lag har sperret vegen ved ${k.sted.navn}. Slå det ut før fristen.`;
+    // (R2-løkka) et sted et annet selskap holder: si det ærlig (k.fare)
+    const holdt = k.type !== 'eskorte' && k.fare && k.fare.length ? ` Obs: ${k.sted.navn} holdes av et annet selskap – regn med kamp mot garnisonen der.` : '';
+    if (k.type === 'hold') return `Ha et eget lag innen ${N.hold} m av ${k.sted.navn}, uten fiender der, i til sammen ${k.hold} timer før fristen.` + (vernetVet(k) ? ' Bygdevernet der vet om jobben og slipper dere inn.' : '') + holdt;
+    if (k.type === 'rydd') return `Et væpnet lag har sperret vegen ved ${k.sted.navn}. Slå det ut før fristen.` + holdt;
     if (k.type === 'forsyning') return k.sted.retning
       ? `${k.giver.navn} har gjemt et nødlager med mat og utstyr i ${k.sted.navn} (ca. ${Math.round((k.sted.d || REGLER.første.avstand) / 100) * 100} m, merket i kartet), men tør ikke hente det selv. Stedet ligger utenfor tettstedene og innen radiorekkevidde, og bygdevernet vet om jobben. Send en tropp dit (innen ${REGLER.første.nær} m) og bær lageret hjem til leiren (innen ${N.leir} m).`
       : `${k.giver.navn} har et nødlager med mat og utstyr ved ${k.sted.navn}, men tør ikke hente det selv. Send en tropp dit (innen ${REGLER.første.nær} m) og bær lageret hjem til leiren (innen ${N.leir} m).`;
-    return `Send et lag til ${k.person} (merket i kartet ved ${k.sted.navn}) og ta vedkommende med til leiren (innen ${N.leir} m). Blir laget slått ut, er kontrakten brutt.`;
+    return `Send et lag til ${k.person} (merket i kartet ved ${k.sted.navn}) og ta vedkommende med til leiren (innen ${N.leir} m). Blir laget slått ut, er kontrakten brutt.` + holdt;
   }
 
   // ---------- NIVÅER OG KRAV (R18-A) ----------

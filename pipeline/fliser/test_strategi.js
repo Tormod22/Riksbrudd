@@ -58,3 +58,11 @@ console.log('ok   strategi: område, stilling, seier, fronter, neste trekk og tr
   a.ok(etter[0].by.navn === 'Sel' && etter[1].tapt && /Speidertropp 1 ble slått ut her for 1 t siden/.test(S2.tapTekst(etter[1], 160)), 'etter tap: Otta trekkes ned – ' + S2.tapTekst(etter[1], 160));
   a.strictEqual(S2.trekk('blå', byer, () => null, egne, [], undefined, { liste: tap.liste, nå: 100 + S2.REGLER.tap.tid + 1 })[0].by.navn, 'Otta', 'etter et døgn: glemt');
   console.log('ok   strategi (R1-løkka): nylige tap trekker stedet ned'); }
+// (R2-løkka 26. nov) et sted med et kjent forsvar som er større enn det dere har (Løten, 35 mann), står ikke øverst; ett tall for kravet
+{ const S2 = require('../../site/dovre-fliser/spill/strategi.js'), a = require('assert');
+  const byer = [{ id: 1, navn: 'Løten', x: 3000, y: 0, folk: 4000 }, { id: 2, navn: 'Elverum', x: 0, y: 6000, folk: 900 }], egne = [{ x: 0, y: 0, navn: 'Vaktlaget', mann: 8 }];
+  const uten = S2.trekk('blå', byer, () => null, egne, []); a.strictEqual(uten[0].by.navn, 'Løten', 'uten kjent forsvar: Løten først (størst og nærmest)');
+  const med = S2.trekk('blå', byer, id => (id === 1 ? 'grønn' : null), egne, [], undefined, null, b => (b.id === 1 ? 35 : 0));
+  a.ok(med[0].by.navn === 'Elverum' && med[1].sterk && med[1].anbefalt === 36 && !med[0].sterk, 'Løten (35 mann) trekkes ned: ' + med.map(t => t.by.navn + (t.sterk ? '*' : '')).join(', '));
+  a.strictEqual(S2.anbefalt(9, 7), 9, 'inntaket krever 9, bygdevernet 7: 9'); a.strictEqual(S2.anbefalt(4, 7), 8, 'bygdevernet 7: minst 8'); a.strictEqual(S2.anbefalt(5, 0), 5);
+  console.log('ok   strategi (R2-løkka): for sterke steder trekkes ned, ett tall for kravet'); }
