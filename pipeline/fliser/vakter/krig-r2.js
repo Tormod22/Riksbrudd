@@ -23,6 +23,10 @@ module.exports = { navn: 'krig-r2', kjør: async (pg, profil) => {
       ut.scenKrav = !!rad && /Send minst \d+ mann/.test(rad.textContent); ut.scenSend = !!rad && !!rad.querySelector('[data-scensend]');
       ut.scenAvtale = !!rad && (!!rad.querySelector('[data-scenavtale]') || !(Krig.vernMenn(by.e.folk) > 0)); ut.fraLeiren = !!rad && /km fra leiren/.test(rad.textContent);
       ut.scenTekst = rad ? rad.textContent.slice(0, 200) : null; StrategiSpill.lukk();
+      // (1b) tettstedspanelet: bygdevernets styrke og «Send»
+      if (typeof visInfo === 'function') { visInfo(by); const H = document.getElementById('handl'), h = document.getElementById('hint');
+        ut.panelSend = !!H.querySelector('[data-tettsend]') && !!H.querySelector('[data-tettkrig]'); ut.panelVern = /Bygdevernet: \d+ mann/.test(h.textContent) && /Send minst \d+ mann/.test(h.textContent);
+        ut.panelTekst = h.textContent.slice(0, 160); if (window.lukkPanel) lukkPanel(); else document.getElementById('panel').classList.remove('på'); }
       // (2) to lag i tettstedet, for få: én melding med begge og summen
       KT.vern[id] = 0; TETTSTEDER.delete(id); const [X, Y] = navnP(by), minst = Garnison.minstFor(by.e.folk), A = blå[0], B = blå[1];
       for (const [i, s] of [A, B].entries()) { s.x = X + i * 30; s.y = Y; s.sti = null; s.menn = s.menn.slice(0, 1).map(m => ({ ...m, hp: 1 })); }
@@ -49,8 +53,8 @@ module.exports = { navn: 'krig-r2', kjør: async (pg, profil) => {
     return ut; });
   if (d.uten) return { ok: true, tekst: 'krig-r2: ikke prøvd (mangler tettsted eller moduler)', data: d };
   const ute = d.ute ? true : d.live && d.sistMeldt && d.varsel;
-  const ok = !d.feil && d.sterk && d.scenby && d.scenKrav && d.scenSend && d.scenAvtale && d.fraLeiren && d.sum !== false && d.hvem && ute;
-  return { ok, data: d, tekst: `krig-r2 (${profil}): for sterkt sted trekkes ned ${d.sterk}; scenariobyen i Krig ${d.scenby} (krav ${d.scenKrav}, Send ${d.scenSend}, avtale ${d.scenAvtale}, fra leiren ${d.fraLeiren}); `
+  const ok = !d.feil && d.sterk && d.scenby && d.scenKrav && d.scenSend && d.scenAvtale && d.fraLeiren && d.panelSend !== false && d.panelVern !== false && d.sum !== false && d.hvem && ute;
+  return { ok, data: d, tekst: `krig-r2 (${profil}): for sterkt sted trekkes ned ${d.sterk}; scenariobyen i Krig ${d.scenby} (krav ${d.scenKrav}, Send ${d.scenSend}, avtale ${d.scenAvtale}, fra leiren ${d.fraLeiren}); tettstedspanelet: Send ${d.panelSend}, bygdevernet ${d.panelVern} («${d.panelTekst}»); `
     + `lagene regnes sammen ${d.sum === undefined ? 'ikke prøvd' : d.sum} («${d.sumTekst}»); hvem sperrer ${d.hvem} («${d.hvemTekst}»); `
     + (d.ute || `egne lag med kontakt live ${d.live}, uten kontakt sist meldt ${d.sistMeldt}, varsel ved marsjordren ${d.varsel} («${d.varselTekst}»)`) + (d.feil ? ' FEIL: ' + d.feil : '') };
 } };

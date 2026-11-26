@@ -385,6 +385,24 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
     h.textContent += ` ${T.navn} (${T.tekst}): ` + (q ? `gir nå ${RG.girTekst(girNå(q), kr)} per døgn. Lojalitet ${Math.round(q.b.loj)} (${RG.lojOrd(q.b.loj)}), skatt: ${RG.SKATT[q.b.skatt].navn.toLowerCase()}, handelsruta er ${q.rute.status}. Skatten velger du i «Region».`
       : `som ditt gir det ${RG.girTekst(grunnFor(o.e.folk || 0, t), kr)} per døgn til leiren.`); });
 
+  // (R2-løkka 26. nov, pakke «krig», kritikken: «Tettstedspanelet (Elverum) har ingen "Send"-knapp og viser ikke bygdevernets styrke»)
+  // et tettsted du ikke holder: forsvaret (bygdevernet og fiender dere vet om), ett tall for hvor mange mann som trengs (Strategi.anbefalt),
+  // og knappene «Send …» (åpner Krig med stedet valgt, så advarslene om radio og forsvar står der), «Gjør avtale» og «Vis i Krig»
+  KROKER.info.push((o, H) => { const SS = window.StrategiSpill; if (o.lag !== 'tettsted' || !H || !SS || !SS.bilde || !window.Strategi) return;
+    if (G.tilstand(TETTSTEDER, o.e.id).eier === 'blå') return;
+    let T = null; try { T = SS.bilde(); } catch (x) { T = null; } const by = T && T.byer.find(b => b.ref === o); if (!by) return;
+    const t = T.trekk.find(q => q.by.id === by.id), v = SS.vern ? SS.vern(by) : null, kf = SS.kjentForsvar ? SS.kjentForsvar(by) : { mann: 0 };
+    const anb = t ? t.anbefalt : Strategi.anbefalt(G.minstFor(by.folk), kf.mann), h = document.getElementById('hint');
+    const vt = v ? (v.oppdrag ? `Bygdevernet slipper dere inn (oppdrag for ${v.oppdrag}).` : v.avtale ? 'Dere har avtale med bygdevernet.' : v.borte ? 'Bygdevernet har gitt opp.' : `Bygdevernet: ${v.mann} mann${v.kjent ? '' : ' (anslått – dere har ikke møtt dem ennå)'}.`) : '';
+    const ft = kf.mann - (kf.vern || 0) > 0 ? ` Fiender her: ca. ${kf.mann - (kf.vern || 0)} mann.` : '';
+    if (h) h.textContent = `${vt}${ft} Send minst ${anb} mann${t ? ` – dere har ${t.har} innen ${Strategi.REGLER.marsj / 1000} km` : ''}. ` + h.textContent;
+    const vis = () => { if (!SS.erÅpen()) SS.åpne(); if (SS.velg) SS.velg(by.id); };
+    if (t && t.lag) { const n = t.flere && t.flere.length > 1 ? t.flere.length : 0, b = knapp(n ? `Send ${n} lag` : `Send ${t.lag.navn}`, false, () => { vis(); SS.send(by); });
+      b.dataset.tettsend = by.id; if (!t.innen || t.lag.kontakt === false) { b.disabled = true; b.title = !t.innen ? 'For langt for én marsj' : 'Ingen radiokontakt med laget'; } H.append(b); }
+    if (v && v.mann > 0 && window.KrigSpill && KrigSpill.vernAvtale) { const b = knapp(`Gjør avtale (${kr(v.pris)})`, false, () => { const KT = KrigSpill.T(); if (KT.vern[by.id] === undefined) KT.vern[by.id] = v.mann; if (KrigSpill.vernAvtale(by.id) && typeof visInfo === 'function') visInfo(o); });
+      b.dataset.tettavtale = by.id; H.append(b); }
+    const b = knapp('Vis i Krig', false, vis); b.dataset.tettkrig = by.id; H.append(b); });
+
   // ---------- Leir-menyen (fanen Lager) og kommandolinja ----------
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e, knapp }) => { if (!klar) return;
     hode.append(e('h3', { 'data-fane': 'lager' }, 'Regionen'));

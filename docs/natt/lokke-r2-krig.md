@@ -6,6 +6,9 @@ Grunnlag: docs/kritikk/2026-11-26-r2-ingrid-saether.md («Hold byen» ved Elveru
 1. **Scenariobyen i Krig** (strategi-visning.js `scenarioBy`): byen i «Hold byen» står øverst i Krig (i scenarioboksen) med folketall, eier,
    avstand fra leiren, forsvar, «Send minst N mann – dere har X innen 30 km», og knappene «Send …» / «Send N lag», «Gjør avtale (pris)» og «Vis».
    Bygdevernets melding i loggen henviser nå til Krig (før «Leir → Mål», der avtalen ikke fantes).
+   Tettstedspanelet (trykk på et tettsted du ikke holder, region-visning.js KROKER.info): bygdevernets styrke (eller «anslått – ikke møtt ennå»),
+   fiender dere vet om, «Send minst N mann – dere har X», og knappene «Send …» (åpner Krig med stedet valgt og sender – advarslene står der),
+   «Gjør avtale (pris)» og «Vis i Krig».
 2. **Lagene regnes sammen og ett tall** – `Strategi.anbefalt(minst, forsvar)` = det inntaket krever, og mer enn det kjente forsvaret.
    Brukt i speiderrapporten (før «flere enn 7»), «framme men tar det ikke» (hvorforIkkeTar: én melding med alle lagene ved stedet og summen,
    lag utenfor kanten nevnes), garnison-visning «For få til å ta …» (alle lagene, summen, ny melding når summen endrer seg) og bygdevernets
@@ -42,7 +45,7 @@ Endre kravet til `!k3.bSkjultUte` (og teksten «ute bare «sist meldt»» til «
 
 ## Vakt
 pipeline/fliser/vakter/krig-r2.js (ca. 1 s): for sterkt sted trekkes ned, scenariobyen i Krig med krav/Send/avtale/avstand fra leiren, lagene regnes
-sammen i én melding, hvem som sperrer, lag med kontakt live / uten kontakt skjult, varsel ved marsjordren. Prøvd på PC og mobil (OK), og med feilen
+sammen i én melding, tettstedspanelet har Send og bygdevernets styrke, hvem som sperrer, lag med kontakt live / uten kontakt skjult, varsel ved marsjordren. Prøvd på PC og mobil (OK), og med feilen
 lagt inn igjen (innsyn ute = live false) – vakta svarte FEIL. Den gamle krig-vakta er grønn på PC og mobil.
 
 ## Ikke gjort
