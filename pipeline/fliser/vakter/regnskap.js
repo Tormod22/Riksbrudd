@@ -106,10 +106,11 @@ module.exports = {
         const kr = window.Spillet && Spillet.Hendelser.LISTE.find(h => h.id === 'krangel'); ut.krangelOk = !kr || (kr.to && /Ola og Kari har/.test(kr.tekst('Ola', 'Kari')));
         // (15) navn: en ny person får aldri navnet til en død eller en i en tropp
         { const G = FolkRegler.fraJSON(JSON.parse(f0)), S = SS && SS.tilstand(), døde0 = S ? S.døde.length : 0; if (S) S.døde.push({ navn: 'Ragnhild Tangen', hvem: 'soldat', tid: 0 });
-          const r = FolkRegler.rng(13); for (let i = 0; i < 60; i++) FolkRegler.nyPerson(G, r);
-          const lagNavn = ENHETER.filter(q => q.side === 'blå').flatMap(q => q.menn.map(m => m.navn)), alle = G.personer.map(p => p.navn);
-          ut.navnOk = new Set(alle).size === alle.length && !alle.includes('Ragnhild Tangen') && !alle.some(n => lagNavn.includes(n));
-          if (!ut.navnOk) ut.navnFeil = { like: alle.filter((n, i) => alle.indexOf(n) !== i).slice(0, 4), død: alle.includes('Ragnhild Tangen'), iLag: alle.filter(n => lagNavn.includes(n)).slice(0, 4) }; if (S) S.døde.length = døde0; }
+          // (fletting r3) bare de NYE personene sjekkes: folk som alt står i Leirvakta (lagt der av en annen vakt) har samme navn i laget med vilje
+          const n0 = G.personer.length, r = FolkRegler.rng(13); for (let i = 0; i < 60; i++) FolkRegler.nyPerson(G, r);
+          const lagNavn = ENHETER.filter(q => q.side === 'blå').flatMap(q => q.menn.map(m => m.navn)), alle = G.personer.map(p => p.navn), nye = alle.slice(n0);
+          ut.navnOk = new Set(alle).size === alle.length && !nye.includes('Ragnhild Tangen') && !nye.some(n => lagNavn.includes(n));
+          if (!ut.navnOk) ut.navnFeil = { like: alle.filter((n, i) => alle.indexOf(n) !== i).slice(0, 4), død: nye.includes('Ragnhild Tangen'), iLag: nye.filter(n => lagNavn.includes(n)).slice(0, 4) }; if (S) S.døde.length = døde0; }
         // (16) opplæringen steg 6: kravet står konkret og to på Vakt holder
         if (window.Opplaering) { const s6 = Opplaering.STEG.find(q => q.id === 'tropp2'); ut.krav = Opplaering.krav(s6, { tropper: 0, påVakt: 1 });
           ut.kravOk = /1 på Vakt \(trenger 2\)/.test(ut.krav) && s6.ferdig({ tropper: 0, påVakt: 2 }); } else ut.kravOk = false;
