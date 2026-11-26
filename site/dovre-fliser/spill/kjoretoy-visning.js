@@ -16,6 +16,7 @@
   window.KJ_PANEL = []; window.KJ_TEKST = [];   // (k, knapperad) => void  og  k => tekst eller null
 
   // ---------- vegnettet: hentes i biter gjennom mellomstasjonen, pakkes ut i nettleseren der den kan ----------
+  const teknisk = () => document.body.classList.contains('teknisk');
   function lastVegnett() {
     if (graf) return Promise.resolve(graf);
     if (lasting) return lasting;
@@ -23,7 +24,9 @@
       const m = await (await fetch(`/api/kart/${VEGNETT_TAG}/manifest.json/0/1048576`)).json();
       const gz = typeof DecompressionStream !== 'undefined', fil = gz ? 'vegnett.bin.gz' : 'vegnett.bin', byte = gz ? m.gzip_byte : m.byte;
       const O = VEG_TLF.område();
-      logg(O ? `Laster vegnettet (${Math.round(byte / 1048576)} MB) – bare vegene i ${O.navn || 'spillområdet'} beholdes …` : VEG_TLF.boks() ? `Laster vegnettet (${Math.round(byte / 1048576)} MB) – på telefon beholdes bare vegene rundt leiren …` : `Laster vegnettet for hele Norge (${Math.round(byte / 1048576)} MB) …`);
+      // (kritikerløkka 26. nov, Jonas: «Laster vegnettet for hele Norge (24 MB)» / «2 030 683 vegstrekninger (NVDB …)» i loggen er teknisk)
+      // spilleren får en enkel setning; størrelse, antall og kilde står bare med «Tekniske tall» (☰) på
+      logg('Henter vegkartet, så kjøretøyene finner fram – første gang kan det ta et halvt minutt …' + (teknisk() ? ` (${Math.round(byte / 1048576)} MB${O ? ', bare ' + (O.navn || 'spillområdet') : VEG_TLF.boks() ? ', bare rundt leiren' : ''})` : ''));
       const deler = [], kø = []; for (let fra = 0; fra < byte; fra += BIT) kø.push(fra);
       let ferdig = 0;
       await Promise.all(Array.from({ length: 4 }, async () => { for (let fra; (fra = kø.shift()) !== undefined;) {
@@ -36,11 +39,10 @@
       else { data = new Uint8Array(byte); let p = 0; for (const d of deler) { data.set(d, p); p += d.byteLength; } deler.length = 0; }
       // på telefon bare vegene rundt leiren (VEG_TLF.boks): ca. 20 MB i minnet i stedet for ca. 210 MB for hele landet
       const boks = VEG_TLF.boks(); graf = Vegnett.les(data, boks ? { boks } : {}); data = null; window.VEGNETT = graf;
-      logg(O ? `Vegnettet er lastet for ${O.navn || 'spillområdet'}: ${graf.antallLenker.toLocaleString('nb-NO')} vegstrekninger (NVDB, 1. juni 2023).` : boks ? `Vegnettet er lastet for området rundt leiren (${Math.round((boks[2] - boks[0]) / 1000)} × ${Math.round((boks[3] - boks[1]) / 1000)} km): ${graf.antallLenker.toLocaleString('nb-NO')} vegstrekninger (NVDB, 1. juni 2023).`
-        : `Vegnettet er lastet: ${graf.antallLenker.toLocaleString('nb-NO')} vegstrekninger (NVDB, 1. juni 2023).`);
+      logg('Vegkartet er klart: kjøretøyene kan kjøre.' + (teknisk() ? ` (${graf.antallLenker.toLocaleString('nb-NO')} vegstrekninger${boks ? ` i ${Math.round((boks[2] - boks[0]) / 1000)} × ${Math.round((boks[3] - boks[1]) / 1000)} km rundt leiren` : O ? ' i ' + (O.navn || 'spillområdet') : ''}, NVDB 1. juni 2023)` : ''));
       return graf;
     })();
-    lasting.catch(e => { lasting = null; logg('Fikk ikke lastet vegnettet: ' + e.message); });
+    lasting.catch(e => { lasting = null; logg('Fikk ikke hentet vegkartet – kjøretøyene står til det er hentet. Prøv igjen om litt.' + (teknisk() ? ' (' + e.message + ')' : '')); });
     return lasting;
   }
   window.lastVegnett = lastVegnett;
@@ -131,7 +133,8 @@
   });
 
   // ---------- trykk: velg kolonne, eller velg mål når «Kjør til …» er på ----------
-  KROKER.trykk.push((X, Y) => {
+  // (kritikerløkka 26. nov) kroken setter mål («Kjør til …»): den får trykket også mens du velger mål (velgerMål i index.html)
+  const kjTrykk = (X, Y) => {
     if (modus === 'marsj' && valgt) return false;   // lagets marsjordre går foran
     if (valgtKj && kjørModus) { kjørModus = false; if (valgtKj.side === 'blå') KOMMANDO({ type: 'kjør', kjøretøy: nidKj(valgtKj), x: X, y: Y }); visKj(valgtKj); return true; }
     let best = null, bd = 22;
@@ -142,7 +145,10 @@
     if (best) { velg(best); return true; }
     if (valgtKj) { valgtKj = null; kjørModus = false; skitten = true; }
     return false;
-  });
+  };
+  kjTrykk.mål = true; KROKER.trykk.push(kjTrykk);
+  window.kjørModusPå = () => !!(valgtKj && kjørModus);
+  window.avbrytKjørModus = () => { if (!kjørModus) return; kjørModus = false; if (valgtKj) visKj(valgtKj); skitten = true; };
   function velg(k) { valgt = null; modus = null; valgtKj = k; kjørModus = false; visKj(k); skitten = true; }
   window.velgKjoretoy = velg;
   window.valgtKjoretoy = () => valgtKj;

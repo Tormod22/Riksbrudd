@@ -1180,9 +1180,19 @@ function leirTillegg() { if (!(kam.m > NAVN_UTE)) return ''; const lag = ENHETER
   return lag || kj ? ' · ' + [lag ? lag + ' lag' : '', kj ? kj + ' kjøretøy' : ''].filter(Boolean).join(', ') : ''; }
 function klokkeslett(t) { const h = 6 + t / TIME; return String(Math.floor(h % 24)).padStart(2, '0') + ':' + String(Math.floor(h % 1 * 60)).padStart(2, '0'); }
 
+// MÅLVALG (kritikerløkka 26. nov, Jonas på telefon: «trykket på leiren åpnet leirpanelet i stedet for å sette mål»): mens du velger mål
+// (Marsjer, Kjør dit, Kjør til …), går trykket bare til krokene som setter mål (f.mål = true, og flyt.js sin marsjkrok) – ikke til
+// merkene (leiren, basen, oppdrag …) som ellers åpner sitt eget panel. Bygger du noe samtidig, går plasseringen foran som før.
+function velgerMål() {
+  if (window.LeirSpill && LeirSpill.plassering && LeirSpill.plassering()) return false;
+  if (window.Byggesett && Byggesett.tilstand && Byggesett.tilstand().åpen) return false;
+  if (modus === 'marsj' && (valgt || (window.FlytSpill && FlytSpill.gruppe && FlytSpill.gruppe().length > 1))) return true;
+  return !!(window.kjørModusPå && kjørModusPå());
+}
+const målKrok = f => !!f.mål || !!(window.FlytSpill && f === FlytSpill.trykk);
 function trykkPå(cx, cy) {
-  const X = kam.x + (cx - VW / 2) * kam.m, Y = kam.y - (cy - VH / 2) * kam.m;
-  for (const f of KROKER.trykk) if (f(X, Y, cx, cy)) return;
+  const X = kam.x + (cx - VW / 2) * kam.m, Y = kam.y - (cy - VH / 2) * kam.m, mv = velgerMål();
+  for (const f of KROKER.trykk) if ((!mv || målKrok(f)) && f(X, Y, cx, cy)) return;
   // KROKER.kanOrdre (K3): ordren når ikke fram uten radiokontakt
   // (R17 funn 15) en tropp om bord: ordren går til kjøretøyet (window.OMBORD_ORDRE i tropper-visning.js)
   if (modus === 'marsj' && valgt) { modus = null; if (valgt.ombord && window.OMBORD_ORDRE && OMBORD_ORDRE(valgt, X, Y)) { visPanel(); return; } if (KROKER.kanOrdre.every(f => f(valgt))) KOMMANDO({ type: 'ordre', lag: KOMMANDO.nid(valgt), x: X, y: Y }); visPanel(); return; }
@@ -3518,8 +3528,8 @@ function framdrift(tekst, andel) {
     if (e.type === 'pointerup' && ned && !flyttet && !p.size && R3 && R3.ut) {
       const u = R3.ut;
       // trykk på bakken i 3D for moduler som velger et sted (leiren, bygg): KROKER.trykk3d(X, Y) -> true når det er brukt
-      if (KROKER.trykk3d.length) { R3.ray.setFromCamera(new THREE.Vector2(nå[0] / VW * 2 - 1, -nå[1] / VH * 2 + 1), R3.cam); const hit = R3.ray.intersectObject(R3.mesh)[0];
-        if (hit && KROKER.trykk3d.some(f => f(u.cx + hit.point.x, u.cy + hit.point.y))) { ned = null; return; } }
+      if (KROKER.trykk3d.length) { R3.ray.setFromCamera(new THREE.Vector2(nå[0] / VW * 2 - 1, -nå[1] / VH * 2 + 1), R3.cam); const hit = R3.ray.intersectObject(R3.mesh)[0], mv = velgerMål();
+        if (hit && KROKER.trykk3d.some(f => (!mv || målKrok(f)) && f(u.cx + hit.point.x, u.cy + hit.point.y))) { ned = null; return; } }
       let best = null, bd = 28; for (const s of ENHETER) { if (VIS.taake && !synlig(s)) continue; const q = proj3(s.x, s.y); if (!q) continue; const d = Math.hypot(q[0] - nå[0], q[1] - nå[1]); if (d < bd) { bd = d; best = s; } }
       if (modus === 'marsj' && valgt) {
         R3.ray.setFromCamera(new THREE.Vector2(nå[0] / VW * 2 - 1, -nå[1] / VH * 2 + 1), R3.cam); const hit = R3.ray.intersectObject(R3.mesh)[0];
@@ -3630,7 +3640,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/etikett.js?v=0ac6f97621"></script>
 <script src="/dovre-fliser/spill/vegnett.js?v=a3504a74bd"></script>
 <script src="/dovre-fliser/spill/kjoretoy.js?v=e11e4e8a0f"></script>
-<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=f9b0032ad3"></script>
+<script src="/dovre-fliser/spill/kjoretoy-visning.js?v=167a1133c0"></script>
 <script src="/dovre-fliser/spill/okonomi.js?v=ec2d281a1f"></script>
 <script src="/dovre-fliser/spill/okonomi-visning.js?v=a8c748ba7f"></script>
 <script src="/dovre-fliser/spill/penger-visning.js?v=b5adad08c7"></script>
@@ -3693,7 +3703,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/oppstart.js?v=f630d17792"></script>
 <script src="/dovre-fliser/spill/leir.js?v=ea1427b801"></script>
 <script src="/dovre-fliser/spill/folk.js?v=eba7f5b061"></script>
-<script src="/dovre-fliser/spill/oppstart-visning.js?v=a59e3a10d5"></script>
+<script src="/dovre-fliser/spill/oppstart-visning.js?v=036ef3b962"></script>
 <script src="/dovre-fliser/spill/leirvalg.js?v=a4e95aa4c1"></script>
 <script src="/dovre-fliser/spill/helling.js?v=14983ad6c3"></script>
 <script src="/dovre-fliser/spill/helling-visning.js?v=55533490bc"></script>
@@ -3751,7 +3761,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/overlev.js?v=44a9091163"></script>
 <script src="/dovre-fliser/spill/folk3d.js?v=c197435ead"></script>
 <script src="/dovre-fliser/spill/figur3d.js?v=3e33ad384f"></script>
-<script src="/dovre-fliser/spill/narhud.js?v=d4ac7dacf9"></script>
+<script src="/dovre-fliser/spill/narhud.js?v=34bbe95198"></script>
 <script src="/dovre-fliser/spill/ikoner.js?v=653bcc5070"></script>
 <script src="/dovre-fliser/spill/panelpynt.js?v=a71edf6820"></script>
 <script src="/dovre-fliser/spill/foto.js?v=f0352506d3"></script>
@@ -3766,7 +3776,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/morgen-visning.js?v=57896291fe"></script>
 <script src="/dovre-fliser/spill/forsvar-hjemme.js?v=1d8131905f"></script>
 <script src="/dovre-fliser/spill/tropper.js?v=22731c62bc"></script>
-<script src="/dovre-fliser/spill/tropper-visning.js?v=0662e9bee5"></script>
+<script src="/dovre-fliser/spill/tropper-visning.js?v=754468d56d"></script>
 <script src="/dovre-fliser/spill/karakter.js?v=9aa33a2091"></script>
 <script src="/dovre-fliser/spill/lager-visning.js?v=b648a18286"></script>
 <script src="/dovre-fliser/spill/strategi.js?v=042b63bc8f"></script>
@@ -3810,11 +3820,11 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/scenario.js?v=55bc5f9d74"></script>
 <script src="/dovre-fliser/spill/scenario-visning.js?v=49c5bb2f2f"></script>
 <script src="/dovre-fliser/spill/neste.js?v=3fbba9040b"></script>
-<script src="/dovre-fliser/spill/kompakt.js?v=6fed2358e9"></script>
+<script src="/dovre-fliser/spill/kompakt.js?v=9ceabbbf5f"></script>
 <script src="/dovre-fliser/spill/lys3d.js?v=9a7e1bb68e"></script>
 <script src="/dovre-fliser/spill/luft.js?v=98926811be"></script>
 <script src="/dovre-fliser/spill/luft3d.js?v=3cbd5cb14f"></script>
-<script src="/dovre-fliser/spill/tema.js?v=18c02f70c1"></script>
+<script src="/dovre-fliser/spill/tema.js?v=4689b8e877"></script>
 <script src="/dovre-fliser/spill/effekter3d.js?v=9b3d2dc2ec"></script>
 <script src="/dovre-fliser/spill/fjernby3d.js?v=fcce2ba8ce"></script>
 <script src="/dovre-fliser/spill/knapper.js?v=952462e96e"></script>
@@ -3830,10 +3840,10 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/minikart2d.js?v=dae9f4bfb7"></script>
 <script src="/dovre-fliser/spill/tegnforklaring.js?v=6ef9864da2"></script>
 <script src="/dovre-fliser/spill/paneler.js?v=7c30488bdb"></script>
-<script src="/dovre-fliser/spill/spillhud.js?v=48495a45f5"></script>
+<script src="/dovre-fliser/spill/spillhud.js?v=0b5c5bb75e"></script>
 <script src="/dovre-fliser/spill/taster.js?v=d821a03b79"></script>
 <script src="/dovre-fliser/spill/telefon.js?v=0be9c9f3ec"></script>
-<script src="/dovre-fliser/spill/skjermlag.js?v=347c3251ec"></script>
+<script src="/dovre-fliser/spill/skjermlag.js?v=dcfbfdba49"></script>
 <script src="/dovre-fliser/spill/loggdemp.js?v=52b2238d6f"></script>
 <script src="/dovre-fliser/spill/logglager.js?v=bd48528ab4"></script>
 </body>

@@ -17,6 +17,8 @@ button:focus-visible{ outline:2px solid #c9b26a; outline-offset:1px; } button:di
 #leirmeny h3, #folkmeny h3, #sekk h3{ margin:14px 0 4px; padding-top:8px; border-top:1px solid rgba(201,178,106,.22); font-size:13px; letter-spacing:.07em; text-transform:uppercase; color:#c9b26a; font-weight:600; }
 #leirmeny, #folkmeny, #sekk, #hjelp, #lagmeny{ scrollbar-width:thin; scrollbar-color:#5a4f38 transparent; }
 #skytknapp, #gangeknapper button, #byttvapen, #kjorknapp, #letknapp, #sikreknapp{ font-family:inherit; font-weight:600; letter-spacing:.02em; }
+/* (kritikerløkka 26. nov, Jonas: «Sikt», «Granat» og «Lag» sto i fet sans ved siden av «Skyt») samme skrift som de andre knappene når du går */
+#siktknapp, #granatknapp, #lagkamknapp{ font-family:inherit; font-weight:600; letter-spacing:.02em; font-size:15px; }
 #gangeknapper button, #skytknapp{ font-size:16px; box-shadow:0 2px 8px rgba(0,0,0,.5); backdrop-filter:blur(2px); }
 #folkmeny .status.brikker{ display:flex; flex-wrap:wrap; gap:5px; margin:6px 0; } #folkmeny .status.brikker span{ background:#241e14; border:1px solid #3a3223; border-radius:3px; padding:2px 8px; font-size:13px; }
 body.kort .stats > div > span:not([id]){ display:none; } body.kort .stats{ gap:2px 12px; }

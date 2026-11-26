@@ -77,4 +77,78 @@ body.kort #leirmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + ${B}); 
     window.UI_TOPP3D = Math.round(y + 2);
   }, 400);
   window.Kompakt = { sjekk: () => ({ kort: document.body.classList.contains('kort'), topp: window.UI_TOPP3D || 0 }) };
+
+  // ================= TELEFON: PANELENE (kritikerløkka 26. nov, runde 1, Jonas Bakke på 390 × 844 med berøring) =================
+  // 1. «Ta kontrakten» lå under bunnmenyen (Leir/Folk/Tropper …), og trykket åpnet Tropper oppå Selskapet. Selskapet og noen andre
+  //    paneler var ikke med i lista over paneler som slutter over bunnmenyen (Skjermlag.LØFT) – nå er de det.
+  // 2. På telefon er bare ett av de store panelene åpent om gangen: åpner du et nytt, lukkes det gamle (med sin egen lukkeknapp).
+  // 3. Panelene er ugjennomsiktige (teksten bak skinte gjennom) og lavere, og mens du velger mål på kartet (Marsjer, Kjør dit,
+  //    Kjør til …) er de borte, så du ser kartet. En stripe øverst sier hva du gjør, med «Avbryt». Neste-lappen viker for panelene.
+  // Alt gjelder spilleren på telefon (body.kort); i testene (navigator.webdriver) bare når Kompakt.test = true. Tallene er Claudes forslag.
+  const REGLER = { panelHøyde: '44vh', hver: 150 };
+  const aktiv = () => !navigator.webdriver || window.Kompakt.test === true;
+  // spill/paneler.js holder alt annet til ett panel om gangen på telefon; Selskapet var ikke med der (det lå oppå Tropper og omvendt)
+  const ENE = ['selskap'], ANDRE = () => (window.Paneler && Paneler.PLASS ? [...Paneler.PLASS.venstre, ...Paneler.PLASS.høyre] : ['leirmeny', 'folkmeny', 'tropppanel', 'karakterark', 'krig', 'region', 'panel']);
+  const LØFT_TIL = ['selskap', 'funnpanel', 'lapppanel', 'logghel', 'lagremeny', 'ressursvalg', 'gaavalg'];
+  const SKJUL_VED_MÅL = ['panel', 'selskap', 'tropppanel', 'leirmeny', 'folkmeny', 'karakterark', 'degmeny', 'krig', 'region', 'samfunnmeny', 'verdenpanel', 'sjopanel', 'krigpanel', 'flytgruppe', 'stridpanel', 'sekk', 'nestelapp', 'flismerliste', 'mkommer'];
+  const css2 = document.createElement('style');
+  css2.textContent = `
+body.kort.tlfaktiv{ --panel:#16120c; }
+body.kort.smal.tlfaktiv #panel{ max-height:${REGLER.panelHøyde}; background:#16120c; }
+body.kort.tlfaktiv :is(#tropppanel, #selskap, #leirmeny, #folkmeny, #degmeny, #karakterark){ background-color:#16120c; }
+body.kort.tlfaktiv.målvalg :is(${SKJUL_VED_MÅL.map(id => '#' + id).join(', ')}){ display:none; }
+body.kort.tlfaktiv.tlfpanel #nestelapp{ display:none; }
+#maalstripe{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 8px); z-index:12; display:none; box-sizing:border-box; width:max-content;
+  max-width:calc(100vw - 16px); padding:6px 8px 6px 12px; gap:10px; align-items:center; background:#1c170f; border:1px solid #c9b26a; border-radius:3px;
+  color:#f0e2b0; font-size:14.5px; line-height:1.25; box-shadow:0 4px 14px rgba(0,0,0,.55); }
+#maalstripe.på{ display:flex; } #maalstripe button{ flex:none; min-height:40px; min-width:72px; padding:2px 12px; background:#2a2318; border:1px solid #5b5140; color:inherit; font:inherit; border-radius:3px; }`;
+  document.head.appendChild(css2);
+  const stripe = document.createElement('div'); stripe.id = 'maalstripe'; stripe.setAttribute('role', 'status');
+  const sTekst = document.createElement('span'), avbryt = document.createElement('button'); avbryt.textContent = 'Avbryt'; stripe.append(sTekst, avbryt); document.body.appendChild(stripe);
+  avbryt.onclick = e => { e.stopPropagation(); try { if (window.FlytSpill && FlytSpill.køModus) FlytSpill.køModus(false); modus = null; if (window.avbrytKjørModus) avbrytKjørModus(); visPanel(); skitten = true; } catch (x) { /* før spillet */ } };
+  const $ = id => document.getElementById(id), vises = e => !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+  // lukk et panel slik spill/paneler.js gjør det (eierens egen knapp), ellers med lukkeknappen (×) i panelet
+  function lukk(id) { const e = $(id); if (!e) return;
+    if (id === 'leirmeny') { if ($('leirknapp')) $('leirknapp').click(); return; }
+    if (id === 'krig') { if (window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen() && $('krigknapp')) $('krigknapp').click(); return; }
+    if (id === 'flytgruppe') { if (window.FlytSpill && FlytSpill.velg) FlytSpill.velg([]); return; }
+    if (id === 'panel') { if (window.lukkPanel) lukkPanel(); return; }
+    if (id === 'stridpanel') { if (window.StridSpill && StridSpill.lukk) StridSpill.lukk(); else e.classList.remove('på'); return; }
+    const b = e.querySelector('.lukk, button[aria-label^="Lukk"], button[title^="Lukk"]') || [...e.querySelectorAll('button')].find(q => /^[×✕✖]$/.test(q.textContent.trim()));
+    if (b) b.click(); else e.classList.remove('på'); }
+  function målTekst() { try {
+      if (window.kjørModusPå && kjørModusPå()) return 'Trykk på kartet der kjøretøyet skal kjøre.';
+      const g = window.FlytSpill && FlytSpill.gruppe ? FlytSpill.gruppe() : []; if (g.length > 1) return `Trykk på kartet der de ${g.length} lagene skal gå.`;
+      if (valgt && valgt.ombord) return `Trykk på kartet der ${valgt.ombord.navn} skal kjøre.`;
+      return valgt ? `Trykk på kartet der ${valgt.navn} skal gå.` : 'Trykk på kartet for å velge mål.'; } catch (x) { return 'Trykk på kartet for å velge mål.'; } }
+  let forrige = new Set(), sistTekst = '';
+  setInterval(() => { try {
+    const B = document.body, på = aktiv() && B.classList.contains('kort');
+    if (B.classList.contains('tlfaktiv') !== på) B.classList.toggle('tlfaktiv', på);
+    if (window.Skjermlag) { for (const id of LØFT_TIL) if (Skjermlag.LØFT && !Skjermlag.LØFT.includes(id)) Skjermlag.LØFT.push(id); if (Skjermlag.SELV && !Skjermlag.SELV.includes('selskap')) Skjermlag.SELV.push('selskap'); }
+    const mv = på && typeof velgerMål === 'function' && velgerMål();
+    if (B.classList.contains('målvalg') !== mv) B.classList.toggle('målvalg', mv);
+    const mvb = $('marsjvalg'), stripePå = mv && !(mvb && mvb.classList.contains('på'));
+    if (stripePå) { const t = målTekst(); if (t !== sistTekst) { sTekst.textContent = t; sistTekst = t; } }
+    if (stripe.classList.contains('på') !== stripePå) stripe.classList.toggle('på', stripePå);
+    if (!på) { forrige = new Set(); if (B.classList.contains('tlfpanel')) B.classList.remove('tlfpanel'); return; }
+    if (mv) return;   // panelene er skjult mens du velger mål: ingen skal lukkes av det
+    const alle = [...ENE, ...ANDRE()], åpne = alle.filter(id => vises($(id))), nye = åpne.filter(id => !forrige.has(id));
+    if (nye.length && åpne.length > 1) { const ny = nye[nye.length - 1];
+      if (ENE.includes(ny)) { for (const id of åpne) if (id !== ny) lukk(id); } else for (const id of ENE) if (åpne.includes(id)) lukk(id); }
+    forrige = new Set(alle.filter(id => vises($(id))));
+    const tp = forrige.size > 0; if (B.classList.contains('tlfpanel') !== tp) B.classList.toggle('tlfpanel', tp);
+  } catch (x) { /* neste runde */ } }, REGLER.hver);
+  // NAVN I KANTEN (kritikerløkka 26. nov, Jonas: «Speidertropp 1» og «Kontrakt: Her…» ble kuttet i høyre kant på telefon): navnene som
+  // plasseres av spill/etikett.js, skyves inn så hele navnet står på skjermen (luft: Claudes forslag). Gjelder alle skjermer.
+  const KANT = 4;
+  function klampNavn() { const E = window.Etikett; if (!E || !E.tekst || E.tekst.__klamp) return !!(E && E.tekst && E.tekst.__klamp);
+    const orig = E.tekst;
+    const ny = function (g, t, x, y, retning, prio) {
+      if (g && g.canvas && isFinite(x) && typeof g.measureText === 'function') { const W = typeof VW !== 'undefined' ? VW : g.canvas.clientWidth || g.canvas.width, w = g.measureText(String(t)).width, a = g.textAlign;
+        if (W > 2 * KANT + w) { if (a === 'left' || a === 'start') x = Math.min(Math.max(x, KANT), W - KANT - w); else if (a === 'right' || a === 'end') x = Math.min(Math.max(x, KANT + w), W - KANT); else x = Math.min(Math.max(x, KANT + w / 2), W - KANT - w / 2); } }
+      return orig.call(this, g, t, x, y, retning, prio); };
+    ny.__klamp = true; E.tekst = ny; return true; }
+  if (!klampNavn()) { const t = setInterval(() => { if (klampNavn()) clearInterval(t); }, 500); }
+  Object.assign(window.Kompakt, { test: false, REGLER, ENE, stripe: () => stripe.classList.contains('på') });
 })();
