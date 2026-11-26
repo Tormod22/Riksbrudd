@@ -34,10 +34,13 @@ const RAMME = {
   // … og drifta skal likevel ta minst 2 % av startpengene på ti døgn (ellers betyr diesel og mat ingenting)
   driftTiDøgnMinst: .02 * START,
   // en vanlig kontrakt skal betale 1–15 døgn med drift (sommer): verdt å ta, men ikke så mye at én kontrakt løser alt
-  kontraktDøgn: [1, 15],
+  // (R1-løkka 26. nov) øvre grense 15 -> 20: modellen har ikke lønna med (ca. 0,1 mill. i døgnet), så drifta her er lavere enn i spillet
+  kontraktDøgn: [1, 20],
   // med én kontrakt i døgnet skal kassa vokse, og et nytt grunnbygg skal koste 2–20 døgn med kontrakter (plan-r18.md, spor A:
   // «betaling gir neste steg i leiren») – kortere, og pengene betyr ingenting; lengre, og kontraktene føles meningsløse
-  byggDøgn: [2, 20],
+  // (R1-løkka 26. nov, oppdraget: «øk kontraktenes betaling slik at én kontrakt dekker omtrent ett grunnbygg» – kritikken: kontraktene
+  // betydde nesten ingenting for kassa) nedre grense 2 -> 0,8: den billigste (dieseltanken) koster nå ca. ett døgn med kontrakter
+  byggDøgn: [.8, 20],
   // en ny person skal koste mindre enn én vanlig kontrakt (folk er det viktigste du har)
   rekruttMaksKontrakter: 1,
 };
