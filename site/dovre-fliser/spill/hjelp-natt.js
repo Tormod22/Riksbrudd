@@ -962,6 +962,56 @@ window.HJELP_TILLEGG = [
 "Lag og strid"
 ],
 [
+"Røverne kommer ikke likt hver gang",
+"Fra bølge 2 har røverne en plan: rett på, en omvei inn fra en annen kant, et lite lag som går foran for å prøve forsvaret (det flykter ved første tap), eller – om natta – tyver som går rett mot lageret og stikker av med varer. Varselet sier det vaktene tror. Samme plan kommer aldri to ganger på rad.",
+"Lag og strid"
+],
+[
+"Hvilken kant forsvaret vender mot",
+"«Forsvar leiren» setter lagene mot kanten røverne faktisk kommer fra – der ruta deres kommer inn mot leiren, eller der de sist ble sett. Før de har dratt ut, står lagene i ring rundt leiren. Viser ruta eller vaktene at de kommer fra en annen kant, flytter lagene stillingene dit så lenge ingen er i ildkamp.",
+"Lag og strid"
+],
+[
+"Kjør dit med en tropp",
+"Sitter troppen i en bil, trykker du «Kjør dit» og så på kartet. Bilen kjører langs vegene til punktet på vegen nærmest målet, og troppen går av der. Ligger målet langt fra en veg, sier loggen det med en gang, og troppens panel får knappen «Gå av og marsjer dit». Trykker du i vann, går laget til nærmeste bredd.",
+"Lag og strid"
+],
+[
+"Lagene dine i kartet",
+"Lag du har radiokontakt med, står der de er. Mister et lag kontakten, står det der det sist meldte seg, med hvor lenge siden. Gir du en marsjordre ut av radioens rekkevidde, sier loggen hvor langt ute laget mister kontakten.",
+"Lag og strid"
+],
+[
+"Scenariets by i Krig",
+"I «Hold byen» står byen øverst i Krig: forsvaret, hvor mange mann som trengs (ett tall – det inntaket krever og flere enn forsvaret), hvor mange dere har, og knappene Send og Gjør avtale. Alle egne lag inne i tettstedet regnes sammen.",
+"Lag og strid"
+],
+[
+"Faste utgifter",
+"Leiren koster penger hver dag, også når ingenting skjer: lønn (15 000 kr per person i døgnet) og vedlikehold av byggene (1 % av det bygget kostet, per døgn – halvparten for bygg som er slått av). Jo større leiren er, jo mer koster den. Leir → Lager → «Penger inn» viser de faste utgiftene og hva som kom inn og gikk ut siste døgn (fra kl. 06 til kl. 06) – de samme tallene som morgenmøtet.",
+"Leiren"
+],
+[
+"Eskorte: rolig rute eller bakhold",
+"Hvert eskortetilbud sier om ruta er rolig eller om det er meldt bakhold. En rolig rute betaler lite. Med meldt bakhold betaler jobben godt, men det ligger som oftest folk i stilling langs vegen foran bilen – send et lag med bilen eller i forkant. Mister du bilen, er kontrakten brutt.",
+"Lag og strid"
+],
+[
+"Folketallet øverst",
+"«8 +4» betyr 8 i leiren og 4 ute i troppene (12 i alt). Lønna gjelder alle.",
+"Kom i gang"
+],
+[
+"Avbestille et bygg",
+"Et bygg som står i køen og som ingen har begynt på, kan avbestilles: trykk «Avbestill» i jobblista i Leir eller i panelet til bygget. Du får alle pengene og materialene tilbake.",
+"Leiren"
+],
+[
+"Store kjøp",
+"Bygg som koster 3 mill. kr eller mer, må bekreftes én gang til i banneret («Ja, bestill») før pengene trekkes.",
+"Leiren"
+],
+[
 "Lysstriper og byger",
 "Når det er delvis skyet og sola står lavt, kan du se solstråler gjennom hull i skyene ned mot dalen – tydeligst når du ser mot sola. I skyet vær driver regn- og snøbyger som grå eller hvite slør over landskapet med vinden. Driver en byge over der du står, regner eller snør det rundt deg en stund, sola blir borte og sikten blir kortere. Høyt til fjells faller bygene som snø.",
 "Vær, lyd og bilde"
