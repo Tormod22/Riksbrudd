@@ -49,8 +49,20 @@
     T.bølge = nr; T.aktiv = nr; skriv('riksbrudd-trussel', T);
     const mann = Trussel.menn(nr, soldater, n, window.SPILLREGLER ? SPILLREGLER.faktor.røvere : 1);
     const planer = [], nye = [];
+    // (kritikerløkka r2) planen for bølgen (Trussel.velgPlan): rett, omvei, speidere foran, eller tyver om natta – ikke i testene
+    const time = ((6 + tid / 60) % 24 + 24) % 24, plan = auto() && Trussel.velgPlan ? Trussel.velgPlan(nr, tilfV(), time, T.sistPlan) : 'rett', side = tilfV() < .5 ? -1 : 1;
+    T.sistPlan = plan; T.plan = plan; skriv('riksbrudd-trussel', T);
+    const lagerBygg = plan === 'tyver' && L() && window.Leir ? L().bygg.find(b => /lager|container/.test(b.type) && Leir.ferdig(b)) : null;
     for (let i = 0; i < n; i++) { const e = nyttLag(`Røvere ${nr}.${i + 1}`, s.x + (i % 3) * 45, s.y + Math.floor(i / 3) * 45, 'rød'); e.raid = nr; e.fra = { x: s.x, y: s.y }; e.startTid = tid; const tak = nr === 1 && auto() ? Math.min(mann, FØRSTE.menn) : mann; if (!navigator.webdriver && e.menn.length > tak) { e.menn = e.menn.slice(0, tak); e.leder = 0; }
-      if (nr === 1 && FØRSTE.lett && auto() && window.Strid && Strid.bevæpn) { try { Strid.bevæpn(e.menn, 'lett'); e.strid = { ...(e.strid || {}), bev: 'lett' }; } catch (x) { /* bevæpningen finnes ikke */ } } ENHETER.push(e); nye.push(e); const p = ordre(e, leir.x + (tilfV() - .5) * 80, leir.y + (tilfV() - .5) * 80, true); if (p && p.then) planer.push(p.catch(() => {})); }
+      if (nr === 1 && FØRSTE.lett && auto() && window.Strid && Strid.bevæpn) { try { Strid.bevæpn(e.menn, 'lett'); e.strid = { ...(e.strid || {}), bev: 'lett' }; } catch (x) { /* bevæpningen finnes ikke */ } } ENHETER.push(e); nye.push(e);
+      let mx = leir.x + (tilfV() - .5) * 80, my = leir.y + (tilfV() - .5) * 80;
+      if (plan === 'omvei') { const W = Trussel.omveiPunkt(leir, s, side, tilfV()); e.omvei = W; e.innfart = W; mx = W.x; my = W.y; }
+      if (plan === 'tyver') { e.tyv = true; if (lagerBygg) { mx = lagerBygg.x + (tilfV() - .5) * 10; my = lagerBygg.y + (tilfV() - .5) * 10; } }
+      const p = ordre(e, mx, my, true); if (p && p.then) planer.push(p.catch(() => {})); }
+    // speiderne: et lite lag fra en annen kant, nærmere – det kommer først
+    if (plan === 'speider') { const q = Trussel.speiderStart(leir, s, side, tilfV(), tilfV()); if (await påLand(q.x, q.y)) { const e = nyttLag(`Røvere ${nr}.${n + 1}`, q.x, q.y, 'rød');
+      e.menn = e.menn.slice(0, Trussel.PLAN.speider.menn); e.leder = 0; e.raid = nr; e.fra = { x: q.x, y: q.y }; e.startTid = tid; e.prøver = true; ENHETER.push(e); nye.push(e);
+      const p = ordre(e, leir.x + (tilfV() - .5) * 80, leir.y + (tilfV() - .5) * 80, true); if (p && p.then) planer.push(p.catch(() => {})); } }
     // (19. nov) anslaget i varselet: tida ruta deres tar (venter høyst 3 s på ruta), ellers Trussel.anslag – så varselet og banneret sier det samme
     if (planer.length) await Promise.race([Promise.all(planer), new Promise(r => setTimeout(r, 3000))]);
     const ruter = nye.filter(e => e.sti && e.timerIgjen > 0).map(e => e.timerIgjen * 60), min = ruter.length ? Math.min(...ruter) : Trussel.anslag(s.meter, 0);
@@ -62,7 +74,11 @@
     // så den går bare til loggen her, ikke i et eget varsel midt på skjermen
     // (kritikerløkka r1, Ingrid: tre ulike tider i banneret og loggen) – loggen sier det samme som banneret: når de trolig er framme (Forsvar.når)
     const FO = window.Forsvar, når = FO && FO.når ? FO.når(tid, tid + min) : null;
-    logg(Trussel.varsel(nr, n, s) + (når ? ` De er ${når.replace(/^trolig /, 'trolig framme ')}.` : ` Ventet om ca. ${Math.max(5, Math.round(min / 5) * 5)} min.`)); skitten = true; meny(); return true; }
+    logg(Trussel.varsel(nr, n, s) + (når ? ` De er ${når.replace(/^trolig /, 'trolig framme ')}.` : ` Ventet om ca. ${Math.max(5, Math.round(min / 5) * 5)} min.`) + (Trussel.PLAN_TEKST && Trussel.PLAN_TEKST[plan] ? ' ' + Trussel.PLAN_TEKST[plan] : '')); skitten = true; meny(); return true; }
+  // (kritikerløkka r2) OMVEIEN: framme ved punktet (eller stått stille nær det) – videre mot leiren
+  KROKER.sim.push(() => { if (!klar || !T || !T.aktiv || !auto() || !S() || !S().leir) return; const leir = S().leir;
+    for (const e of ENHETER) if (e.omvei && e.raid === T.aktiv && levende(e) && !e.planlegger && !e.trekker && !e.flykter) { const d = Math.hypot(e.x - e.omvei.x, e.y - e.omvei.y);
+      if (d < 120 || (!e.sti && d < 400)) { delete e.omvei; ordre(e, leir.x + (tilfV() - .5) * 80, leir.y + (tilfV() - .5) * 80, true); } } });
   // ---------- (runde 4) RØVERE SOM HAR HERJET trekker seg ut med byttet (Trussel.HERJ) ----------
   // tiden hvert røverlag er inne i leiren (innen Trussel.HERJ.radius fra midten), i spillminutter
   KROKER.sim.push(dt => { if (!klar || !T || !T.aktiv || !auto() || !S() || !S().leir) return; const leir = S().leir;
@@ -72,11 +88,13 @@
   // laget tar byttet (kassa, lageret, dieselen og maten) og marsjerer bort fra leiren
   function trekkUt(e) { const leir = S().leir, LS = L(), f = F(), H = Trussel.HERJ;
     const b = Trussel.bytte({ penger: S().penger, lager: LS ? LS.lager : {}, diesel: LS ? LS.drivstoff : 0, mat: f ? f.mat : 0 });
+    // (kritikerløkka r2) tyvene tar bare varer
+    if (e.tyv) b.penger = 0;
     if (b.penger > 0 && !OppstartSpill.betal(b.penger)) b.penger = 0;
     if (LS) { for (const [k, v] of Object.entries(b.lager)) LS.lager[k] = Math.max(0, Math.round(((LS.lager[k] || 0) - v) * 10) / 10); LS.drivstoff = Math.max(0, LS.drivstoff - b.diesel); if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); }
     if (f) f.mat = Math.max(0, f.mat - b.mat);
     e.trekker = true; e.trekkerFra = tid; e.bytte = b; e.venterNatt = false; bort(e);
-    varsel(`${e.navn} har herjet i leiren og trekker seg ut med byttet: ${Trussel.bytteTekst(b)}.`); skitten = true; return b; }
+    varsel(e.tyv ? `${e.navn} har stjålet fra lageret og stikker av: ${Trussel.bytteTekst(b)}.` : `${e.navn} har herjet i leiren og trekker seg ut med byttet: ${Trussel.bytteTekst(b)}.`); skitten = true; return b; }
   // bort fra leiren: samme vei som de kom (der finnes det en rute), ellers rett ut fra leiren
   function bort(e, tilfeldig) { const leir = S().leir, H = Trussel.HERJ;
     if (e.fra && !tilfeldig) { ordre(e, e.fra.x, e.fra.y, true); return; }
