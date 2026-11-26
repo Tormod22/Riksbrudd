@@ -391,7 +391,10 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
       const [x, y] = P(k.sted.x, k.sted.y), r = k.type === 'hold' ? Math.max(8, SK.REGLER.nær.hold / m) : 9;
       g.strokeStyle = '#d9a441'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke(); g.setLineDash([]);
       g.fillStyle = '#d9a441'; g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x + 5, y); g.lineTo(x, y + 6); g.lineTo(x - 5, y); g.closePath(); g.fill();
-      g.fillStyle = 'rgba(18,20,23,.85)'; const t = `Kontrakt: ${typeNavn(k)}`, w = g.measureText(t).width + 10; g.fillRect(x - w / 2, y - r - 20, w, 16); g.fillStyle = '#f2d68a'; g.fillText(t, x, y - r - 8);
+      g.fillStyle = 'rgba(18,20,23,.85)'; const t = `Kontrakt: ${typeNavn(k)}`, w = g.measureText(t).width + 10;
+      // (løkka r1, kritiker Jonas: etiketten ble kuttet i kanten og lå under lagnavn) – plassen fra Etikett, og aldri utenfor skjermen
+      const ty = window.Etikett && Etikett.tekst ? Etikett.tekst(g, t, x, y - r - 8, -1) : y - r - 8, tx = Math.max(w / 2 + 2, Math.min((typeof VW !== 'undefined' ? VW : 1e4) - w / 2 - 2, x));
+      g.fillRect(tx - w / 2, ty - 12, w, 16); g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(t, tx, ty); g.fillStyle = '#f2d68a'; g.fillText(t, tx, ty);
       if (k.type === 'eskorte' && k.fra) { const [fx, fy] = P(k.fra.x, k.fra.y); g.strokeStyle = 'rgba(217,164,65,.6)'; g.setLineDash([2, 6]); g.beginPath(); g.moveTo(fx, fy); g.lineTo(x, y); g.stroke(); g.setLineDash([]); }
       if (k.type === 'hent' && !k.hentet) { g.fillStyle = '#f2efe4'; g.beginPath(); g.arc(x + 12, y - 4, 3, 0, 7); g.fill(); g.fillRect(x + 10, y, 4, 8); }
       if (k.type === 'rydd' && k.sperre) { const [sx, sy] = P(k.sperre.x, k.sperre.y); g.strokeStyle = '#b0443a'; g.lineWidth = 3; g.beginPath(); g.moveTo(sx - 7, sy - 7); g.lineTo(sx + 7, sy + 7); g.moveTo(sx + 7, sy - 7); g.lineTo(sx - 7, sy + 7); g.stroke(); }

@@ -118,7 +118,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Den første uka",
-"Bygg brakke, aggregat og dieseltank først, kjøp 500 l diesel, sett folk i arbeid og lag en tropp. Et vakttårn med en person på «Vakt» melder røverne før de er i leiren. Kontrollrommet (9 mill. kr) kan vente til leiren står. Den første røverbølgen kommer tidligst etter et døgn (eller en halv time spilling), og de tre første døgnene er det bare ett røverlag om gangen.",
+"Bygg brakke, aggregat og dieseltank først, kjøp 500 l diesel, sett folk i arbeid og lag en tropp. Et vakttårn med en person på «Vakt» melder røverne før de er i leiren. Kontrollrommet (det dyreste av grunnbyggene – prisen står i byggelista) kan vente til leiren står. Den første røverbølgen kommer tidligst etter et døgn (eller en halv time spilling), og de tre første døgnene er det bare ett røverlag om gangen.",
 "Kom i gang"
 ],
 [
@@ -537,11 +537,6 @@ window.HJELP_TILLEGG = [
 "I 3D"
 ],
 [
-"Den første kontrakten",
-"Når du starter et nytt spill, har et bygdelag i nærheten en jobb til deg: hent nødlageret deres og bær det hjem til leiren. Lappen «Neste» nederst sier hva du skal gjøre, ett steg om gangen – trykk på den, så åpner den riktig panel eller viser stedet i kartet. Stegene: ta kontrakten i Selskapet, lag en tropp av folkene dine, send troppen til stedet, ta nødlageret med hjem (da betaler bygdelaget 400 000 kr), bygg noe i leiren, og ta en ny kontrakt. Mens den første kontrakten pågår, venter opplæringsruta.",
-"Kom i gang"
-],
-[
 "Kontraktsnivåer",
 "Selskapet har fire nivåer: Ukjent, Kjent i bygda, Etablert og Ettertraktet. Leverte kontrakter og ryktet «pålitelig» løfter dere opp; øverst i Selskapet står hva som mangler for neste nivå. Høyere nivå gir bedre betaling og større jobber. Tilbud fra neste nivå vises med lås – de kan tas når dere er der.",
 "Lag og strid"
@@ -693,7 +688,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Motstanderne samler seg først",
-"De første døgnene (2,5 på Vanlig, lenger på Lett, kortere på Hard) holder Ravnsund og Mosevakt seg i sitt eget tettsted og bygger seg opp – de tar ingen andre tettsteder. Det neste døgnet tar de bare småsteder, og først etter det går de mot byene. Bruk tida: lag tropper og ta tettstedene nær leiren. De får et nytt lag omtrent hver sjette spilltime, og flere jo lenger spillet varer.",
+"De første døgnene (2,5 på Vanlig, lenger på Lett, kortere på Hard) holder Kystalliansen og Folkefronten seg i sitt eget tettsted og bygger seg opp – de tar ingen andre tettsteder. Det neste døgnet tar de bare småsteder, og først etter det går de mot byene. Bruk tida: lag tropper og ta tettstedene nær leiren. De får et nytt lag omtrent hver sjette spilltime, og flere jo lenger spillet varer.",
 "Lag og strid"
 ],
 [
@@ -723,7 +718,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Motstanderne blir sterkere",
-"Etter fredstiden tjener Ravnsund og Mosevakt penger og får folk fra tettstedene de holder. De kjøper nye lag, lastebiler og etter hvert en stridsvogn. Jo mer de holder, jo fortere vokser de – ta tettsteder fra dem, så bremser du dem. På «Lett» går det saktere, på «Hard» fortere.",
+"Etter fredstiden tjener Kystalliansen og Folkefronten penger og får folk fra tettstedene de holder. De kjøper nye lag, lastebiler og etter hvert en stridsvogn. Jo mer de holder, jo fortere vokser de – ta tettsteder fra dem, så bremser du dem. På «Lett» går det saktere, på «Hard» fortere.",
 "Lag og strid"
 ],
 [
@@ -733,7 +728,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Etterretning om angrep",
-"Når et angrep mot noe av ditt samles, sier loggen det: «Etterretning: Ravnsund samler 3 lag ved Oltedal. Målet er trolig Høle (ditt) – angrep tidligst om ca. 6 t.» Kartet viser samlingsstedet med en stiplet ring og en pil. Bruk tida: send flere lag dit, grav ned garnisonen og sett stridsreglene til «kjemp» – ellers trekker garnisonen seg når den er underlegen.",
+"Når et angrep mot noe av ditt samles, sier loggen det: «Etterretning: Kystalliansen samler 3 lag ved Oltedal. Målet er trolig Høle (ditt) – angrep tidligst om ca. 6 t.» Kartet viser samlingsstedet med en stiplet ring og en pil. Bruk tida: send flere lag dit, grav ned garnisonen og sett stridsreglene til «kjemp» – ellers trekker garnisonen seg når den er underlegen.",
 "Lag og strid"
 ],
 [
@@ -853,7 +848,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Scenariets by",
-"I «Hold byen» står byen du skal ta med navn i Krig («Ta Røysland (Ravnsunds, 9 km NV)»), med en gyllen ring i kartet og «Scenariets by» i tettstedspanelet. Holder du den, teller Krig døgnene («1,0 av 3 døgn» etter 24 timer). Mister du den, sier loggen at telleren starter på nytt.",
+"I «Hold byen» står byen du skal ta med navn i Krig («Ta Røysland (Kystalliansens, 9 km NV)»), med en gyllen ring i kartet og «Scenariets by» i tettstedspanelet. Holder du den, teller Krig døgnene («1,0 av 3 døgn» etter 24 timer). Mister du den, sier loggen at telleren starter på nytt.",
 "Lag og strid"
 ],
 [
@@ -935,6 +930,36 @@ window.HJELP_TILLEGG = [
 "Kjøretøy, strøm og samband",
 "Garasje, verkstedhall og vaskeplass reparerer egne kjøretøy som står inntil, og fyllestasjonen fyller tanken med leirens diesel. På parkeringsplassen tar kjøretøyene halv skade. Generatorhuset gir 30 kW på diesel, og transformatoren dobler strømmen fra nettet mens det virker. Kommandosenteret gir feltradioene 10 km lenger rekkevidde, og satellittterminalen gjør at åser og fjell ikke stopper dem. Dronehangaren holder en vaktdrone over leiren (oppskytingsrampen gir én til). Kontor og møtetelt gjør alt arbeid litt raskere, og arresten vokter fangene.",
 "Leiren"
+],
+[
+"Sjansen mot røverne",
+"Angrepsbanneret, «Forsvar» i Leir-menyen og morgenmøtet sier «Med dette forsvaret: god, usikker eller dårlig sjanse». Det regnes med de samme treffsjansene som kampen: lagene hjemme, Leirvakta, vakttårnet, om lagene står i stilling, er nedgravd eller bak voller – mot bølgen som kommer. Første bølge er et lite, dårlig bevæpnet røverlag.",
+"Lag og strid"
+],
+[
+"Når du selv står ute",
+"Står du mer enn 500 m fra leiren når den angripes, sier banneret hvor du står og hvor røverne kommer fra. «Gå hjem» sender deg tilbake til leiren. Kommer røverne nær deg, får du et varsel til.",
+"Lag og strid"
+],
+[
+"⏭ under angrep og om natta",
+"Mens kampen om leiren pågår, spoler ⏭ bare i 10×, så du ser den – og rapporten etterpå sier hvem som kom, hvem som falt hos dere og hos dem, og hva som ble skadet eller tatt. En rolig natt (ingen angrep, ingen lag på marsj) spoler ⏭ i 3600× til noe skjer eller morgenmøtet kommer.",
+"Kom i gang"
+],
+[
+"Den første kontrakten",
+"Når du starter et nytt spill, har bygdelaget i nærmeste tettsted en jobb til deg: nødlageret deres står i en låve nær leiren (ca. 900 m, merket med en kasse i kartet). Lappen «Neste» nederst sier hva du skal gjøre, ett steg om gangen. Lag en tropp, send den til låven, og ta nødlageret med hjem – da betaler bygdelaget 1,5 mill. kr. Låven ligger utenfor tettstedene og innen radiorekkevidde. Går det galt, koster det ingen bot, og nye kontrakter kommer straks.",
+"Kom i gang"
+],
+[
+"Bygdevern og ruter",
+"Bygdevernet i et tettsted slåss mot alle som kommer inn uten avtale – men ikke mot lagene dine når dere har en kontrakt for bygdelaget eller kommunen der. Går marsjruta gjennom et tettsted med bygdevern eller et tettsted motstanderen holder, går laget utenom hvis det finnes en rimelig omveg. Finnes det ingen, står det en advarsel i loggen, og i Krig kan du gjøre en avtale med tettstedet på vegen før laget går.",
+"Lag og strid"
+],
+[
+"Kontraktenes krav",
+"Kortet i Selskapet bruker samme vurdering som Krig: er det kjente forsvaret ved stedet minst like stort som det største laget ditt, står det «For svakt» i stedet for ✓. Steder der et lag nylig ble slått ut, foreslås ikke først i Krig det neste døgnet.",
+"Lag og strid"
 ],
 [
 "Lysstriper og byger",
