@@ -10,13 +10,15 @@ module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krig
     // frø: tilfeldighetene i index.html (tilf) er faste – nyttLag bruker dem, og vaktene etter denne (krig) regner med samme rekke
     const L = S.leir, kam0 = { x: kam.x, y: kam.y, m: kam.m }, tid0 = tid, frø0 = frø, taake0 = VIS.taake, valgt0 = valgt, kl0 = KartLys.test, nye = [];
     const over = (r, q) => r[0] < q[0] + q[2] && q[0] < r[0] + r[2] && r[1] < q[1] + q[3] && q[1] < r[1] + r[3];
-    const tegnNå = (x, y, m) => { kam.x = x; kam.y = y; kam.m = m; skitten = true; tegn(); return { navn: Etikett.tegnet(), hindre: Etikett.hindringer(), overlapp: Etikett.overlapp() }; };
+    // (fletting r1) «sist sett»-merker fra fiender andre vakter har laget ved leiren, går foran leirnavnet (med vilje) – de tas bort mens denne vakta tegner
+    const sett0 = ENHETER.filter(e => e.side !== 'blå' && e.sett).map(e => [e, e.sett]);
+    const tegnNå = (x, y, m, utenSpøk) => { if (utenSpøk) for (const [e] of sett0) delete e.sett; kam.x = x; kam.y = y; kam.m = m; skitten = true; tegn(); if (utenSpøk) for (const [e, st] of sett0) e.sett = st; return { navn: Etikett.tegnet(), hindre: Etikett.hindringer(), overlapp: Etikett.overlapp() }; };
     const piksel = (x, y) => { const p = ctx.getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data; return [p[0], p[1], p[2]]; };
     const skjerm = (X, Y) => [(X - (kam.x - VW / 2 * kam.m)) / kam.m, ((kam.y + VH / 2 * kam.m) - Y) / kam.m];
     try {
       valgt = null;
       // 1) leiren på vanlig zoom: ingen navn oppå hverandre eller oppå merkene, «0 t olje» og «Leiren til …» vises ikke
-      for (const m of [5, 2]) { const T = tegnNå(L.x + 120, L.y, m); ut['m' + m] = T.navn.map(n => n.t);
+      for (const m of [5, 2]) { const T = tegnNå(L.x + 120, L.y, m, true); ut['m' + m] = T.navn.map(n => n.t);
         krev(T.overlapp === 0, `m ${m}: ${T.overlapp} navn oppå hverandre`);
         krev(!T.navn.some(n => n.t === '0 t olje' || /^Leiren til /.test(n.t)), `m ${m}: «0 t olje» eller «Leiren til …» står ved leiren: ${ut['m' + m].join(' | ')}`);
         krev(T.navn.some(n => n.t === S.fraksjon.navn || n.t.startsWith(S.fraksjon.navn + ' · ')), `m ${m}: leirens navn mangler (${ut['m' + m].join(' | ')})`);
