@@ -35,7 +35,7 @@ module.exports = { navn: 'den røde tråden: første kontrakt, stegene, betaling
       krev(SS.tråd() && SS.tråd().id === 'bygg', 'steget etter betaling er ikke «bygg»'); ut.steg.push('hjem');
       krev(S.tilbud.length > 0 || true, ''); if (!S.tilbud.length) SS.nyeTilbud([{ navn: 'Prøvested A', x: P.x + 4000, y: P.y, slag: 'tettsted', id: 'pA' }, { navn: 'Prøvested B', x: P.x - 3000, y: P.y + 3000, slag: 'tettsted', id: 'pB' }]);
       // 6) bygg noe: ett bygg til i leiren
-      Leir.kjøpMateriale(L, 'tre', 30, OppstartSpill.betal); const b = Leir.bygg(L, { type: 'vakttårn', x: P.x + 60, y: P.y + 60, retning: 0 }, OppstartSpill.betal, {}, {});
+      Leir.kjøpMateriale(L, 'tre', 30, OppstartSpill.betal); Leir.kjøpMateriale(L, 'stål', 3, OppstartSpill.betal); const b = Leir.bygg(L, { type: 'vakttårn', x: P.x + 60, y: P.y + 60, retning: 0 }, OppstartSpill.betal, {}, {});
       krev(b && !b.feil, 'kunne ikke bygge: ' + (b && b.feil)); SS.oppdaterTråd(); krev(SS.tråd() && SS.tråd().id === 'neste', 'bygg-steget ble ikke ferdig'); ut.steg.push('bygg');
       // 7) neste kontrakt: tilbud finnes; et låst tilbud fra neste nivå kan ikke tas; et vanlig tas
       ut.tilbud = S.tilbud.length; krev(S.tilbud.length > 0, 'ingen nye tilbud etter den første kontrakten');
