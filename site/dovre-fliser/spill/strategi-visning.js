@@ -243,7 +243,7 @@
     if (!k || !levende(s)) { delete s.avstigning; continue; } if (k.sti) { a.kjørt = true; continue; }
     if (!a.kjørt) { if (tid - a.t > 30) { delete s.avstigning; logg(`${k.navn} kom ikke av gårde mot ${a.navn} (finner ingen veg dit). ${s.navn} sitter fortsatt på.`); } continue; }
     delete s.avstigning; if (window.TropperSpill && TropperSpill.gåAv) TropperSpill.gåAv(s); else s.ombord = null;
-    const inn = Math.hypot(s.x - a.x, s.y - a.y) > 60 && !(s.speid && /^utkanten/.test(a.navn)); if (inn) ordre(s, a.x, a.y, true); logg(`${s.navn} er framme ved ${a.navn}` + (inn ? ' og går inn i tettstedet.' : '.')); } });
+    const inn = Math.hypot(s.x - a.x, s.y - a.y) > 60 && !(s.speid && /^utkanten/.test(a.navn)); if (inn) ordre(s, a.x, a.y, true); logg(`${s.navn} er framme ved ${a.navn}` + (inn ? (a.navn === 'målet' ? ' og går resten av vegen til fots.' : ' og går inn i tettstedet.') : '.')); } });
 
   // ---------- ordre ----------
   // o.likevel = sendt etter advarselen; o.sjekket = terrenget er sjekket (eller kunne ikke sjekkes)

@@ -61,7 +61,9 @@
   // ---------- lag om bord ----------
   const egne = () => ENHETER.filter(s => s.side === 'blå' && levende(s) && !s.leirvakt);
   const omBord = b => ENHETER.filter(s => s.påBåt === b);
-  function gåOmBord(s, b) { if (s.ombord) { logg(`${s.navn} sitter i et kjøretøy – la dem gå av først.`); return false; } const f = SJ.ombordFeil(s, b, omBord(b).length); if (f) { logg(`${s.navn}: ${f}`); return false; }
+  // (kritikerløkka r3, Jonas: «båtpanelet sier bare at laget må stå innen 250 m – jeg fant ingen knapp for å gå om bord») et lag som sitter i et
+  // kjøretøy ved båten, går av først; et lag lenger unna kan sendes til båten (sendTilBåt) og går om bord når det er framme (tilBåtSteg)
+  function gåOmBord(s, b) { if (s.ombord) { if (Math.hypot(s.x - b.x, s.y - b.y) <= R.ombord && window.TropperSpill && TropperSpill.rett && TropperSpill.rett.gåAv) TropperSpill.rett.gåAv(s); if (s.ombord) { logg(`${s.navn} sitter i et kjøretøy – la dem gå av først.`); return false; } } const f = SJ.ombordFeil(s, b, omBord(b).length); if (f) { logg(`${s.navn}: ${f}`); return false; }
     s.påBåt = b; s.sti = null; s.x = b.x; s.y = b.y; s.siktSkitten = true; logg(`${s.navn} er om bord i ${b.navn}. Gi båten ordre – laget følger med.`); merk(); if (valgt === s) visPanel(); return true; }
   // nærmeste land ved punktet (laget skal ikke settes i vannet)
   async function landVed(x, y) { try { const v = await lagVindu([x - 400, y - 400, x + 400, y + 400], false); let best = null, bd = Infinity; for (let j = 0; j < v.h; j++) for (let i = 0; i < v.w; i++) { const c = v.K[j * v.w + i]; if (c === 3 || c === 255) continue; const cx = v.x0 + (i + .5) * v.r, cy = v.y0 - (j + .5) * v.r, d = Math.hypot(cx - x, cy - y); if (d < bd) { bd = d; best = [cx, cy]; } } return bd <= 400 ? best : null; } catch (e) { return null; } }
@@ -71,10 +73,27 @@
     const fi = byerNær(b.x, b.y, R.landgangNær).find(o => { const e = eier(o.by); return e && e !== 'blå'; });
     if (fi) { s.landgang = tid + R.landgangMin; logg(`${s.navn} går i land ved ${fi.by.e.navn}. Landgang fra sjøen: fienden er overrasket i ${R.landgangMin} minutter.`); } else logg(`${s.navn} har gått i land ved ${kaiNavn(b.kai)}.`);
     merk(); if (valgt === s) visPanel(); tegnPanel(true); return true; }
+  // Claudes forslag: et lag innen TIL_BÅT meter kan sendes til båten fra båtpanelet og lagpanelet
+  const TIL_BÅT = 15000;
+  const kanTilBåt = e => !e.påBåt && !e.karakter && !(e.ombord && e.ombord.påBåt);
+  const nærmestTilBåt = b => egne().filter(kanTilBåt).map(e => ({ e, d: Math.hypot(e.x - b.x, e.y - b.y) })).filter(o => o.d <= TIL_BÅT).sort((a, c) => a.d - c.d)[0] || null;
+  async function sendTilBåt(s, b) { if (!s || !b || b.sti) return false; const p = (await landVed(b.x, b.y)) || [b.x, b.y]; s.tilBåt = b.id; s.tilBåtTid = tid;
+    if (s.ombord && window.OMBORD_ORDRE) { window.OMBORD_ORDRE(s, p[0], p[1]); logg(`${s.navn} kjører til ${b.navn} og går om bord når de er framme.`); }
+    else { try { await ordre(s, p[0], p[1]); } catch (e) { /* ordren feilet */ } if (!s.sti && Math.hypot(s.x - b.x, s.y - b.y) > R.ombord) { delete s.tilBåt; logg(`${s.navn} finner ingen rute til ${b.navn}.`); return false; }
+      s.tilBåtSti = s.sti; logg(`${s.navn} går til ${b.navn} og går om bord når de er framme.`); }
+    if (valgt === s) visPanel(); tegnPanel(true); return true; }
+  KROKER.sim.push(() => { if (!klar) return; for (const s of ENHETER) { if (!s.tilBåt) continue; const b = S.båter.find(q => q.id === s.tilBåt);
+    if (!b || b.sti || !levende(s) || s.påBåt || (s.sti && s.tilBåtSti && s.sti !== s.tilBåtSti)) { delete s.tilBåt; delete s.tilBåtSti; continue; }
+    if (!s.sti && !s.planlegger && !(s.ombord && s.ombord.sti) && Math.hypot(s.x - b.x, s.y - b.y) <= R.ombord) { if (s.ombord && s.avstigning) continue; delete s.tilBåt; delete s.tilBåtSti; gåOmBord(s, b); tegnPanel(true); continue; }
+    if (!s.sti && !s.planlegger && !s.ombord && !s.avstigning && tid - (s.tilBåtTid || 0) > 3) { delete s.tilBåt; delete s.tilBåtSti; logg(`${s.navn} kom ikke nær nok ${b.navn} (${km(Math.hypot(s.x - b.x, s.y - b.y))} unna – må være innen ${R.ombord} m).`); } } });
+  KROKER.lagTekst.push(s => (s.tilBåt && !s.påBåt ? 'på vei til båten' : null));
   KROKER.kanOrdre.push(s => { if (!s.påBåt) return true; logg(`${s.navn} er om bord i ${s.påBåt.navn}: gi båten ordre, eller sett laget i land ved en kai.`); return false; });
   KROKER.lagTekst.push(s => (s.påBåt ? `om bord i ${s.påBåt.navn}` : s.landgang && tid < s.landgang ? 'landgang: fienden er overrasket' : null));
   KROKER.lagKnapper.push((s, H) => { if (!klar || s.side !== 'blå' || s.karakter) return; if (s.påBåt) { H.appendChild(knapp('Gå i land', false, () => { gåILand(s); })); return; }
-    const b = S.båter.find(q => !q.sti && Math.hypot(q.x - s.x, q.y - s.y) <= R.ombord && omBord(q).length < TY[q.type].lag); if (b) H.appendChild(knapp(`Om bord i ${b.navn}`, false, () => { gåOmBord(s, b); tegnPanel(true); })); });
+    const b = S.båter.find(q => !q.sti && Math.hypot(q.x - s.x, q.y - s.y) <= R.ombord && omBord(q).length < TY[q.type].lag); if (b) { H.appendChild(knapp(`Om bord i ${b.navn}`, false, () => { gåOmBord(s, b); tegnPanel(true); })); return; }
+    // (r3) en egen båt lenger unna: «Gå til Småbåt 1» – laget går dit og går om bord
+    if (s.tilBåt || s.ombord) return; const n = S.båter.filter(q => !q.sti && omBord(q).length < TY[q.type].lag).map(q => ({ q, d: Math.hypot(q.x - s.x, q.y - s.y) })).filter(o => o.d <= TIL_BÅT).sort((a, c) => a.d - c.d)[0];
+    if (n) { const bt = knapp(`Gå til ${n.q.navn} (${km(n.d)})`, false, () => { sendTilBåt(s, n.q); }); bt.title = `Laget går til båten og går om bord`; H.appendChild(bt); } });
   KROKER.ild.push((a, b) => (a.påBåt || b.påBåt || a.landgang || b.landgang ? SJ.ild(a, b, tid) : 1));
 
   // ---------- kjøretøy om bord (lekter og ferje) ----------
@@ -433,7 +452,8 @@ body.kort.smal:not(.tlfligg) #sjopanel.på:not(.kort){ top:auto; max-height:72vh
       K2.push(kn('Til kai', () => { modus = modus === 'kai' ? null : 'kai'; skitten = true; }, { 'data-sjo': 'tilkai' }), kn('Til sted', () => { modus = modus === 'punkt' ? null : 'punkt'; skitten = true; }));
       if (b.sti) K2.push(kn('Stopp', () => { SJ.stopp(b); b.jakter = null; merk(); logg(`${b.navn} stopper.`); }));
       else if (om.length && b.kai >= 0) K2.push(kn('Sett i land', () => { for (const q of om) gåILand(q); }));
-      else { const s = om.length < T.lag && egne().find(e => !e.påBåt && !e.ombord && !e.karakter && Math.hypot(e.x - b.x, e.y - b.y) <= R.ombord); if (s) K2.push(kn('Ta om bord', () => gåOmBord(s, b))); }
+      else { const s = om.length < T.lag && egne().find(e => kanTilBåt(e) && Math.hypot(e.x - b.x, e.y - b.y) <= R.ombord); if (s) K2.push(kn(`Ta ${s.navn} om bord`, () => gåOmBord(s, b), { 'data-sjo': 'ombord' }));
+        else if (om.length < T.lag) { const n = nærmestTilBåt(b); if (n && n.e.tilBåt !== b.id) K2.push(kn(`Send ${n.e.navn} hit`, () => { sendTilBåt(n.e, b); }, { 'data-sjo': 'tilbaat' })); } }
       const f = om.length && !b.jakter && S.frakt.filter(q => q.type === 'frakt' && !q.ai && serFrakt(q)).sort((p, q) => Math.hypot(p.x - b.x, p.y - b.y) - Math.hypot(q.x - b.x, q.y - b.y))[0];
       if (f && Math.hypot(f.x - b.x, f.y - b.y) < 15000) K2.push(kn('Bord', () => startJakt(b, f), { 'data-sjo': 'bord' }));
       if (T.fiske && !b.sti) K2.push(kn(b.fisker ? 'Slutt fiske' : 'Fisk', () => fisk(b), b.fisker ? { klasse: 'på' } : {}));
@@ -459,7 +479,10 @@ body.kort.smal:not(.tlfligg) #sjopanel.på:not(.kort){ top:auto; max-height:72vh
     H.append(el('h3', {}, 'Lag om bord'));
     if (!om.length) H.append(el('p', {}, el('small', {}, `Ingen. Plass til ${T.lag} lag – laget må stå innen ${R.ombord} m fra båten.`)));
     for (const s of om) H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, s.navn)), kn('Sett i land', () => { gåILand(s); }, b.sti || b.kai < 0 ? { disabled: '', title: 'Båten må ligge ved en kai' } : { 'data-sjo': 'iland' })));
-    if (!b.sti && om.length < T.lag) for (const s of egne().filter(e => !e.påBåt && !e.ombord && !e.karakter && Math.hypot(e.x - b.x, e.y - b.y) <= R.ombord)) H.append(el('div', { klasse: 'rad' }, el('div', {}, s.navn, ' ', el('small', {}, 'står ved båten')), kn('Ta om bord', () => gåOmBord(s, b), { 'data-sjo': 'ombord' })));
+    if (!b.sti && om.length < T.lag) { const ved = egne().filter(e => kanTilBåt(e) && Math.hypot(e.x - b.x, e.y - b.y) <= R.ombord);
+      for (const s of ved) H.append(el('div', { klasse: 'rad' }, el('div', {}, s.navn, ' ', el('small', {}, s.ombord ? `sitter i ${s.ombord.navn} ved båten` : 'står ved båten')), kn('Ta om bord', () => gåOmBord(s, b), { 'data-sjo': 'ombord' })));
+      // (r3) ingen ved båten: det nærmeste laget kan sendes hit
+      const n = !ved.length && nærmestTilBåt(b); if (n) H.append(el('div', { klasse: 'rad' }, el('div', {}, n.e.navn, ' ', el('small', {}, n.e.tilBåt === b.id ? 'på vei til båten' : `${km(n.d)} unna`)), n.e.tilBåt === b.id ? '' : kn('Send til båten', () => { sendTilBåt(n.e, b); }, { 'data-sjo': 'tilbaat' }))); }
     if (T.kj) { const kj = kjOmBord(b); H.append(el('h3', {}, `Kjøretøy om bord (${kj.length} av ${T.kj})`));
       for (const k of kj) H.append(el('div', { klasse: 'rad' }, el('div', {}, el('b', {}, k.navn)), kn('Kjør i land', () => { kjørILand(k); }, b.sti || b.kai < 0 ? { disabled: '', title: 'Båten må ligge ved en kai' } : { 'data-sjo': 'kjiland' })));
       if (!b.sti && b.kai >= 0 && kj.length < T.kj) for (const k of biler().filter(q => q.side === 'blå' && !q.påBåt && !q.oppdrag && Math.hypot(q.x - b.x, q.y - b.y) <= R.ombord)) H.append(el('div', { klasse: 'rad' }, el('div', {}, k.navn, ' ', el('small', {}, 'står ved båten')), kn('Kjør om bord', () => kjørOmBord(k, b), { 'data-sjo': 'kjombord' })));
@@ -523,7 +546,7 @@ body.kort.smal:not(.tlfligg) #sjopanel.på:not(.kort){ top:auto; max-height:72vh
     hode.appendChild(k2('Åpne sjøpanelet', () => { valg = null; vis(true); }, { id: 'sjoknapp' })); });
 
   window.SjoSpill = Object.assign(ut, { tilstand: () => S, klar: () => klar, start, lagre, vis, erÅpen: () => åpen, trykk, kai: kaiTrykk, velg: b => { valg = b ? { båt: b } : null; tegnPanel(true); }, valgt: () => valg, modus: m => { if (m !== undefined) modus = m; return modus; },
-    kjøp, taFerje, ferjeHer: i => { const q = kai(i); return !!q && ferjeHer(q); }, seil, seilTilKai: (b, i, o) => { const q = kai(i); return q ? seil(b, q.x, q.y, i, o) : Promise.resolve({ feil: 'ingen kai' }); }, gåOmBord, gåILand, omBord, lastOm, loss, fisk, miner, senk, rydd, havner, havnFor, kjørOmBord, kjørILand, kjOmBord, settFiskere, fiskere, leirHarKai, region: () => !!region(), nett3d: () => nett3, rydd3d, fiendeHavner, sendFrakt, avskåret: () => avskåret.map(b => b.e.navn), kjøpGrunn: i => { const q = kai(i); return q ? kjøpGrunn(q) : null; }, tilLeiren, kaiInfo: kai,
+    kjøp, sendTilBåt, taFerje, ferjeHer: i => { const q = kai(i); return !!q && ferjeHer(q); }, seil, seilTilKai: (b, i, o) => { const q = kai(i); return q ? seil(b, q.x, q.y, i, o) : Promise.resolve({ feil: 'ingen kai' }); }, gåOmBord, gåILand, omBord, lastOm, loss, fisk, miner, senk, rydd, havner, havnFor, kjørOmBord, kjørILand, kjOmBord, settFiskere, fiskere, leirHarKai, region: () => !!region(), nett3d: () => nett3, rydd3d, fiendeHavner, sendFrakt, avskåret: () => avskåret.map(b => b.e.navn), kjøpGrunn: i => { const q = kai(i); return q ? kjøpGrunn(q) : null; }, tilLeiren, kaiInfo: kai,
     // runde 4
     isFor, fiendeBåter: () => S.frakt, skyttereMot, bord, senket, ildSteg, skytTilbake, egenSenket, startJakt, aiSteg, planAI, gåOmAI, iLandAI, trykk3d, tegnBåt,
     tatteFerjer: () => S.ferjerTatt.map(n => { const [x, y] = String(n).split(',').map(Number); return { x: x * 50, y: y * 50 }; }) });
