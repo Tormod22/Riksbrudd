@@ -79,6 +79,10 @@ body.spill #leirmeny .liste h4{ margin:6px 0 0; font-size:12px; letter-spacing:.
 body.spill #leirmeny .bygg.kort{ position:relative; align-items:center; text-align:center; gap:1px; padding:6px 4px 5px; min-height:0; }
 body.spill #leirmeny .bygg.kort .tegn{ display:none; }
 body.spill #leirmeny .bygg.kort[data-ikon]::before{ display:block; width:24px; height:24px; margin:0 auto 1px; color:#d9c27a; opacity:1; }
+/* (kritikerløkka r3, Ingrid: «byggelista hopper fortsatt» – Dieseltank gikk mellom y = 422 og 500) – ikonet over kortet kom først når
+   ikoner.js hadde merket kortet (data-ikon), etter at lista var tegnet på nytt; da ble hvert kort 25 px høyere og alt under seg nedover.
+   Plassen til ikonet holdes nå av alle kort fra første stund (et kort uten ikon får en tom plass like høy). */
+body.spill #leirmeny .bygg.kort:not([data-ikon])::before{ content:''; display:block; width:24px; height:24px; margin:0 auto 1px; }
 body.spill #leirmeny .bygg.kort > div{ width:100%; }
 body.spill #leirmeny .bygg.kort b{ font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 body.spill #leirmeny .bygg.kort .pris{ display:block; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

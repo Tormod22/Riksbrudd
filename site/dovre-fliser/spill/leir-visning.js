@@ -217,7 +217,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   }
   // pekeren (mus) over lista: da tegnes den ikke på nytt av seg selv (kortet under pekeren kan vokse når du peker på det, og et kort kunne
   // da hoppe opp eller ned mellom visning og klikk); nye tall kommer når pekeren går ut av lista eller du trykker på noe i den
-  let pekerOver = null, utsatt = false;
+  let pekerOver = null, utsatt = false, menyDeler = null;
   // nettleserens egen «scroll anchoring» flyttet lista når innholdet ble byttet ut – her gjør ankerKort() det
   menyEl.style.overflowAnchor = 'none';
   menyEl.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') pekerOver = { x: e.clientX, y: e.clientY, t: performance.now() }; });
@@ -299,7 +299,9 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       const b = knapp(planModus ? 'Planlegg' : 'Bygg', () => startPlassering(id, null, { plan: planModus })); b.disabled = !planModus && !B.linje && S.penger < k.pris;
       // 18. nov: byggene som kort i et rutenett – en liten tegning av bygget, navn, pris og én kort linje; resten står i forklaringen (data-tips)
       const tegn = el('img', { klasse: 'tegn', alt: '', draggable: 'false' }); if (window.Tegninger) tegn.src = Tegninger.bilde(Tegninger.bygg(id));
-      liste.appendChild(el('div', { klasse: 'bygg kort', 'data-type': id, 'data-tips': `${B.navn}|${pris}${strøm}${nv}. ${B.linje ? 'Per meter: ' : 'Materialer: '}${matTekst(k.mat)}. ${B.virkning && B.virkning !== B.tekst ? B.tekst + '. Virkning: ' + B.virkning : B.tekst}` }, tegn,
+      // (r3) ikonet settes med en gang (før kom det først når ikoner.js merket kortet, og da vokste kortet – lista hoppet)
+      const ikon = window.Ikoner && Ikoner.BYGG && Ikoner.BYGG[id];
+      liste.appendChild(el('div', { klasse: 'bygg kort', 'data-type': id, ...(ikon ? { 'data-ikon': ikon } : {}), 'data-tips': `${B.navn}|${pris}${strøm}${nv}. ${B.linje ? 'Per meter: ' : 'Materialer: '}${matTekst(k.mat)}. ${B.virkning && B.virkning !== B.tekst ? B.tekst + '. Virkning: ' + B.virkning : B.tekst}` }, tegn,
         el('div', {}, el('b', {}, B.navn), el('small', { klasse: 'pris', title: B.linje ? '' : mp ? `Arbeid ${LB.kroner(k.pris)} + materialer du mangler ${LB.kroner(mp)}` : 'Materialene har du på lageret' }, B.linje ? `${LB.kroner(B.prisPerMeter)}/m` : LB.kroner(k.pris + mp) + (mp ? ' i alt' : '')), B.virkningKort ? el('small', { klasse: 'virk' }, B.virkningKort) : '', el('small', { klasse: 'kortlinje' }, (B.linje ? '' : tidTekst(k.timer * 60)) + strøm.replace(/^ · /, B.linje ? '' : ' · ') || B.tekst), el('small', { klasse: 'mer' }, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', { klasse: 'mer' }, B.virkning || B.tekst)), b));
     }
     // FANER (brukeren 16. nov: «forbedre menyene» – Leir-menyen var én lang side): status og Folk-knappen står alltid øverst, resten
@@ -336,12 +338,18 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
         q.h.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); q.h.onclick(); } };
         for (const n of q.noder) { if (lukket) { if (n === q.h) { /* overskriften står */ } else if (q.boks && n === q.noder[0]) n.classList.add('delboks', 'lukket'); else n.hidden = true; } til.appendChild(n); } }
       if (fane !== 'bygg') hale.hidden = true; }
-    const nøkkel = hode.innerHTML + liste.innerHTML + hale.innerHTML; if (nøkkel === menyNøkkel && menyEl.firstChild) return;
+    const deler = [hode.innerHTML, liste.innerHTML, hale.innerHTML], nøkkel = deler.join('\u0001'); if (nøkkel === menyNøkkel && menyEl.firstChild) return;
     // (kritikerløkka r2, Ingrid på PC: «byggelista hopper» – hun traff Ammunisjonsbunker og Garasje i stedet for Aggregat og Vakttårn) – står
     // pekeren (mus) står over lista, venter nye tall til den går ut (se pekerOver); og når lista tegnes på nytt, står det øverste synlige kortet
     // på samme sted på skjermen, selv om det har kommet en linje til over lista (en ny jobb i køen) – også på telefon
     const anker = ankerKort(); utsatt = false;
-    menyNøkkel = nøkkel; menyEl.innerHTML = ''; menyEl.append(hode, liste, hale); menyEl.scrollTop = rulle;
+    // (kritikerløkka r3, Ingrid: lista hoppet fortsatt) – hodet og halen byttes ut som før (andre deler kan ha koblet seg til de nye
+    // nodene), men kortene i lista blir stående som de er når de ikke er endret – også mens du trykker på et av dem. Første gang (eller
+    // når noe annet har tømt menyen) som før.
+    const gml = menyDeler && menyDeler.el.every(n => n.parentNode === menyEl) ? menyDeler : null;
+    if (gml) { const nye = [hode, liste, hale]; nye.forEach((n, i) => { if (i !== 1 || deler[i] !== gml.html[i]) gml.el[i].replaceWith(n); else nye[i] = gml.el[i]; }); menyDeler = { el: nye, html: deler }; }
+    else { menyEl.innerHTML = ''; menyEl.append(hode, liste, hale); menyDeler = { el: [hode, liste, hale], html: deler }; }
+    menyNøkkel = nøkkel; menyEl.scrollTop = rulle;
     // (andre deler pynter menyen like etter – fanelinja på telefon, spill/telefon.js – så kortet rettes også i neste bilde og litt etter)
     if (anker) { const rett = () => { const ny = menyEl.querySelectorAll(`.bygg.kort[data-type="${anker.type}"]`)[anker.nr]; if (ny && ny.getClientRects().length) { const d = ny.getBoundingClientRect().top - anker.top; if (Math.abs(d) >= 1) menyEl.scrollTop += d; } };
       rett(); requestAnimationFrame(rett); setTimeout(rett, 160); }
