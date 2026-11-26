@@ -13,14 +13,15 @@
     const bygg = {}, bestilt = {}; for (const b of L.bygg || []) { if (Leir.ferdig(b)) bygg[b.type] = (bygg[b.type] || 0) + 1; else bestilt[b.type] = (bestilt[b.type] || 0) + 1; }
     const siste = LeirSpill.siste ? LeirSpill.siste() : null, R = window.RessursSpill && RessursSpill.tilstand(), R3_ = r3();
     let tettsteder = 0; if (window.TETTSTEDER) for (const t of TETTSTEDER.values()) if (t && t.eier === 'blå') tettsteder++;
-    const går = !!(R3_ && R3_.fot && typeof på3d !== 'undefined' && på3d);
+    // (26. nov) i kartet holder det at karakteren har gått et stykke (spill/spill2d.js), og leting i kartet er å gå inn i et hus
+    const går3d = !!(R3_ && R3_.fot && typeof på3d !== 'undefined' && på3d), går = går3d || !!(window.Spill2D && Spill2D.harReist && Spill2D.harReist());
     // krigen (kapittel 5): stillingen fra krigskartet, og egne tettsteder med et lag i garnison
     let andel = 0, vunnet = false, garnison = 0;
     try { const K = window.StrategiSpill && StrategiSpill.bilde(); if (K) { andel = K.st.sider.blå.andel; vunnet = K.ut.vinner === 'blå'; garnison = K.byer.filter(b => window.Garnison && Garnison.tilstand(TETTSTEDER, b.id).eier === 'blå' && Garnison.lagI(b.ref, ENHETER.filter(e => e.side === 'blå' && !e.karakter && levende(e))).length > 0).length; } } catch (e) { /* krigskartet er ikke klart */ }
     // strøm: egen strøm (aggregat eller solceller) – strømnettet i området ga før «Mål nådd: få strøm» i første sekund av et nytt spill
     return { bygg, bestilt, diesel: L.drivstoff || 0, strøm: !!(siste && siste.prod > 0 && (bygg.aggregat || bygg.solcelle)), folk: L.folk && L.folk.personer ? L.folk.personer.length : 0, tre: (L.lager && L.lager.tre) || 0,
       hogd: R && R.hogd ? R.hogd.filter(h => !(h.andel < 1)).length : 0, revet: R && R.revet ? R.revet.length : 0, tettsteder, går, andel, vunnet, garnison,
-      inne: går && !!(window.Interior3d && Interior3d.inne(R3_.bane.x, R3_.bane.y)), lett: window.LeteSpill ? LeteSpill.antall() : 0,
+      inne: (går3d && !!(window.Interior3d && Interior3d.inne(R3_.bane.x, R3_.bane.y))) || (window.LeteSpill ? LeteSpill.antall() > 0 : false), lett: window.LeteSpill ? LeteSpill.antall() : 0,
       matDøgn: L.folk && L.folk.personer && L.folk.personer.length ? (L.folk.mat || 0) / L.folk.personer.length : 0 };
   }
   function sjekk(stille) {

@@ -15,7 +15,8 @@
       // RUNDE 14 (kritiker I og J: «På Bygg: 4 av 2 · åpne Folk» sto i halvannet døgn): kravet er bare to på Bygg – Folk trenger ikke åpnes
       krav: b => `På Bygg: ${b.påBygg || 0} av 2` },
     { id: 'tropp', tittel: 'Lag en tropp', tekst: 'Åpne Tropper, velg noen av folkene og gi troppen et navn. Tropper kan du sende ut i kartet.', mål: 'tropper', ferdig: b => b.tropper > 0 },
-    { id: 'gaa', tittel: 'Gå i 3D', tekst: 'Trykk 3D for å se landet ovenfra, og så Gå for å gå rundt i leiren selv.', mål: '3d', ferdig: b => b.går },
+    // (26. nov, spill i 2D) steget nås også i kartet: karakteren har gått et stykke eller lett gjennom et hus
+    { id: 'gaa', tittel: 'Gå ut i verden', get tekst() { return rot.UTEN_3D ? 'Trykk på et hus i kartet og velg «Let gjennom huset»: karakteren din går dit og leter.' : 'Trykk på et hus i kartet og velg «Let gjennom huset» – eller trykk 3D og Gå for å gå rundt selv.'; }, mål: '3d', ferdig: b => b.går },
     // (balansen runde 4, 18. nov) det gjennomspillingen viste at en ny spiller trenger for å klare den første uka: to tropper, mat,
     // forsvar når alarmen går, og reparasjon etter angrep. Rekkefølgen og «før dag 4» er Claudes forslag.
     // (runde 8, kritiker C og D) «Ha to tropper før dag 4» fikk nye spillere til å gjøre alle folkene til soldater (brakka ble aldri
@@ -126,7 +127,7 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
   function bilde() { const L = rot.LeirSpill && LeirSpill.tilstand && LeirSpill.tilstand(), F = rot.FolkSpill && FolkSpill.tilstand && FolkSpill.tilstand();
     if ($('leirmeny') && $('leirmeny').classList.contains('på')) sett.leir = true; if ($('folkmeny') && $('folkmeny').classList.contains('på')) sett.folk = true;
     return { leirÅpnet: sett.leir, brakker: L ? L.bygg.filter(b => b.type === 'brakke').length : 0, folkÅpnet: sett.folk, påBygg: F && F.personer ? F.personer.filter(p => p.oppgave === 'bygg').length : 0,
-      tropper: typeof ENHETER !== 'undefined' ? ENHETER.filter(s => s.fraFolk && levende(s)).length : 0, påVakt: F && F.personer ? F.personer.filter(p => p.oppgave === 'vakt').length : 0, går: typeof R3 !== 'undefined' && !!(R3 && R3.fot) && typeof på3d !== 'undefined' && på3d,
+      tropper: typeof ENHETER !== 'undefined' ? ENHETER.filter(s => s.fraFolk && levende(s)).length : 0, påVakt: F && F.personer ? F.personer.filter(p => p.oppgave === 'vakt').length : 0, går: (typeof R3 !== 'undefined' && !!(R3 && R3.fot) && typeof på3d !== 'undefined' && på3d) || !!(rot.Spill2D && Spill2D.harReist && Spill2D.harReist()) || !!(rot.LeteSpill && LeteSpill.antall() > 0),
       ...bilde4(L, F) }; }
   // RUNDE 14: har minst to stått på Vakt (dobbel vakt fra morgenmøtet teller), huskes det for steget «Mer forsvar»
   const bildeFør = bilde;
@@ -142,7 +143,7 @@ body.kort.tlfligg #opplaering.sammen:not(.liten) b{ white-space:nowrap; overflow
     if (s.mål === 'brakke') { if ($('byggvalg') && synlig($('byggvalg'))) return null; if (åpen) { const fane = [...lm.querySelectorAll('.faner button, [data-fane-knapp]')].find(b => /^Bygg/.test(b.textContent.trim())); const rad = lm.querySelector('.bygg[data-type="brakke"]'); return synlig(rad) ? rad : synlig(fane) ? fane : null; } return kn('leir') || $('leirknapp'); }
     if (s.mål === 'folk') { const fm = $('folkmeny'); if (fm && fm.classList.contains('på')) return null; return kn('folk') || $('folkknapp'); }
     if (s.mål === 'tropper') { const tp = $('tropppanel'); if (tp && tp.classList.contains('på')) return null; return kn('tropper') || $('nytropp'); }
-    if (s.mål === '3d') return typeof på3d !== 'undefined' && på3d ? $('gaaknapp') : $('v3d');
+    if (s.mål === '3d') return rot.UTEN_3D ? null : typeof på3d !== 'undefined' && på3d ? $('gaaknapp') : $('v3d');
     // (runde 8: gjennomspillingen fant ikke «Øv» – delen Forsvar står langt nede og kan være lagt sammen) ringen står rundt overskriften
     // når knappen ikke synes, og menyen rulles én gang (per åpning) så Forsvar kommer til syne
     // (paneler.js setter menyen øverst like etter at den åpnes – derfor rulles den først når den har vært åpen et knapt sekund)

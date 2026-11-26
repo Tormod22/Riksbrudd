@@ -1649,3 +1649,15 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   mennene i egne tropper (s.fraFolk), ganges med markedets inflasjon (SpilletSpill.M().infl, Marked.INFL = 1,01 – uendret). Tom kasse: F.ubetalt
   (lagres med folket), melding én gang, moralmålet −20 til alt er etterbetalt. Folk-panelet: «Lønn: … per døgn · … skyldes» og en linje under
   knappene. Hjelpen: emnet «Lønn». I testene betales ingen lønn av seg selv (FolkSpill.lønnTest). VAKT «lønn til folkene» (vakter/lonn.js).
+  SPILL I 2D (26. nov, brukeren: «det skal være mulig å spille det bare i 2D, og så kan folk spille litt i 3D om de ønsker»): spill/spill2d.js
+  (reglene øverst uten DOM: klasse = hus3d sin byggklasse, gått, lesAv; test_spill2d.js; lastes rett før meny.js). Karakterlaget står for deg i
+  kartet: trykk på et hus -> #hus2d i panelet: «Let gjennom huset» (Gange.reis dit, så #let2d med framdrift i Leting.tid sekunder, så
+  LeteSpill.ferdig(P, { X, Y, i2d }) – P i kartets meter; i2d gir våpen/ammo i sekken og ingen skap, panelet står (funn2d)), «Sikre huset»
+  (OverlevSpill.sikre2d), «Hvil her» (OverlevSpill.hvil(i)), «Sov her» (EventyrSpill.sov2d), «Hent det som ligger igjen» (LeteSpill.hent(P, { i2d })).
+  Karakterens lagpanel (KROKER.lagKnapper): «Sett ut snarefelle» (EventyrSpill.settFelle({ x, y, skog })), «Sjekk fella», «Sov her».
+  Tellerne: karakterens meter i kartet -> EventyrSpill.leggTil('gått') og utholdenhet; KROKER.salve -> «felt» når karakterlaget slår ut en fiende.
+  Målene «Gå selv ut i verden» (Spill2D.harReist: 50 m) og «Gå inn i et hus» (en leting) og opplæringens «Gå ut i verden» nås i kartet.
+  ☰ → Bilde og lyd → «3D-visning» (localStorage «riksbrudd-uten3d», window.UTEN_3D, body.uten3d): av = 3D-knappen og «Gå inn i huset» er borte,
+  three.js lastes ikke i bakgrunnen (index.html), og slå3d(true) sier fra i stedet for å åpne 3D (kameraer, kontrollromsfeeds osv.).
+  VAKT «spill i 2D» (vakter/spill2d.js, med selvtest). Bilder: scratchpad to/flyt2d.js (ekte /norge, MOBIL=1). IKKE i 2D ennå: kamp til fots
+  med eget våpen/granater (karakterlaget slåss som et lag i stedet), feltbil/helikopter du kjører selv, møbler, lapper og skap i husene.

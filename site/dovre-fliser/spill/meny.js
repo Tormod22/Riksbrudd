@@ -12,7 +12,7 @@
     ['Oversikt', 'Hjelp til å lese situasjonen', ['Selskapet', 'Siktfelt', 'Tåke', 'Motstandere', 'Kompass', 'Minikart']],
     ['Spill sammen', 'Flere spillere i samme verden', ['Spill sammen']],
     ['Vær og årstid', 'Automatisk, eller lås et vær', ['Årstid', 'Vær']],
-    ['Bilde og lyd', 'Lavere grafikk gir jevnere bilde', ['Grafikk', 'Filter', 'Lyd', 'Fotomodus']],
+    ['Bilde og lyd', 'Lavere grafikk gir jevnere bilde', ['3D-visning', 'Grafikk', 'Filter', 'Lyd', 'Fotomodus']],
     ['Måling', 'Tall du kan sende hvis noe går tregt', ['FPS-teller', 'Tekniske tall', 'Mål ytelse', 'Mål hakk']],
   ];
   const HANDLING = ['Mål ytelse', 'Mål hakk', 'Måler', 'Fotomodus'], FARE = ['Nytt spill'];

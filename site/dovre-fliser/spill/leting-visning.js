@@ -64,12 +64,13 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
   // ---------- RESULTATET (runde 12) ----------
   // Et panel som står til du lukker det eller går ut: hva som gikk til leiren (og hvor), hva som havnet i sekken, hva som ble
   // igjen, og «Se i skapene» – beholderne i huset (spill/lut-visning.js) åpner du derfra, uten å lete etter hvert skap.
-  let funnFor = null;
+  // funn2d: panelet er fra en leting i kartet (spill/spill2d.js) – det lukkes ikke av at du ikke går i 3D
+  let funnFor = null, funn2d = false;
   const DIT = { mat: 'leirens mat', tre: 'lageret', betong: 'lageret', stål: 'lageret', diesel: 'dieseltankene', penger: 'kassa' };
   const NAVN2 = { mat: n => (n === 1 ? 'rasjon' : 'rasjoner'), tre: () => 'm³ tre', betong: () => 'm³ betong', stål: () => 't stål', diesel: () => 'l diesel', penger: () => 'kr' };
   const tall2 = v => String(v).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   const lagEl = (t, tekst, kl) => { const e = document.createElement(t); if (kl) e.className = kl; if (tekst !== undefined) e.textContent = tekst; return e; };
-  function lukkFunn() { funn.classList.remove('på'); funn.replaceChildren(); funnFor = null; }
+  function lukkFunn() { funn.classList.remove('på'); funn.replaceChildren(); funnFor = null; funn2d = false; }
   // d: { tittel, fikk, tomt, igjen, sekken: [tekst], person, hentet }
   function visResultat(P, d) {
     const navn = P.leir ? 'Bygget' : NAVN[P.bygg.kl] || 'Bygget', ny = [];
@@ -83,12 +84,12 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
     if (d.igjen) { ny.push(lagEl('h4', 'Ble igjen i huset')); ny.push(lagEl('p', d.igjen)); }
     if (d.person) { ny.push(lagEl('h4', 'Folk')); ny.push(lagEl('p', d.person)); }
     // skapene: hvor mange det ligger noe i
-    const O = window.LutSpill && LutSpill.husOversikt ? LutSpill.husOversikt(P) : null, kn = lagEl('div', undefined, 'kn');
+    const O = !d.i2d && P.inne && window.LutSpill && LutSpill.husOversikt ? LutSpill.husOversikt(P) : null, kn = lagEl('div', undefined, 'kn');
     if (O && O.antall) { ny.push(lagEl('h4', 'Skap, skuffer og hyller'));
       ny.push(lagEl('p', O.medTing ? `Det ligger ting i ${O.medTing} av ${O.antall} (${tall2(O.kg)} kg) – mat, våpen og utstyr tar du selv.` : `${O.antall} i alt, men de er tomme.`));
       if (O.medTing) { const b = lagEl('button', 'Se i skapene', 'hoved'); b.type = 'button'; b.onclick = () => { if (LutSpill.åpneHele()) lukkFunn(); }; kn.append(b); } }
     const lk = lagEl('button', 'Lukk'); lk.type = 'button'; lk.onclick = lukkFunn; kn.append(lk); ny.push(kn);
-    funn.replaceChildren(...ny); funn.classList.add('på'); funnFor = P.bygg.i; lukkHint();
+    funn.replaceChildren(...ny); funn.classList.add('på'); funnFor = P.bygg.i; funn2d = !!d.i2d; lukkHint();
     if (document.pointerLockElement) document.exitPointerLock();
   }
   funn.addEventListener('pointerdown', e => e.stopPropagation());
@@ -113,31 +114,32 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
   function plassTil(rest) { const L = window.LeirSpill && LeirSpill.tilstand(); if (!L || !rest) return false;
     if (rest.diesel > 0 && Leir.kapasitet(L) - (L.drivstoff || 0) >= 1) return true;
     for (const m of ['tre', 'betong', 'stål']) if (rest[m] > 0 && Leir.lagerplass(L) - ((L.lager && L.lager[m]) || 0) >= .1) return true; return false; }
-  function hent(P) { const p = lett.get(P.bygg.i), rest = restAv(P); if (!rest) return null;
+  function hent(P, o = {}) { const p = lett.get(P.bygg.i), rest = restAv(P); if (!rest) return null;
     const fikk = ta(rest), ny = {}; for (const m of ['tre', 'betong', 'stål', 'diesel']) { const r = (rest[m] || 0) - (fikk[m] || 0); if (r > (m === 'diesel' ? .5 : .05)) ny[m] = Math.round(r * 10) / 10; }
     if (Object.keys(ny).length) p[2] = ny; else p.length = 2; lagre();
     const melding = Leting.tekst(fikk).replace(/^Du fant/, 'Du hentet') + hvorTekst(fikk) + (Object.keys(ny).length ? ' Noe ligger fortsatt igjen.' : ' Nå er huset tomt.'); logg(melding); visFunn(melding);
-    visResultat(P, { tittel: 'Hentet det som lå igjen', fikk, hentet: true, igjen: Object.keys(ny).length ? 'Noe ligger fortsatt igjen – leiren har ikke plass til alt.' : '' }); return { fikk, rest: restAv(P) }; }
+    visResultat(P, { i2d: !!o.i2d, tittel: 'Hentet det som lå igjen', fikk, hentet: true, igjen: Object.keys(ny).length ? 'Noe ligger fortsatt igjen – leiren har ikke plass til alt.' : '' }); return { fikk, rest: restAv(P) }; }
   // (runde 12) hvor funnet havnet – rasjonene i leirens matlager (med tallet etterpå), ikke i sekken
   const hvorTekst = fikk => { const F = window.FolkSpill && FolkSpill.tilstand(), t = Leting.hvor ? Leting.hvor(fikk, { mat: F ? F.mat : undefined }) : ''; return t ? ' ' + t : ''; };
-  function ferdig(P) {
+  // o (2D, spill/spill2d.js): { X, Y } = husets midte i kartets meter (P er da i kartets meter), i2d = ingen skap å åpne
+  function ferdig(P, o = {}) {
     const R = r3(), u = R && R.ut; let mx = 0, my = 0; for (const p of P) { mx += p[0]; my += p[1]; }
     // (balansen 18. nov, Claudes forslag) det første huset du leter i, er aldri tomt: fire rasjoner og 20 000 kr når det ellers var tomt
     let f = Leting.funn(P.bygg.kl, arealAv(P), P.bygg.i); if (f.tomt && !lett.size && !navigator.webdriver) f = { ...f, tomt: false, mat: 4, penger: 20000 };
     // (R18-F) huset en lapp pekte mot, har et gjemt lager i tillegg (spill/spor-visning.js)
     if (window.SporSpill && SporSpill.medGjemt) f = SporSpill.medGjemt(P, f);
-    const fikk = ta(f); lett.set(P.bygg.i, u ? [u.cx + mx / P.length, u.cy + my / P.length] : null); lagre();
+    const fikk = ta(f); lett.set(P.bygg.i, Number.isFinite(o.X) ? [o.X, o.Y] : u ? [u.cx + mx / P.length, u.cy + my / P.length] : null); lagre();
     const mistet = ['tre', 'betong', 'stål', 'diesel'].filter(m => f[m] > 0 && fikk[m] < f[m] - 1e-6);
     { const p = lett.get(P.bygg.i), rest = {}; for (const m of mistet) rest[m] = Math.round((f[m] - (fikk[m] || 0)) * 10) / 10; if (p && mistet.length) { p[2] = rest; lagre(); } }
     const noe = fikk.mat || fikk.tre || fikk.betong || fikk.stål || fikk.diesel || fikk.penger;
-    const res = { fikk, tomt: f.tomt ? Leting.tekst(f) : '', igjen: mistet.length ? igjen(f, fikk, mistet) + ' Det ligger der til dere har plass.' : '', sekken: [], person: '' };
+    const res = { i2d: !!o.i2d, fikk, tomt: f.tomt ? Leting.tekst(f) : '', igjen: mistet.length ? igjen(f, fikk, mistet) + ' Det ligger der til dere har plass.' : '', sekken: [], person: '' };
     const melding = f.tomt ? Leting.tekst(f) : (noe ? Leting.tekst(fikk) + hvorTekst(fikk) : 'Du fant noe, men det var ikke plass til det i leiren.') + (mistet.length ? ' ' + igjen(f, fikk, mistet) + ' Det ligger der til dere har plass.' : '');
     // resultatet står midt på skjermen i fem sekunder (loggen er liten på telefon), og i loggen
     // våpen, ammunisjon og førstehjelp går i sekken din (spill/utstyr.js)
     // (18. nov kveld) med beholderne (spill/lut-visning.js) ligger våpen, ammunisjon, mat og utstyr i skapene og skuffene i stedet –
     // letingen gir det tunge (materialer, diesel, penger og mat i kartonger til leiren), og meldingen minner om skapene
-    { const LS = window.LutSpill && LutSpill.klar && LutSpill.klar(), ekstra = !f.tomt && window.UtstyrSpill && !LS ? UtstyrSpill.fantIHus(P.bygg.kl, P.bygg.i) : '';
-      const skap = LS && P.inne && window.Lut && Lut.beholdere(P.inne).length ? ' Skap og skuffer åpner du selv (E ved møbelet).' : '';
+    { const LS = window.LutSpill && LutSpill.klar && LutSpill.klar(), ekstra = !f.tomt && window.UtstyrSpill && (!LS || o.i2d) ? UtstyrSpill.fantIHus(P.bygg.kl, P.bygg.i) : '';
+      const skap = LS && !o.i2d && P.inne && window.Lut && Lut.beholdere(P.inne).length ? ' Skap og skuffer åpner du selv (E ved møbelet).' : '';
       if (ekstra) { logg(melding); logg(ekstra); visFunn(melding + ' ' + ekstra); } else { logg(melding); visFunn(melding + skap); }
       res.sekken = ekstra ? [ekstra] : []; }
     // en overlevende: blir med hvis leiren har en ledig seng (ellers blir vedkommende igjen)
@@ -166,7 +168,7 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
   hint.addEventListener('pointerdown', e => { e.stopPropagation(); lukkHint(); });
   function ramme(R) {
     const her = R.fot && window.Interior3d ? Interior3d.inne(R.bane.x, R.bane.y) : null; visLapp(her);
-    if (funnFor !== null && !(her && her.bygg && her.bygg.i === funnFor)) lukkFunn();
+    if (funnFor !== null && !funn2d && !(her && her.bygg && her.bygg.i === funnFor)) lukkFunn();
     skapSteg(her);
     if (hintFor !== null && (performance.now() > hintTil || !(her && her.bygg && her.bygg.i === hintFor))) lukkHint();
     if (klar && her && her.bygg && her.inne && !her.leir && hintFor === null && (!navigator.webdriver || window.LeteSpill.test) && !hintVist()) visHint(her);
@@ -190,8 +192,8 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
     for (const p of lett.values()) { if (!p) continue; const [x, y] = tilSkjerm(p[0], p[1], vx0, vy1); if (x < -10 || y < -10 || x > VW + 10 || y > VH + 10) continue;
       g.fillStyle = 'rgba(22,18,12,.78)'; g.beginPath(); g.arc(x, y, 7, 0, 6.283); g.fill(); const f = p[2] ? '#e0b24a' : '#9fc46a'; g.strokeStyle = f; g.lineWidth = 1; g.stroke(); g.fillStyle = f; g.fillText(p[2] ? '+' : '✓', x, y + .5); }
     g.restore(); });
-  setInterval(() => { const R = r3(); if (!R || !R.fot || typeof på3d === 'undefined' || !på3d) { jobb = null; knapp.classList.remove('på'); if (performance.now() >= funnTil) lapp.classList.remove('på'); if (funnFor !== null) lukkFunn(); if (hintFor !== null) lukkHint(); skapKn.classList.remove('på'); } }, 500);
+  setInterval(() => { const R = r3(); if (!R || !R.fot || typeof på3d === 'undefined' || !på3d) { jobb = null; knapp.classList.remove('på'); if (performance.now() >= funnTil) lapp.classList.remove('på'); if (funnFor !== null && !funn2d) lukkFunn(); if (hintFor !== null) lukkHint(); skapKn.classList.remove('på'); } }, 500);
   function start() { const S = window.OppstartSpill && OppstartSpill.tilstand(); leirId = S && S.leir ? Math.round(S.leir.x) + ',' + Math.round(S.leir.y) : 'x'; les(); klar = true; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  window.LeteSpill = { test: false, visResultat, lukkFunn, funnÅpent: () => funn.classList.contains('på'), lukkHint, start, ferdig, ta, hent, restAv, plassTil, antall: () => lett.size, lett: () => lett, jobb: () => jobb, nullstill: () => { lett = new Map(); lagre(); }, spol: () => { if (jobb) jobb.start -= 60000; } };
+  window.LeteSpill = { test: false, areal: arealAv, visResultat, lukkFunn, funnÅpent: () => funn.classList.contains('på'), lukkHint, start, ferdig, ta, hent, restAv, plassTil, antall: () => lett.size, lett: () => lett, jobb: () => jobb, nullstill: () => { lett = new Map(); lagre(); }, spol: () => { if (jobb) jobb.start -= 60000; } };
 })();

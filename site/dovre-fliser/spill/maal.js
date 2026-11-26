@@ -29,9 +29,9 @@
       { id: 'folk', tekst: 'Rekrutter en person til', hjelp: 'Folk → «Rekrutter» når det er en ledig seng.', ferdig: T => T.folk > 10 },
     ] },
     { navn: 'Ut i verden', mål: [
-      { id: 'gå', tekst: 'Gå selv i 3D', hjelp: 'Trykk «3D» og så «Gå».', ferdig: T => !!T.går },
-      { id: 'inne', tekst: 'Gå inn i et hus', hjelp: 'Gå rett mot døra. Inne er det rom og møbler etter hva slags bygg det er.', ferdig: T => !!T.inne },
-      { id: 'let', tekst: 'Let gjennom et hus', hjelp: 'Inne i et bygg: trykk «Let gjennom huset» (eller E). Butikker har mat, verksteder materialer.', ferdig: T => T.lett > 0 },
+      { id: 'gå', tekst: 'Gå selv ut i verden', hjelp: 'Trykk på karakteren din i kartet og gi den en ordre – eller trykk på et hus og «Let gjennom huset». I 3D: «3D» og så «Gå».', ferdig: T => !!T.går },
+      { id: 'inne', tekst: 'Gå inn i et hus', hjelp: 'Trykk på et hus i kartet og velg «Let gjennom huset» – karakteren går inn. I 3D: gå rett mot døra; inne er det rom og møbler.', ferdig: T => !!T.inne },
+      { id: 'let', tekst: 'Let gjennom et hus', hjelp: 'Trykk på et hus i kartet og «Let gjennom huset» (i 3D: inne i bygget, knappen eller E). Butikker har mat, verksteder materialer.', ferdig: T => T.lett > 0 },
       { id: 'tettsted', tekst: 'Ta kontroll over et tettsted', hjelp: 'Flytt et lag inn i tettstedet og hold det til det er ditt.', ferdig: T => T.tettsteder > 0 },
     ] },
     // KRIGEN (natt 18. nov): etter de fire første kapitlene handler målene om krigskartet (spill/strategi.js). T.tettsteder = tettsteder

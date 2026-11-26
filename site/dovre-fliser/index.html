@@ -221,7 +221,8 @@ const KLAR = (async () => {
 })();
 KF.klar = KLAR;
 KLAR.then(hentInfra);
-KLAR.then(() => setTimeout(() => lastThree().catch(() => {}), 2500));
+// (26. nov) med 3D slått av i ☰ (spill/spill2d.js: window.UTEN_3D) lastes ikke three.js i bakgrunnen
+KLAR.then(() => setTimeout(() => { if (!window.UTEN_3D) lastThree().catch(() => {}); }, 2500));
 // /norge uten kontakt med kartlageret (12. nov: siden viste da stille bare Dovre-piloten). Vi sier fra, viser Dovre imens og spør
 // kartlageret igjen etter 10 s, 20 s, 40 s … (høyst hvert minutt). Når det svarer, kan spilleren laste inn Norgeskartet med en knapp.
 function norgeMangler() {
@@ -3646,7 +3647,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/flom.js?v=47a26f294e"></script>
 <script src="/dovre-fliser/spill/flom-visning.js?v=ac6e0a3ab9"></script>
 <script src="/dovre-fliser/spill/hjelp-natt.js?v=3774ac260c"></script>
-<script src="/dovre-fliser/spill/hjelp.js?v=7a90d887a8"></script>
+<script src="/dovre-fliser/spill/hjelp.js?v=4253278207"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=14f321d2b1"></script>
 <script src="/dovre-fliser/spill/gange.js?v=b9050a6c72"></script>
 <script src="/dovre-fliser/spill/veg.js?v=8da99c174d"></script>
@@ -3725,7 +3726,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gate.js?v=9ee37c3bc8"></script>
 <script src="/dovre-fliser/spill/gate3d.js?v=a14beb67ee"></script>
 <script src="/dovre-fliser/spill/leting.js?v=a941eb3114"></script>
-<script src="/dovre-fliser/spill/leting-visning.js?v=672d2c0c07"></script>
+<script src="/dovre-fliser/spill/leting-visning.js?v=9ea1b712f1"></script>
 <script src="/dovre-fliser/spill/lut.js?v=485c23b2da"></script>
 <script src="/dovre-fliser/spill/lut-visning.js?v=a5556f047b"></script>
 <script src="/dovre-fliser/spill/spor.js?v=8e78418546"></script>
@@ -3739,13 +3740,13 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/fjellmark3d.js?v=a375b287b8"></script>
 <script src="/dovre-fliser/spill/kjoretoy3d.js?v=7a6698c11e"></script>
 <script src="/dovre-fliser/spill/kjor.js?v=13b2c4a572"></script>
-<script src="/dovre-fliser/spill/maal.js?v=0761659d97"></script>
-<script src="/dovre-fliser/spill/maal-visning.js?v=e96dd0006d"></script>
+<script src="/dovre-fliser/spill/maal.js?v=231d8a0bc7"></script>
+<script src="/dovre-fliser/spill/maal-visning.js?v=76d6ea2a23"></script>
 <script src="/dovre-fliser/spill/dagbok.js?v=ae1e1488af"></script>
 <script src="/dovre-fliser/spill/spillet.js?v=23bdf3b00d"></script>
 <script src="/dovre-fliser/spill/utstyr.js?v=045d01823d"></script>
 <script src="/dovre-fliser/spill/spillet-visning.js?v=ec8b6e3a42"></script>
-<script src="/dovre-fliser/spill/overlev.js?v=8992548ec9"></script>
+<script src="/dovre-fliser/spill/overlev.js?v=44a9091163"></script>
 <script src="/dovre-fliser/spill/folk3d.js?v=c197435ead"></script>
 <script src="/dovre-fliser/spill/figur3d.js?v=3e33ad384f"></script>
 <script src="/dovre-fliser/spill/narhud.js?v=754488817e"></script>
@@ -3791,7 +3792,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/anleggsarbeid-visning.js?v=7d4760b39c"></script>
 <script src="/dovre-fliser/spill/kameravakt-visning.js?v=b96acad144"></script>
 <script src="/dovre-fliser/spill/eventyr.js?v=b9ddcc2dc2"></script>
-<script src="/dovre-fliser/spill/eventyr-visning.js?v=df559b2ee6"></script>
+<script src="/dovre-fliser/spill/eventyr-visning.js?v=b3b2482586"></script>
 <script src="/dovre-fliser/spill/kommando.js?v=104bcaf14d"></script>
 <script src="/dovre-fliser/spill/kommandoer.js?v=52394d4f0f"></script>
 <script src="/dovre-fliser/spill/kommando-visning.js?v=868d91c35f"></script>
@@ -3801,7 +3802,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/selskap-visning.js?v=d0896a67c1"></script>
 <script src="/dovre-fliser/spill/bakkekamp.js?v=df5617e107"></script>
 <script src="/dovre-fliser/spill/bakkekamp-visning.js?v=e39217bbb0"></script>
-<script src="/dovre-fliser/spill/meny.js?v=936954be6d"></script>
+<script src="/dovre-fliser/spill/spill2d.js?v=f933f4684e"></script>
+<script src="/dovre-fliser/spill/meny.js?v=31e5816aee"></script>
 <script src="/dovre-fliser/spill/flyt.js?v=8dd34da813"></script>
 <script src="/dovre-fliser/spill/scenario.js?v=55bc5f9d74"></script>
 <script src="/dovre-fliser/spill/scenario-visning.js?v=49c5bb2f2f"></script>
@@ -3821,7 +3823,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/leirvirkning.js?v=c5f0030244"></script>
 <script src="/dovre-fliser/spill/leirvirkning-visning.js?v=6420c8ec13"></script>
 <script src="/dovre-fliser/spill/flistips.js?v=fcce03e02d"></script>
-<script src="/dovre-fliser/spill/opplaering.js?v=a1ec4ed722"></script>
+<script src="/dovre-fliser/spill/opplaering.js?v=c773b52e5f"></script>
 <script src="/dovre-fliser/spill/minikart2d.js?v=dae9f4bfb7"></script>
 <script src="/dovre-fliser/spill/tegnforklaring.js?v=6ef9864da2"></script>
 <script src="/dovre-fliser/spill/paneler.js?v=7c30488bdb"></script>
