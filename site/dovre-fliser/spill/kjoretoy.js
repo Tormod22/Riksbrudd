@@ -35,7 +35,9 @@
     if (!Number.isFinite(kj.x) || !Number.isFinite(kj.y)) return { feil: 'Kjøretøyets plass er ukjent.' };
     if (!Array.isArray(mål) || !Number.isFinite(mål[0]) || !Number.isFinite(mål[1])) return { feil: 'Ugyldig mål.' };
     const påVeg = typeof graf.naermestePåVeg === 'function';
-    const vS = påVeg ? graf.naermestePåVeg([kj.x, kj.y], maks) : null, vM = påVeg ? graf.naermestePåVeg(mål, maks) : null;
+    // en sperret lenke (sprengt bru, snø, flom – valg.tillat) brukes ikke til start- eller sluttbiten: da nærmeste node som før
+    const brukbar = v => { if (!v) return null; const l = graf.lenke(v.lenke); return l.sperret || (valg.tillat && !valg.tillat(l)) ? null : v; };
+    const vS = påVeg ? brukbar(graf.naermestePåVeg([kj.x, kj.y], maks)) : null, vM = påVeg ? brukbar(graf.naermestePåVeg(mål, maks)) : null;
     const a0 = graf.naermeste([kj.x, kj.y], maks), b0 = graf.naermeste(mål, maks);
     if (a0 < 0 && !vS) return { feil: 'Kjøretøyet står for langt fra en veg.' };
     if (b0 < 0 && !vM) return { feil: 'Ingen veg i nærheten av målet.' };
