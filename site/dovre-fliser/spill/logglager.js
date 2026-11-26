@@ -23,6 +23,8 @@
       [/falt|død|drept|såret|slått ut|tapt|forlot|forlatt|savnet/i, 4],
       [/angrep|angrip|røver|bølge|fiende|ildkamp|i kamp|kampen/i, 3],
       [/ – [^.]*\.|morgenmøt|valgte|bestemte/i, 3],
+      // (R2-løkka) kontraktene er den røde tråden: levert, brutt, tatt og nytt nivå skal med
+      [/kontrakt|nytt nivå|betalte/i, 3],
     ],
     // aldri i velkomstboksen
     ALDRI: /farten er|farten settes|spillform:|holder til (i|ved)|velkommen tilbake/i,
@@ -84,7 +86,11 @@
   let L = null, venter = [], skriv = 0, vist = false;
   function lagre() { clearTimeout(skriv); skriv = 0; if (!L || !L.leir) return; try { localStorage.setItem(NØKKEL, pakk(L)); } catch (e) { /* fullt eller sperret */ } }
   const lagreSnart = () => { if (!skriv) skriv = setTimeout(lagre, 800); };
-  function ny(tekst, t, slått) { if (!L) { venter.push([tekst, t, slått]); if (venter.length > REGLER.maks) venter.shift(); return; } legg(L, tekst, t, slått); lagreSnart(); oppdaterPanel(); }
+  // (R2-løkka 26. nov, kritikken: «Velkommen tilbake viser fortsatt bare en gammel melding fra dag 1 06:11» – gjenskapt: meldinger som
+  // kom mens et lagret spill ble lest inn, fikk klokka 06:0x fordi spillets klokke ikke var satt tilbake ennå, og ved neste omlasting var
+  // en slik linje «den siste viktige») – klokka går aldri bakover i loggen: en melding får minst tida til den siste linja
+  const sisteTid = () => (L && L.linjer.length ? L.linjer[L.linjer.length - 1][0] : 0);
+  function ny(tekst, t, slått) { if (!L) { venter.push([tekst, t, slått]); if (venter.length > REGLER.maks) venter.shift(); return; } legg(L, tekst, Math.max(+t || 0, sisteTid()), slått); lagreSnart(); oppdaterPanel(); }
   function start() {
     const l = leirId(spill() && spill().leir); if (!l) return;
     let lagret = null; try { lagret = localStorage.getItem(NØKKEL); } catch (e) { lagret = null; }
@@ -93,7 +99,7 @@
     const nytt = rot.LagringSpill && LagringSpill.nyttSpill && LagringSpill.nyttSpill();
     L = nytt ? tom(l) : les(lagret, l); if (L.linjer.length) L.økt += 1;
     // meldingene fra før det lagrede spillet var lest inn, har klokka 06:00 – de får klokka spillet står på nå
-    const nå = typeof tid === 'number' && isFinite(tid) ? tid : 0; for (const [x, t, s] of venter) legg(L, x, Math.max(+t || 0, nå), s); venter = []; lagre();
+    const nå = Math.max(typeof tid === 'number' && isFinite(tid) ? tid : 0, sisteTid()); for (const [x, t, s] of venter) legg(L, x, Math.max(+t || 0, nå), s); venter = []; lagre();
     // RUNDE 14: velkomsten vises STRAKS (før kortene og morgenmøtet, som venter i kortkøen til den er lukket – høyst én modal om gangen)
     const o = oppsummer(L, REGLER, nå); if (o && !vist && (!navigator.webdriver || API.test === true)) { vist = true; velkommen(o); }
   }

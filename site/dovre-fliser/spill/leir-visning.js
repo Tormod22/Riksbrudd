@@ -182,8 +182,10 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
           else logg(`${B.navn} er ødelagt av ${e.navn}!` + (tapt >= 1 ? ` ${Math.round(tapt).toLocaleString('nb-NO')} l diesel gikk tapt.` : '') + (mt ? ` Materialene til oppgraderingen som ikke var brukt, er tilbake på lageret: ${mt}.` : ''));
           if (valgtBygg === b.id) { valgtBygg = null; banner.classList.remove('på'); }
           bygg3dPåNytt(); lagre(); }
-        else { const nøkkel = B.del ? 'byggesett' : b.id; if (!skadeMeldt.has(nøkkel)) { skadeMeldt.add(nøkkel);
-          logg(B.del ? `${e.navn} skader byggesettet!` : r.byggeplass ? `${e.navn} skader byggeplassen for ${navn}!` : `${e.navn} skader ${navn} i leiren!`); } } }
+        // (R2-løkka 26. nov, kritikken: «røverne skader aggregat/dieseltank …» mens byggene sto på 99–100 %) meldes først når skaden synes
+        // (under 90 %), og med hvor mye som er igjen
+        else { const nøkkel = B.del ? 'byggesett' : b.id; if (!skadeMeldt.has(nøkkel) && !(b.hp >= .9)) { skadeMeldt.add(nøkkel);
+          logg(B.del ? `${e.navn} skader byggesettet!` : r.byggeplass ? `${e.navn} skader byggeplassen for ${navn}!` : `${e.navn} skader ${navn} i leiren (${Math.round(Math.max(0, b.hp) * 100)} % igjen)!`); } } }
       if (deler.n) { const mt = matTekst(deler.mat); logg(`${deler.n} ${deler.n === 1 ? 'del' : 'deler'} i byggesettet er ødelagt av ${e.navn}!` + (mt ? ` Materialene som ikke var brukt, er tilbake på lageret: ${mt}.` : '')); skitten = true; } }
     akk += dt; if (akk >= 10 || siste.nyFerdig.length || siste.ferdigArbeid.length) { akk = 0; lagre(); }
     if (performance.now() - (sist || 0) > 1000) { sist = performance.now(); visStatus(); const nede = window.pekerNede || (() => false); if (meny && !nede(menyEl)) visMeny(); if (valgtBygg && !plassering && !nede(banner)) visByggPanel(); skitten = true; }

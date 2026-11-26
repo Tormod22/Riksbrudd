@@ -225,7 +225,7 @@
   function hendelser(ut) {
     for (const h of ut) {
       const k = h.k;
-      if (h.type === 'levert') { if (window.OppstartSpill) OppstartSpill.gi(h.kr); logg(`Kontrakt levert: ${k.tittel}. ${k.giver.navn} betalte ${kr(h.kr)}.`); rydd(k); kobling(h);
+      if (h.type === 'levert') { if (window.OppstartSpill) OppstartSpill.gi(h.kr); logg(`Kontrakt levert: ${k.tittel}. ${k.giver.navn} betalte ${kr(h.kr)}.`); rydd(k); kobling(h); levertØyeblikk(k, h.kr);
         try { window.dispatchEvent(new CustomEvent('riksbrudd-kontrakt', { detail: { type: 'levert', id: k.id, kr: h.kr } })); } catch (e) { /* gammel nettleser */ } }
       else if (h.type === 'brutt') { const bot = Math.min(h.kr || 0, (Sp() && Sp().penger) || 0); if (bot > 0) OppstartSpill.betal(bot);
         const grunn = SK.bruttTekst(k) || (h.grunn === 'frist' ? 'fristen gikk ut' : 'dere avbrøt den');
@@ -234,12 +234,50 @@
           logg(n.length ? `${n.length} nye kontrakter står i Selskapet. Velg en dere har det som trengs til, og send et lag som er sterkt nok.` : 'Nye kontrakter kommer i morgen tidlig. Bygg opp leiren og troppene imens.'); }
         else { logg(`Kontrakt brutt (${grunn}): ${k.tittel}. Bot ${kr(bot)}.`); rydd(k); } }
       else if (h.type === 'rivalFørst') { logg(`${navnFor(h.rival)} kom først: ${k.tittel}. Kontrakten er tapt, men uten bot.`); rydd(k); }
-      else if (h.type === 'angrep') { const b = bilFor(k); if (b) { const v = (window.Tilfeldig ? Tilfeldig.verden() : .5) * Math.PI * 2, a = nyttLag(`${navnFor(h.rival)}, angrepslag`, b.x + Math.cos(v) * 700, b.y + Math.sin(v) * 700, h.rival);
-        a.menn.length = 6; a.angrepslag = true; a.kontrakt = k.id; ENHETER.push(a); try { ordre(a, b.x, b.y, true); } catch (e) { /* uten ordre */ }
-        logg(`${navnFor(h.rival)} angriper ${k.bil}! Beskytt bilen.`); } }
+      else if (h.type === 'angrep') { const b = bilFor(k); if (b) {
+        // (R2-løkka 26. nov, kritikken: «bilen ble meldt angrepet, men kontrakten ble levert uten at noe skjedde – ordet eskorte betyr
+        // ingenting») bakholdet ligger FORAN bilen langs ruta (Claudes forslag: 60 % av det som er igjen, høyst 900 m, 90 m til siden), seks
+        // bevæpnede mann som venter i stilling og skyter på bilen når den kommer (enheter-visning.js: lag skyter på kjøretøy innen 600 m).
+        // Et lag om bord eller i forkant kan slå dem ut; uten eskorte kan bilen gå tapt – og da er kontrakten brutt.
+        const dx = k.sted.x - b.x, dy = k.sted.y - b.y, d = Math.hypot(dx, dy) || 1, fram = Math.min(900, d * .6), side = ((window.Tilfeldig ? Tilfeldig.verden() : .5) < .5 ? -1 : 1) * 90;
+        const ax = b.x + dx / d * fram - dy / d * side, ay = b.y + dy / d * fram + dx / d * side, a = nyttLag(`${navnFor(h.rival)}, bakhold`, ax, ay, h.rival);
+        a.menn.length = 6; a.angrepslag = true; a.kontrakt = k.id; a.ingenAI = true; a.født = tid; try { if (window.Strid && Strid.bevæpn) Strid.bevæpn(a, 'lett'); } catch (e) { /* uten stridsregler */ } ENHETER.push(a);
+        logg(`${navnFor(h.rival)} ligger i bakhold ${meter(fram)} foran ${k.bil}! Send et lag for å rydde vegen, eller kjør en annen veg – uten eskorte kan bilen gå tapt.`); } }
       else if (h.type === 'rivalTok') { /* stille: står i oversikten */ }
     }
     if (ut.length) { lagre(); skitten = true; }
+  }
+
+  // ---------- LEVERINGSØYEBLIKKET (R2-løkka 26. nov, kritikken: «leveringen av den første kontrakten (1,5 mill.) skjer stille – bare
+  // Neste-lappen skifter») ----------
+  // Et lite kort øverst i kartet i ca. 14 sekunder (spillet går videre): hvem som betalte, hva det betyr, og hva neste steg er – med en
+  // knapp rett dit. Den første kontrakten får hele forklaringen; senere kontrakter et kortere kort. Ikke i testene (auto()).
+  const lcss = document.createElement('style');
+  lcss.textContent = `#levertkort{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 10px); z-index:19; width:min(420px, calc(100vw - 24px)); box-sizing:border-box;
+  background:linear-gradient(180deg,#26301c,#161c10); border:1px solid #8fae5e; box-shadow:0 10px 26px rgba(0,0,0,.55); color:#e7dcc3; padding:9px 12px 10px; font-size:14px; line-height:1.4; }
+#levertkort small{ display:block; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#a9c27a; } #levertkort b{ font-family:'Cormorant Garamond', serif; font-size:19px; color:#f0e2b0; font-weight:600; }
+#levertkort p{ margin:4px 0 0; } #levertkort .knapper{ display:flex; gap:6px; justify-content:flex-end; margin-top:7px; }
+#levertkort button{ min-height:34px; padding:0 12px; background:#2a2318; border:1px solid #5a4a2a; color:#e7dcc3; font:inherit; font-size:13.5px; cursor:pointer; } #levertkort button.hoved{ border-color:#8fae5e; color:#dfeab8; }
+body.kort #levertkort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }`;
+  document.head.appendChild(lcss);
+  let levertTid = 0, levertVent = 0;
+  // kort og møter som står oppe: da venter leveringskortet (høyst ett minutt), og det går bort hvis et av dem kommer (aldri to oppå hverandre)
+  const annetKort = () => ['morgenkort', 'hendelse', 'samfunnkort', 'formkort', 'krigkort', 'loggvelkommen', 'angrepkort'].some(id => { const e = document.getElementById(id); return e && (e.classList.contains('på') || id === 'loggvelkommen') && e.getClientRects().length > 0; });
+  function levertØyeblikk(k, beløp, forsøk = 0) {
+    if (!auto() || !k) return; clearTimeout(levertVent);
+    if (annetKort()) { if (forsøk < 60) levertVent = setTimeout(() => levertØyeblikk(k, beløp, forsøk + 1), 1000); return; }
+    const s = Sp(), gml = document.getElementById('levertkort'); if (gml) gml.remove(); clearTimeout(levertTid);
+    const b = document.createElement('div'); b.id = 'levertkort'; b.setAttribute('role', 'status');
+    const kasse = s ? ` Kassa: ${kr(s.penger)}.` : '';
+    const hva = k.første ? `Dette er selskapets første inntekt – og første rykte: «${egetNavn()}» holder ord. Pengene rekker til en brakke (flere senger) eller et vakttårn (ser røverne før de kommer).`
+      : `Ryktet for å holde ord vokste. Husk de faste utgiftene: lønn og vedlikehold trekkes hver time.`;
+    const neste = k.første ? 'Neste steg: åpne Leir og bygg noe for pengene. Etterpå venter nye kontrakter i Selskapet.' : 'Neste: en ny kontrakt i Selskapet, eller bygg ut leiren.';
+    b.innerHTML = `<small>Kontrakt levert</small><b>${esc(k.giver.navn)} betalte ${esc(kr(beløp))}</b><p>${esc(hva)}${esc(kasse)}</p><p>${esc(neste)}</p>`
+      + `<div class="knapper"><button type="button" class="hoved" data-l="neste">${k.første ? 'Åpne Leir' : 'Åpne Selskapet'}</button><button type="button" data-l="ok">OK</button></div>`;
+    b.addEventListener('click', e => { const t = e.target.closest('button'); if (!t) return; b.remove(); clearTimeout(levertTid);
+      if (t.dataset.l === 'neste') { if (k.første) { const lk = document.getElementById('leirknapp'); if (lk) lk.click(); if (window.LeirSpill && LeirSpill.fane) LeirSpill.fane('bygg'); } else vis(true); } });
+    document.body.appendChild(b); const t0 = performance.now();
+    const se = () => { if (!b.isConnected) return; if (annetKort() || performance.now() - t0 > 14000) { b.remove(); return; } levertTid = setTimeout(se, 500); }; levertTid = setTimeout(se, 500);
   }
 
   // ---------- steget (KROKER.sim, dt i spillminutter) ----------
@@ -249,6 +287,12 @@
     // en sperre for en aktiv rydd-kontrakt som ikke finnes etter omlasting, settes ut igjen (fiendens lag lagres ikke)
     for (const k of S.sider[ID].aktive) { if (k.type === 'rydd' && !k.slått && !sperreFor(k)) { if (k.sperreSatt) k.slått = true; else { lagSperre(k); k.sperreSatt = true; } }
       if (k.type === 'eskorte' && !bilFor(k) && !k.bilSatt) { lagBil(k); k.bilSatt = true; } }
+    // (R2-løkka, koordinatoren: rivalens angrepslag kunne bli stående i et tettsted og sperre det) et angreps-/bakholdslag forsvinner når
+    // kontrakten ikke lenger er aktiv (levert, brutt, utløpt, avbrutt – også etter en omlasting), eller når det har stått i 6 spilltimer
+    { const aktive = new Set(S.sider[ID].aktive.map(q => q.id)); let ut = false;
+      for (let i = ENHETER.length - 1; i >= 0; i--) { const e = ENHETER[i]; if (!e.angrepslag) continue;
+        if (!aktive.has(e.kontrakt) || (Number.isFinite(e.født) && tid - e.født > 360) || !Number.isFinite(e.født) && (e.født = tid, false)) { ENHETER.splice(i, 1); ut = true; } }
+      if (ut) skitten = true; }
     const mål = {}; for (const k of S.sider[ID].aktive) mål[k.id] = vurder(k);
     hendelser(SK.steg(S, ID, tid, d, mål));
     const dag = dagNå();
@@ -324,7 +368,7 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     const kt = SK.kanTa(k, har(k), S.sider[ID]), K = SK.kravFor(k), låst = K.nivå > nivåNå().nr, adv = kt.advarsel && kt.advarsel.length;
     const kravLinje = k.første ? `<div class="rad"><span class="krav ok">Din første kontrakt – vi viser deg hvert steg.</span></div>`
       : `<div class="rad"><span class="krav${kt.ok && !adv ? ' ok' : ''}"${adv ? ' data-svak="1"' : ''}>${kt.ok && adv ? '⚠ ' + esc(kt.advarsel.join('; ')) + ' – samme vurdering som i Krig. Send et sterkere lag.' : kt.ok ? '✓ Dere har det som trengs' : 'Krever ' + esc(kt.mangler.join(' og '))}${SK.kravKort(k) && kt.ok && !adv ? ' (' + esc(SK.kravKort(k)) + ')' : ''}</span></div>`;
-    return `<div class="kort${låst ? ' låst' : ''}${k.første ? ' første' : ''}" data-kontrakt="${k.id}"><b>${låst ? '🔒 ' : ''}${esc(k.tittel)}</b><div class="fra">${esc(typeNavn(k))} · ${esc(k.giver.navn)} · ${esc(avstand(k))}</div><p>${esc(SK.kravTekst(k))}</p>`
+    return `<div class="kort${låst ? ' låst' : ''}${k.første ? ' første' : ''}" data-kontrakt="${k.id}"><b>${låst ? '🔒 ' : ''}${esc(k.tittel)}</b><div class="fra">${esc(typeNavn(k))}${k.risiko === 'bakhold' ? ' · <span class="krav">⚠ meldt bakhold</span>' : k.risiko === 'rolig' ? ' · rolig rute' : ''} · ${esc(k.giver.navn)} · ${esc(avstand(k))}</div><p>${esc(SK.kravTekst(k))}</p>`
       + `<div class="rad"><span>Betaling <span class="kr tall">${kr(k.betaling)}</span></span><span>Bot ved brudd <span class="bot tall">${kr(k.bot)}</span></span><span>Frist <span class="tall">${k.timer} t</span> etter at dere tar den</span></div>`
       + (k.konkurrent ? `<div class="rad"><span>${esc(navnFor(k.konkurrent))} vil også ha den – vær raske.</span></div>` : '')
       + kravLinje + `<div class="rad"><span>Tilbudet står i ${går} til.</span></div><div class="knapper"><button class="hoved" data-s="ta" data-id="${k.id}"${låst ? ' disabled title="Låst til selskapet når nivå ' + K.nivå + '"' : ''}>Ta kontrakten</button><button data-s="avslå" data-id="${k.id}">Avslå</button><button data-s="vis" data-id="${k.id}">Vis i kartet</button></div></div>`;
@@ -334,6 +378,8 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     if (k.type === 'hold') { andel = k.framdrift / (k.hold * 60); status = `Holdt ${Math.floor(k.framdrift / 60)} t ${Math.round(k.framdrift % 60)} min av ${k.hold} t` + (v.fiender ? ' – fiender ved stedet, tida står' : v.lag ? ' – laget holder stedet' : ' – ingen lag der ennå'); }
     else if (k.type === 'eskorte') { andel = v.andel || 0; status = v.tapt ? 'Bilen er borte.' : `${esc(k.bil || 'Bilen')}: ${meter(v.igjen || 0)} igjen. Velg bilen i kartet og gi den ordre.`; }
     else if (k.type === 'rydd') { status = v.i ? 'Sperra er slått ut.' : 'Sperra står. Send et lag.'; andel = v.i ? 1 : 0; }
+    // (R2-løkka, kritikken: «venter ved låven sørøst for leiren.» uten subjekt) den første kontrakten har ingen person – det er nødlageret som venter
+    else if (k.type === 'forsyning') { status = k.hentet ? `${esc(k.bærer || 'Troppen')} bærer nødlageret – ta det med hjem til leiren.` : `Nødlageret venter i ${esc(k.sted.navn)}.`; andel = k.hentet ? (v.i ? 1 : .5) : 0; }
     else { status = k.hentet ? `${esc(k.bærer || 'Laget')} har ${esc(k.person)} med seg – til leiren.` : `${esc(k.person)} venter ved ${esc(k.sted.navn)}.`; andel = k.hentet ? (v.i ? 1 : .5) : 0; }
     return `<div class="kort aktiv${klarNå ? ' klar' : ''}" data-kontrakt="${k.id}"><b>${esc(k.tittel)}</b><div class="fra">${esc(typeNavn(k))} · ${esc(k.giver.navn)} · <span class="tall">${esc(SK.fristTekst(k, tid))}</span></div>`
       + `<p>${status}</p><div class="fram"><i style="width:${Math.round(Math.max(0, Math.min(1, andel)) * 100)}%"></i></div>`
@@ -563,7 +609,7 @@ body.kort #nestelapp small{ display:none; }
   // vurdering (spill/strategi-visning.js) bruker den.
   function oppdragFor(byId) { if (!S || byId == null) return null; return S.sider[ID].aktive.find(k => k.giver && k.giver.slag !== 'firma' && (k.giver.by === byId || (k.sted && k.sted.by === byId))) || null; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  Object.assign(api, { fargeord, start, vis, erÅpen: () => åpen, tilstand: () => S, sett: d => { S = SK.fraJSON(d) || S; settNavn(); tegn(true); }, ta, avslå, lever, avbryt, pris, nyeTilbud, steder,
+  Object.assign(api, { fargeord, levertØyeblikk, start, vis, erÅpen: () => åpen, tilstand: () => S, sett: d => { S = SK.fraJSON(d) || S; settNavn(); tegn(true); }, ta, avslå, lever, avbryt, pris, nyeTilbud, steder,
     vurder, klar: klarTilLevering, steg: dt => { akk = 0; steg(Math.max(1, dt)); }, lagre, NØKKEL,
     førsteKontrakt, lagerPlass, landLager, oppdragFor, forsvarVed, fred: byId => !!oppdragFor(byId), knappFor, fargeNavn, tråd: () => (S ? SK.trådSteg(S) : null), trådAktiv, oppdaterTråd: tråd, lapp, følgLapp, har, nivå: nivåNå,
     rett: { kontraktTa: ta, kontraktAvslå: avslå, kontraktLever: id => lever(id), kontraktAvbryt: avbryt, kontraktPris: pris }, RIVALER, merke: (side, px) => (side === ID ? egetMerke(px || 40) : rivalMerke(side, px || 40)) });

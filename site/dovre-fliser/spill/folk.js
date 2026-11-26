@@ -252,7 +252,8 @@
   // Hvorfor det ikke kan rekrutteres nå (null = det går)
   function kanRekruttere(F, L, o = {}) {
     if (nød(F)) return null;
-    const B = behov(F, L, o); if (B.senger <= B.n + B.avh) return 'Ingen ledig seng: bygg en brakke først.';
+    // (R2-løkka 26. nov, kritikken: «bygg en brakke først» når brakka står) – med en brakke: bygg en til eller bygg den ut
+    const B = behov(F, L, o); if (B.senger <= B.n + B.avh) return L && Array.isArray(L.bygg) && L.bygg.some(b => b.type === 'brakke') ? 'Ingen ledig seng: bygg en brakke til, eller bygg ut den dere har.' : 'Ingen ledig seng: bygg en brakke først.';
     if (F.moral < 40) return 'Moralen er for lav til at noen vil bli med.';
     return null;
   }

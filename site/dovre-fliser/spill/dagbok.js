@@ -13,9 +13,13 @@
     if (d.folk > 0) { if (d.matDager === Infinity) deler.push('Maten dekkes av drivhusene.'); else { deler.push(`Mat til ${des(Math.max(0, d.matDager))} døgn.`); if (d.matDager < 2) varsler.push(d.matDager <= 0 ? 'Dere er tomme for mat' : 'Lite mat'); } }
     // (runde 6) d.rekkerDøgn = den felles prognosen (Leir.dieselRekker, samme tall som i Lager); uten den: forbruket siste døgn som før
     if (d.diesel > 0 || d.dieselBruk > 0) { const døgn = d.rekkerDøgn !== undefined && d.rekkerDøgn !== null ? d.rekkerDøgn : d.dieselBruk > 0 ? d.diesel / d.dieselBruk : Infinity;
-      deler.push(`Diesel ${Math.round(d.diesel).toLocaleString('nb-NO')} l` + (døgn === Infinity ? '.' : ` (rekker ca. ${des(døgn)} døgn).`)); if (døgn < 1.5) varsler.push(d.diesel <= 0 ? 'Tomt for diesel' : 'Lite diesel'); }
+      deler.push(`Diesel ${Math.round(d.diesel).toLocaleString('nb-NO')} l` + (døgn === Infinity ? '.' : ` (rekker ca. ${des(døgn)} døgn).`)); if (døgn < 1.5) varsler.push(d.diesel <= 0 ? 'Tomt for diesel' : 'Lite diesel');
+      // (R2-løkka 26. nov, kritikken: «dieselen rekker ca. 167,4 døgn») strømnettet dekker leiren de første døgnene – si hva det blir uten det
+      if (d.utenNett > 0 && d.diesel > 0) deler.push(`Strømnettet dekker det meste nå; uten nettet bruker aggregatene ca. ${Math.round(d.utenNett)} l i døgnet (ca. ${des(d.diesel / d.utenNett)} døgn).`); }
     if (d.moral < 30 && d.folk > 0) varsler.push('Moralen er farlig lav');
-    deler.push(`Kassa ${kr(d.kassa)}` + (d.kassaFør === null || d.kassaFør === undefined || Math.abs(d.kassa - d.kassaFør) < 1000 ? '.' : ` (${d.kassa >= d.kassaFør ? '+' : ''}${kr(d.kassa - d.kassaFør)} siste døgn).`));
+    // (R2-løkka 26. nov) d.bok = dagboka over inn og ut for siste døgn (PengerSpill) – samme tall som Lager → Penger inn
+    if (d.bok) deler.push(`Kassa ${kr(d.kassa)} (siste døgn: ${kr(d.bok.inn)} inn, ${kr(d.bok.ut)} ut).` + (d.faste > 0 ? ` Faste utgifter ca. ${kr(d.faste)} i døgnet (lønn og vedlikehold).` : ''));
+    else deler.push(`Kassa ${kr(d.kassa)}` + (d.kassaFør === null || d.kassaFør === undefined || Math.abs(d.kassa - d.kassaFør) < 1000 ? '.' : ` (${d.kassa >= d.kassaFør ? '+' : ''}${kr(d.kassa - d.kassaFør)} siste døgn).`));
     if (d.mål && d.mål[0] < d.mål[1]) deler.push(`Mål ${d.mål[0]} av ${d.mål[1]}.`);
     return { tekst: (varsler.length ? varsler.join('. ') + '! ' : '') + deler.join(' '), varsler };
   }
@@ -39,9 +43,16 @@
     const O = rot.OppstartSpill && OppstartSpill.tilstand(), L = rot.LeirSpill && LeirSpill.tilstand(), F = rot.FolkSpill && FolkSpill.tilstand(); if (!O || !L) return null;
     let matDager = 0; try { const B = F && rot.FolkRegler ? FolkRegler.behov(F, L, FolkSpill.valg ? FolkSpill.valg() : {}) : null; matDager = B ? B.dager : 0; } catch (e) { matDager = 0; }
     const bruk = S.diesel === null ? 0 : Math.max(0, S.diesel - (L.drivstoff || 0)), P = rot.LeirSpill && LeirSpill.diesel ? LeirSpill.diesel() : null;
-    return { dag: dag(tid), folk: F ? F.personer.length : 0, moral: F ? F.moral : 0, matDager, diesel: L.drivstoff || 0, dieselBruk: P ? P.perDøgn : bruk, rekkerDøgn: P ? P.timer / 24 : undefined, kassa: O.penger, kassaFør: S.kassa,
+    return { dag: dag(tid), folk: F ? F.personer.length : 0, moral: F ? F.moral : 0, matDager, diesel: L.drivstoff || 0, dieselBruk: P ? P.perDøgn : bruk, rekkerDøgn: P ? P.timer / 24 : undefined, kassa: O.penger, kassaFør: S.kassa, bok: bok(), faste: faste(), utenNett: utenNett(L, P),
       mål: rot.MaalSpill ? [MaalSpill.stilling().totalt, MaalSpill.stilling().alle] : null };
   }
+  // (R2-løkka) dagboka over inn og ut for døgnet som nettopp er slutt (06–06), og de faste utgiftene (spill/penger-visning.js)
+  const bok = () => { try { const P = rot.PengerSpill; if (!P || !P.døgn || !P.tilstand || !P.tilstand()) return null; const D = P.døgn(dag(tid) - 1); return { inn: D.inn, ut: D.ut }; } catch (e) { return null; } };
+  const faste = () => { try { return rot.PengerSpill && PengerSpill.faste ? PengerSpill.faste().sum : 0; } catch (e) { return 0; } };
+  // dieselen uten strømnettet: det byggene som er på, bruker (kW) × 24 t × liter per kWt – bare når nettet dekker mer enn halvparten nå
+  function utenNett(L, P) { try { const LB = rot.Leir; if (!LB || !L || !Array.isArray(L.bygg)) return 0; let kw = 0;
+    for (const b of L.bygg) { const B = LB.BYGG[b.type]; if (B && B.kw < 0 && b.igjen <= 0 && !b.av) kw -= B.kw; }
+    const l = kw * 24 * LB.DRIVSTOFF.literPerKWt, nå = P ? P.perDøgn : 0; return l > 1 && nå < l * .5 && LB.nettKW && LB.nettKW(L) > 0 ? l : 0; } catch (e) { return 0; } }
   // RUNDE 13 (kritiker H: etter omlasting kl. 05:59 kom «Dag 2: …» en gang til): bare en NYERE dag gir rapport – klokka kan stå litt bak etter en omlasting
   KROKER.sim.push(() => { if (!klar || (Number.isFinite(S.dag) && dag(tid) <= S.dag)) return; const d = nå(); if (!d) return;
     const r = rapport(d); logg(r.tekst); S.liste.unshift(r.tekst); S.liste.length = Math.min(S.liste.length, 7); S.dag = d.dag; S.kassa = d.kassa; S.diesel = d.diesel; lagre(); });

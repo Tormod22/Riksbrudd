@@ -189,3 +189,15 @@ console.log(`Alle ${n} testene for selskap.js er ok`);
     const t = S0.kravTekst ? S0.kravTekst(k) : ''; if (k.fare && (!S0.kravTekst || (/holdes av et annet selskap/.test(t) && !/slipper dere inn/.test(t)))) ærlig++; } }
   assert.ok(n2 > 0 && ærlig === n2, `bare Løten: alle ${n2} jobbene sier at stedet holdes av et annet selskap (${ærlig})`);
   console.log('ok   (R2-løkka) jobber i steder et annet selskap holder'); }
+// (R2-løkka 26. nov) eskortene har risiko: rolig rute betaler lite, meldt bakhold betaler godt og gir som oftest et bakhold
+{ let rolig = [], bakhold = [], angrepR = 0, angrepB = 0;
+  for (let i = 0; i < 80; i++) { const E = S0.ny(leir); for (const k of S0.lagTilbud(E, 'blå', i * 13, steder, S0.lagRand(i + 3))) { if (k.type !== 'eskorte') continue;
+    assert.ok(k.risiko === 'rolig' || k.risiko === 'bakhold', 'eskorten har risiko'); (k.risiko === 'rolig' ? rolig : bakhold).push(k);
+    assert.ok(k.bot === Math.round(k.betaling * S0.REGLER.bot / 10000) * 10000, 'bota følger betalingen');
+    assert.ok(k.risiko === 'bakhold' ? /bakhold/.test(S0.kravTekst(k)) : /rolig/.test(S0.kravTekst(k)), 'kravteksten sier risikoen');
+    S0.godta(E, 'blå', k.id, i * 13, S0.lagRand(i + 99)); if (k.angrep) { if (k.risiko === 'rolig') angrepR++; else angrepB++; } } }
+  const snitt = L => L.reduce((s, k) => s + k.betaling, 0) / (L.length || 1);
+  assert.ok(rolig.length > 5 && bakhold.length > 5, `begge slag eskorter kommer (${rolig.length} rolige, ${bakhold.length} med bakhold)`);
+  assert.ok(snitt(bakhold) >= 2 * snitt(rolig), `bakhold betaler minst dobbelt: ${Math.round(snitt(bakhold))} mot ${Math.round(snitt(rolig))}`);
+  assert.ok(angrepB / bakhold.length > .6 && angrepR / rolig.length < .3, `bakholdet kommer som oftest (${angrepB}/${bakhold.length}), sjelden på rolige ruter (${angrepR}/${rolig.length})`);
+  console.log(`ok   eskorte etter risiko: ${rolig.length} rolige (snitt ${Math.round(snitt(rolig) / 1000)} 000 kr), ${bakhold.length} med bakhold (snitt ${Math.round(snitt(bakhold) / 1000)} 000 kr)`); }

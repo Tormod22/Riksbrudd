@@ -184,8 +184,10 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
   function visStatus() {
     st.hidden = !F; if (!F) return; const Lr = L(), B = Lr ? FR.behov(F, Lr, valg()) : null;
     const varsel = B && (B.utenSeng || (F.sist && (F.sist.sult || F.sist.kald > .05)) || B.dager < 1 || F.moral < 35);
-    const t = `${F.personer.length}` + (varsel ? ' ⚠' : ''); if (t !== vist) { vist = t; document.getElementById('sFolk').textContent = t; }
-    st.title = `Moral ${Math.round(F.moral)}`;
+    // (R2-løkka 26. nov, kritikken: «topplinja 8, krigskartet 12 personer») de som er ute i troppene, står etter et pluss: «8 +4»
+    // (8 i leiren og 4 i tropper = 12 i alt, som Krig og lønna regner). Første tall er fortsatt de i leiren (Folk-knappen).
+    const ute = iTropper(), t = `${F.personer.length}` + (ute ? ` +${ute}` : '') + (varsel ? ' ⚠' : ''); if (t !== vist) { vist = t; document.getElementById('sFolk').textContent = t; }
+    st.title = `${F.personer.length} i leiren` + (ute ? `, ${ute} i tropper (${F.personer.length + ute} i alt)` : '') + ` · moral ${Math.round(F.moral)}`;
   }
   // Raden i Leir-menyen (leir-visning.js kaller denne)
   function menyRad() {
@@ -219,7 +221,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
   });
   // RUNDE 14 (kritiker J: «FOLK 10 ⚠» øverst mens Folk-knappen viste 6 etter at en tropp ble laget): tallet øverst oppdateres også når
   // spillet står på pause (KROKER.sim går ikke da) – samme kilde som knappen (F.personer.length), høyst 0,4 s etter
-  setInterval(() => { try { if (F && document.getElementById('sFolk') && document.getElementById('sFolk').textContent.split(' ')[0] !== String(F.personer.length)) visStatus(); } catch (e) { /* neste runde */ } }, 400);
+  setInterval(() => { try { if (F && document.getElementById('sFolk') && (document.getElementById('sFolk').textContent.split(' ')[0] !== String(F.personer.length) || !/\+/.test(document.getElementById('sFolk').textContent) !== !iTropper())) visStatus(); } catch (e) { /* neste runde */ } }, 400);
   // ---------- (runde 12, kritiker F) DE FALNE: én kilde for loggen, folket og begravelsen ----------
   // Kritikken: «Håkon Rønning og Silje Berg er falt» og «2 døde venter på begravelse», men begge sto i Folk med helse 15 %, og
   // folketallet sto på 12 også etter «4 døde». Leirvakta (forsvar-visning.js) er folk på «vakt» som tar opp våpen: mennene peker på

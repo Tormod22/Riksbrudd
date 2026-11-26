@@ -98,7 +98,9 @@
       sistEtterforsket: -1e9, nesteFlykt: null, nesteKort: null, akk: 0 };
   }
   function fraJSON(o) { if (!o || typeof o !== 'object') return null; const S = { ...ny(o.frø || 1), ...o }; S.lover = { ...ny().lover, ...(o.lover || {}) };
-    for (const k of ['avhengige', 'døde', 'gravlagte', 'virkninger', 'opplæring', 'løfter']) if (!Array.isArray(S[k])) S[k] = []; return S; }
+    for (const k of ['avhengige', 'døde', 'gravlagte', 'virkninger', 'opplæring', 'løfter']) if (!Array.isArray(S[k])) S[k] = [];
+    // (R2-løkka) lagrede spill med samme døde to ganger: den første står
+    S.døde = S.døde.filter((q, i, A) => q && A.findIndex(w => w && w.navn === q.navn) === i); S.gravlagte = [...new Set(S.gravlagte)]; return S; }
 
   // ================= PERSONER: ansikt, historie, lynne og ønske =================
   const STEDER = ['Otta', 'Lesja', 'Vågå', 'Oppdal', 'Lom', 'Hjerkinn', 'Folldal', 'Tynset', 'Ringebu', 'Sunndalsøra', 'Vinstra', 'Åndalsnes'];
@@ -341,7 +343,8 @@
   }
 
   // ================= BEGRAVELSER OG MINNESMERKE =================
-  function død(S, navn, hvem, tid) { S.døde.push({ navn, hvem: hvem || 'folk', tid: tid || 0 }); }
+  // (R2-løkka 26. nov, kritikken: «Venter på begravelse: Vegard Dahl, Vegard Dahl» etter omlasting) samme navn står bare én gang på lista
+  function død(S, navn, hvem, tid) { if (!navn || S.døde.some(q => q.navn === navn)) return false; S.døde.push({ navn, hvem: hvem || 'folk', tid: tid || 0 }); return true; }
   // måte: 'seremoni' (koster tre timer, gir moral og lojalitet) eller 'enkel' (ingen kostnad, ingen trøst)
   function gravlegg(S, F, måte, tid) {
     if (!S.døde.length) return { feil: 'Ingen venter på å bli gravlagt.' }; const navn = S.døde.map(q => q.navn); S.gravlagte.push(...navn); S.døde = [];

@@ -59,9 +59,38 @@
     ut.push({ id: 'røvere', tekst: 'Røvere: slår dere tilbake et angrep, tar dere byttet deres.' });
     return ut;
   }
+  // ---------- DAGBOKA OVER INN OG UT (R2-løkka 26. nov) ----------
+  // Kritikken: «Lager → Penger inn sa ‹I går: 0 kr inn, 8 394 kr ut›, mens morgenmøtet sa ‹+3,9 mill. kr siste døgn› og to kontrakter
+  // betalte 6,3 mill.» – to regnestykker (kassa målt hvert halve sekund, og kassa nå mot kassa i går). Nå ÉN kilde: hver krone inn og ut
+  // føres i dagboka med hva den gjaldt, per døgn fra kl. 06 til kl. 06 (døgn = Math.floor(tid / 1440) + 1, som morgenmøtet). Penger inn,
+  // morgenmøtet og dagboka i Leir viser de samme tallene. B = { d: { [døgn]: { inn, ut, p: { [hva]: kr (+ inn, − ut) } } } }.
+  const DØGN_HUSK = 8;
+  function før(B, døgn, kr, hva) {
+    if (!B || typeof B !== 'object' || !B.d) B = { d: {} }; kr = Math.round(+kr || 0); if (!kr || !Number.isFinite(døgn)) return B;
+    const D = B.d[døgn] || (B.d[døgn] = { inn: 0, ut: 0, p: {} }); if (kr > 0) D.inn += kr; else D.ut -= kr;
+    const h = String(hva || 'annet'); D.p[h] = (D.p[h] || 0) + kr;
+    const nøkler = Object.keys(B.d).map(Number).sort((a, b) => b - a); for (const n of nøkler.slice(DØGN_HUSK)) delete B.d[n];
+    return B;
+  }
+  const døgnSum = (B, døgn) => (B && B.d && B.d[døgn]) || { inn: 0, ut: 0, p: {} };
+  // «kontrakter 6,3 mill. kr» … for postene på én side (inn > 0, ut < 0), største først, høyst n
+  function poster(D, inn, kr, n = 3) {
+    const L = Object.entries((D && D.p) || {}).filter(([, v]) => (inn ? v > 0 : v < 0)).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+    const v = L.slice(0, n).map(([k, x]) => `${k} ${kr(Math.abs(x))}`); if (L.length > n) v.push(`annet ${kr(L.slice(n).reduce((s, [, x]) => s + Math.abs(x), 0))}`); return v.join(', ');
+  }
+  // én setning: «6,3 mill. kr inn (kontrakter 6,3 mill. kr), 1,1 mill. kr ut (lønn …)»
+  const døgnTekst = (D, kr) => `${kr(D.inn)} inn` + (D.inn ? ` (${poster(D, true, kr)})` : '') + `, ${kr(D.ut)} ut` + (D.ut ? ` (${poster(D, false, kr)})` : '');
+  // hva pengene gjaldt, ut fra fila som kalte OppstartSpill.gi/betal (Claudes forslag; ukjent = «annet»)
+  const HVA = [[/selskap/, 'kontrakter', 'bøter'], [/folk-visning|folk\.js/, 'lønn'], [/penger-visning/, 'vedlikehold'], [/leir-visning|leir\.js|lager-visning|leirvirkning|kommando|anleggsarbeid|taster/, 'bygg og innkjøp'],
+    [/region/, 'skatt fra tettsteder'], [/spillet-visning|spillet\.js|marked/, 'marked og røvere'], [/morgen/, 'morgenmøtet'], [/leting|eventyr|lut|funn/, 'funn og belønninger'],
+    [/samfunn/, 'samfunnet'], [/kjoretoy|forsyning|okonomi|enheter|tropper|utstyr|karakter/, 'kjøretøy og utstyr'], [/scenario|krig|strategi|garnison|forsvar|strid|bakkekamp|kontrollrom/, 'krig og forsvar']];
+  function hvaFra(stakk, inn) {
+    const L = String(stakk || '').split('\n').map(l => (l.match(/spill\/([\wæøå-]+)\.js/) || [])[1]).filter(f => f && !/^(penger-visning|oppstart-visning|flerspiller-visning)$/.test(f));
+    const f = L[0] || ''; for (const [re, a, b] of HVA) if (re.test(f)) return inn || !b ? a : b; return 'annet';
+  }
   const tall = v => (Math.round((v || 0) * 10) / 10).toLocaleString('nb-NO');
   const km = m => (m >= 1000 ? (Math.round(m / 100) / 10).toLocaleString('nb-NO') + ' km' : Math.round(m / 10) * 10 + ' m');
-  const api = { REGLER, kandidater, velgFelt, konto, linjer, retning, km };
+  const api = { REGLER, kandidater, velgFelt, konto, linjer, retning, km, før, døgnSum, poster, døgnTekst, hvaFra, DØGN_HUSK };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.Penger = api;
   if (typeof document === 'undefined' || typeof KROKER === 'undefined') return;
@@ -79,6 +108,9 @@
     try { d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); } catch (e) { d = null; }
     S = d && d.leir === leirId() ? d : { start: s.penger, K: null, meldt: false, lavMeldt: false, hogstMeldt: 0 };
     if (!(S.start > 0)) S.start = s.penger;
+    // dagboka: kassa nå er utgangspunktet (det som skjedde før en omlasting, er alt ført)
+    S.sist = s.penger; if (!S.B || !S.B.d) S.B = { d: {} }; S.vAkk = +S.vAkk || 0; S.vTid = Number.isFinite(S.vTid) ? S.vTid : tid;
+    kobleKasse();
     klar = true;
     // én beskjed når et nytt spill starter (ikke i testene)
     // (bare i et nytt spill – et lagret spill med tettsteder og oppdrag i gang skal ikke høre «ingen fast inntekt»)
@@ -86,6 +118,38 @@
     lagre();
   }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
+
+  // ---------- dagboka over inn og ut: hver betaling føres med hva den gjaldt ----------
+  const døgnNå = () => Math.floor((typeof tid === 'number' && isFinite(tid) ? tid : 0) / 1440) + 1;
+  let hvaNå = null;
+  // før(kr, hva): fører en endring i kassa som alt har skjedd (kr > 0 inn, < 0 ut)
+  function føring(kr, hva) { if (!S) return; S.B = P.før(S.B, døgnNå(), kr, hva); const s = Sp(); if (s) S.sist = s.penger; lagreSnart(); }
+  let lagreT = 0; const lagreSnart = () => { if (!lagreT) lagreT = setTimeout(() => { lagreT = 0; lagre(); }, 1500); };
+  // OppstartSpill.gi/betal pakkes inn én gang: beløpet føres når det faktisk går gjennom
+  function kobleKasse() {
+    const O = rot.OppstartSpill; if (!O || O.gi.dagbok) return;
+    const gi0 = O.gi, betal0 = O.betal;
+    const gi = function (b) { const før0 = Sp() ? Sp().penger : 0, r = gi0.apply(this, arguments), d = (Sp() ? Sp().penger : 0) - før0; if (d > 0) føring(d, hvaNå || P.hvaFra(new Error().stack, true)); return r; };
+    const betal = function (b) { const før0 = Sp() ? Sp().penger : 0, r = betal0.apply(this, arguments), d = (Sp() ? Sp().penger : 0) - før0; if (d < 0) føring(d, hvaNå || P.hvaFra(new Error().stack, false)); return r; };
+    gi.dagbok = betal.dagbok = true; O.gi = gi; O.betal = betal;
+  }
+  // endringer i kassa som ikke gikk gjennom gi/betal (røverbytte, scenarioer …), føres som «annet» når de oppdages
+  function avstem() { const s = Sp(); if (!S || !s || !Number.isFinite(s.penger)) return; if (!Number.isFinite(S.sist)) { S.sist = s.penger; return; }
+    const d = s.penger - S.sist; if (Math.abs(d) >= 1) føring(d, 'annet'); S.sist = s.penger; }
+  // ---------- LØPENDE DRIFT: vedlikehold av byggene (Leir.vedlikehold, Claudes forslag) – trekkes hver spilltime ----------
+  const driftAuto = () => !navigator.webdriver || PS.driftTest === true;
+  function vedlikehold() {
+    const L = rot.LeirSpill && LeirSpill.tilstand(); return L && rot.Leir && Leir.vedlikehold ? Leir.vedlikehold(L) : { perDøgn: 0, antall: 0, bygg: [] };
+  }
+  function driftSteg() {
+    if (!S || !Number.isFinite(tid)) return; if (!Number.isFinite(S.vTid) || tid < S.vTid) S.vTid = tid;
+    const dt = tid - S.vTid; if (dt < 60) return; S.vTid = tid; if (!driftAuto()) return;
+    const v = vedlikehold(); S.vAkk = (+S.vAkk || 0) + v.perDøgn * Math.min(dt, 3 * 1440) / 1440;
+    const beløp = Math.round(S.vAkk); if (beløp < 1) return; hvaNå = 'vedlikehold'; let ok = false; try { ok = rot.OppstartSpill && OppstartSpill.betal(beløp); } finally { hvaNå = null; }
+    if (ok) { S.vAkk -= beløp; if (S.vSkyld) { S.vSkyld = 0; logg('Vedlikeholdet av byggene er betalt igjen.'); } }
+    else { S.vAkk = 0; S.vSkyld = (S.vSkyld || 0) + beløp; if (!S.vMeldt || tid - S.vMeldt > 1440) { S.vMeldt = tid; logg(`Kassa rekker ikke til vedlikeholdet av byggene (${kr(v.perDøgn)} i døgnet). Byggene slites – skaff penger med en kontrakt.`); } }
+    lagreSnart();
+  }
 
   // hva som er tilgjengelig nå (til linjene og vakta)
   function bilde() {
@@ -109,8 +173,10 @@
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el, knapp }) => {
     if (!klar || !Sp()) return; const s = Sp(), K = S.K, ny = [];
     ny.push(el('h3', { 'data-fane': 'lager', id: 'pengerinn' }, 'Penger inn'));
-    const inn = K ? (K.før ? K.før.inn : K.inn) : 0, ut = K ? (K.før ? K.før.ut : K.ut) : 0;
-    ny.push(el('div', { klasse: 'penger sum', 'data-fane': 'lager' }, `Kassa ${kr(s.penger)}. ${K && K.før ? 'I går' : 'I dag'}: ${kr(inn)} inn, ${kr(ut)} ut.`));
+    // (R2-løkka) dagboka over inn og ut – de samme tallene som morgenmøtet
+    ny.push(el('div', { klasse: 'penger sum', 'data-fane': 'lager', 'data-penger': 'sum' }, sumTekst()));
+    { const dt = detaljTekst(); if (dt) ny.push(el('div', { klasse: 'penger sum', 'data-fane': 'lager', 'data-penger': 'detalj' }, dt)); }
+    ny.push(el('div', { klasse: 'penger', 'data-fane': 'lager', 'data-penger': 'faste' }, fasteTekst()));
     for (const l of P.linjer(bilde(), kr)) { const d = el('div', { klasse: 'penger', 'data-fane': 'lager', 'data-penger': l.id }, l.tekst);
       if (l.id === 'oppdrag' && rot.LeirSpill) d.appendChild(knapp('Vis oppdragene', () => LeirSpill.fane('mål')));
       if (l.id === 'region' && rot.RegionSpill && RegionSpill.åpne) d.appendChild(knapp('Åpne Region', () => RegionSpill.åpne()));
@@ -120,6 +186,23 @@
     const mat = [...hode.children].find(n => n.tagName === 'H3' && /^Materialer \(lager/.test(n.textContent));
     for (const n of ny) if (mat) hode.insertBefore(n, mat); else hode.appendChild(n);
   });
+
+  // «Kassa 20,9 mill. kr. Siste døgn (dag 2, kl. 06–06): … Siden kl. 06 i dag: …»
+  // beløpene rundes til nærmeste tusen (som morgenmøtet)
+  const krT = v => kr(Math.round((v || 0) / 1000) * 1000);
+  function sumTekst() {
+    const s = Sp(), d = døgnNå(), I = P.døgnSum(S && S.B, d - 1), N = P.døgnSum(S && S.B, d);
+    return `Kassa ${kr(s ? s.penger : 0)}. ` + (d > 1 ? `Siste døgn (dag ${d - 1} kl. 06 – dag ${d} kl. 06): ${krT(I.inn)} inn, ${krT(I.ut)} ut. ` : '') + `Så langt i dag: ${krT(N.inn)} inn, ${krT(N.ut)} ut.`;
+  }
+  // hva pengene gikk til og kom fra: siste hele døgn (eller i dag på dag 1)
+  function detaljTekst() {
+    const d = døgnNå(), D = P.døgnSum(S && S.B, d > 1 ? d - 1 : d), del = []; if (!D.inn && !D.ut) return '';
+    if (D.inn) del.push('inn: ' + P.poster(D, true, krT, 4)); if (D.ut) del.push('ut: ' + P.poster(D, false, krT, 4));
+    return `${d > 1 ? 'Siste døgn' : 'I dag'} – ${del.join('; ')}.`;
+  }
+  // de faste utgiftene per døgn: lønn (FolkSpill) og vedlikehold (Leir.vedlikehold)
+  function faste() { let lønn = 0; try { lønn = rot.FolkSpill && FolkSpill.lønnNå ? FolkSpill.lønnNå() : 0; } catch (e) { lønn = 0; } const v = vedlikehold(); return { lønn, vedlikehold: v.perDøgn, bygg: v.antall, sum: lønn + v.perDøgn }; }
+  function fasteTekst() { const f = faste(); return `Faste utgifter: ca. ${krT(f.sum)} i døgnet – lønn ${krT(f.lønn)} og vedlikehold av ${f.bygg} bygg ${krT(f.vedlikehold)} (${Math.round((rot.Leir ? Leir.REGLER.vedlikehold : .01) * 100)} % av byggeprisen per døgn). Jo større leiren er, jo mer koster den å holde.`; }
 
   // ---------- varselbrikken når kassa er lav ----------
   (rot.VARSEL_TILLEGG = rot.VARSEL_TILLEGG || []).push(() => {
@@ -131,7 +214,8 @@
   // ---------- kontoen og hogstlaget ----------
   KROKER.sim.push(() => {
     if (!klar || !S) return; const s = Sp(); if (!s || !s.leir) return; const nå = performance.now();
-    if (nå - sistKonto > 500) { sistKonto = nå; S.K = P.konto(S.K, s.penger, Math.floor(tid / 1440) + 1); }
+    if (nå - sistKonto > 500) { sistKonto = nå; S.K = P.konto(S.K, s.penger, Math.floor(tid / 1440) + 1); avstem(); }
+    driftSteg();
     if (s.penger < Math.max(P.REGLER.lavKassaKr, (S.start || 0) * P.REGLER.lavKassa)) { if (!S.lavMeldt && auto()) { S.lavMeldt = true; lagre(); logg(`Kassa er nede i ${kr(s.penger)}. Penger inn: oppdrag (Leir → Mål), salg av tre og materialer (Leir → Lager), skatt fra tettsteder (Mer → Region) og røverbytte.`); } }
     else if (S.lavMeldt && s.penger > 2 * P.REGLER.lavKassaKr) { S.lavMeldt = false; lagre(); }
     // uten skog i nærheten letes det sjeldnere (hvert femte minutt)
@@ -169,5 +253,5 @@
       return r.jobb;
     } finally { leter = false; }
   }
-  const PS = rot.PengerSpill = { test: false, start, bilde, finnHogst, tilstand: () => S, lagre };
+  const PS = rot.PengerSpill = { test: false, driftTest: false, start, bilde, finnHogst, tilstand: () => S, lagre, føring, døgn: n => P.døgnSum(S && S.B, n), døgnNå, sumTekst, detaljTekst, faste, fasteTekst, vedlikehold, driftSteg, avstem };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
