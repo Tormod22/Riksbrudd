@@ -21,7 +21,7 @@
     maks: 400,           // så mange ulike meldinger huskes (de eldste glemmes)
     // (løkka r1, kritiker I: «Speidertropp 1 har lastet nødlageret. (×22)», «Under ild! (×17)») en melding som gjentar seg innen vinduet,
     // flyttes bare øverst i loggen igjen når tallet når et av disse trinnene – ellers telles den stille (den står der alt)
-    visVed: [2, 5, 10, 25, 50, 100, 250, 500, 1000],
+    visVed: [2, 3, 5, 10, 25, 50, 100, 250, 500, 1000],
     // meldinger som bare skal stå én gang per ENGANG.hver spillminutter (samme hendelse meldt fra flere steder i koden)
     ENGANG: { re: /har lastet nødlageret|har med seg .+\. Ta vedkommende med/, hver: 1440 },
     RUTINE: [
