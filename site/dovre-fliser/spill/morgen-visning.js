@@ -228,6 +228,8 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
   document.addEventListener('click', e => { const b = e.target && e.target.closest ? e.target.closest(FARTKNAPPER.map(id => '#' + id).join(',')) : null;
     if (!b || !auto() || !kort.classList.contains('på') || !kort.getClientRects().length) return;
     e.preventDefault(); e.stopImmediatePropagation(); ønsketFart = b.id;
+    // (kritikerløkka r1, Jonas: «⏭ ga ingen tilbakemelding når morgenmøtet holder spillet – klokka står på 06:00») – si det med ord
+    if (rot.FlytSpill && FlytSpill.visKort) FlytSpill.visKort(b.id === 'nesteh' ? 'Morgenmøtet venter på svaret ditt – ⏭ spoler videre når du har valgt.' : 'Morgenmøtet venter på svaret ditt – farten du valgte, gjelder når du har svart.', false);
     const m = document.getElementById('kortpause'); if (m) { m.classList.remove('blink'); void m.offsetWidth; m.classList.add('blink'); }
     if (typeof tempo !== 'undefined' && tempo > 0) { const p = document.getElementById('sp0'); if (p) p.click(); } }, true);
   function etterSvar() { const id = ønsketFart; ønsketFart = null; if (!id || !auto()) return;
