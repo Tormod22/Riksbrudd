@@ -88,7 +88,7 @@
     const matKr = Math.round((s.matPris || 3000) * R.kjøp);
     // RUNDE 14: røverne kommer snart (eller angriper) – forsvaret først
     const rd = s.raid; if (rd && !rd.satt && (rd.aktiv || rd.min <= R.raid.forsvar) && s.folk > 0)
-      legg(12, { id: 'forsvar', t: 'Forsvar leiren nå', følge: `Alle lag innen 3 km går i stilling mot røverne og graver seg ned. Folk på vakt blir Leirvakta. ${rd.aktiv ? 'Røverne angriper nå.' : 'Røverne kommer om ' + rd.nedtelling + '.'}` });
+      legg(12, { id: 'forsvar', t: 'Forsvar leiren nå', følge: `Alle lag innen 3 km går i stilling mot røverne og graver seg ned. Folk på vakt blir Leirvakta. ${rd.aktiv ? 'Røverne angriper nå.' : 'Røverne drar ut om ' + rd.nedtelling + '.'}` });
     // RUNDE 14: etter et tapt tettsted eller en tapt tropp – minst ett valg som gir flere soldater (krisehjelp når alt er tapt)
     const tapt = s.tapt && ((s.tapt.byer || []).length || (s.tapt.lag || []).length), T = R.tap;
     if (s.kriseKan) legg(11, { id: 'krise', t: `Krisehjelp: bygdevernet sender ${R.krise.menn} frivillige (gratis)`, følge: `Dere har ingen tettsteder og bare ${s.soldater} friske soldater. ${R.krise.menn} frivillige kommer til leiren i dag som et eget lag – lett bevæpnet, men det er en start.` });

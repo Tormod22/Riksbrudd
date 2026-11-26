@@ -54,4 +54,5 @@ ok(Kamp.skade([{ avst: 50, menn: 6 }], null) > Kamp.skade([{ avst: 50, menn: 6 }
   Marked.steg(M, () => .5); ok(Marked.kanSelge(M, 'tre', 10) === 10, 'nytt døgn: kjøperne tar imot igjen');
   const v = Oppdrag.vent(() => .5); ok(Oppdrag.TAKT.start === 2 && v.spill >= 360 && v.spill <= 600 && v.ekte >= 480 && v.ekte <= 840, 'nye oppdrag: 6–10 spilltimer eller 8–14 minutter spilling'); }
 { const kr = require('../../site/dovre-fliser/spill/spillet.js').Hendelser.LISTE.find(h => h.id === 'krangel'); ok(kr.to && kr.tekst('Ingrid', 'Per') === 'Ingrid og Per har røket i tottene på hverandre om arbeidsfordelingen.', 'krangel: begge navngis (runde 13)'); }
+{ const ty = require('../../site/dovre-fliser/spill/spillet.js').Hendelser.LISTE.find(h => h.id === 'tyveri'); ok(/i løpet av dagen/.test(ty.tekst('A', null, 16.9)) && /i natt/.test(ty.tekst('A', null, 7)) && !/i natt/.test(ty.tekst('A', null, 16.9)), 'tyveri: teksten følger klokka (kritikerløkka r1)'); }
 console.log(feil ? feil + ' feil' : 'alle testene for spillet ok'); process.exit(feil ? 1 : 0);
