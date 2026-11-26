@@ -1661,3 +1661,8 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   three.js lastes ikke i bakgrunnen (index.html), og slå3d(true) sier fra i stedet for å åpne 3D (kameraer, kontrollromsfeeds osv.).
   VAKT «spill i 2D» (vakter/spill2d.js, med selvtest). Bilder: scratchpad to/flyt2d.js (ekte /norge, MOBIL=1). IKKE i 2D ennå: kamp til fots
   med eget våpen/granater (karakterlaget slåss som et lag i stedet), feltbil/helikopter du kjører selv, møbler, lapper og skap i husene.
+  KRITIKERLØKKA (26. nov, brukeren: «lag en loop som gjentar seg 3 ganger: rapport fra to fiktive spillkritikere, så fiks alt»): tre runder med
+  Ingrid Sæther («Strategi & Simulering», PC/2D) og Jonas Bakke («Nattskift», telefon/3D) – anmeldelsene og sammendraget i docs/kritikk/
+  (sammendrag-2026-11-26.md: terningkast 3/4 → 4/4, hva som er rettet og hva som gjenstår). Rettingene står i docs/natt/lokke-r1-*.md,
+  lokke-r2-*.md og lokke-r3-*.md (én fil per pakke, med vakter i pipeline/fliser/vakter/). Briefene: scratchpad LOKKE-KRITIKER-BRIEF(-LOKAL).md
+  og LOKKE-FIKS-BRIEF.md. Ikke publisert før brukeren sier «Publiser».
