@@ -121,7 +121,10 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
   function lukkValg() { if (reise) return; valgEl.classList.remove('på'); valgEl.replaceChildren(); venterKart = null; if (venterUt) { venterUt = null; overlegg(true); } }
   function kn(tekst, liten, fn, hoved) { const b = document.createElement('button'); b.type = 'button'; if (hoved) b.className = 'hoved'; b.append(tekst); if (liten) { const sm = document.createElement('small'); sm.textContent = liten; b.append(sm); } b.onclick = fn; return b; }
   function startValg() {
-    if (!r3() || !R3.ut) return; const G = window.Gaavalg, kar = karakter(), b = R3.bane, u = R3.ut;
+    if (!r3() || !R3.ut) return;
+    // (kritikerløkka r2) et nytt valg erstatter ventingen på kartet fra et tidligere «Gå inn i huset» / «Reis hit» – ellers startet
+    // gangen av seg selv når kartet ble ferdig, midt i det nye valget
+    if (venterUt && !reise) { venterUt = null; overlegg(true); } const G = window.Gaavalg, kar = karakter(), b = R3.bane, u = R3.ut;
     // et valgt lag: ved siden av laget som før; uten karakter (eller uten reglene): der kameraet ser
     if (!G || !kar || kar.ombord || (valgt && !valgt.karakter && iUt(valgt))) { start(); return; }
     const X = u.cx + b.x, Y = u.cy + b.y, d = Math.hypot(X - kar.x, Y - kar.y), v = G.valg(d);
