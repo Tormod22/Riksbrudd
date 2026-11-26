@@ -24,7 +24,7 @@
       // (løkka r1, kritiker I: startrådet sa 9 mill., byggelista 8,8 mill. i alt og målet «ca. 12 mill.») prisen er den samme som i byggelista:
       // T.pris.kontrollrom = LeirSpill.totalPris('kontrollrom') (utstyr og deler + materialene du mangler, til dagens pris)
       { id: 'kontrollrom', tekst: 'Bygg kontrollrommet', hjelp: 'Kartet, kameraene og radioen. Det er det dyreste bygget i starten og kan vente til leiren står og du har to tropper og et vakttårn.',
-        hjelpT: T => (T && T.pris && T.pris.kontrollrom > 0 ? `Kartet, kameraene og radioen. Det koster ${kroner(T.pris.kontrollrom)} i alt nå (samme pris som i byggelista) og kan vente til leiren står og du har to tropper og et vakttårn.` : null), ferdig: T => b(T, 'kontrollrom') > 0 },
+        hjelpT: T => (T && T.pris && T.pris.kontrollrom > 0 ? `Kartet, kameraene og radioen. Det koster ${(T.pris.tekst && T.pris.tekst.kontrollrom) || kroner(T.pris.kontrollrom)} i alt nå (samme pris som i byggelista) og kan vente til leiren står og du har to tropper og et vakttårn.` : null), ferdig: T => b(T, 'kontrollrom') > 0 },
       { id: 'radiomast', tekst: 'Bygg en radiomast', hjelp: 'Lagene må ha radiokontakt for å ta imot ordre: 15 km med mast, 8 km uten.', ferdig: T => b(T, 'radiomast') > 0 },
       { id: 'vakttårn', tekst: 'Bygg et vakttårn', hjelp: 'Sett en person på «Vakt» under Folk, så melder tårnet fiender nær leiren.', ferdig: T => b(T, 'vakttårn') > 0 },
     ] },

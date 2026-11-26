@@ -24,7 +24,7 @@
       inne: (går3d && !!(window.Interior3d && Interior3d.inne(R3_.bane.x, R3_.bane.y))) || (window.LeteSpill ? LeteSpill.antall() > 0 : false), lett: window.LeteSpill ? LeteSpill.antall() : 0,
       matDøgn: L.folk && L.folk.personer && L.folk.personer.length ? (L.folk.mat || 0) / L.folk.personer.length : 0,
       // (løkka r1) prisen i alt som byggelista viser (LeirSpill.totalPris)
-      pris: { kontrollrom: LeirSpill.totalPris ? LeirSpill.totalPris('kontrollrom') || 0 : 0 } };
+      pris: (k => ({ kontrollrom: k, tekst: { kontrollrom: k > 0 && window.Leir && Leir.kroner ? Leir.kroner(k) : '' } }))(LeirSpill.totalPris ? LeirSpill.totalPris('kontrollrom') || 0 : 0) };
   }
   function sjekk(stille) {
     const T = bilde(); if (!T) return [];
