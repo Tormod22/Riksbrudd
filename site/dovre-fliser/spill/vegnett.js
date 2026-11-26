@@ -200,6 +200,31 @@
       }
       return best;
     }
+    // (kritikerløkka r2, 26. nov: et mål midt på en lang veglenke fikk samme nærmeste node som kjøretøyet – ruta ble tom og posisjonen NaN)
+    // Nærmeste punkt PÅ en veg (veggeometrien), ikke bare nærmeste node. Ser på lenkene som går fra/til noder innen maks + ekstra meter,
+    // så svært lange lenker med begge endene langt unna kan bli oversett (da brukes nærmeste node som før). ekstra = 1500 m er Claudes forslag.
+    // Gir { lenke, x, y, d (meter fra punktet), langs (meter fra lenkens fra-node langs geometrien), total (geometriens lengde) } eller null.
+    function naermestePåVeg(p, maks = 2000, ekstra = 1500) {
+      if (!Array.isArray(p) || p.length !== 2 || !p.every(Number.isFinite) || !Number.isFinite(maks) || maks < 0) throw new TypeError('Ugyldig punkt eller søkeavstand');
+      const RR = (maks + ekstra) ** 2, kand = new Set();
+      for (let n = 0; n < N; n++) {
+        if ((p[0] - x[n]) ** 2 + (p[1] - y[n]) ** 2 > RR) continue;
+        for (let k = antall[n]; k < antall[n + 1]; k++) kand.add(kant[k]);
+      }
+      let best = null, bd = maks * maks;
+      for (const e of kand) {
+        const L = R.linje(e); let s = 0;
+        for (let i = 1; i < L.length; i++) {
+          const ax = L[i - 1][0], ay = L[i - 1][1], dx = L[i][0] - ax, dy = L[i][1] - ay, l2 = dx * dx + dy * dy, l = Math.sqrt(l2);
+          const t = l2 ? Math.max(0, Math.min(1, ((p[0] - ax) * dx + (p[1] - ay) * dy) / l2)) : 0, qx = ax + dx * t, qy = ay + dy * t;
+          const dd = (p[0] - qx) ** 2 + (p[1] - qy) ** 2;
+          if (dd <= bd) { bd = dd; best = { lenke: e, x: qx, y: qy, d: Math.sqrt(dd), langs: s + l * t, total: 0 }; }
+          s += l;
+        }
+        if (best && best.lenke === e) best.total = s;
+      }
+      return best;
+    }
     function linje(e) {
       sjekkLenke(e);
       const punkter = R.linje(e);
@@ -252,7 +277,7 @@
       }
       return null;
     }
-    return { antallNoder: N, antallLenker: M, dato: String(R.dato), boks: valg.boks ? valg.boks.slice() : null, punkt, naermeste, linje, lenke, rute,
+    return { antallNoder: N, antallLenker: M, dato: String(R.dato), boks: valg.boks ? valg.boks.slice() : null, punkt, naermeste, naermestePåVeg, linje, lenke, rute,
       infraLenker(type, id) { return (infra.get(type + ':' + id) || []).slice(); },
       lenkerVed(n) { if (!heltall(n, N)) throw new RangeError('Ukjent node'); return [...new Set(kant.slice(antall[n], antall[n + 1]))]; },   // lenkene som går fra/til noden (S5 vegkrater)
       infraPåLenke(e) { sjekkLenke(e); return (infraPå.get(e) || []).map(t => t.slice()); },   // [[type, kilde-id], ...]

@@ -22,34 +22,75 @@
     if (lenke.ferje) return FERJE_FART / 3.6;
     return Math.min(TYPER[type].maks, lenke.fartsgrense || RESERVE[KATEGORIER.indexOf(lenke.vegkategori)]) / 3.6;
   }
-  // Rute fra der kjøretøyet står til nærmeste veg ved målet. Gir { meter, sekunder, ferjer } eller { feil }.
+  // (kritikerløkka r2, 26. nov, Jonas: «Kjør dit» til et mål på vegen ga «finner ingen veg dit», og kjøretøyet fikk posisjon NaN)
+  // ÅRSAK: målet og kjøretøyet hadde samme nærmeste node (et mål midt på en lang veglenke) – ruta ble tom (ingen lenker), stien fikk
+  // ett punkt, og posisjon() regnet med et punkt som ikke fantes. NÅ: kjøretøyet kjører fra der det står, inn på nærmeste veg, langs
+  // lenken til en node, ruta, og langs mållenken til punktet på vegen nærmest målet (graf.naermestePåVeg). Står det alt der, er det framme.
+  // TERRENG_FART (km/t) er farten det første stykket fra der kjøretøyet står og inn på vegen – Claudes forslag.
+  const TERRENG_FART = 15;
+  // Rute fra der kjøretøyet står til punktet på vegen nærmest målet. Gir { meter, sekunder, ferjer } (framme: true når den alt står der)
+  // eller { feil }. Kjøretøyets posisjon blir aldri NaN: en sti med ugyldige tall gir { feil } og kjøretøyet står.
   function planlegg(kj, graf, mål, valg = {}) {
     const maks = valg.maksAvstand === undefined ? 3000 : valg.maksAvstand;
-    const a = graf.naermeste([kj.x, kj.y], maks), b = graf.naermeste(mål, maks);
-    if (a < 0) return { feil: 'Kjøretøyet står for langt fra en veg.' };
-    if (b < 0) return { feil: 'Ingen veg i nærheten av målet.' };
-    const r = graf.rute(a, b, { ferjeVentetid: FERJE_VENT, kategoriFaktor: TYPER[kj.type].faktor, tillat: valg.tillat });
-    if (!r) return { feil: 'Ingen veg dit (kanskje sperret).' };
-    // Stien som punkter med fart per stykke. Hver lenke kjøres på lengde / fart (som rutesøket), fordelt på geometrien.
-    const P = [], V = [], VENT = [], LENKE = [];
-    const [sx, sy] = graf.punkt(r.noder[0]); P.push(sx, sy);
-    let forrigeFerje = false;
-    r.lenker.forEach((e, i) => {
-      const l = graf.lenke(e); let linje = graf.linje(e);
-      if (l.fra !== r.noder[i]) linje = linje.slice().reverse();
-      let geo = 0; for (let k = 1; k < linje.length; k++) geo += Math.hypot(linje[k][0] - linje[k - 1][0], linje[k][1] - linje[k - 1][1]);
-      const v = fart(l, kj.type) * (geo > 0 ? geo / l.lengde : 1);   // så lenken tar lengde / fart sekunder
-      for (let k = 1; k < linje.length; k++) {
-        P.push(linje[k][0], linje[k][1]); V.push(v); LENKE.push(e);
-        VENT.push(k === 1 && l.ferje && !forrigeFerje ? FERJE_VENT : 0);   // vent én gang før ferja går fra land
-      }
-      forrigeFerje = l.ferje;
-    });
+    if (!Number.isFinite(kj.x) || !Number.isFinite(kj.y)) return { feil: 'Kjøretøyets plass er ukjent.' };
+    if (!Array.isArray(mål) || !Number.isFinite(mål[0]) || !Number.isFinite(mål[1])) return { feil: 'Ugyldig mål.' };
+    const påVeg = typeof graf.naermestePåVeg === 'function';
+    const vS = påVeg ? graf.naermestePåVeg([kj.x, kj.y], maks) : null, vM = påVeg ? graf.naermestePåVeg(mål, maks) : null;
+    const a0 = graf.naermeste([kj.x, kj.y], maks), b0 = graf.naermeste(mål, maks);
+    if (a0 < 0 && !vS) return { feil: 'Kjøretøyet står for langt fra en veg.' };
+    if (b0 < 0 && !vM) return { feil: 'Ingen veg i nærheten av målet.' };
+    const P = [kj.x, kj.y], V = [], VENT = [], LENKE = [];
+    const legg = (x, y, v, e, vent = 0) => { P.push(x, y); V.push(v); LENKE.push(e); VENT.push(vent); };
+    // en bit av lenke e langs geometrien fra s0 til s1 meter (fra fra-noden); punktene fra (s0) er alt lagt inn
+    const bit = (e, s0, s1) => { const L = graf.linje(e), v = fart(graf.lenke(e), kj.type), fram = s1 >= s0, mid = [];
+      let s = 0; for (let i = 1; i < L.length; i++) { s += Math.hypot(L[i][0] - L[i - 1][0], L[i][1] - L[i - 1][1]); if (i < L.length - 1) mid.push([s, L[i]]); }
+      const inn = mid.filter(([q]) => (fram ? q > s0 && q < s1 : q < s0 && q > s1)); if (!fram) inn.reverse();
+      for (const [, p] of inn) legg(p[0], p[1], v, e); };
+    const tilNode = (v, n) => { const l = graf.lenke(v.lenke); return n === l.fra ? 0 : v.total; };
+    // stykket fra kjøretøyet og inn på vegen
+    const inn = vS || { x: graf.punkt(a0)[0], y: graf.punkt(a0)[1], lenke: -1 };
+    if (Math.hypot(inn.x - kj.x, inn.y - kj.y) > 1) legg(inn.x, inn.y, TERRENG_FART / 3.6, vS ? vS.lenke : -1);
+    let r = null, meterRute = 0, ferjer = 0;
+    if (vS && vM && vS.lenke === vM.lenke) {
+      // samme lenke: rett langs vegen
+      bit(vS.lenke, vS.langs, vM.langs); legg(vM.x, vM.y, fart(graf.lenke(vM.lenke), kj.type), vM.lenke);
+    } else {
+      // startnode og sluttnode: endene av lenkene (eller nærmeste node uten naermestePåVeg). Den nærmeste kombinasjonen prøves først.
+      const ender = (v, n0) => { if (!v) return [n0]; const l = graf.lenke(v.lenke); return [l.fra, l.til]; };
+      const S = ender(vS, a0), M = ender(vM, b0), par = [];
+      for (const a of S) for (const b of M) { const pa = graf.punkt(a), pb = graf.punkt(b);
+        par.push([a, b, (vS ? Math.abs(tilNode(vS, a) - vS.langs) : 0) + Math.hypot(pa[0] - pb[0], pa[1] - pb[1]) + (vM ? Math.abs(tilNode(vM, b) - vM.langs) : 0)]); }
+      par.sort((p, q) => p[2] - q[2]);
+      let a = -1, b = -1;
+      for (const [pa, pb] of par) { r = graf.rute(pa, pb, { ferjeVentetid: FERJE_VENT, kategoriFaktor: TYPER[kj.type].faktor, tillat: valg.tillat }); if (r) { a = pa; b = pb; break; } }
+      if (!r) return { feil: 'Ingen veg dit (kanskje sperret).' };
+      let lenker = r.lenker.slice(), noder = r.noder.slice();
+      // snur ruta rett tilbake langs startlenken eller går forbi målpunktet på mållenken: kutt den lenken og kjør bare biten
+      if (vS && lenker.length && lenker[0] === vS.lenke) { lenker.shift(); noder.shift(); a = noder[0]; }
+      if (vM && lenker.length && lenker[lenker.length - 1] === vM.lenke) { lenker.pop(); noder.pop(); b = noder[noder.length - 1]; }
+      if (vS) bit(vS.lenke, vS.langs, tilNode(vS, a));
+      const [sx, sy] = graf.punkt(a); legg(sx, sy, vS ? fart(graf.lenke(vS.lenke), kj.type) : TERRENG_FART / 3.6, vS ? vS.lenke : -1);
+      // Stien som punkter med fart per stykke. Hver lenke kjøres på lengde / fart (som rutesøket), fordelt på geometrien.
+      let forrigeFerje = false;
+      lenker.forEach((e, i) => {
+        const l = graf.lenke(e); let linje = graf.linje(e);
+        if (l.fra !== noder[i]) linje = linje.slice().reverse();
+        let geo = 0; for (let k = 1; k < linje.length; k++) geo += Math.hypot(linje[k][0] - linje[k - 1][0], linje[k][1] - linje[k - 1][1]);
+        const v = fart(l, kj.type) * (geo > 0 ? geo / l.lengde : 1);   // så lenken tar lengde / fart sekunder
+        for (let k = 1; k < linje.length; k++) legg(linje[k][0], linje[k][1], v, e, k === 1 && l.ferje && !forrigeFerje ? FERJE_VENT : 0);   // vent én gang før ferja går fra land
+        forrigeFerje = l.ferje; meterRute += l.lengde;
+      });
+      ferjer = VENT.filter(v => v > 0).length;
+      if (vM) { bit(vM.lenke, tilNode(vM, b), vM.langs); legg(vM.x, vM.y, fart(graf.lenke(vM.lenke), kj.type), vM.lenke); }
+    }
+    if (!P.every(Number.isFinite) || !V.every(v => Number.isFinite(v) && v > 0)) return { feil: 'Ingen veg dit (ruta kunne ikke regnes ut).' };
     const n = V.length, D = new Float64Array(n + 1);
     for (let i = 0; i < n; i++) D[i + 1] = D[i] + Math.hypot(P[2 * i + 2] - P[2 * i], P[2 * i + 3] - P[2 * i + 1]);
+    // står alt ved målet (under 2 m å kjøre): framme med en gang, ingen sti
+    if (!n || D[n] < 2) { kj.sti = null; kj.framme = true; return { meter: 0, sekunder: 0, ferjer: 0, framme: true }; }
     kj.sti = { P, V, VENT, LENKE, D, i: 0, s: 0, vent: 0, ventet: -1 }; kj.framme = false;
-    kj.x = sx; kj.y = sy; oppdater(kj);
-    return { meter: r.meter, sekunder: tidIgjen(kj), ferjer: VENT.filter(v => v > 0).length };
+    oppdater(kj);
+    return { meter: Math.max(D[n], meterRute), sekunder: tidIgjen(kj), ferjer };
   }
   // Kjør sek spillsekunder. Gir true når kolonnen kom fram i dette steget.
   function steg(kj, sek) {
@@ -76,7 +117,7 @@
     const ax = P[2 * i], ay = P[2 * i + 1], bx = P[2 * i + 2], by = P[2 * i + 3];
     return { x: ax + (bx - ax) * f, y: ay + (by - ay) * f, retning: Math.atan2(by - ay, bx - ax) };
   }
-  function oppdater(kj, t = kj.sti) { const p = posisjon(kj, 0, t); if (t) { kj.x = p.x; kj.y = p.y; kj.retning = p.retning; } }
+  function oppdater(kj, t = kj.sti) { const p = posisjon(kj, 0, t); if (t && Number.isFinite(p.x) && Number.isFinite(p.y)) { kj.x = p.x; kj.y = p.y; if (Number.isFinite(p.retning)) kj.retning = p.retning; } }
   function tidIgjen(kj) {
     const t = kj.sti; if (!t) return 0;
     let sek = t.vent;
