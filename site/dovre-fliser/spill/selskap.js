@@ -157,7 +157,7 @@
     const nye = [];
     if (!iNærheten.length) return nye;
     const byer = iNærheten.filter(q => q.slag !== 'bru'), bruer = iNærheten.filter(q => q.slag === 'bru');
-    for (let n = antallTilbud(R); n > 0; n--) {
+    for (let n = antallTilbud(R), forsøk = 0; n > 0 && forsøk < 4 * antallTilbud(R); forsøk++) {
       // det siste tilbudet kan være fra neste nivå: låst til ryktet er godt nok, men synlig (så spilleren ser hva som venter)
       const kNivå = teaser && n === 1 ? NV[nv.nr] : nv;
       const typ = vektet(typeVekter(R), r), giverSlag = vektet(giverVekter(R, typ), r), T = REGLER.TYPER[typ];
@@ -167,6 +167,9 @@
       // en garnison på 35–50») heller ikke andre jobber legges i et tettsted et annet selskap holder, når det finnes andre; ellers sier
       // kravteksten det ærlig (k.fare), og bygdevernet nevnes ikke (det finnes ikke i et sted et selskap holder)
       if (typ !== 'eskorte' && sted.slag !== 'bru' && sted.eier && sted.eier !== id) { const fri = byer.filter(q => !q.eier || q.eier === id); if (fri.length) sted = velg(fri, r); }
+      // (kritikerløkka r3, Ingrid: «Hold Byflaten i 8 timer» og «… i 10 timer» fra to oppdragsgivere samtidig – én tropp kunne tatt begge
+      // betalingene) aldri to tilbud (eller et tilbud og en aktiv kontrakt) av samme type på samme sted: et annet sted, ellers intet tilbud
+      if (typ !== 'eskorte') { const brukt = q => opptatt(S, sd, typ, q); if (brukt(sted)) { const fri = (typ === 'hold' ? iNærheten : byer.length ? byer : iNærheten).filter(q => !brukt(q) && (!q.eier || q.eier === id || q.slag === 'bru')); if (!fri.length) continue; sted = velg(fri, r); } }
       if (typ === 'eskorte') {
         // fra et sted til et annet (minst 2 km mellom), eller fra leiren når det bare finnes ett sted.
         // (R1-løkka 26. nov, kritikken: «eskorte fra Ravnsunds hovedsete til Mosevakts hovedsete uten kommentar») steder et annet
@@ -196,12 +199,17 @@
         fra: fra ? { navn: fra.navn, x: Math.round(fra.x), y: Math.round(fra.y) } : null, last, person, sperre, konkurrent, side: null, for: id, nivå: kNivå.nr };
       if (typ === 'eskorte') { const holdt = [fra, sted].filter(q => q && q.eier && q.eier !== id); if (holdt.length) k.fare = holdt.map(q => ({ navn: q.navn, eier: q.eier })); k.risiko = risiko; k.betaling = avrund(k.betaling); k.bot = avrund(k.betaling * REGLER.bot); }
       else if (sted.eier && sted.eier !== id && sted.slag !== 'bru') k.fare = [{ navn: sted.navn, eier: sted.eier }];
-      k.tittel = tittel(k); nye.push(k);
+      if (typ === 'eskorte' && opptatt(S, sd, typ, sted, fra)) continue;
+      k.tittel = tittel(k); nye.push(k); S.tilbud.push(k); n--;
     }
-    S.tilbud.push(...nye);
-    while (S.tilbud.length > REGLER.maksTilbud) S.tilbud.shift();
+    // de eldste går ut – aldri den første kontrakten (den har sin egen frist), r3: nye tilbud kommer også mens den ligger der
+    while (S.tilbud.length > REGLER.maksTilbud) { const i = S.tilbud.findIndex(q => !q.første); if (i < 0) break; S.tilbud.splice(i, 1); }
     return nye;
   }
+  // finnes det alt et tilbud eller en aktiv kontrakt av samme type på samme sted (eskorte: samme fra og til)?
+  const sammeSted = (a, b) => !!(a && b && ((a.id != null && b.id != null && a.id === b.id) || (a.navn && a.navn === b.navn)));
+  function opptatt(S, sd, typ, sted, fra) {
+    return [...S.tilbud, ...(sd ? sd.aktive : [])].some(k => k && k.type === typ && sammeSted(k.sted, sted) && (typ !== 'eskorte' || sammeSted(k.fra, fra))); }
   function tittel(k) {
     if (k.type === 'eskorte') return `Eskorter ${k.last === 'tankbil' ? 'tankbilen' : 'lastebilen'} fra ${k.fra.navn} til ${k.sted.navn}`;
     if (k.type === 'hold') return `Hold ${k.sted.slag === 'bru' ? k.sted.navn : k.sted.navn} i ${k.hold} timer`;
@@ -261,6 +269,28 @@
       advarsel.push(`For svakt: ${tall(har.størsteLag)} mann mot et forsvar på ca. ${Math.round(tall(har.forsvar))}${har.forsvarTekst ? ' (' + har.forsvarTekst + ')' : ''}`);
     return { ok: !m.length, mangler: m, advarsel };
   }
+  // ---------- MARSJEN TIL STEDET (kritikerløkka r3, 26. nov) ----------
+  // Ingrid: «Hold Byflaten i 10 timer» sto som «19,3 km fra leiren» med «✓ Dere har det som trengs», men marsjen var 35 km / 9,4 t gjennom
+  // Moelv (Mosevakt), og fristen 20 t – i praksis tapt. Visningen regner ruta fra leiren (samme regel som ordre(): Terreng.ruteTil, utenom
+  // fiendtlige tettsteder når omvegen er god nok) og gir m = { km, timer, gjennom: ['Moelv (Mosevakt holder det)'], omveg, ingen, forLangt }.
+  // Claudes forslag: en marsj tar i praksis «slakk» ganger så lang tid som planen (hvil, motbakker, en kort stans); en ryddejobb trenger
+  // «kamp» timer ved sperra; en hentejobb går fram og tilbake.
+  REGLER.marsj = { slakk: 1.3, kamp: 1 };
+  const tNum = t => String(Math.round(t * 10) / 10).replace('.', ',');
+  const liste = L => (L.length <= 1 ? L.join('') : L.slice(0, -1).join(', ') + ' og ' + L[L.length - 1]);
+  // gir { linje, advarsel } – linje = «marsj ca. 35 km, ca. 9,4 t, gjennom Moelv (…)», advarsel = tekst når fristen ikke kan holdes (eller '')
+  function marsjVurdering(k, m) {
+    if (!k || !m) return { linje: '', advarsel: '' };
+    if (m.ingen) return { linje: 'ingen rute dit til fots fra leiren', advarsel: 'Troppen finner ingen rute dit til fots fra leiren (vann eller stengt terreng)' };
+    if (m.forLangt) return { linje: 'for langt for én marsj fra leiren', advarsel: 'Stedet er for langt unna for én marsj fra leiren' };
+    const M = REGLER.marsj, t = tall(m.timer), gj = (m.gjennom || []).filter(Boolean);
+    const linje = `marsj ca. ${tNum(tall(m.km))} km, ca. ${tNum(t)} t` + (gj.length ? `, gjennom ${liste(gj)}` : m.omveg ? ', utenom fiendtlige tettsteder' : '');
+    const tur = k.type === 'hent' ? 2 * t : t, trengs = tur * M.slakk + (k.type === 'hold' ? tall(k.hold) : k.type === 'rydd' ? M.kamp : 0);
+    let advarsel = '';
+    if (k.type !== 'eskorte' && trengs > tall(k.timer)) advarsel = k.type === 'hold' ? `Fristen holder ikke: marsjen tar ca. ${tNum(t)} t og holdet ${k.hold} t – fristen er ${k.timer} t` : k.type === 'hent' ? `Fristen holder ikke: fram og tilbake tar ca. ${tNum(tur)} t – fristen er ${k.timer} t` : `Fristen holder ikke: marsjen tar ca. ${tNum(t)} t – fristen er ${k.timer} t`;
+    if (gj.length) advarsel = (advarsel ? advarsel + '. ' : '') + `Ruta går gjennom ${liste(gj)} – speidere stopper der, og andre lag må slåss seg gjennom`;
+    return { linje, advarsel };
+  }
   const kravKort = k => { const K = kravFor(k), d = []; if (K.nivå > 1) d.push(`nivå ${K.nivå}`); if (K.menn) d.push(`lag på ${K.menn}+`); if (K.kjøretøy) d.push('kjøretøy'); return d.join(', '); };
 
   // ---------- godta, levere, bryte ----------
@@ -292,7 +322,8 @@
   function bryt(S, id, k, grunn, nå) {
     const sd = side(S, id), E = grunn === 'avbrutt' ? REGLER.avbrutt : grunn === 'rivalFørst' ? REGLER.rivalFørst : REGLER.brutt;
     const bot = grunn === 'rivalFørst' ? 0 : k.bot;
-    endreRykte(S, id, { pålitelig: E.pålitelig * (k.første ? REGLER.første.bruddRykte : 1) }); k.ferdig = Math.round(nå); k.grunn = grunn;
+    // (kritikerløkka r3) å gi opp den første kontrakten koster ingenting (opplæringen skal kunne gå videre når den ikke kan fullføres)
+    endreRykte(S, id, { pålitelig: k.første && grunn === 'avbrutt' ? 0 : E.pålitelig * (k.første ? REGLER.første.bruddRykte : 1) }); k.ferdig = Math.round(nå); k.grunn = grunn;
     avslutt(S, id, k, grunn === 'rivalFørst' ? 'tapt' : 'brutt'); if (grunn !== 'rivalFørst') sd.sum.brutt++; sd.sum.bøter += bot;
     return { type: grunn === 'rivalFørst' ? 'rivalFørst' : 'brutt', grunn, k, kr: bot };
   }
@@ -370,7 +401,7 @@
       tekst: () => 'Åpne Tropper og trykk «Lag ny tropp». Velg 2–4 personer – la minst to stå igjen på Bygg.', ferdig: b => b.tropper > 0 || b.framme },
     // (R1-løkka, kritikken: «trykk «Marsjer»» når knappen heter «Kjør dit») o.knapp = navnet på knappen troppen har nå (fra visningen)
     { id: 'send', tittel: 'Send troppen', pek: 'kart', lapp: k => `Send troppen til ${k.sted.navn}`,
-      tekst: (k, o) => `Velg troppen i kartet, trykk «${(o && o.knapp) || 'Marsjer'}» og så på det gule merket ved ${k.sted.navn}.`, ferdig: b => b.framme },
+      tekst: (k, o) => `Velg troppen i kartet, trykk «${(o && o.knapp) || 'Marsjer'}» og så på det gule merket ved ${k.sted.navn}. Kommer troppen ikke fram, kan du gi opp jobben i Selskapet uten bot.`, ferdig: b => b.framme },
     { id: 'hjem', tittel: 'Kom tilbake', pek: 'kart', lapp: () => 'Ta nødlageret med hjem til leiren',
       tekst: () => 'Troppen bærer nødlageret. Gi den ordre tilbake til leiren – da betaler bygdelaget.', ferdig: b => b.levert },
     { id: 'bygg', tittel: 'Bygg noe for pengene', pek: 'leir', lapp: () => 'Bygg noe for pengene (Leir → Bygg)',
@@ -378,7 +409,8 @@
     // (R1-løkka, kritikken: «Kontrakt brutt», så «Ryktet ditt har vokst», så «Første kontrakt er fullført») etter et brudd sier
     // steget hva som skjedde og hva du gjør nå – ingen ros
     { id: 'neste', tittel: 'Neste kontrakt', pek: 'selskap', lapp: k => (bruttTekst(k) ? 'Prøv en ny kontrakt i Selskapet' : 'Ta en ny kontrakt i Selskapet'),
-      tekst: k => (bruttTekst(k) ? `Den første kontrakten gikk galt: ${bruttTekst(k)}. Det kostet ingen bot, men litt rykte. Nye kontrakter står i Selskapet – velg en dere har det som trengs til (se kravet på kortet), og send et lag som er sterkt nok.`
+      tekst: k => (k && k.grunn === 'avbrutt' && k.første ? 'Dere ga opp den første kontrakten – det kostet ingenting. Nye kontrakter står i Selskapet – velg en dere har det som trengs til (se kravet på kortet), og send et lag som er sterkt nok.'
+        : bruttTekst(k) ? `Den første kontrakten gikk galt: ${bruttTekst(k)}. Det kostet ingen bot, men litt rykte. Nye kontrakter står i Selskapet – velg en dere har det som trengs til (se kravet på kortet), og send et lag som er sterkt nok.`
         : 'Ryktet ditt har vokst. Nye kontrakter står i Selskapet – de større krever bedre rykte, kjøretøy eller sterkere lag.'), ferdig: b => b.nyKontrakt },
   ];
   // hva som gikk galt med en brutt kontrakt (tom tekst når den ikke er brutt)
@@ -440,7 +472,7 @@
   }
 
   const api = { REGLER, SIDER, ORD, ny, side, endreRykte, ord, rykteTekst, typeVekter, giverVekter, antallTilbud, betaling, lagTilbud, tittel, kravTekst, bruttTekst, retningOrd,
-    godta, lever, bryt, avbryt, steg, dagSteg, nivå, nesteNivå, kravFor, kanTa, kravKort, førsteKontrakt, TRÅD, oppdaterTråd, trådSteg, lappFor, hardhendt, settPris, fristTekst, tilJSON, fraJSON, lagRand };
+    godta, lever, bryt, avbryt, steg, dagSteg, marsjVurdering, nivå, nesteNivå, kravFor, kanTa, kravKort, førsteKontrakt, TRÅD, oppdaterTråd, trådSteg, lappFor, hardhendt, settPris, fristTekst, tilJSON, fraJSON, lagRand };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Selskap = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

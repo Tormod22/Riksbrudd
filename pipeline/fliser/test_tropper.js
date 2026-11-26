@@ -47,3 +47,12 @@ assert.ok(/kjører/.test(T.ombordFeil({ menn: t.menn.slice(0, 3) }, { ...bil, st
     assert.ok(!T.advarsler(ti, valgt, { jobber: 1 }).some(t => /byggelag/.test(t)), 'én jobb og ett byggelag: ingen kø-advarsel');
     assert.ok(!T.advarsler(ti, [9, 10], { jobber: 3 }).some(t => /byggelag/.test(t)), 'byggerne blir: ingen kø-advarsel'); } }
 console.log('ok   tropper: sammensetning, roller, oppløsning og plass i kjøretøy; forslagene lar to bygge (runde 8)');
+// (kritikerløkka r3, Ingrid: «å oppløse troppen kostet utstyret») utstyret legges på lager, og en ny tropp får det gratis
+{ const T = require('../../site/dovre-fliser/spill/tropper.js'), assert = require('assert');
+  const lag = { menn: [{ hp: 1, valgt: 'maskingevær' }, { hp: 0, valgt: 'maskingevær' }, { hp: 1, valgt: 'rifle' }], utstyr: { feltradio: true, kikkert: true } };
+  const r = T.tilLager(T.tomtLager(), lag);
+  assert.ok(r.lager.våpen.maskingevær === 1 && !r.lager.våpen.rifle && r.lager.utstyr.feltradio === 1 && /maskingevær/.test(T.lagerTekst(r.inn)), 'på lager: ' + T.lagerTekst(r.inn));
+  const full = T.pris(['maskingevær', 'maskingevær'], ['feltradio', 'sanitet']), m = T.prisMedLager(['maskingevær', 'maskingevær'], ['feltradio', 'sanitet'], r.lager);
+  assert.ok(m.sum === full - T.VÅPEN.maskingevær.pris - T.UTSTYR.feltradio.pris && r.lager.våpen.maskingevær === 1, 'prisen uten å ta: ' + m.sum);
+  T.prisMedLager(['maskingevær'], ['feltradio'], r.lager, true); assert.ok(!r.lager.våpen.maskingevær && !r.lager.utstyr.feltradio && r.lager.utstyr.kikkert === 1, 'tatt fra lageret');
+  console.log('ok   tropper: utstyret legges på lager ved oppløsning og brukes av neste tropp (r3)'); }
