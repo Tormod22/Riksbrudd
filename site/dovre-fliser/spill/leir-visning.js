@@ -371,7 +371,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   }
   const avbryt = () => { plassering = null; banner.classList.remove('på'); skisse3d(); skitten = true; };
   const hellingTekst = p => typeof på3d !== 'undefined' && på3d ? 'I 2D-kartet ser du hvor det er flatt nok (grønt) og for bratt (rødt).'
-    : kam.m <= HellingVis.REGLER.maksM ? `Bakken for ${LB.BYGG[p.type].navn.toLowerCase()}: grønt = flatt, gult = skrått (grunnmur), rødt = for bratt.` : 'Zoom inn for å se i kartet hvor det er flatt nok.';
+    : kam.m <= HellingVis.REGLER.maksM ? `Bakken for ${LB.BYGG[p.type].navn.toLowerCase()}: grønt = flatt, gult = skrått (${LB.følgerBakken && LB.følgerBakken(p.type) ? 'følger bakken, ingen grunnmur' : 'grunnmur'}), rødt = for bratt.` : 'Zoom inn for å se i kartet hvor det er flatt nok.';
   // (21. nov) teksten om fargene følger zoomen: zoomer du inn etter at banneret kom, byttes «Zoom inn …» ut med forklaringen av fargene
   setInterval(() => { const h = banner.classList.contains('på') && banner.querySelector('.hellingtekst'), p = plassering; if (!h || !p || !p.type || !LB.BYGG[p.type]) return;
     const t = hellingTekst(p); if (h.textContent !== t) h.textContent = t;
