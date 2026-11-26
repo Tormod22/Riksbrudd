@@ -114,6 +114,26 @@ body.spill.minivik #mini2d, body.spill.minivik #minikart{ visibility:hidden; } b
         c.onclick = () => { const id = b.getAttribute('data-fane-knapp'); if (id && rot.LeirSpill && LeirSpill.fane) LeirSpill.fane(id); else b.click(); }; k.appendChild(c); } }
     const ut = f.getBoundingClientRect().bottom < m.getBoundingClientRect().top + 4; if (k.classList.contains('på') !== ut) k.classList.toggle('på', ut); }
   m0: { const m = document.getElementById('leirmeny'); if (m) m.addEventListener('scroll', () => faneKopi(), { passive: true }); }
+  // ---------- LESEPAUSE (kritikerløkka r3, Jonas: «spillet fortsetter med 600× mens husleting og menyer er åpne – klokka hoppet fra
+  // 14:00 til 18:18 mens jeg leste funnet») ----------
+  // Åpnes et panel du leser i mens det går fort (LESEPAUSE.fra og oppover, eller ⏭ spoler), settes farten ned til 1× til panelene er lukket;
+  // da går den tilbake til farten du hadde (eller ⏭ spoler videre) – så sant du ikke har valgt en annen fart selv imens. Claudes forslag.
+  // I testene (navigator.webdriver) som før, til Paneler.test = true.
+  const LESEPAUSE = { fra: 600, paneler: ['funnpanel', 'selskap', 'krig', 'region', 'samfunnmeny', 'folkmeny', 'karakterark', 'verdenpanel', 'sjopanel', 'logghel', 'kommer', 'mkommer', 'flismerliste', 'lapppanel', 'degmeny', 'tropppanel', 'hjelp'] };
+  Paneler.LESEPAUSE = LESEPAUSE;
+  let lesePause = null;
+  const fartKnapp = () => { const b = document.querySelector('[id^=sp].på'); return b ? b.id : null; };
+  function lesepause() { if (navigator.webdriver && Paneler.test !== true) return; if (typeof tempo === 'undefined') return;
+    const åpne = LESEPAUSE.paneler.filter(vises), spoler = !!(rot.FlytSpill && FlytSpill.spoler && FlytSpill.spoler());
+    if (åpne.length && !lesePause && (tempo >= LESEPAUSE.fra || spoler)) { const fra = fartKnapp(), b = $('sp1'); if (!b) return;
+      lesePause = { fra, spoler }; b.click(); lesePause.satt = tempo;
+      if (rot.FlytSpill && FlytSpill.visKort) FlytSpill.visKort('Farten er satt ned til 1× mens du leser – den går opp igjen når du lukker.', false); }
+    else if (!åpne.length && lesePause) { const p = lesePause; lesePause = null;
+      // har du valgt en annen fart selv imens, står den
+      if (tempo !== p.satt) return;
+      if (p.spoler && rot.FlytSpill && FlytSpill.spol) FlytSpill.spol(); else if (p.fra && $(p.fra)) $(p.fra).click(); } }
+  Paneler.lesepause = () => lesePause;
+  setInterval(lesepause, 250);
   setInterval(sjekk, 120);
   Paneler.sjekk = sjekk; Paneler.åpne = () => ALLE.filter(vises); Paneler.lukk = lukk; Paneler.NYE = NYE; Paneler.vik = vik;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

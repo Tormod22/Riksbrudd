@@ -153,7 +153,12 @@ body.kort #loggvelkommen{ top:calc(var(--topp,44px) + 4px); font-size:13px; padd
     // pause mens den står oppe
     tempoFør = 0; if (fart() > 0) { const p = document.getElementById('sp0'); if (p) { tempoFør = fart(); p.click(); } }
     tidVed = nåTid();
-    vakt = setInterval(() => { if (!document.getElementById('loggvelkommen')) { clearInterval(vakt); vakt = 0; return; }
+    // (kritikerløkka r3, Jonas på PC: «angrepspanelet ligger oppå Velkommen tilbake ved innlasting under angrep») – står angrepslinja
+    // (#alarm) eller et annet varsel øverst, legger velkomsten seg rett under den
+    const under = () => { let bunn = 0; for (const id of ['alarm', 'fartgrunn']) { const e = document.getElementById(id), r = e && e.getClientRects().length ? e.getBoundingClientRect() : null; if (r && r.height && r.top < window.innerHeight / 2) bunn = Math.max(bunn, r.bottom); }
+      const t = bunn ? Math.round(bunn + 8) + 'px' : ''; if (b.style.top !== t) b.style.top = t; };
+    under(); requestAnimationFrame(under);
+    vakt = setInterval(() => { if (!document.getElementById('loggvelkommen')) { clearInterval(vakt); vakt = 0; return; } under();
       // et annet kort eller møte står oppe, eller spillet går igjen: velkomsten lukkes
       const annet = ['formkort', 'krigkort', 'morgenkort'].some(id => { const e = document.getElementById(id); return e && e.classList.contains('på') && e.getClientRects().length > 0; });
       if (annet || nåTid() > tidVed + .01 || fart() > 0) { tempoFør = 0; lukkVelkommen(false); } }, 200);
