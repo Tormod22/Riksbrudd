@@ -300,6 +300,8 @@ body.kort #levertkort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }`;
     const tidlig = S.tråd && !S.tråd.slutt && !S.tråd.gjort.includes('bygg');
     if (dag !== S.dag && auto()) { S.dag = dag; hendelser(SK.dagSteg(S, tid)); const n = tidlig ? [] : nyeTilbud(); if (n.length) logg(`Selskapet: ${n.length} nye kontrakttilbud. Se «Selskapet».`); }
     tråd();
+    // (r3) nødlageret som ikke er sjekket mot kartet (kartet var ikke lastet), prøves igjen hvert 15. sekund
+    if (performance.now() - landSist > 15000) landLager();
     if (performance.now() - lagreTid > 20000) { lagreTid = performance.now(); lagre(); }
   }
 
@@ -560,37 +562,60 @@ body.kort #nestelapp small{ display:none; }
       if (fri(x, y)) return { x: Math.round(x), y: Math.round(y) }; }
     return { x: Math.round(L.x + Math.cos(v0) * F.avstand * .55), y: Math.round(L.y + Math.sin(v0) * F.avstand * .55) };
   }
-  // (kritikerløkka r2, 26. nov, Ingrid: «nødlageret lå midt i Glomma») lagerPlass over sjekker bare havet (høyde ≤ 1 moh.). Etterpå sjekkes
-  // terrengklassen (lagVindu, 32 m-ruter): nødlageret flyttes til nærmeste rute på fast mark – ikke vann, myr eller utenfor kartet, med
-  // fast mark rundt (LAND.kant) – helst på samme side av elva/vannet som leiren (LAND.vannStraff), nær en veg (LAND.veg), i samme retning fra leiren (så tittelen stemmer), og bare før noen har hentet
-  // det. Gjelder også lagrede spill (k.sted.land = sjekket). Tallene i LAND er Claudes forslag.
-  const LAND = { søk: 520, kant: 2, veg: 160, vegStraff: 450, retningStraff: 900, vannStraff: 700 };
-  let landJobb = null;
+  // (kritikerløkka r2, 26. nov, Ingrid: «nødlageret lå midt i Glomma») lagerPlass over sjekker bare havet (høyde ≤ 1 moh.).
+  // (kritikerløkka r3, 26. nov, Jonas: nødlageret lå midt i fjorden ved Nesvik – «Marsjer» ga «ingen rute dit», «Kjør dit» stoppet ved
+  // fjæra.) Sjekken mot terrengklassen holdt ikke: den ble bare prøvd én gang (feilet hentingen av kartet, ble lageret liggende), og den
+  // sjekket ikke om troppen kan GÅ dit. NÅ: ett vindu (lagVindu, 32 m-ruter – det samme ordre() bruker) rundt leiren; alle ruter man kan
+  // gå til fra leiren, finnes med en flomfylling (Terreng.fart > 0, samme regel som ruta i ordre()). Lageret skal ligge på fast mark
+  // (ikke vann/myr, med fast mark rundt – LAND.kant), som troppen kan nå, utenfor tettstedene (fri0), LAND.min–LAND.maks fra leiren
+  // (helst F.avstand), helst nær en veg og i bygdas retning (tittelen). Den beste kandidaten må også ha en ekte rute
+  // (Terreng.ruteTil) på høyst LAND.timer timer. Finnes ingen, prøves alle retninger (kandidatene er alle ruter rundt leiren), så et
+  // punkt rett ved leiren (LAND.nød). Kartet er ikke lastet (leirens rute har ingen data): prøves igjen (steg). k.sted.land = 2 betyr
+  // sjekket med ruta – gamle lagrede kontrakter (land 1 eller uten) sjekkes på nytt når de lastes, så lenge ingen har hentet lageret.
+  // Tallene i LAND er Claudes forslag.
+  const LAND = { kant: 2, veg: 160, vegStraff: 450, retningStraff: 600, min: 300, maks: 1050, timer: 1.5, nød: [220, 160, 110], prøv: 8 };
+  let landJobb = null, landSist = 0;
+  // flomfylling fra (si, sj): Uint8Array med 1 for ruter man kan gå til (8 naboer, som A* i Terreng.ruteTil)
+  function nåbare(v, si, sj) {
+    const N = v.w * v.h, ut = new Uint8Array(N), fram = q => Terreng.fart(v.K[q], v.V ? v.V[q] : 0) > 0;
+    if (si < 0 || sj < 0 || si >= v.w || sj >= v.h) return ut; const kø = new Int32Array(N); let a = 0, b = 0; const s0 = sj * v.w + si; ut[s0] = 1; kø[b++] = s0;
+    while (a < b) { const q = kø[a++], i = q % v.w, j = (q / v.w) | 0;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const x = i + di, y = j + dj; if ((!di && !dj) || x < 0 || y < 0 || x >= v.w || y >= v.h) continue; const m = y * v.w + x; if (ut[m] || !fram(m)) continue; ut[m] = 1; kø[b++] = m; } }
+    return ut;
+  }
   function landLager() { if (landJobb || !S || typeof lagVindu !== 'function' || typeof Terreng === 'undefined') return landJobb;
-    const k = [...S.tilbud, ...S.sider[ID].aktive].find(q => q && q.første && q.sted && q.sted.slag === 'lager' && !q.sted.land); if (!k) return null;
+    const k = [...S.tilbud, ...S.sider[ID].aktive].find(q => q && q.første && q.sted && q.sted.slag === 'lager' && q.sted.land !== 2 && !q.hentet); if (!k) return null;
+    landSist = performance.now();
     landJobb = (async () => { try {
-      const L = S.leir || (Sp() || {}).leir; if (!L) return; const x0 = k.sted.x, y0 = k.sted.y, R = LAND.søk + 200;
-      const v = await lagVindu([x0 - R, y0 - R, x0 + R, y0 + R], true); if (!v || !v.K) return;
-      const K = (i, j) => (i >= 0 && j >= 0 && i < v.w && j < v.h ? v.K[j * v.w + i] : 255);
-      const fast = (i, j) => { const c = K(i, j); return c !== 3 && c !== 255; };
+      const L = S.leir || (Sp() || {}).leir; if (!L) return; const F = SK.REGLER.første, R = LAND.maks + 300;
+      const v = await lagVindu([L.x - R, L.y - R, L.x + R, L.y + R], true); if (!v || !v.K || !v.w) return;
+      const K = (i, j) => (i >= 0 && j >= 0 && i < v.w && j < v.h ? v.K[j * v.w + i] : 255), fast = (i, j) => { const c = K(i, j); return c !== 3 && c !== 255; };
       const ok = (i, j) => { if (K(i, j) === 6 || !fast(i, j)) return false; for (let a = -LAND.kant; a <= LAND.kant; a++) for (let b = -LAND.kant; b <= LAND.kant; b++) if (!fast(i + a, j + b)) return false; return true; };
       const vegNær = (i, j) => { const n = Math.ceil(LAND.veg / v.r); for (let a = -n; a <= n; a++) for (let b = -n; b <= n; b++) { const q = j + b, p = i + a; if (p >= 0 && q >= 0 && p < v.w && q < v.h && v.V && v.V[q * v.w + p] > 0) return true; } return false; };
-      // går linja fra stedet mot leiren over vann (innenfor vinduet)? da ligger stedet på andre siden av en elv eller et vann
-      const overVann = (x, y) => { const d = Math.hypot(L.x - x, L.y - y), n = Math.ceil(d / (v.r / 2)); for (let q = 1; q < n; q++) { const [i, j] = Terreng.rute(v, x + (L.x - x) * q / n, y + (L.y - y) * q / n); const c = K(i, j); if (c === 255) break; if (c === 3 && !(v.V && v.V[j * v.w + i] > 0)) return true; } return false; };
-      const [i0, j0] = Terreng.rute(v, x0, y0), ret0 = SK.retningOrd(x0 - L.x, y0 - L.y), n = Math.ceil(LAND.søk / v.r);
-      // står det alt på fast mark og nær en veg, blir det stående
-      let best = ok(i0, j0) && vegNær(i0, j0) && !overVann(x0, y0) ? { x: x0, y: y0, sk: 0 } : null;
-      const sk0 = (x, y) => (overVann(x, y) ? LAND.vannStraff : 0);
-      if (!best) for (let a = -n; a <= n; a++) for (let b = -n; b <= n; b++) { const i = i0 + a, j = j0 + b; if (!ok(i, j)) continue;
-        const [x, y] = Terreng.senter(v, i, j), d = Math.hypot(x - x0, y - y0); if (d > LAND.søk) continue;
-        const sk = d + (vegNær(i, j) ? 0 : LAND.vegStraff) + (SK.retningOrd(x - L.x, y - L.y) === ret0 ? 0 : LAND.retningStraff) + sk0(x, y);
-        if ((!best || sk < best.sk) && fri0(x, y)) best = { x, y, sk }; }
-      if (!best) { if (ok(i0, j0)) k.sted.land = 1; return; }
+      // startruta: leirens rute, eller nærmeste rute man kan gå i innen ca. 100 m (leiren kan stå i en myr eller ved et vann)
+      let [li, lj] = Terreng.rute(v, L.x, L.y); if (K(li, lj) === 255) return;
+      if (!(Terreng.fart(K(li, lj), v.V ? v.V[lj * v.w + li] : 0) > 0)) { let bd = 1e9, bp = null; for (let a = -3; a <= 3; a++) for (let b = -3; b <= 3; b++) { const c = K(li + a, lj + b); if (c !== 255 && Terreng.fart(c, v.V ? v.V[(lj + b) * v.w + li + a] : 0) > 0 && a * a + b * b < bd) { bd = a * a + b * b; bp = [li + a, lj + b]; } } if (bp) [li, lj] = bp; }
+      const nå = nåbare(v, li, lj), kan = (i, j) => i >= 0 && j >= 0 && i < v.w && j < v.h && nå[j * v.w + i] === 1;
+      const x0 = k.sted.x, y0 = k.sted.y, [i0, j0] = Terreng.rute(v, x0, y0), ret0 = k.sted.retning || SK.retningOrd(x0 - L.x, y0 - L.y);
+      const rute = (x, y) => { try { const r = Terreng.ruteTil(v, L.x, L.y, x, y); return r && r.timer <= LAND.timer ? r : null; } catch (e) { return null; } };
+      let best = null;
+      // står det alt på fast mark som troppen kan nå, nær en veg og med en kort rute, blir det stående
+      const d0 = Math.hypot(x0 - L.x, y0 - L.y);
+      if (ok(i0, j0) && kan(i0, j0) && vegNær(i0, j0) && d0 <= LAND.maks && fri0(x0, y0) && rute(x0, y0)) best = { x: x0, y: y0 };
+      if (!best) { const kand = [];
+        for (let j = 0; j < v.h; j++) for (let i = 0; i < v.w; i++) { if (!kan(i, j)) continue; const [x, y] = Terreng.senter(v, i, j), d = Math.hypot(x - L.x, y - L.y); if (d < LAND.min || d > LAND.maks || !ok(i, j)) continue;
+          kand.push({ i, j, x, y, sk: Math.abs(d - F.avstand) + (vegNær(i, j) ? 0 : LAND.vegStraff) + (SK.retningOrd(x - L.x, y - L.y) === ret0 ? 0 : LAND.retningStraff) }); }
+        kand.sort((a, b) => a.sk - b.sk); let n = 0;
+        for (const c of kand) { if (!fri0(c.x, c.y)) continue; if (rute(c.x, c.y)) { best = c; break; } if (++n >= LAND.prøv * 4) break; } }
+      // nødløsningen: et punkt rett ved leiren som troppen kan gå til (alle retninger)
+      if (!best) for (const d of LAND.nød) { for (let q = 0; q < 16 && !best; q++) { const a = q * Math.PI / 8, x = L.x + Math.cos(a) * d, y = L.y + Math.sin(a) * d, [i, j] = Terreng.rute(v, x, y);
+        if (kan(i, j) && fast(i, j) && rute(x, y)) best = { x, y }; } if (best) break; }
+      if (!best) return;
       if (best.x !== x0 || best.y !== y0) { const dx = best.x - L.x, dy = best.y - L.y, ret = SK.retningOrd(dx, dy);
         k.sted.x = Math.round(best.x); k.sted.y = Math.round(best.y); k.sted.d = Math.round(Math.hypot(dx, dy));
-        if (k.sted.retning && ret !== k.sted.retning) { k.sted.retning = ret; k.sted.navn = `låven ${ret} for leiren`; k.tittel = SK.tittel(k); } }
-      k.sted.land = 1; lagre(); sistHtml = ''; if (åpen) tegn(true); skitten = true;
-    } catch (e) { /* prøves igjen neste gang */ } finally { landJobb = null; } })();
+        if (k.sted.retning && ret !== k.sted.retning) { k.sted.retning = ret; k.sted.navn = `låven ${ret} for leiren`; } k.tittel = SK.tittel(k); }
+      k.sted.land = 2; lagre(); sistHtml = ''; if (åpen) tegn(true); skitten = true;
+    } catch (e) { /* prøves igjen neste gang (steg) */ } finally { landJobb = null; } })();
     return landJobb; }
   // fri() fra lagerPlass (utenfor tettstedene og spillkartet) for et punkt
   function fri0(x, y) { const F = SK.REGLER.første, byer = (typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || [], G = window.Garnison;
