@@ -383,8 +383,9 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
     tre: 'Tettstedene teller: hold tre samtidig. Prosenten under gjelder ikke scenariet.',
     lyn: 'Krigen ER målet: hold 60 % av folket i området.',
   };
+  // (kritikerløkka r3, Jonas: «dag 2 av 7» på dag 3 kl. 02:47) – dagen er den samme som klokka øverst (ny dag ved midnatt, spillet starter kl. 06)
   function scenarioBoks(T0) { let sc = null; try { sc = window.ScenarioSpill && ScenarioSpill.scenario ? ScenarioSpill.scenario() : null; } catch (e) { sc = null; } const id = scenarioId(); if (!sc || !id) return null;
-    const T = T0 || bilde(), SC = window.Scenario && Scenario.SCENARIER && Scenario.SCENARIER[id], dager = SC ? SC.dager : 0, dag = Math.min(dager || 99, Math.floor((typeof tid === 'number' ? tid : 0) / 1440) + 1);
+    const T = T0 || bilde(), SC = window.Scenario && Scenario.SCENARIER && Scenario.SCENARIER[id], dager = SC ? SC.dager : 0, dag = Math.min(dager || 99, Math.floor(((typeof tid === 'number' ? tid : 0) + 360) / 1440) + 1);
     const status = sc.status === 'vunnet' ? ' – klart!' : sc.status === 'tapt' ? ' – tapt' : dager ? ` – dag ${dag} av ${dager}` : '';
     if (/^Dag \d+ av \d+\. /.test(sc.tekst || '')) sc = { ...sc, tekst: sc.tekst.replace(/^Dag \d+ av \d+\. /, '') };
     const frist = sc.status === 'pågår' && sc.igjen > 0 && window.Scenario && Scenario.fristTekst ? ` (${Scenario.fristTekst(Math.round(sc.igjen / 10) * 10)})` : '';

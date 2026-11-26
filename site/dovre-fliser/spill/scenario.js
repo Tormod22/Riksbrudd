@@ -36,7 +36,8 @@
     etterspill: { hver: 180, maks: 240, lagMaks: 40, byggMaks: 60, kjMaks: 24, kampMaks: 24, kampRute: 250 },
   };
   const DØGN = 1440;
-  const dag = tid => Math.floor(tid / DØGN) + 1;
+  // dagen som klokka øverst viser (spillet starter dag 1 kl. 06, ny dag ved midnatt) – kritikerløkka r3: «dag 2 av 7» på dag 3 kl. 02:47
+  const dag = tid => Math.floor((tid + 360) / DØGN) + 1;
 
   // ---------- valgene til et spill ----------
   // regler(valg): rensede valg med faktorene regnet ut. valg = { vanskelighet, utfordringer, scenario, styrke (trinn etter seire) }
@@ -80,7 +81,7 @@
       vurder(T) { return T.egne >= 3 ? { status: 'vunnet', tekst: 'Du holder tre tettsteder.' } : { status: 'pågår', tekst: `Du holder ${T.egne} av 3 tettsteder.`, andel: T.egne / 3 }; } },
     overlev: { navn: 'Sju døgn', dager: 7, seierVedFrist: true, tekst: 'Overlev i sju døgn uten å miste leiren, og ha minst fem personer igjen.',
       vurder(T) { if (T.leirTapt) return { status: 'tapt', tekst: 'Leiren gikk tapt.' }; if (T.folk < 5) return { status: 'tapt', tekst: 'Dere er færre enn fem.' };
-        return { status: 'pågår', tekst: `Dag ${dag(T.tid)} av 7. ${T.folk} personer.`, andel: Math.min(1, T.tid / (7 * DØGN)) }; } },
+        return { status: 'pågår', tekst: `Dag ${Math.min(7, dag(T.tid))} av 7. ${T.folk} personer.`, andel: Math.min(1, T.tid / (7 * DØGN)) }; } },
     lyn: { navn: 'Lynkrig', dager: 10, tekst: 'Vinn regionen (60 % av folket i området) før ti døgn er gått.',
       vurder(T) { return T.andel >= .6 ? { status: 'vunnet', tekst: 'Regionen er din.' } : { status: 'pågår', tekst: `Du holder ${Math.round(T.andel * 100)} % – målet er 60 %.`, andel: T.andel / .6 }; } },
   };
