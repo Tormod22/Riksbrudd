@@ -132,7 +132,24 @@
   setInterval(() => { const S = window.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); if (!S || typeof S.penger !== 'number') { forrige = null; return; }
     const p = S.penger, b = $('sPenger'); if (forrige !== null && p !== forrige && b && b.getClientRects().length && Math.abs(p - forrige) >= 100) { const d = p - forrige, nå = performance.now();
       b.classList.remove('blink'); void b.offsetWidth; b.classList.add('blink');
-      if (nå - sistLapp > 500) { sistLapp = nå; const r = b.getBoundingClientRect(), l = document.createElement('div'); l.className = 'pengelapp ' + (d > 0 ? 'pluss' : 'minus'); l.textContent = (d > 0 ? '+ ' : '− ') + kr(d); l.style.left = Math.max(4, r.left - 6) + 'px'; l.style.top = r.bottom + 6 + 'px'; document.body.appendChild(l); setTimeout(() => l.remove(), 1600); } }
+      if (nå - sistLapp > 500) { sistLapp = nå; const r = b.getBoundingClientRect(), l = document.createElement('div'); l.className = 'pengelapp ' + (d > 0 ? 'pluss' : 'minus'); l.textContent = (d > 0 ? '+ ' : '− ') + kr(d); l.style.left = Math.max(4, r.left - 6) + 'px'; l.style.top = r.bottom + 6 + 'px'; document.body.appendChild(l);
+        if (plasserLapp(l, r)) setTimeout(() => l.remove(), 1600); else l.remove(); } }
     forrige = p; }, 500);
-  window.FlisTips = { vis, skjul, tekst, FORKLAR, PÅVIRKES, LANGT, viser: () => viser };
+  // (kritikerløkka r2, Jonas på telefon: «− 5 000 kr» la seg over lukkeknappen på banneret og over «Mer» i topplinja): lappen legges der den
+  // bare dekker kartet – under kassa, til høyre eller midt under topplinja, og lenger ned i trinn til den er fri. Finnes ingen fri plass,
+  // vises den ikke (tallet i kassa blinker uansett). Trinnene er Claudes forslag.
+  const LAPP = { luft: 6, steg: 34, trinn: 9, fall: 28 };
+  const HINDER = ['#logg > *', '#alarm', '#flytkort', '#kortpause', '#fartgrunn', '#nestelapp', '#tlfvaer', '.top', '#varsler > *', '#maalstripe', '#opplaering', '#minikart', '#kompass', '#tips', '#byggvalg'];
+  function fri(x, y, w, h) {
+    if (x < 2 || y < 2 || x + w > innerWidth - 2 || y + h > innerHeight - 2) return false;
+    for (const q of document.querySelectorAll(HINDER.join(','))) { if (!q.getClientRects().length) continue; const o = q.getBoundingClientRect(); if (o.width && x < o.right && x + w > o.left && y < o.bottom && y + h > o.top) return false; }
+    // bare kartet (lerretet) under lappen: ingen knapper, paneler eller kort
+    for (const fx of [.05, .5, .95]) for (const fy of [.05, .5, .95]) { const e = document.elementFromPoint(x + w * fx, y + h * fy); if (e && e.tagName !== 'CANVAS' && e !== document.body && e !== document.documentElement) return false; }
+    return true; }
+  function plasserLapp(l, r) { const w = l.offsetWidth || 110, h = (l.offsetHeight || 24) + LAPP.fall, top = document.querySelector('.top'), y0 = Math.max(r.bottom, top ? top.getBoundingClientRect().bottom : 0) + LAPP.luft;
+    const xs = [Math.max(4, r.left - 6), innerWidth - w - 10, (innerWidth - w) / 2];
+    for (let i = 0; i < LAPP.trinn; i++) { const y = i === 0 && fri(xs[0], r.bottom + LAPP.luft, w, h) ? r.bottom + LAPP.luft : y0 + i * LAPP.steg;
+      for (const x of xs) if (fri(x, y, w, h)) { l.style.left = Math.round(x) + 'px'; l.style.right = 'auto'; l.style.top = Math.round(y) + 'px'; return true; } }
+    return false; }
+  window.FlisTips = { plasserLapp, fri, vis, skjul, tekst, FORKLAR, PÅVIRKES, LANGT, viser: () => viser };
 })();

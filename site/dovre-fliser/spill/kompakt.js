@@ -85,10 +85,10 @@ body.kort #leirmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + ${B}); 
   // 3. Panelene er ugjennomsiktige (teksten bak skinte gjennom) og lavere, og mens du velger mål på kartet (Marsjer, Kjør dit,
   //    Kjør til …) er de borte, så du ser kartet. En stripe øverst sier hva du gjør, med «Avbryt». Neste-lappen viker for panelene.
   // Alt gjelder spilleren på telefon (body.kort); i testene (navigator.webdriver) bare når Kompakt.test = true. Tallene er Claudes forslag.
-  const REGLER = { panelHøyde: '44vh', hver: 150 };
+  const REGLER = { panelHøyde: '44vh', hver: 150, lappLuft: 6 };
   const aktiv = () => !navigator.webdriver || window.Kompakt.test === true;
   // spill/paneler.js holder alt annet til ett panel om gangen på telefon; Selskapet var ikke med der (det lå oppå Tropper og omvendt)
-  const ENE = ['selskap'], ANDRE = () => (window.Paneler && Paneler.PLASS ? [...Paneler.PLASS.venstre, ...Paneler.PLASS.høyre] : ['leirmeny', 'folkmeny', 'tropppanel', 'karakterark', 'krig', 'region', 'panel']);
+  const ENE = ['selskap'], ANDRE = () => (window.Paneler && Paneler.PLASS ? [...Paneler.PLASS.venstre, ...Paneler.PLASS.høyre].filter(id => !ENE.includes(id)) : ['leirmeny', 'folkmeny', 'tropppanel', 'karakterark', 'krig', 'region', 'panel']);
   const LØFT_TIL = ['selskap', 'funnpanel', 'lapppanel', 'logghel', 'lagremeny', 'ressursvalg', 'gaavalg'];
   const SKJUL_VED_MÅL = ['panel', 'selskap', 'tropppanel', 'leirmeny', 'folkmeny', 'karakterark', 'degmeny', 'krig', 'region', 'samfunnmeny', 'verdenpanel', 'sjopanel', 'krigpanel', 'flytgruppe', 'stridpanel', 'sekk', 'nestelapp', 'flismerliste', 'mkommer'];
   const css2 = document.createElement('style');
@@ -150,5 +150,24 @@ body.kort.tlfaktiv.tlfpanel #nestelapp{ display:none; }
       return orig.call(this, g, t, x, y, retning, prio); };
     ny.__klamp = true; E.tekst = ny; return true; }
   if (!klampNavn()) { const t = setInterval(() => { if (klampNavn()) clearInterval(t); }, 500); }
-  Object.assign(window.Kompakt, { test: false, REGLER, ENE, stripe: () => stripe.classList.contains('på') });
+  // (kritikerløkka r2, Jonas: «Nattskift · 2 lag, 1 kjøretøy» ble kuttet i venstre kant av krigskartet) – navnet ble flyttet til siden av
+  // merket (Etikett.kandidater), ut over kanten. Kantene av skjermen meldes nå inn som hindringer hver ramme, så et navn bare flyttes dit
+  // det står helt på skjermen (2D og 3D). KANT er luften (Claudes forslag).
+  function kanter() { const E = window.Etikett; if (!E || !E.hinder || !E.aktiv || !E.aktiv()) return; const W = typeof VW !== 'undefined' ? VW : innerWidth, H = typeof VH !== 'undefined' ? VH : innerHeight, U = 4000;
+    E.hinder(-U, -U, U + KANT, H + 2 * U); E.hinder(W - KANT, -U, U, H + 2 * U); E.hinder(-U, -U, W + 2 * U, U + KANT); E.hinder(-U, H - KANT, W + 2 * U, U); }
+  if (typeof KROKER !== 'undefined') { if (KROKER.tegn) KROKER.tegn.push(kanter); if (KROKER.tegn3d) KROKER.tegn3d.push(kanter); }
+  // NESTE-LAPPEN OG VARSLENE (kritikerløkka r2, Jonas: «Neste-lappen dekker fortsatt varsellappene nede til venstre» – «Røverne drar ut om …»,
+  // «Svartebørsen …», i 2D og i 3D-oversikten på telefon). Varslene (spill/narhud.js) står over nordpila og målestokken, lappen
+  // (spill/selskap-visning.js) over bunnmenyen; i 3D er nordpila borte, og da gled varslene ned bak lappen. Nå skyves varslene opp over
+  // lappen når de ellers ville ligget oppå hverandre (translate, så narhud.js sin egen plassering får stå). Gjelder alle skjermer.
+  let løftV = 0;
+  function varslerOverLapp() { const v = $('varsler'), l = $('nestelapp');
+    if (!v) return; const lr = l && vises(l) && l.classList.contains('på') ? l.getBoundingClientRect() : null;
+    if (!lr || !v.getClientRects().length) { if (løftV) { løftV = 0; v.style.translate = ''; } return; }
+    const barn = [...v.children].filter(c => c.getClientRects().length); if (!barn.length) { if (løftV) { løftV = 0; v.style.translate = ''; } return; }
+    const r = barn.map(c => c.getBoundingClientRect()), venstre = Math.min(...r.map(q => q.left)), høyre = Math.max(...r.map(q => q.right)), bunn = Math.max(...r.map(q => q.bottom)) + løftV;
+    const ny = høyre > lr.left && venstre < lr.right && bunn > lr.top - REGLER.lappLuft ? Math.round(bunn - (lr.top - REGLER.lappLuft)) : 0;
+    if (ny !== løftV) { løftV = ny; v.style.translate = ny ? `0 ${-ny}px` : ''; } }
+  setInterval(() => { try { varslerOverLapp(); } catch (x) { /* neste runde */ } }, REGLER.hver);
+  Object.assign(window.Kompakt, { test: false, REGLER, ENE, stripe: () => stripe.classList.contains('på'), varslerLøft: () => løftV });
 })();

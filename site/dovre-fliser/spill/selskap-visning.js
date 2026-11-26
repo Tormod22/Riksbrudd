@@ -461,6 +461,8 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
       const w = g.measureText(t).width + 12, ty = y - r - 12;
       g.fillStyle = 'rgba(18,20,23,.88)'; g.fillRect(x - w / 2, ty - 12, w, 17); g.fillStyle = '#f2d68a'; g.fillText(t, x, ty + 1);
     } else if (L) { const [lx, ly] = P(L.x, L.y), t = 'Lever nødlageret her', w = g.measureText(t).width + 12;
+      // (kritikerløkka r2, pakke skjerm: lappen lå oppå leirens navn) – meldes til navnene (Etikett), så leirens navn går utenom
+      if (window.Etikett && Etikett.hinder) Etikett.hinder(lx - w / 2, ly + 14, w, 17);
       g.fillStyle = 'rgba(18,20,23,.88)'; g.fillRect(lx - w / 2, ly + 14, w, 17); g.fillStyle = '#a9c27a'; g.fillText(t, lx, ly + 27); }
   }
   KROKER.sim.push(dt => { try { steg(dt); } catch (e) { console.error('selskap', e); } });

@@ -143,7 +143,29 @@ body.kort #alarm{ width:max-content; max-width:min(560px, calc(100vw - 16px)); b
   function angrepPågår() { const T = rot.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() && SpilletSpill.T ? SpilletSpill.T() : null, a = $('alarm');
     return !!(T && T.aktiv) || (typeof ENHETER !== 'undefined' && ENHETER.some(e => e.raid && e.menn && e.menn.some(m => m.hp > 0))) || !!(a && a.classList.contains('på') && !a.classList.contains('satt') && vises(a)); }
   function vent() { const v = aktiv() && venter(angrepPågår()).length > 0; if (document.body.classList.contains('angrepvent') !== v) document.body.classList.toggle('angrepvent', v); }
-  setInterval(() => { try { vent(); lag(); underAlarm(); pause(); løft(); const l = løftet.size > 0; if (document.body.classList.contains('mkomloft') !== l) document.body.classList.toggle('mkomloft', l); } catch (e) { /* neste runde */ } }, 150);
+  // ---------- 6 (kritikerløkka r2, Jonas på telefon): ETT OVERLEGG OM GANGEN mens et kort venter på svar ----------
+  // Før lå 1×-varselet, angrepsbanneret, Neste-lappen, varslene og et panel (leirpanelet åpnet fra topplinja) oppå og bak morgenmøtet.
+  // Nå: på telefon legges alt det andre bort til kortet er besvart (det kommer tilbake slik det var), og et trykk i topplinja, på været
+  // eller i bunnmenyen åpner ikke noe bak kortet – lappen «Spillet står på pause …» blinker i stedet. 3D, ☰-hjelpen (?) og farten virker.
+  // Ved ⏭ eller en fartsknapp sa både lappen og en egen stripe «⏭ Svar på kortet først …» det samme: nå står det bare i lappen.
+  const BORT = ['alarm', 'fartgrunn', 'flytkort', 'nestelapp', 'varsler', 'maalstripe', 'flismerliste', 'mkommer', 'selskap', 'byggvalg', 'opplaering'];
+  const SPERR = '.top .stats, #tlfvaer, #mkom, #meny, #leirknapp, #krigknapp, #karakterknapp';
+  const bortCss = document.createElement('style');
+  bortCss.textContent = `body.kort.kortvent :is(${[...BORT, ...SELV].map(id => '#' + id).join(', ')}){ display:none !important; }`;
+  document.head.appendChild(bortCss);
+  let lappTid = 0;
+  function kortVenter() { for (const id of [...KORT, ...ØVERST]) { const e = $(id); if (e && e.classList.contains('på') && vises(e)) return e; } return null; }
+  function blinkLapp(tekst) { if (tekst) { merke.textContent = tekst; clearTimeout(lappTid); lappTid = setTimeout(() => { merke.textContent = 'Spillet står på pause til du svarer'; }, 3500); }
+    merke.classList.remove('blink'); void merke.offsetWidth; merke.classList.add('blink'); }
+  function ettOmGangen() { const B = document.body, k = aktiv() ? kortVenter() : null, v = !!k && B.classList.contains('kort');
+    if (B.classList.contains('kortvent') !== v) B.classList.toggle('kortvent', v);
+    if (!k) return;
+    // én linje: stripa «⏭ Svar på kortet først …» (flyt.js) og linja i banneret (forsvar) blir borte, lappen under kortet sier det
+    const f = $('flytkort'); if (f && f.classList.contains('på') && /kortet først|venter på svaret ditt/.test(f.textContent)) { f.classList.remove('på'); blinkLapp('Svar på kortet først – farten du valgte, gjelder etterpå'); }
+    for (const l of document.querySelectorAll('#alarm .alinje')) if (/kortet først|venter på svaret ditt/.test(l.textContent) && !l.hidden) l.hidden = true; }
+  document.addEventListener('click', e => { if (!document.body.classList.contains('kortvent') || !e.target || !e.target.closest || !e.target.closest(SPERR)) return;
+    e.preventDefault(); e.stopImmediatePropagation(); blinkLapp('Svar på kortet først'); }, true);
+  setInterval(() => { try { ettOmGangen(); vent(); lag(); underAlarm(); pause(); løft(); const l = løftet.size > 0; if (document.body.classList.contains('mkomloft') !== l) document.body.classList.toggle('mkomloft', l); } catch (e) { /* neste runde */ } }, 150);
   // (kritikerløkka 26. nov) LØFT og SELV kan utvides av andre filer (kompakt.js legger til Selskapet m.fl.)
-  Object.assign(Skjermlag, { LØFT, lag, pause, løft, vent, angrepPågår, rekke: () => o.slice(), pauset: () => pauset, merke: () => merke.classList.contains('på'), løftet: () => [...løftet.keys()].map(e => e.id) });
+  Object.assign(Skjermlag, { LØFT, BORT, ettOmGangen, kortVenter, lag, pause, løft, vent, angrepPågår, rekke: () => o.slice(), pauset: () => pauset, merke: () => merke.classList.contains('på'), løftet: () => [...løftet.keys()].map(e => e.id) });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

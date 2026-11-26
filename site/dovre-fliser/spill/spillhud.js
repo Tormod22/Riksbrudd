@@ -104,7 +104,12 @@ body.kort.smal #flismer::before{ display:none; } body.kort.smal .stats > div#fli
 body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyframes kommeropp{ from{ opacity:0; translate:0 10px; } }
 #mkommer{ position:fixed; left:calc(8px + env(safe-area-inset-left,0px)); right:calc(52px + env(safe-area-inset-right,0px)); bottom:calc(64px + env(safe-area-inset-bottom,0px)); z-index:6; display:none; gap:4px; padding:5px; flex-wrap:wrap; justify-content:center; background:rgba(22,17,10,.96); border:1px solid #8a7440; border-radius:5px; box-shadow:0 6px 18px rgba(0,0,0,.6); }
 #mkommer.på{ display:flex; animation:kommeropp .16s ease-out; } #mkommer button{ flex:0 0 68px; }
-@media (prefers-reduced-motion:reduce){ #kommer.på, #mkommer.på{ animation:none; } }`;
+@media (prefers-reduced-motion:reduce){ #kommer.på, #mkommer.på{ animation:none; } }
+/* (kritikerløkka r2, Jonas: «Mer» og «Krig» lyste begge) – når Neste-lappen peker på en fane, får fanen en liten blinkende prikk i hjørnet,
+   ikke en lys ramme som ser ut som den valgte fanen */
+:is(#kommando,#mkom) button.traadpek{ outline:none !important; animation:none; }
+:is(#kommando,#mkom) button.traadpek::after{ content:''; position:absolute; right:5px; top:5px; width:8px; height:8px; border-radius:50%; background:#e8c75a; box-shadow:0 0 0 2px rgba(20,16,10,.9); animation:traadprikk 1.4s ease-in-out infinite; }
+@keyframes traadprikk{ 50%{ opacity:.35; } } @media (prefers-reduced-motion:reduce){ :is(#kommando,#mkom) button.traadpek::after{ animation:none; } }`;
   document.head.appendChild(css);
 
   // ---------- kommandolinja ----------
@@ -132,7 +137,9 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
   document.addEventListener('pointerdown', e => { if (komMerÅpen && !kommer.contains(e.target) && !mkommer.contains(e.target) && !merKn.includes(e.target)) åpneKomMer(false); });
   // tilleggene som finnes nå, flyttes inn i raden bak «Mer» når de er flere enn én (én alene står i linja)
   function fordel() { const T = KN.filter(K => K.tillegg && !K.el.hidden), samle = T.length > 1; for (const K of KN) if (K.tillegg) { const f1 = samle ? kommer : bar, f2 = samle ? mkommer : mbar; if (K.el.parentNode !== f1) f1.insertBefore(K.el, f1 === bar ? merKn[0] : null); if (K.el2.parentNode !== f2) f2.insertBefore(K.el2, f2 === mbar ? merKn[1] : null); }
-    const noePå = samle && T.some(K => K.el.classList.contains('på'));
+    // (kritikerløkka r2, Jonas: «to faner lyser samtidig») – «Mer» lyser bare når lista er åpen, eller når det som er åpent ligger bak den
+    // og ingen av de faste fanene (Leir, Folk, Tropper, Krig, Deg) lyser
+    const fastPå = KN.slice(0, FASTE).some(K => K.el.classList.contains('på')), noePå = samle && !fastPå && T.some(K => K.el.classList.contains('på'));
     // RUNDE 13 (kritiker G: «MER +8» øverst og «Mer 4» nederst betyr to ulike ting): knappen nederst heter «Mer» uten tall (tallet så ut som
     // fire uleste meldinger); forklaringen sier hvor mange kommandoer og hvilke. Flisa øverst heter «+8 tall».
     const hva = `Mer|${T.length} kommandoer til: ${T.map(K => K.navn).join(', ')}`;
@@ -146,8 +153,8 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
   // RUNDE 13 (kritiker H: «i 3D forsvinner Folk fra toppstripa»): Folk er viktig og går sist inn bak flisa (før: foran strøm og diesel)
   const UT = ['sHvor', 'sKrig', 'sOlje', 'sMaal', 'sStaal', 'sBetong', 'sTre', 'sStrom', 'sDiesel', 'sFolk'], ORD = { sKrig: 'Kontroll', sHvor: 'Du er' };
   const mer = document.createElement('div'); mer.id = 'flismer'; mer.dataset.ikon = 'mer'; mer.setAttribute('role', 'button'); mer.setAttribute('aria-label', 'Flere tall'); mer.dataset.tips = 'Flere tall|Tallene som ikke fikk plass på raden. Trykk for å se dem.'; mer.dataset.ord = 'tall'; const merTall = document.createElement('b'); mer.appendChild(merTall);
-  const merListe = document.createElement('div'); merListe.id = 'flismerliste'; document.body.appendChild(merListe); let merSig = '', merÅpen = false;
-  function fyllMer() { const S = document.querySelector('.stats'); if (!S) return; const rader = [...S.children].filter(d => d.dataset.mer && !d.hidden && !d.dataset.tom && !d.dataset.teknisk), sig = rader.map(d => d.textContent).join('|'); if (sig === merListe.dataset.sig) return; merListe.dataset.sig = sig; merListe.textContent = '';
+  const merListe = document.createElement('div'); merListe.id = 'flismerliste'; document.body.appendChild(merListe); let merSig = '', merÅpen = false, merAnt = 0;
+  function fyllMer() { const S = document.querySelector('.stats'); if (!S) return; const rader = [...S.children].filter(d => d.dataset.mer && !d.hidden && !d.dataset.tom && !d.dataset.teknisk && !(d.dataset.s === 'sVaer' && tlfVær.classList.contains('på') && !tlfVær.dataset.kort)), sig = rader.map(d => d.textContent).join('|'); if (sig === merListe.dataset.sig) return; merListe.dataset.sig = sig; merListe.textContent = '';
     for (const d of rader) { const b = document.createElement('button'), o = d.querySelector('span:not([id])'), v = d.querySelector('b'); if (d.dataset.ikon) b.dataset.ikon = d.dataset.ikon; const n = document.createElement('span'); n.textContent = d.dataset.ord || ETIKETT[d.dataset.s] || (d.dataset.s === 'sVaer' ? 'Vær' : '') || (o ? o.textContent.trim() : ''); const t = document.createElement('b'); t.textContent = v ? v.textContent : ''; if (v && v.style.color) t.style.color = v.style.color; b.append(n, t); if (d.dataset.tips) b.dataset.tips = d.dataset.tips; b.onclick = () => { åpneMer(false); d.click(); }; merListe.appendChild(b); } }
   function åpneMer(på) { merÅpen = på; mer.classList.toggle('åpen', på); merListe.classList.toggle('på', på); if (på) { fyllMer(); const r = mer.getBoundingClientRect(); merListe.style.left = Math.max(6, Math.min(window.innerWidth - 230, r.left)) + 'px'; merListe.style.top = r.bottom + 5 + 'px'; } }
   mer.onclick = e => { e.stopPropagation(); åpneMer(!merÅpen); }; document.addEventListener('pointerdown', e => { if (merÅpen && !merListe.contains(e.target) && !mer.contains(e.target)) åpneMer(false); });
@@ -155,7 +162,11 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
     const sig = window.innerWidth + '|' + document.body.className.length + '|' + barn.map(d => (d.hidden || d.dataset.tom || d.dataset.teknisk ? 0 : d.textContent.length)).join(','); if (sig === merSig) { if (merÅpen) fyllMer(); return; } merSig = sig;
     // PC: alt på én rad; telefon (runde 6): raden skal ikke rulles eller kuttes («ingen t…») – det som ikke får plass, står bak «Mer»
     const enRad = () => { if (kort) return S.scrollWidth <= S.clientWidth + 1; let t = null; for (const d of S.children) { if (!d.getClientRects().length) continue; if (t === null) t = d.offsetTop; else if (Math.abs(d.offsetTop - t) > 4) return false; } return true; };
-    const sett = n => { if (kort) delete S.dataset.trang; else S.dataset.trang = String(Math.min(n, 2)); let ant = 0; const navn = []; const k = kort ? n : n - 2; for (const d of barn) { const i = ut.indexOf(d.dataset.s), u = i >= 0 && i < k; if (u) { d.dataset.mer = '1'; if (!d.hidden && !d.dataset.tom && !d.dataset.teknisk) { ant++; navn.push(d.dataset.ord || ETIKETT[d.dataset.s] || (d.dataset.s === 'sVaer' ? 'været' : '')); } } else delete d.dataset.mer; } mer.classList.toggle('på', ant > 0); { const tlf = kort && document.body.classList.contains('smal'), t = tlf ? 'Mer' : '+' + ant, o = tlf ? '▾' : 'tall'; if (merTall.textContent !== t) merTall.textContent = t; if (mer.dataset.ord !== o) mer.dataset.ord = o; }
+    const sett = n => { if (kort) delete S.dataset.trang; else S.dataset.trang = String(Math.min(n, 2)); let ant = 0; const navn = []; const k = kort ? n : n - 2; for (const d of barn) { const i = ut.indexOf(d.dataset.s), u = i >= 0 && i < k; if (u) { d.dataset.mer = '1'; if (!d.hidden && !d.dataset.tom && !d.dataset.teknisk) { ant++; navn.push(d.dataset.ord || ETIKETT[d.dataset.s] || (d.dataset.s === 'sVaer' ? 'været' : '')); } } else delete d.dataset.mer; } mer.classList.toggle('på', ant > 0); merAnt = ant;
+      // (kritikerløkka r2, Jonas og Ingrid: «to Mer» – topplinja og fanelinja – og «+7 tall» på PC er uforståelig): flisa heter «Tall ▾» på
+      // stående telefon og «Flere tall» på PC og liggende telefon (med prikk-ikonet); «Mer» er bare knappen i fanelinja/kommandolinja.
+      // Ordene er Claudes forslag.
+      { const smal = kort && document.body.classList.contains('smal'), t = smal ? 'Tall' : 'Flere', o = smal ? '▾' : 'tall'; if (merTall.textContent !== t) merTall.textContent = t; if (mer.dataset.ord !== o) mer.dataset.ord = o; }
       // (runde 13) forklaringen sier hvilke tall som står bak flisa
       const tips = `Flere tall|${ant} tall fikk ikke plass på raden${navn.filter(Boolean).length ? ': ' + navn.filter(Boolean).join(', ').toLowerCase() : ''}. Trykk for å se dem.`; if (mer.dataset.tips !== tips) mer.dataset.tips = tips; mer.setAttribute('aria-label', `${ant} tall til`); return ant; };
     let n = 0; sett(0); while (!enRad() && n < ut.length + 2) sett(++n);
@@ -216,18 +227,21 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
   function visTlfVær() { const B = document.body, v = $('sVaer'), kn = document.querySelector('.top .knapper'), st = $('oppstart');
     const på = B.classList.contains('kort') && B.classList.contains('smal') && !B.classList.contains('gaar') && !!v && !!kn && !(st && st.classList.contains('på')) && !!v.textContent.trim() && kn.getClientRects().length > 0;
     if (!på) { if (tlfVær.classList.contains('på')) tlfVær.classList.remove('på'); return; }
-    const t = v.textContent.trim(); if (tvB.textContent !== t) tvB.textContent = t;
+    // (kritikerløkka r2, Jonas: «været står to ganger før leiren er lagt») – står været i raden øverst (det får plass der før leiren), vises ikke flisa her
+    { const d = v.parentElement; if (d && !d.dataset.mer && d.getClientRects().length) { if (tlfVær.classList.contains('på')) tlfVær.classList.remove('på'); return; } }
     const k = kn.getBoundingClientRect(), x0 = 6, w = Math.round(k.left - 8 - x0); if (w < 60) { tlfVær.classList.remove('på'); return; }
     const S2 = { left: x0 + 'px', top: Math.round(k.top) + 'px', height: Math.round(k.height) + 'px', maxWidth: w + 'px' }; for (const n in S2) if (tlfVær.style[n] !== S2[n]) tlfVær.style[n] = S2[n];
+    // (kritikerløkka r2: «Skyet, 1…» i 3D, der knapperaden er bredere) – får ikke hele teksten plass, står bare temperaturen (og vinden);
+    // hele været står i lista bak «Tall ▾» og i forklaringen
+    const hel = v.textContent.trim(), kort = (hel.match(/-?[\d,]+\s*°C.*$/) || [hel])[0].trim();
+    if (tvB.textContent !== hel) tvB.textContent = hel; tlfVær.classList.add('på');
+    if (tvB.scrollWidth > tvB.clientWidth + 1 && tvB.textContent !== kort) tvB.textContent = kort;
+    tlfVær.dataset.kort = tvB.textContent !== hel ? '1' : '';
     // ikonet: det samme som flisa i raden bruker (CSS-variabelen --kn/maske fra ikoner.js leses av flisa)
     if (!tlfVær.dataset.ikonSatt) { const d = v.parentElement, m = d ? getComputedStyle(d, '::before').webkitMaskImage || getComputedStyle(d, '::before').maskImage : ''; if (m && m !== 'none') { tlfVær.style.setProperty('--ikon-vaer', m); tlfVær.dataset.ikonSatt = '1'; } }
     tlfVær.classList.add('på'); }
   setInterval(visTlfVær, 1000);
-  // (kritikerløkka 26. nov, Jonas: «− 6 305 kr» la seg over 3D-knappen) på telefon står kasselappen (spill/flistips.js lager den under kassa)
-  // til høyre under knapperaden, der det er ledig (loggen står til venstre)
-  new MutationObserver(ms => { if (!document.body.classList.contains('kort')) return; const top = document.querySelector('.top'); if (!top) return;
-    for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 && n.classList.contains('pengelapp')) { n.style.left = 'auto'; n.style.right = 'calc(10px + env(safe-area-inset-right,0px))'; n.style.top = Math.round(top.getBoundingClientRect().bottom + 6) + 'px'; } })
-    .observe(document.body, { childList: true });
+  // (kritikerløkka r2) kasselappen («− 5 000 kr») plasseres nå av spill/flistips.js der den ikke dekker knapper (før: observatøren her)
   setInterval(oppdater, 400); window.addEventListener('resize', oppdater); window.addEventListener('riksbrudd-spill', () => setTimeout(oppdater, 100)); oppdater();
   // «Tekniske tall» i ☰: moh., MB lastet og bilder per sekund
   { const m = $('lagmeny'); if (m) { const b = document.createElement('button'); b.id = 'tekniskknapp'; b.textContent = 'Tekniske tall'; let på = false; try { på = localStorage.getItem('riksbrudd-teknisk') === '1'; } catch (e) { på = false; } const sett = () => { document.body.classList.toggle('teknisk', på); b.textContent = 'Tekniske tall: ' + (på ? 'vises' : 'skjult'); }; b.onclick = () => { på = !på; try { localStorage.setItem('riksbrudd-teknisk', på ? '1' : '0'); } catch (e) { /* sperret */ } sett(); }; sett();
@@ -237,5 +251,5 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
   { const m = $('lagmeny'); if (m && typeof INFRA_FOKUS !== 'undefined') { const b = document.createElement('button'); b.id = 'allemerker'; const sett = () => { b.textContent = 'Kartmerker: ' + (INFRA_FOKUS.alt ? 'alle' : 'de viktige'); b.title = 'Bruer, tunneler, kraftverk og ferjekaier: bare de som betyr noe for det du gjør, eller alle'; };
       b.onclick = () => { INFRA_FOKUS.alt = !INFRA_FOKUS.alt; try { localStorage.setItem('riksbrudd-allemerker', INFRA_FOKUS.alt ? '1' : '0'); } catch (e) { /* sperret */ } sett(); if (typeof skitten !== 'undefined') skitten = true; }; sett();
       const inf = [...m.querySelectorAll('button')].find(q => /^Infrastruktur/.test(q.textContent)); if (inf && inf.parentNode !== m) inf.parentNode.insertBefore(b, inf.nextSibling); } }
-  window.SpillHud = { oppdater, aktiv: () => document.body.classList.contains('spill'), knapper: () => KN.filter(K => !K.el.hidden).map(K => K.k), bakMer: () => KN.filter(K => K.tillegg && !K.el.hidden && K.el.parentNode === kommer).map(K => K.k), åpneKomMer, FASTE, telefon: () => mbar.classList.contains('på'), mer: () => ({ antall: mer.classList.contains('på') ? +merTall.textContent : 0, åpen: merÅpen }), åpneMer, passInn: () => { merSig = ''; passInn(); } };
+  window.SpillHud = { oppdater, aktiv: () => document.body.classList.contains('spill'), knapper: () => KN.filter(K => !K.el.hidden).map(K => K.k), bakMer: () => KN.filter(K => K.tillegg && !K.el.hidden && K.el.parentNode === kommer).map(K => K.k), åpneKomMer, FASTE, telefon: () => mbar.classList.contains('på'), mer: () => ({ antall: mer.classList.contains('på') ? merAnt : 0, åpen: merÅpen, navn: merTall.textContent + ' ' + (mer.dataset.ord || '') }), åpneMer, passInn: () => { merSig = ''; passInn(); } };
 })();
