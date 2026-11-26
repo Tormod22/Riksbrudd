@@ -60,7 +60,8 @@
   #oppstart .flaggboks h3{ display:none; } #oppstart .flaggboks canvas{ width:150px; height:100px; }
   /* (kritikerløkka 26. nov, Jonas: «flagget henger over overskriften Farge 3 når du ruller») flagget står fast øverst, mindre, og det som
      ruller inn under det tones ut i panelets farge i stedet for å kuttes midt i en overskrift */
-  #oppstart .to>.flaggboks{ padding:20px 0 4px; box-shadow:0 14px 12px -2px #16120c; } #oppstart .flaggboks canvas{ width:120px; height:80px; } }
+  #oppstart .to>.flaggboks{ padding:20px 0 4px; } #oppstart .flaggboks canvas{ width:120px; height:80px; }
+  #oppstart .to>.flaggboks::after{ content:''; position:absolute; left:0; right:0; top:100%; height:28px; pointer-events:none; background:linear-gradient(#16120c 30%, rgba(22,18,12,0)); } }
 #oppstart button.valg{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); cursor:pointer; min-height:40px; padding:4px 10px; }
 #oppstart button.valg.på{ border-color:var(--hover); background:#3a3022; box-shadow:inset 0 0 0 1px var(--hover); }
 #oppstart button.farge{ width:34px; height:34px; min-height:0; padding:0; border:2px solid #0006; cursor:pointer; }
