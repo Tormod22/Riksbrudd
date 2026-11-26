@@ -80,4 +80,11 @@ const lapp = (t, x, y, prio, retning = -1, w = 80) => ({ t, x, y, w, h: E.LINJE,
   E.nullstill(); E.samleSted(S); for (const q of L) { const y = E.tekst(g, q.t, q.x, q.y, -1, q.prio); g.fillText(q.t, q.x, y); } E.tegnAlle(g);
   const tekst = tegnet.join(''); ok(/Leiren: 3 lag, 1 kjøretøy/.test(tekst) && !/Lag 1/.test(tekst) && /Røvere/.test(tekst) && /Lag fjern/.test(tekst) && E.overlapp() === 0 && E.samling() && E.samling().n.alle === 4,
     'i rammen: én samlelapp, fienden og laget langt unna står, ingen overlapp (' + E.tegnet().map(n => n.t).join(' | ') + ')'); }
+// (kritikerløkka r3, Jonas: «Speiderbil 1» så ut til å ligge midt i fjorden) – merket utenfor skjermen: navnet klemmes ikke inn; fienden står med pil
+{ const P = E.REGLER.prio, W = 390, H = 800, kant = [{ r: [-4000, H - 6, 9000, 4000], prio: 9, tekst: false }];
+  const bil = lapp('Speiderbil 1', 100, H + 2, P.kjøretøy), fi = lapp('Røvere 1', 200, H + 4, P.fiende), nær = lapp('Lag nær', 300, 400, P.egne);
+  E.plasser([bil, fi, nær], kant, E.REGLER, [W, H]);
+  ok(!bil.vis && fi.vis && !!fi.pil && nær.vis && !nær.pil, `merket utenfor skjermen: bilnavnet skjules, fienden står med pil, laget midt på uten pil (bil ${bil.vis}, fiende ${fi.vis}/${!!fi.pil}, lag ${nær.vis}/${!!nær.pil})`);
+  const hind = [{ r: [40, 330, 120, 60], prio: 9, tekst: false }], flyttet = lapp('Feltbil', 100, 360, P.kjøretøy);
+  E.plasser([flyttet], hind, E.REGLER, [W, H]); ok(flyttet.vis && (!flyttet.pil || Math.abs(flyttet.py - 360) > 20), `navn som er flyttet: pil bare når det står langt fra merket (py ${flyttet.py}, pil ${!!flyttet.pil})`); }
 process.exit(feil ? 1 : 0);
