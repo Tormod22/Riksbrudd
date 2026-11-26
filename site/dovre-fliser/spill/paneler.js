@@ -14,7 +14,9 @@
   // RUNDE 6 (kritikeren: «Leir og Folk åpnes til venstre, Tropper og Deg til høyre – uten system»). REGELEN NÅ: alt du åpner fra bunnmenyen
   // (Leir, Folk, Tropper, Krig, Deg – og Region, Verden og Sjø under «Mer») åpnes til VENSTRE, ett om gangen; det som hører til et panel
   // eller et lag (Stridsregler, Tiltak, Sekken fra Deg) og tegnforklaringen åpnes til HØYRE ved siden av; kort med valg står i midten.
-  const PLASS = { venstre: ['leirmeny', 'folkmeny', 'samfunnmeny', 'region', 'krig', 'panel', 'flytgruppe', 'karakterark', 'tropppanel', 'verdenpanel', 'sjopanel'], høyre: ['krigpanel', 'sekk', 'stridpanel', 'forklaring'], midt: ['personkort', 'evpanel'] };
+  // (kritikerløkka r2) Selskapet står også til venstre (left:10px i selskap-visning.js): åpnes det mens Tropper (eller Leir, Folk …) står,
+  // lukkes det andre – før lå de oppå hverandre på PC (Tropper lukket Selskapet, men ikke omvendt)
+  const PLASS = { venstre: ['leirmeny', 'folkmeny', 'samfunnmeny', 'region', 'krig', 'panel', 'flytgruppe', 'karakterark', 'tropppanel', 'verdenpanel', 'sjopanel', 'selskap'], høyre: ['krigpanel', 'sekk', 'stridpanel', 'forklaring'], midt: ['personkort', 'evpanel'] };
   const plass = id => Object.keys(PLASS).find(p => PLASS[p].includes(id)) || null;
   // hvilke åpne paneler som må vike når «ny» åpnes (smal = telefon: venstre og høyre er samme plass)
   function viker(ny, åpne, smal) { const p = plass(ny); if (!p) return []; const samme = q => q === p || (smal && p !== 'midt' && q !== 'midt' && q !== null); return åpne.filter(id => id !== ny && samme(plass(id))); }

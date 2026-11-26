@@ -88,7 +88,7 @@ body.kort #leirmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + ${B}); 
   const REGLER = { panelHøyde: '44vh', hver: 150, lappLuft: 6 };
   const aktiv = () => !navigator.webdriver || window.Kompakt.test === true;
   // spill/paneler.js holder alt annet til ett panel om gangen på telefon; Selskapet var ikke med der (det lå oppå Tropper og omvendt)
-  const ENE = ['selskap'], ANDRE = () => (window.Paneler && Paneler.PLASS ? [...Paneler.PLASS.venstre, ...Paneler.PLASS.høyre] : ['leirmeny', 'folkmeny', 'tropppanel', 'karakterark', 'krig', 'region', 'panel']);
+  const ENE = ['selskap'], ANDRE = () => (window.Paneler && Paneler.PLASS ? [...Paneler.PLASS.venstre, ...Paneler.PLASS.høyre].filter(id => !ENE.includes(id)) : ['leirmeny', 'folkmeny', 'tropppanel', 'karakterark', 'krig', 'region', 'panel']);
   const LØFT_TIL = ['selskap', 'funnpanel', 'lapppanel', 'logghel', 'lagremeny', 'ressursvalg', 'gaavalg'];
   const SKJUL_VED_MÅL = ['panel', 'selskap', 'tropppanel', 'leirmeny', 'folkmeny', 'karakterark', 'degmeny', 'krig', 'region', 'samfunnmeny', 'verdenpanel', 'sjopanel', 'krigpanel', 'flytgruppe', 'stridpanel', 'sekk', 'nestelapp', 'flismerliste', 'mkommer'];
   const css2 = document.createElement('style');
