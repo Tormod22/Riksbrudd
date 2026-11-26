@@ -6,8 +6,16 @@ let feil = 0; const ok = (v, t) => { console.log((v ? 'ok   ' : 'FEIL ') + t); i
 function logg() { const L = [], d = D.lag(); return { L, d, inn(t, nå) { const r = d.vurder(t, L, nå); if (!r) return null; if (r.fjern >= 0) L.splice(r.fjern, 1); L.unshift(r.tekst); L.length = Math.min(L.length, 6); return r; } }; }
 
 // 1: samme melding fire ganger blir én linje med ×4
-{ const g = logg(); for (let i = 0; i < 4; i++) g.inn('Kamp om Bryne: ingen tar tettstedet mens begge sider er der.', 100 + i * 10);
-  ok(g.L.length === 1 && g.L[0] === 'Kamp om Bryne: ingen tar tettstedet mens begge sider er der. (×4)', 'fire like blir én linje med «(×4)»: ' + g.L.join(' | ')); }
+{ const g = logg(); for (let i = 0; i < 5; i++) g.inn('Kamp om Bryne: ingen tar tettstedet mens begge sider er der.', 100 + i * 10);
+  ok(g.L.length === 1 && g.L[0] === 'Kamp om Bryne: ingen tar tettstedet mens begge sider er der. (×5)', 'fem like blir én linje med «(×5)»: ' + g.L.join(' | ')); }
+// (løkka r1) gjentakelser mellom trinnene (2, 5, 10, 25 …) flyttes ikke øverst igjen: 22 like gir bare fire visninger
+{ const g = logg(); let vist = 0; g.inn('Noe annet skjedde.', 0);
+  for (let i = 0; i < 22; i++) if (g.inn('Leiesoldater 1: Under ild!', 1 + i)) vist++;
+  ok(vist === 4 && g.L[0] === 'Leiesoldater 1: Under ild! (×10)' && g.L.length === 2, '22 like: vist 4 ganger (1, ×2, ×5, ×10), ikke 22: ' + vist + ' | ' + g.L.join(' | ')); }
+// (løkka r1, kritiker I: «Speidertropp 1 har lastet nødlageret. (×22)») samme hendelse bare én gang per døgn
+{ const g = logg(); const t = 'Speidertropp 1 har lastet nødlageret. Gi troppen ordre hjem til leiren – da betaler Bygdelaget.';
+  const r = [g.inn(t, 0), g.inn(t, 0.5), g.inn(t, 300), g.inn(t, 1500)].map(x => (x ? 1 : 0)).join('');
+  ok(r === '1001' && !/×/.test(g.L[0]), 'nødlageret lastet: én gang per døgn (' + r + ')'); }
 { const g = logg(); g.inn('Ravnsunds lastebil er under ild fra fienden (20 m)!', 5); g.inn('Noe annet.', 6); g.inn('Ravnsunds lastebil er under ild fra fienden (35 m)!', 7);
   ok(g.L.length === 2 && g.L[0] === 'Ravnsunds lastebil er under ild fra fienden (35 m)! (×2)' && g.L[1] === 'Noe annet.', 'tallene regnes ikke med, nyeste tekst øverst'); }
 { const g = logg(); g.inn('Kamp om Bryne: ingen tar tettstedet mens begge sider er der.', 0); g.inn('Kamp om Bryne: ingen tar tettstedet mens begge sider er der.', 500);

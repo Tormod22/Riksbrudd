@@ -18,6 +18,12 @@
     for (const f of VIST) V[f] = vist[f];
     V.nøkkel = S.årstid + '|' + Math.round(vist.sky * 40) + '|' + Math.round(vist.dis * 40);
   }
+  // teksten om sikten etter en værmelding: nå, og om den blir bedre eller dårligere (målet = sikten i det nye været)
+  function siktTekst(V) {
+    const nå = Math.round(V.sikt * 100), m = Vaer.VÆR[S.vær] && isFinite(Vaer.VÆR[S.vær].sikt) ? Math.round(Vaer.VÆR[S.vær].sikt * 100) : nå;
+    if (Math.abs(m - nå) < 5) return nå < 100 ? ` Sikten er ${nå} % av vanlig.` : '';
+    return m > nå ? ` Sikten er ${nå} % av vanlig nå og blir bedre den neste timen.` : ` Sikten går ned mot ${m} % av vanlig (nå ${nå} %).`;
+  }
   function oppdater(melding) {
     const h = (6 + tid / TIME) % 24, V = Vaer.tilstand(S, h, tid), før = window.VAER;
     // (runde 6, 19. nov – «Regn» øverst, men blå himmel i 3D): den glattede kopien ble bare oppdatert i 3D-bildene. Regnet det
@@ -33,7 +39,9 @@
     TRE_U.uHostLov.value = V.høst; TRE_U.uNaken.value = S.årstid === 'vinter' ? 1 : 0;
     if (!før || før.mål !== window.VAER.mål) {
       for (const s of ENHETER) s.siktSkitten = true;
-      if (melding) logg(melding + (V.sikt < 1 ? ` Sikten er ${Math.round(V.sikt * 100)} % av vanlig.` : ''));
+      // (løkka r1, kritiker I: «Det klarner opp. Sikten er 30 % av vanlig») været blandes over en time eller to (Vaer.blandet), så
+      // sikten nå kan være langt fra sikten i det nye været: teksten sier hvor den er nå og hvilken vei den går
+      if (melding) logg(melding + siktTekst(V));
       skitten = true;
     }
     knappÅ.textContent = 'Årstid: ' + V.årstidNavn; knappV.textContent = 'Vær: ' + (S.låst ? V.navn : 'automatisk (' + V.navn.toLowerCase() + ')');

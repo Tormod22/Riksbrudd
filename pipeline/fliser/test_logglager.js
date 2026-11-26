@@ -33,6 +33,13 @@ ok(LL.oppsummer(LL.tom(leir)) === null, 'ingen tidligere meldinger: ingen oppsum
   const B = LL.les(LL.pakk(A), leir); B.økt += 1; ok(LL.oppsummer(B) === null, 'F5 rett etter F5 gir ingen velkomst');
   // ingen tid har gått i forrige økt
   let C = LL.tom(leir); LL.legg(C, 'Røysland er vårt.', 0); LL.legg(C, 'Ola falt.', 0); C = LL.les(LL.pakk(C), leir); C.økt += 1; ok(LL.oppsummer(C) === null, 'ingen velkomst når ingen tid har gått (06:00–06:00)'); }
+// (løkka r1, kritiker J: velkomsten viste dag 1 12:50–13:12 da spillet sto på 16:34) bare det siste som skjedde, med klokkeslett
+{ let A = LL.tom(leir); LL.legg(A, 'Brakke er bestilt.', 400); LL.legg(A, 'Ola Moen falt i kampen.', 412); LL.legg(A, 'Hogstlaget fant skog.', 420);
+  A = LL.les(LL.pakk(A), leir); A.økt += 1; const o = LL.oppsummer(A, LL.REGLER, 634);
+  ok(o && o.stille && o.antall === 1 && /falt/.test(o.viktige[0].tekst) && o.viktige[0].klokke === '12:52' && o.nå.klokke === '16:34', 'gamle meldinger: bare den siste viktige, og klokka spillet står på (' + (o && o.nå.klokke) + ')');
+  let B = LL.tom(leir); LL.legg(B, 'Brakke er bestilt.', 100); LL.legg(B, 'Ola Moen falt i kampen.', 560); LL.legg(B, 'Vaktlaget er sendt mot Otta.', 600);
+  B = LL.les(LL.pakk(B), leir); B.økt += 1; const p = LL.oppsummer(B, LL.REGLER, 634);
+  ok(p && !p.stille && p.antall === 2 && !p.viktige.some(v => /Brakke/.test(v.tekst)), 'bare meldingene fra de siste ' + LL.REGLER.nylig + ' minuttene før lagringen'); }
 { const D = require('../../site/dovre-fliser/spill/loggdemp.js').lag();
   ok(D.vurder('Spillform: Vanlig · Hold byen.', [], 0, true) === null && D.vurder('Ravnsund (rød) holder til i Rognan, 8 km nord for leiren.', [], 0, true) === null && D.vurder('Velkommen tilbake, Ivar. Har har 3 mill. kr i kassa.', [], 0, true) === null, 'omlasting: innledningen skrives ikke i loggen');
   ok(!!D.vurder('Spillform: Vanlig · Hold byen.', [], 0, false), 'nytt spill: innledningen skrives'); }

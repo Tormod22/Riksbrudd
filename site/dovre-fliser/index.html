@@ -1224,7 +1224,7 @@ function visPanel() {
   }
   const M = document.getElementById('menn'); M.innerHTML = '';
   s.menn.forEach((q, i) => { const b = document.createElement('button'); b.className = i === s.leder ? 'leder' : '';
-    b.textContent = q.navn; const sp = document.createElement('span'); sp.textContent = (i === s.leder ? 'lagfører' + (q.rolle === 'lagfører' ? '' : ' · ' + q.rolle) : q.rolle) + (q.hp <= 0 ? ' · falt' : q.hp < 1 ? ' · såret' : ' · lojalitet ' + Math.round(q.loy * 100) + ' %');
+    b.textContent = q.navn; const sp = document.createElement('span'); sp.textContent = (i === s.leder ? 'lagfører' + (q.rolle === 'lagfører' ? '' : ' · ' + q.rolle) : q.rolle) + (q.hp <= 0 ? ' · falt' : q.hp < 1 ? ' · såret' : s.karakter ? '' : ' · lojalitet ' + Math.round(q.loy * 100) + ' %');
     if (q.hp <= 0) b.style.opacity = '.45';
     b.appendChild(sp); if (s.side === 'blå') b.onclick = () => KOMMANDO({ type: 'lagfører', lag: KOMMANDO.nid(s), mann: i }); M.appendChild(b); });
   document.getElementById('hint').textContent = s.side !== 'blå' ? (s.ai && window.Fraksjoner ? Fraksjoner.FRAKSJONER[s.side].navn + ' – motstander, styrt av AI-en.' : 'Fiendtlig patrulje.') : Terreng.slattUt(s.menn) ? 'Laget er slått ut og skyter ikke lenger. Trekk det tilbake.' :

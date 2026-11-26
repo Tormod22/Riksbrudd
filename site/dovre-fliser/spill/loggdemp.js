@@ -19,6 +19,11 @@
     minForklaring: 24,   // tegn: kortere setninger regnes ikke som forklaring
     værHver: 360,        // spillminutter: det samme store værskiftet meldes ikke oftere
     maks: 400,           // så mange ulike meldinger huskes (de eldste glemmes)
+    // (løkka r1, kritiker I: «Speidertropp 1 har lastet nødlageret. (×22)», «Under ild! (×17)») en melding som gjentar seg innen vinduet,
+    // flyttes bare øverst i loggen igjen når tallet når et av disse trinnene – ellers telles den stille (den står der alt)
+    visVed: [2, 5, 10, 25, 50, 100, 250, 500, 1000],
+    // meldinger som bare skal stå én gang per ENGANG.hver spillminutter (samme hendelse meldt fra flere steder i koden)
+    ENGANG: { re: /har lastet nødlageret|har med seg .+\. Ta vedkommende med/, hver: 1440 },
     RUTINE: [
       { slag: 'egenpleie', re: /^Du (drikker deg utørst|spiser i leiren)/, hver: 1440 },
       { slag: 'hogst', re: /^(Hogstlaget fant skog|Hogstfeltet er hogd)/, hver: 480 },
@@ -39,7 +44,7 @@
   const setninger = t => String(t).split(/(?<=[.!?…])\s+(?=[A-ZÆØÅ«(📻])/);
 
   function lag(R = REGLER, tips = new Set()) {
-    const sist = new Map(), sett = new Map(), rutine = {}; let vær = { stor: false, t: -1e9, tekst: '' };
+    const sist = new Map(), sett = new Map(), engang = new Map(), rutine = {}; let vær = { stor: false, t: -1e9, tekst: '' };
     const nær = (a, b, v) => Math.abs(a - b) <= v;
     function glem(kart) { if (kart.size <= R.maks) return; const n = kart.size - R.maks; let i = 0; for (const k of kart.keys()) { if (i++ >= n) break; kart.delete(k); } }
     // svar: null = hold tilbake, ellers { tekst, fjern } (fjern = indeksen til en gammel linje som skal bort, −1 = ingen)
@@ -54,6 +59,8 @@
         else if (vær.stor && /^Det klarner opp/.test(t)) vær = { stor: false, t: nå, tekst: første };
         else return null;
       }
+      // ENGANG: samme hendelse (første setning, uten tall) bare én gang per ENGANG.hver
+      if (R.ENGANG && R.ENGANG.re.test(t)) { const ek = nøkkel(setninger(t)[0]), e = engang.get(ek); if (e !== undefined && nær(nå, e, R.ENGANG.hver)) return null; engang.set(ek, nå); glem(engang); }
       // 2: rutine
       for (const r of R.RUTINE) if (r.re.test(t)) { if (rutine[r.slag] !== undefined && nær(nå, rutine[r.slag], r.hver)) return null; rutine[r.slag] = nå; break; }
       // 4: tips og forklaringer som alt er vist
@@ -68,12 +75,15 @@
         t = ut.join(' ');
       } else if (R.tips.test(t)) { if (tips.has(t)) return null; tips.add(t); }
       // 1: samme melding innen vinduet
-      const k = nøkkel(t), før = sist.get(k), n = før && nær(nå, før.t, R.vindu) ? før.n + 1 : 1;
+      const k = nøkkel(t), før = sist.get(k);
+      const n = før && nær(nå, før.t, R.vindu) ? før.n + 1 : 1;
       sist.delete(k); sist.set(k, { t: nå, n }); glem(sist);
+      // gjentakelser mellom trinnene telles, men vises ikke på nytt
+      if (n > 1 && R.visVed && !R.visVed.includes(n)) return null;
       const fjern = n > 1 ? linjer.findIndex(l => nøkkel(l) === k) : -1;
       return { tekst: n > 1 ? t + ' (×' + n + ')' : t, fjern };
     }
-    return { vurder, tips, nullstill: () => { sist.clear(); sett.clear(); for (const k of Object.keys(rutine)) delete rutine[k]; vær = { stor: false, t: -1e9, tekst: '' }; } };
+    return { vurder, tips, nullstill: () => { sist.clear(); sett.clear(); engang.clear(); for (const k of Object.keys(rutine)) delete rutine[k]; vær = { stor: false, t: -1e9, tekst: '' }; } };
   }
 
   const api = { REGLER, nøkkel, setninger, lag };
