@@ -19,7 +19,7 @@ module.exports = { navn: 'kart (navnelapper uten overlapp, fiender øverst, krig
       for (const m of [5, 2]) { const T = tegnNå(L.x + 120, L.y, m); ut['m' + m] = T.navn.map(n => n.t);
         krev(T.overlapp === 0, `m ${m}: ${T.overlapp} navn oppå hverandre`);
         krev(!T.navn.some(n => n.t === '0 t olje' || /^Leiren til /.test(n.t)), `m ${m}: «0 t olje» eller «Leiren til …» står ved leiren: ${ut['m' + m].join(' | ')}`);
-        krev(T.navn.some(n => n.t === S.fraksjon.navn || n.t.startsWith(S.fraksjon.navn + ' · ')), `m ${m}: leirens navn mangler`);
+        krev(T.navn.some(n => n.t === S.fraksjon.navn || n.t.startsWith(S.fraksjon.navn + ' · ')), `m ${m}: leirens navn mangler (${ut['m' + m].join(' | ')})`);
         const opp = T.navn.filter(n => n.prio < Etikett.REGLER.tving && T.hindre.some(h => over(n.ramme, h))); krev(!opp.length, `m ${m}: navn oppå et merke: ${opp.map(n => n.t).join(', ')}`); }
       // 2) fienden ved leiren: navnet får plassen sin, egne navn flyttes, og merket ligger over alle navn
       VIS.taake = false; const fi = nyttLag('Røvere vakt', L.x + 60, L.y + 40, 'rød'); fi.raid = 1; ENHETER.push(fi); nye.push(fi);
