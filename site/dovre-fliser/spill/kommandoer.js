@@ -95,6 +95,10 @@
         return { fjernet: Lr.planFjern(L, k.pid) }; } });
     K.registrer('riv', { leir: true, sjekk: (k, c) => utenLeir(c) || ukjentBygg(c, k.bygg),
       utfør: (k, c) => { const r = LB().riv(leir(c), k.bygg); if (!r.feil) gi(c)(r.penger); return r; }, beskriv: () => 'river et bygg' });
+    // (kritikerløkka r2) avbestill et bygg i køen som ingen har begynt på: rives, og resten av prisen betales tilbake (alt i én kommando)
+    K.registrer('avbestill', { leir: true, sjekk: (k, c) => utenLeir(c) || ukjentBygg(c, k.bygg),
+      utfør: (k, c) => { const b = finnBygg(c, k.bygg), pris = b ? b.pris || 0 : 0; const r = LB().riv(leir(c), k.bygg); if (r.feil) return r;
+        const rest = Math.max(0, pris - (r.penger || 0)); gi(c)((r.penger || 0) + rest); return { ...r, tilbake: (r.penger || 0) + rest }; }, beskriv: () => 'avbestiller et bygg' });
     K.registrer('flytt', { leir: true,
       sjekk: (k, c) => { const f = utenLeir(c) || ukjentBygg(c, k.bygg); if (f) return f; if (!k.til || !tall(+k.til.x) || !tall(+k.til.y)) return 'Ugyldig plass.';
         const b = finnBygg(c, k.bygg), Lr = LB(); if (Lr.BYGG[b.type].linje) return 'Kan ikke flyttes.'; if (b.arbeid) return 'Bygget er opptatt.';

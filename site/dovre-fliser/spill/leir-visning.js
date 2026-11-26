@@ -568,8 +568,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   // kommet i gang, intet arbeid gjort) kan avbestilles – alle pengene og materialene tilbake (rives det, får du bare en del)
   const avbestillbar = b => !!b && !LB.BYGG[b.type].del && b.igjen > 0 && b.igjen >= (b.totalt || 0) - 1e-6 && !b.arbeid;
   function avbestill(b) { if (!avbestillbar(b)) return false; const B = LB.BYGG[b.type], pris = b.pris || 0;
-    const r = kom({ type: 'riv', bygg: b.id }); if (r.feil) { logg(r.feil); return false; }
-    const rest = Math.max(0, pris - (r.bygg || 0)); if (rest > 0 && window.OppstartSpill && OppstartSpill.gi) OppstartSpill.gi(rest);
+    const r = kom({ type: 'avbestill', bygg: b.id }); if (r.feil) { logg(r.feil); return false; }
     logg(`${B.navn} er avbestilt: ${LB.kroner(pris)} tilbake, og materialene er på lageret igjen.`);
     if (valgtBygg === b.id) { valgtBygg = null; banner.classList.remove('på'); } lagre(); visStatus(); bygg3dPåNytt(true); skitten = true; if (meny) visMeny(); return true; }
 

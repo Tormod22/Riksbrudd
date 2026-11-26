@@ -85,7 +85,7 @@ const B = sider.blå, Lb = B.L;
 const gyldig = (k, t, c = C) => { const r = K.utfør(k, c); sjekk(r.ok, `${t}: gyldig ${JSON.stringify(r).slice(0, 160)}`); return r; };
 const avvist = (k, t, tekst, c = C) => { const r = K.utfør(k, c); sjekk(!r.ok && (!tekst || (tekst instanceof RegExp ? tekst.test(r.feil) : r.feil === tekst)), `${t}: avvist ${JSON.stringify(r).slice(0, 160)}`); return r; };
 // alle typene finnes
-const alle = ['bygg', 'byggPlan', 'plan', 'riv', 'flytt', 'oppgrader', 'reparer', 'prioriter', 'bryter', 'kjøpDiesel', 'kjøpMateriale', 'selgMateriale',
+const alle = ['bygg', 'byggPlan', 'plan', 'riv', 'avbestill', 'flytt', 'oppgrader', 'reparer', 'prioriter', 'bryter', 'kjøpDiesel', 'kjøpMateriale', 'selgMateriale',
   'folk', 'folkFlytt', 'rekrutter', 'kjøpMat', 'troppOpprett', 'troppOppløs', 'troppUtstyr', 'omBord', 'gåAv', 'kjør', 'kjørStopp'];
 sjekk(alle.every(t => K.finnes(t)), 'alle typene er registrert: ' + alle.filter(t => !K.finnes(t)));
 
@@ -149,6 +149,9 @@ gyldig({ type: 'plan', handling: 'fjern', pid: pid2 }, 'plan fjern'); avvist({ t
 // riv: pengene tilbake til riktig kasse
 { const før = B.penger; r = gyldig({ type: 'riv', bygg: kr2.id }, 'riv'); sjekk(B.penger === før + r.svar.penger && !LB.finn(Lb, kr2.id), 'riv gir pengene tilbake'); }
 avvist({ type: 'riv', bygg: kr2.id }, 'riv igjen', 'Fant ikke bygget.');
+// (kritikerløkka r2) avbestill: et nytt bygg i køen rives, og hele prisen kommer tilbake
+{ const før = B.penger, nb = gyldig({ type: 'bygg', bygg: { type: 'container', x: -600, y: -600 } }, 'bygg før avbestilling').svar.bygg, pris = nb.pris || 0, etter = B.penger;
+  r = gyldig({ type: 'avbestill', bygg: nb.id }, 'avbestill'); sjekk(!LB.finn(Lb, nb.id) && B.penger === etter + r.svar.tilbake && r.svar.tilbake === pris && B.penger === før, 'avbestill gir hele prisen tilbake: ' + JSON.stringify({ før, etter, nå: B.penger, pris, tilbake: r.svar.tilbake })); }
 avvist({ type: 'riv', bygg: tank.id }, 'rød river ikke blås bygg', /Fant ikke bygget|Ingen leir/, CR);
 
 // folk
