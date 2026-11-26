@@ -197,12 +197,14 @@
     if (k.type === 'forsyning') return k.sted.retning ? `Hent nødlageret ${k.sted.retning} for leiren` : k.sted.slag === 'lager' || /^nødlager/i.test(k.sted.navn) ? 'Hent nødlageret' : `Hent nødlageret i ${k.sted.navn}`;
     return `Hent ${k.person} i ${k.sted.navn}`;
   }
+  // (R1-løkka) jobben er for bygda/kommunen i tettstedet selv: bygdevernet der slipper lagene inn mens kontrakten er aktiv
+  const vernetVet = k => !!(k.giver && k.giver.slag !== 'firma' && k.sted && k.sted.slag === 'tettsted' && k.giver.by != null && k.giver.by === k.sted.id);
   // kravet med enkle ord
   function kravTekst(k) {
     const N = REGLER.nær;
     if (k.type === 'eskorte') return `${k.giver.navn} trenger ${k.last === 'tankbil' ? 'diesel' : 'varer'} fram. Bilen står ved ${k.fra.navn}. Kjør den til ${k.sted.navn} (innen ${N.fram} m) før fristen. Mister du bilen, er kontrakten brutt.`
       + (k.fare && k.fare.length ? ` Obs: ${k.fare.map(q => q.navn).join(' og ')} holdes av et annet selskap – regn med kamp der.` : '');
-    if (k.type === 'hold') return `Ha et eget lag innen ${N.hold} m av ${k.sted.navn}, uten fiender der, i til sammen ${k.hold} timer før fristen.`;
+    if (k.type === 'hold') return `Ha et eget lag innen ${N.hold} m av ${k.sted.navn}, uten fiender der, i til sammen ${k.hold} timer før fristen.` + (vernetVet(k) ? ' Bygdevernet der vet om jobben og slipper dere inn.' : '');
     if (k.type === 'rydd') return `Et væpnet lag har sperret vegen ved ${k.sted.navn}. Slå det ut før fristen.`;
     if (k.type === 'forsyning') return k.sted.retning
       ? `${k.giver.navn} har gjemt et nødlager med mat og utstyr i ${k.sted.navn} (ca. ${Math.round((k.sted.d || REGLER.første.avstand) / 100) * 100} m, merket i kartet), men tør ikke hente det selv. Stedet ligger utenfor tettstedene og innen radiorekkevidde, og bygdevernet vet om jobben. Send en tropp dit (innen ${REGLER.første.nær} m) og bær lageret hjem til leiren (innen ${N.leir} m).`

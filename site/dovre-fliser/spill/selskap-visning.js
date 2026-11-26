@@ -84,7 +84,10 @@
   const dagNå = () => Math.floor((6 * 60 + tid) / 1440);
   // prisstigningen i markedet (spill/spillet.js) ganges inn i betalingen (R18-A: markedet følger kontraktene)
   const infl = () => { try { const M = window.SpilletSpill && SpilletSpill.M && SpilletSpill.M(); return M && M.infl > 0 ? M.infl : 1; } catch (e) { return 1; } };
-  function nyeTilbud(liste) { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, liste || steder(), null, { infl: infl() }); lagre(); return n; }
+  // (R1-løkka) stedene får eieren med (Garnison), så eskortene ikke går til/fra tettsteder de andre selskapene holder
+  const medEier = L => L.map(q => { if (q.eier !== undefined || q.slag !== 'tettsted' || q.id == null || !window.Garnison || typeof TETTSTEDER === 'undefined') return q;
+    try { return { ...q, eier: Garnison.tilstand(TETTSTEDER, q.id).eier || null }; } catch (e) { return q; } });
+  function nyeTilbud(liste) { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, medEier(liste || steder()), null, { infl: infl() }); lagre(); return n; }
 
   // ---------- det som legges ut i verden når en kontrakt tas ----------
   const egneLag = () => ENHETER.filter(s => s.side === ID && levende(s) && !s.karakter);
