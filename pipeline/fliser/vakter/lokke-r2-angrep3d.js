@@ -15,7 +15,8 @@ module.exports = {
       if (!window.Forsvar || !window.ForsvarSpill || !window.SpilletSpill || !SpilletSpill.klar() || !Forsvar.innfart) { d.feil.push('Forsvar.innfart / ForsvarSpill / SpilletSpill mangler'); return d; }
       const L = OppstartSpill.tilstand().leir, T = SpilletSpill.T(), FS = ForsvarSpill, før = { aktiv: T.aktiv, tid, retning: FS.retning(), satt: FS.erSatt(), logg: typeof loggLinjer !== 'undefined' ? loggLinjer.length : 0 };
       const blå = ENHETER.filter(e => e.side === 'blå' && !e.karakter), lagFør = blå.map(e => [e, e.x, e.y, e.sti, e.strid ? { ...e.strid } : null, e.forsvar]);
-      const sør = p => p.y < L.y - 20, nye = [];
+      // (spilløkka står stille mens prøvelaget har en rute uten steg – ellers flyttet løkka det: «Cannot read properties of null»)
+      const sør = p => p.y < L.y - 20, nye = [], tempo0 = tempo; tempo = 0;
       try {
         // (1a) før røverne er på vei: ring rundt leiren
         if (FS.erSatt()) FS.opphev(false); T.aktiv = 0; FS.settRetning(NaN);
@@ -49,7 +50,7 @@ module.exports = {
         for (let i = 0; i < 40 && blå.some(e => e.planlegger); i++) await vent(100);
         if (FS.erSatt()) FS.opphev(false);
         for (const [e, x, y, sti, strid, fsv] of lagFør) { e.x = x; e.y = y; e.sti = sti; e.strid = strid; if (fsv === undefined) delete e.forsvar; else e.forsvar = fsv; delete e.graver; e.siktSkitten = true; }
-        T.aktiv = før.aktiv; FS.settRetning(før.retning); tid = Math.max(tid, før.tid); if (typeof skitten !== 'undefined') skitten = true; FS.vis();
+        tempo = tempo0; T.aktiv = før.aktiv; FS.settRetning(før.retning); tid = Math.max(tid, før.tid); if (typeof skitten !== 'undefined') skitten = true; FS.vis();
       }
       // (3) kroppen mot en tynn vegg (som Interior.VEGG): gå og løp, også på skrå – minst 0,3 m unna, aldri gjennom
       if (window.Bevegelse && Bevegelse.fri) {
