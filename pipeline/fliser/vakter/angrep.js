@@ -10,7 +10,7 @@ module.exports = {
     if (!window.ForsvarSpill || !ForsvarSpill.prognose || !window.Forsvar || !window.FlytSpill || !window.SpilletSpill || !SpilletSpill.klar || !SpilletSpill.klar() || !L) return { ok: false, tekst: 'ForsvarSpill, FlytSpill, SpilletSpill eller leiren mangler', data: {} };
     const T = SpilletSpill.T(), k = ENHETER.find(e => e.karakter && e.side === 'blå'), $ = id => document.getElementById(id);
     const FLAGG = ['SpilletSpill', 'ForsvarSpill', 'FlytSpill', 'KampSpill'], flagg = FLAGG.map(n => window[n] ? window[n].test : undefined);
-    const før = { oppdrag: (SpilletSpill.O() && SpilletSpill.O().liste || []).slice(), hÅpen: SpilletSpill.H() ? SpilletSpill.H().åpen : null, tid, tempo, kam: { ...kam }, T: { bølge: T.bølge, aktiv: T.aktiv, nesteSpill: T.nesteSpill, nesteEkte: T.nesteEkte, borteFra: T.borteFra }, k: k ? { x: k.x, y: k.y, sti: k.sti } : null,
+    const før = { O: SpilletSpill.O() ? { nr: SpilletSpill.O().nr, nesteSpill: SpilletSpill.O().nesteSpill, nesteEkte: SpilletSpill.O().nesteEkte } : null, oppdrag: (SpilletSpill.O() && SpilletSpill.O().liste || []).slice(), hÅpen: SpilletSpill.H() ? SpilletSpill.H().åpen : null, tid, tempo, kam: { ...kam }, T: { bølge: T.bølge, aktiv: T.aktiv, nesteSpill: T.nesteSpill, nesteEkte: T.nesteEkte, borteFra: T.borteFra }, k: k ? { x: k.x, y: k.y, sti: k.sti } : null,
       lager: Object.keys(localStorage).filter(n => /^riksbrudd-(trussel|angrep)/.test(n)).map(n => [n, localStorage.getItem(n)]), logg: typeof loggLinjer !== 'undefined' ? loggLinjer.slice() : null, satt: ForsvarSpill.erSatt(), blå: ENHETER.filter(e => e.side === 'blå').map(e => [e, e.x, e.y, e.sti, e.forsvar, e.strid]) };
     const nye = [];
     try {
@@ -59,7 +59,7 @@ module.exports = {
       for (const [e, x, y, sti, fs, sr] of før.blå) { e.x = x; e.y = y; e.sti = sti; if (fs) e.forsvar = fs; else delete e.forsvar; e.strid = sr; e.siktSkitten = true; }
       Object.assign(T, før.T); tid = før.tid; Object.assign(kam, før.kam);
       // (fletting r1) oppdragene og hendelsen SpilletSpill lager mens test-flagget er på, tas bort igjen (vakta «angrep, marked …» krever at alt er stille)
-      { const O = SpilletSpill.O(), H = SpilletSpill.H(); if (O && O.liste) O.liste.splice(0, O.liste.length, ...før.oppdrag); if (H) H.åpen = før.hÅpen; }
+      { const O = SpilletSpill.O(), H = SpilletSpill.H(); if (O && O.liste) { O.liste.splice(0, O.liste.length, ...før.oppdrag); if (før.O) for (const k of ['nr', 'nesteSpill', 'nesteEkte']) { if (før.O[k] === undefined) delete O[k]; else O[k] = før.O[k]; } } if (H) H.åpen = før.hÅpen; }
       for (const n of Object.keys(localStorage)) if (/^riksbrudd-(trussel|angrep)/.test(n)) localStorage.removeItem(n); for (const [n, v] of før.lager) localStorage.setItem(n, v);
       if (før.logg) { loggLinjer.length = 0; loggLinjer.push(...før.logg); }
       $('flytkort').classList.remove('på'); FLAGG.forEach((n, i) => { if (window[n]) window[n].test = flagg[i]; });

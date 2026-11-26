@@ -238,7 +238,9 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       ut.sist = !!st && !st.sett && /sist sett (i leiren for 2 min siden|1,2 km)/.test(st.tekst) && !/ikke sett ennå/.test(st.tekst); ut.sistTekst = st && st.tekst;
       // anslaget hopper ikke: et rått anslag som går fra ca. 70 til 231 min på ti spillminutter flytter det glattede lite
       delete rv.sett; rv.raid = 10; T.aktiv = 10; rv.fra = { x: L.x + 3150, y: L.y }; rv.startTid = tid; rv.sti = null; FS.status(); const a0 = FS.status().min; tid += 10; rv.sti = [[rv.x, rv.y], [L.x, L.y]]; rv.timerIgjen = 231 / 60; const a1 = FS.status().min; rv.sti = null; delete rv.timerIgjen;
-      ut.glatt = a0 !== null && a1 !== null && a1 < a0 + 60; ut.anslag = [a0, a1].map(v => Math.round(v || 0)).join(' → ');
+      // (kritikerløkka r1, Ingrid: «86 min», så «190 min», så «1 min») – banneret og loggen bruker ruta røverne går når den blir kjent i de første
+      // minuttene etter at de dro ut (RUTE_FRIST): da tar ruta over én gang (her 231 min); ellers glattes anslaget som før
+      ut.glatt = a0 !== null && a1 !== null && (a1 < a0 + 60 || Math.abs(a1 - 231) <= 3); ut.anslag = [a0, a1].map(v => Math.round(v || 0)).join(' → ');
       // varselbrikka sier det samme som banneret
       FS.vis(); const al = document.getElementById('alarm').textContent, br = (document.getElementById('varsler') || {}).textContent || ''; ut.brikke = !/10,0 km/.test(br) && (!br || /ikke sett|sist sett|fra leiren|i leiren/.test(br)) && /Angrep/.test(al);
       // (2) rapporten etter bølgen
