@@ -14,7 +14,11 @@
     løpTid: 12, hvile: 6, løpIgjen: .25,     // s med løping på full utholdenhet; s for å fylles helt; må ha 25 % før du kan løpe igjen
     stup: 2.5,                               // m: går du utfor en kant som er høyere enn dette, faller du (s.landet er farten du lander med)
     skritt: .75, gynge: .035,                // m per skritt; hvor mye hodet gynger opp og ned (m)
+    // (kritikerløkka r2) småsteg: lengste flytting (m) som prøves om gangen; høyst så mange småsteg per steg. Claudes forslag.
+    småsteg: .08, småstegMaks: 12,
   };
+  // kroppens omkrets: midten og åtte punkter på radius (rett fram, til sidene og på skrå)
+  const PRØVER = [[0, 0], ...Array.from({ length: 8 }, (x, i) => [Math.cos(i * Math.PI / 4) * R.radius, Math.sin(i * Math.PI / 4) * R.radius])];
   function ny(x, y, z) { return { x, y, z, vx: 0, vy: 0, vz: 0, bakke: true, huk: false, øye: R.øye, utholdenhet: 1, sliten: false, fase: 0, løper: false, fart: 0, ligg: false, landet: 0 }; }
   // inn: { fram, side (−1..1, kan være brøk fra styrespaken), retning (rad, 0 = nord/+y), løp, hopp, huk, ligg,
   //        faktor (fart, 1 = vanlig – skader), ikkeLøp (brukket bein: verken løp eller hopp) }
@@ -40,17 +44,21 @@
     const k = (l > 0 ? R.aks : R.brems) * (s.bakke ? 1 : R.luft) * dt, ex = mx - s.vx, ey = my - s.vy, el = Math.hypot(ex, ey);
     if (el > 0) { const f = Math.min(1, k / el); s.vx += ex * f; s.vy += ey * f; }
     // flytt: hver akse for seg, så du glir langs vegger; bratt, hindring og vann stopper
+    // (kritikerløkka r2, Jonas: «når du går helt inntil låveveggen, havner kameraet i veggen og skjermen blir brunsvart») kroppen prøves i
+    // åtte retninger (før fire: mot en skrå vegg kom hodet nærmere enn kameraets near-plan på 0,2 m), og flyttingen deles i småsteg på
+    // høyst R.småsteg m, så et langt steg (løping, treg telefon: dt 0,1 s) aldri hopper inn i eller gjennom en tynn vegg
     const fritt = (x, y) => {
       if (verden.vann && verden.vann(x, y)) return false;
-      for (const [ox, oy] of [[0, 0], [R.radius, 0], [-R.radius, 0], [0, R.radius], [0, -R.radius]]) if (verden.hindring && verden.hindring(x + ox, y + oy)) return false;
+      for (const [ox, oy] of PRØVER) if (verden.hindring && verden.hindring(x + ox, y + oy)) return false;
       // (verden.trapp(x, y): trapper og ramper er aldri for bratte – inngangen til et hus, spill/interior3d.js)
       if (s.bakke && !(verden.trapp && verden.trapp(x, y))) { const d = Math.hypot(x - s.x, y - s.y); if (d > 1e-6 && (verden.høyde(x, y) - h0) / d > R.bratt) return false; }
       return true; };
-    const nx = s.x + s.vx * dt, ny = s.y + s.vy * dt;
-    if (!fritt(s.x, s.y) || fritt(nx, ny)) { s.x = nx; s.y = ny; }
-    else if (fritt(nx, s.y)) { s.x = nx; s.vy = 0; }
-    else if (fritt(s.x, ny)) { s.y = ny; s.vx = 0; }
-    else { s.vx = 0; s.vy = 0; }
+    const n = Math.max(1, Math.min(R.småstegMaks, Math.ceil(Math.hypot(s.vx, s.vy) * dt / R.småsteg))), ddt = dt / n;
+    for (let i = 0; i < n; i++) { const nx = s.x + s.vx * ddt, ny = s.y + s.vy * ddt;
+      if (!fritt(s.x, s.y) || fritt(nx, ny)) { s.x = nx; s.y = ny; }
+      else if (fritt(nx, s.y)) { s.x = nx; s.vy = 0; }
+      else if (fritt(s.x, ny)) { s.y = ny; s.vx = 0; }
+      else { s.vx = 0; s.vy = 0; break; } }
     // hopp og tyngdekraft
     const bakke = verden.høyde(s.x, s.y);
     if (inn.hopp && s.bakke && !s.huk && !s.ligg && !inn.ikkeLøp) { s.vz = R.hopp; s.bakke = false; }
@@ -63,7 +71,9 @@
     const gyng = s.bakke ? Math.min(1, s.fart / R.gå) : 0;
     return { kx: s.x + Math.cos(a) * Math.sin(s.fase) * .02 * gyng, ky: s.y + Math.sin(a) * Math.sin(s.fase) * .02 * gyng, kz: s.z + s.øye + Math.abs(Math.sin(s.fase)) * R.gynge * gyng - R.gynge * gyng / 2 };
   }
-  const api = { REGLER: R, ny, steg };
+  // har kroppen plass i (x, y)? hindring(x, y) -> true der det er en vegg (som verden.hindring)
+  const fri = (x, y, hindring) => !hindring || PRØVER.every(([ox, oy]) => !hindring(x + ox, y + oy));
+  const api = { REGLER: R, ny, steg, fri, PRØVER };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Bevegelse = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

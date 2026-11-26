@@ -62,7 +62,12 @@
     for (const [t, l] of Object.entries(tropp)) ut.push(`${kort(l)} gikk inn i ${t}`);
     if (falt.length) ut.push(`${kort(falt)} falt`);
     if (døde.length) ut.push(`${kort(døde)} døde`);
-    if (dro.length) { const moral = Math.max(0, (nå.borte || 0) - (før.borte || 0)); ut.push(`${kort(dro)} forlot gjengen` + (moral >= dro.length ? ' fordi moralen var for lav' : moral ? ' (lav moral eller annen grunn)' : '')); }
+    // (kritikerløkka r2: alle som manglet ble kalt «forlot gjengen», også en tropp som manglet etter omlasting) – «forlot gjengen» bare så
+    // mange som folk.js faktisk telte som gått (lav moral); de andre «er ikke lenger i leiren» (grunnen er ukjent her)
+    if (dro.length) { const moral = Math.min(dro.length, Math.max(0, (nå.borte || 0) - (før.borte || 0)));
+      if (moral >= dro.length) ut.push(`${kort(dro)} forlot gjengen fordi moralen var for lav`);
+      else if (moral) ut.push(`${kort(dro)} er ikke lenger i leiren (${moral === 1 ? 'én' : moral} av dem forlot gjengen fordi moralen var for lav)`);
+      else ut.push(`${kort(dro)} er ikke lenger i leiren`); }
     if (nye.length) ut.push(`${kort(nye)} ${nye.length === 1 ? 'er ny' : 'er nye'} i gjengen`);
     return ut;
   }

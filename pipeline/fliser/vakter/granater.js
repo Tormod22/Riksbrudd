@@ -29,7 +29,10 @@ module.exports = {
           for (const s of [a, b]) { s.sikt = { x0: x - 200, y0: y + 200, r: 10, mw: 40, mh: 40, m: new Uint8Array(1600).fill(1) }; s.siktSkitten = false; }
           ENHETER.length = 0; ENHETER.push(a, b); nye.push(a, b);
           const bl0 = BK.blink().length; let res;
-          try { kamprunde(); res = { a: B.Lagkamp.antall(a), b: B.Lagkamp.antall(b), blink: BK.blink().length - bl0, und: B.Undertrykk.styrke(a, tid + 1), ild: KROKER.ild.reduce((v, f) => v * f(a, b), 1), fart: (KROKER.fart || []).reduce((v, f) => v * f(a), 1) }; }
+          // (kritikerløkka r2: vakta feilet av og til med «und: 0») – a skyter først med begge maskingeværene, b etterpå: falt eller ble b sine to
+          // maskingeværskyttere såret i a sin salve (tilfeldig), holdt ingen a nede. Nå måles laget som faktisk holdes nede (b, ellers a)
+          try { kamprunde(); const ua = B.Undertrykk.styrke(a, tid + 1), ub = B.Undertrykk.styrke(b, tid + 1), ned = ub >= ua ? b : a, mot = ned === b ? a : b;
+            res = { a: B.Lagkamp.antall(a), b: B.Lagkamp.antall(b), blink: BK.blink().length - bl0, und: Math.max(ua, ub), ned: ned === b ? 'b' : 'a', ild: KROKER.ild.reduce((v, f) => v * f(ned, mot), 1), fart: (KROKER.fart || []).reduce((v, f) => v * f(ned), 1) }; }
           finally { H.hold = h0; ENHETER.length = 0; ENHETER.push(...gamle); }
           return { res, a, b }; };
         const { res: k2, a } = runde(); ut.lagkamp = k2;

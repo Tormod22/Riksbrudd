@@ -55,4 +55,12 @@ ok(Kamp.skade([{ avst: 50, menn: 6 }], null) > Kamp.skade([{ avst: 50, menn: 6 }
   const v = Oppdrag.vent(() => .5); ok(Oppdrag.TAKT.start === 2 && v.spill >= 360 && v.spill <= 600 && v.ekte >= 480 && v.ekte <= 840, 'nye oppdrag: 6–10 spilltimer eller 8–14 minutter spilling'); }
 { const kr = require('../../site/dovre-fliser/spill/spillet.js').Hendelser.LISTE.find(h => h.id === 'krangel'); ok(kr.to && kr.tekst('Ingrid', 'Per') === 'Ingrid og Per har røket i tottene på hverandre om arbeidsfordelingen.', 'krangel: begge navngis (runde 13)'); }
 { const ty = require('../../site/dovre-fliser/spill/spillet.js').Hendelser.LISTE.find(h => h.id === 'tyveri'); ok(/i løpet av dagen/.test(ty.tekst('A', null, 16.9)) && /i natt/.test(ty.tekst('A', null, 7)) && !/i natt/.test(ty.tekst('A', null, 16.9)), 'tyveri: teksten følger klokka (kritikerløkka r1)'); }
+// (kritikerløkka r2) planen for bølgen: bølge 1 rett, aldri samme to ganger på rad, tyver bare om natta; omveien og speiderne fra en annen kant
+{ const T2 = Trussel, set = new Set(); ok(T2.velgPlan(1, .9, 23, null) === 'rett', 'plan: bølge 1 er alltid rett på');
+  for (let i = 0; i < 40; i++) { const p = T2.velgPlan(3, i / 40, 12, 'omvei'); set.add(p); ok(p !== 'omvei' && p !== 'tyver', 'plan: ikke samme som sist, ingen tyver om dagen (' + p + ')'); }
+  ok(set.has('rett') && set.has('speider'), 'plan: flere planer om dagen'); const natt = new Set(); for (let i = 0; i < 40; i++) natt.add(T2.velgPlan(4, i / 40, 1, 'rett')); ok(natt.has('tyver') && !natt.has('rett'), 'plan: tyver om natta');
+  const leir = { x: 0, y: 0 }, st = { x: -3500, y: 0 }, W = T2.omveiPunkt(leir, st, 1, .5), vW = Math.atan2(W.y, W.x), vS = Math.atan2(st.y, st.x); let dv = Math.abs(vW - vS); if (dv > Math.PI) dv = 2 * Math.PI - dv;
+  ok(Math.abs(Math.hypot(W.x, W.y) - 1200) < 1 && dv > 1.1 && dv < 1.7, 'omvei: 1,2 km fra leiren, 60–100° fra startkanten');
+  const sp = T2.speiderStart(leir, st, -1, .5, .5), d = Math.hypot(sp.x, sp.y); ok(d >= 2000 && d <= 2600 && sp.retning !== 'vest', 'speidere: nærmere og fra en annen kant (' + sp.retning + ')');
+  ok(T2.herjet({ inne: 40, tyv: true }) && !T2.herjet({ inne: 40 }), 'tyver: raskere ute igjen'); }
 console.log(feil ? feil + ' feil' : 'alle testene for spillet ok'); process.exit(feil ? 1 : 0);

@@ -48,6 +48,13 @@ module.exports = {
       for (let q = 0; q < 50 && typeof på3d !== 'undefined' && på3d && R3 && R3.bygger; q++) await vent(200);
       const i3d = typeof på3d !== 'undefined' && på3d && R3 && R3.ut && !R3.bygger; d.i3d = !!i3d;
       if (!i3d || !kar) return d;
+      // (kritikerløkka r2: vakta feilet av og til på telefon – {"går":true,"inne":false}, så «Esc lukket ikke valget» og reisen «venter») Med
+      // programvare-grafikk på telefon tar ett bilde flere sekunder: kartet rundt huset ble ikke ferdig på 10 s, og interiøret ikke på 2,4 s
+      // (Gange sjekker det fire ganger i sekundet, men bare mellom bildene). Vakta ga opp, og ventingen som sto igjen (Gange.venter), startet
+      // gangen igjen midt i de neste prøvene. Nå ventes det etter tida (høyst VENT ms), og det som venter, ryddes før valget og reisen.
+      const VENT = { kart: 45000, inn: 20000, reise: 45000 };
+      const venteGå = async () => { let t = performance.now(); while ((Gange.venter() || !R.fot) && performance.now() - t < VENT.kart) await vent(100);
+        t = performance.now(); while (Gange.innVenter() && performance.now() - t < VENT.inn) { Interior3d.oppdater(true); Gange.oppdaterKnapper(); await vent(100); } };
       const R = R3, u = R.ut, b = R.bane, bane = { X: u.cx + b.x, Y: u.cy + b.y, avst: b.avst, yaw: b.yaw, pitch: b.pitch }, gikk = !!R.fot; let hus = null, kort = null;
       try {
         // (rekkefølgen: døra, Esc og kortene uten pauser rett etter at du begynner å gå – et nytt utsnitt kan bli satt inn ved neste bilde –,
@@ -104,15 +111,13 @@ module.exports = {
           const X2 = U.cx + x1 + 5, Y2 = U.cy + y1 + 4, S1 = typeof utsnittS === 'function' ? utsnittS(1000) : U.S, kanInn = R.ut === U && !R.bygger && Math.hypot(x1 + 5, y1 + 4) <= U.S * .45 && S1 <= U.S * 1.6 && S1 >= U.S * .45;
           // (må utsnittet bygges på nytt, prøves bare siste del: du settes ved døra og går inn – Gange.vedDøra)
           { const h2 = { i: 4247, P: P2.map(([x, y]) => [U.cx + x, U.cy + y]), mx: X2, my: Y2 }; Gange.stopp(); if (kanInn) Gange.gåInn(h2); else Gange.vedDøra(h2);
-          for (let q = 0; q < 100 && (Gange.venter() || !R.fot); q++) await vent(100);
-          for (let q = 0; q < 40 && Gange.innVenter(); q++) { Interior3d.oppdater(true); Gange.oppdaterKnapper(); await vent(60); }
+          await venteGå();
           for (let q = 0; q < 120 && Gange.dørHjelp(); q++) Gange.kamera(R, .06);
           // (telefon, 25. nov: et nytt utsnitt kunne bli bygget mens du gikk – da forsvinner prøvehuset med det gamle utsnittet og valget
           // «gaavalg» står åpent. Da prøves siste del én gang til: ved døra og inn.)
           let omIgjen = false;
           if (!R.fot && R.ut !== U) { omIgjen = true; const gv = document.getElementById('gaavalg'); if (gv) gv.classList.remove('på'); Gange.stopp(); Gange.vedDøra(h2);
-            for (let q = 0; q < 100 && (Gange.venter() || !R.fot); q++) await vent(100);
-            for (let q = 0; q < 40 && Gange.innVenter(); q++) { Interior3d.oppdater(true); Gange.oppdaterKnapper(); await vent(60); }
+            await venteGå();
             for (let q = 0; q < 120 && Gange.dørHjelp(); q++) Gange.kamera(R, .06); }
           const k3 = Gange.kropp(); d.gåInn = { går: !!R.fot, inne: !!(k3 && Interior3d.inne(k3.x, k3.y) === P2) }; if (!d.gåInn.går) d.gåInn.hvorfor = { kanInn, venter: Gange.venter(), kort: Gange.kortVenter && Gange.kortVenter(), åpent: Gange.noeÅpent && Gange.noeÅpent(), tempo, bygger: !!R.bygger, nyttUt: R.ut !== U, modal: [...document.querySelectorAll('.modal.på,.kort.på,[role=dialog].på')].map(e => e.id || e.className).slice(0, 4) }; krev(d.gåInn.går && d.gåInn.inne, '«Gå inn i huset» førte deg ikke inn: ' + JSON.stringify(d.gåInn));
           d.gåInn.del = kanInn && !omIgjen ? 'hele' : 'ved døra'; }
@@ -124,7 +129,7 @@ module.exports = {
           const S0 = window.OppstartSpill && OppstartSpill.tilstand(), iU0 = S0 && S0.leir && Math.abs(S0.leir.x - R.ut.cx) < R.ut.S - 30 && Math.abs(S0.leir.y - R.ut.cy) < R.ut.S - 30;
           if (iU0) { let telt = 0, bål = 0; R.scene.traverse(o => { if (o.userData && o.userData.leirting === 'telt') telt++; if (o.userData && o.userData.leirting === 'bål') bål++; }); d.leirting = { telt, bål };
             krev(bål === 1 && telt >= 1, 'leiren i 3D mangler telt og bål: ' + JSON.stringify(d.leirting)); } }
-        Gange.stopp();
+        Gange.lukkValg(); Gange.stopp();
         // valget: kameraet ser 90 m fra karakteren (bare når karakteren står i utsnittet)
         const V = R.ut, iUt = Math.abs(kar.x - V.cx) < V.S * .8 && Math.abs(kar.y - V.cy) < V.S * .8;
         if (iUt) {
@@ -136,7 +141,7 @@ module.exports = {
           // reisen: karakteren går dit og spilltiden går (farten settes tilbake)
           b.x = kar.x - V.cx + 90; b.y = kar.y - V.cy; const t0 = tid, mål = [kar.x + 90, kar.y]; Gange.startValg(); [...document.querySelectorAll('#gaavalg button')].find(e => /^Reis hit/.test(e.textContent)).click();
           // (runde 8: framme går du – eller kartet rundt deg bygges først, kortet «Henter kartet rundt deg»; det ventes ikke på her)
-          for (let q = 0; q < 80 && Gange.reiser(); q++) await vent(100);
+          { const t1 = performance.now(); while (Gange.reiser() && performance.now() - t1 < VENT.reise) await vent(100); }
           for (let q = 0; q < 20 && !R.fot && !Gange.venter(); q++) await vent(100);
           d.reise = { min: +(tid - t0).toFixed(1), avstand: Math.round(Math.hypot(kar.x - mål[0], kar.y - mål[1])), går: !!R.fot, venter: Gange.venter(), fart: (document.querySelector('#sp0.på, #sp1.på, #sp2.på, #sp3.på, #sp4.på') || {}).id };
           krev((R.fot || d.reise.venter) && d.reise.min >= 1 && d.reise.avstand < 70 && d.reise.fart === før.fart, 'reisen: ' + JSON.stringify(d.reise));

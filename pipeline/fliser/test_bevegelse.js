@@ -28,4 +28,20 @@ s = B.ny(0, 0, 100); kjør(s, { fram: 1, løp: true, faktor: .5, ikkeLøp: true 
 const stup = { høyde: (x, y) => (y > 2 ? 90 : 100) }; s = B.ny(0, 0, 100); let landet = 0; for (let i = 0; i < 600; i++) { s.landet = 0; B.steg(s, { fram: 1 }, 1 / 60, stup); landet = Math.max(landet, s.landet); }
 ok(landet > 13 && landet < 15 && s.z === 90 && s.bakke, 'utfor et stup på 10 m: lander med ' + landet.toFixed(1) + ' m/s');
 s = B.ny(0, 0, 100); landet = 0; B.steg(s, { hopp: true }, 1 / 60, flatt); for (let i = 0; i < 120; i++) { s.landet = 0; B.steg(s, {}, 1 / 60, flatt); landet = Math.max(landet, s.landet); } ok(landet > 3.5 && landet < 5, 'et vanlig hopp lander med ' + landet.toFixed(1) + ' m/s (ufarlig)');
+// (kritikerløkka r2, Jonas: kameraet gikk inn i låveveggen) en tynn vegg (halv tykkelse 0,12 m som Interior.VEGG), rett og på skrå:
+// løp (5,5 m/s) og gå mot den på en treg telefon (dt 0,1 s) – kroppens midte (kameraet) holder seg minst 0,3 m fra veggen og kommer aldri gjennom
+{ const Bv = require('../../site/dovre-fliser/spill/bevegelse.js'), assert2 = require('assert');
+  const vegg = (ax, ay, bx, by) => (x, y) => { const dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))); return Math.hypot(x - ax - t * dx, y - ay - t * dy) < .12; };
+  const prøv = (h, retning, løp) => { const s = Bv.ny(0, 0, 0), V = { høyde: () => 0, hindring: h }; let min = Infinity, gjennom = false;
+    for (let i = 0; i < 80; i++) { Bv.steg(s, { fram: 1, retning, løp }, .1, V); min = Math.min(min, avst(s)); if (side(s) < 0) gjennom = true; } return { min, gjennom }; };
+  let avst, side;
+  // rett: veggen y = 3 (du går mot nord)
+  avst = s => Math.abs(s.y - 3); side = s => 3 - s.y; for (const løp of [false, true]) { const r = prøv(vegg(-50, 3, 50, 3), 0, løp); assert2.ok(!r.gjennom && r.min >= .3, `rett vegg, ${løp ? 'løp' : 'gå'}: ${r.min.toFixed(2)} m`); }
+  // på skrå (22,5° og 45° mot gangretningen): veggen gjennom (0, 3)
+  for (const g of [Math.PI / 8, Math.PI / 4]) { const nx = -Math.sin(g), ny = Math.cos(g); avst = s => Math.abs((s.x - 0) * nx + (s.y - 3) * ny); side = s => -((s.x) * nx + (s.y - 3) * ny);
+    for (const løp of [false, true]) { const r = prøv(vegg(-50 * ny, 3 + 50 * nx, 50 * ny, 3 - 50 * nx), 0, løp); assert2.ok(!r.gjennom && r.min >= .3, `skrå vegg ${Math.round(g * 57.3)}°, ${løp ? 'løp' : 'gå'}: ${r.min.toFixed(2)} m`); } }
+  // den gamle måten (ingen småsteg) kom inn i veggen når du løp – vakta virker
+  const før = Bv.REGLER.småsteg; Bv.REGLER.småsteg = 100; avst = s => Math.abs(s.y - 3); side = s => 3 - s.y; const r0 = prøv(vegg(-50, 3, 50, 3), 0, true); Bv.REGLER.småsteg = før;
+  console.log(`ok   tynn vegg (rett og skrå, gå og løp): kameraet holder seg minst 0,3 m unna (uten småsteg: ${r0.min.toFixed(2)} m${r0.gjennom ? ', gjennom' : ''})`); }
+
 process.exit(feil ? 1 : 0);

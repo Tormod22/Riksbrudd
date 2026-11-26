@@ -21,6 +21,9 @@ const fN = { ...før, navn: ['Håkon Rønning', 'Silje Berg', 'Per Lie', 'Ola Da
 const nN = { ...før, navn: ['Eva Moe', 'Nina Ås'], borte: 1, tropp: { 'Per Lie': 'Stormtropp 1' }, døde: { 'Håkon Rønning': 'falt', 'Silje Berg': 'falt' } };
 const fr = O.tekst(fN, nN);
 ok(/Per Lie gikk inn i Stormtropp 1/.test(fr.tekst) && /Håkon Rønning og Silje Berg falt/.test(fr.tekst) && /Ola Dahl forlot gjengen fordi moralen var for lav/.test(fr.tekst) && /Nina Ås er ny i gjengen/.test(fr.tekst) && !/har dratt/.test(fr.tekst), 'navn og grunn', fr.tekst);
+// (kritikerløkka r2) borte uten at moraltelleren gikk opp: ikke «forlot gjengen»
+{ const f2 = O.tekst({ ...fN, borte: 3 }, { ...nN, borte: 3 }); ok(/Ola Dahl er ikke lenger i leiren/.test(f2.tekst) && !/forlot/.test(f2.tekst), 'borte uten lav moral: ingen «forlot gjengen»', f2.tekst);
+  const f3 = O.tekst({ ...fN, navn: [...fN.navn, 'Kåre Sand'] }, nN); ok(/Ola Dahl og Kåre Sand er ikke lenger i leiren \(én av dem forlot gjengen fordi moralen var for lav\)/.test(f3.tekst), 'to borte, én av lav moral', f3.tekst); }
 ok(O.tekst(null, nå) === null, 'uten bilde fra i går: ingenting');
 // (runde 13, kritiker G) kampene siste døgn med hvem og hvor
 { const O2 = require('../../site/dovre-fliser/spill/forsvar-oppgjor'), A2 = require('assert');

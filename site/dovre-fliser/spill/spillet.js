@@ -68,7 +68,7 @@
     // har røverlaget gitt opp? menn: [{ hp }] – en tredel (brudd) eller flere er falt eller såret
     brutt: menn => { const n = (menn || []).length; return n > 0 && menn.filter(m => m.hp < 1).length >= Math.ceil(n * Trussel.HERJ.brudd); },
     // har laget herjet lenge nok? q: { inne (spillminutter innenfor radius) }
-    herjet: q => (q.inne || 0) >= Trussel.HERJ.min,
+    herjet: q => (q.inne || 0) >= (q.tyv ? Trussel.PLAN.tyver.min : Trussel.HERJ.min),
     // hva ett lag tar med seg. h: { penger, lager: { tre, betong, stål }, diesel, mat } – det som finnes. Gir det samme med mengdene som
     // tas (penger i hele 1000 kr, materialer i tideler, diesel og mat i hele).
     bytte(h) { const H = Trussel.HERJ, l = h.lager || {}, ut = { penger: Math.floor(Math.min((h.penger || 0) * H.penger.andel, H.penger.tak) / 1000) * 1000, lager: {}, diesel: Math.floor((h.diesel || 0) * H.diesel), mat: Math.floor((h.mat || 0) * H.mat) };
@@ -79,6 +79,27 @@
       if (b.penger > 0) d.push(tall(b.penger) + ' kr'); for (const [k, v] of Object.entries(b.lager || {})) if (v > 0) d.push(String(v).replace('.', ',') + ' ' + (ENH[k] || k));
       if (b.diesel > 0) d.push(tall(b.diesel) + ' l diesel'); if (b.mat > 0) d.push(b.mat + (b.mat === 1 ? ' rasjon' : ' rasjoner'));
       return d.length ? (d.length > 1 ? d.slice(0, -1).join(', ') + ' og ' + d[d.length - 1] : d[0]) : 'ingenting'; },
+    // ---------- (kritikerløkka r2, 26. nov, Ingrid: «andre gang gikk det nøyaktig likt») PLANEN for bølgen ----------
+    // Hver bølge (fra bølge 2) får en plan, aldri den samme to ganger på rad. Små og trygge regler, alle tallene er Claudes forslag:
+    //  rett:    som før – rett mot leiren.
+    //  omvei:   røverne går først til et punkt omvei.meter fra leiren, omvei.vinkel (± tilfeldig del) til siden for der de startet,
+    //           og kommer inn fra den kanten – forsvaret snur når ruta viser det (Forsvar.innfart).
+    //  speider: et lite lag på speider.menn mann går foran fra en annen kant (speider.vinkel), starter nærmere (speider.start m) og
+    //           prøver forsvaret – det flykter ved første tap (Trussel.brutt med så få menn).
+    //  tyver:   bare om natta (tyver.natt: timene): røverne går rett mot lageret, er raskere ute igjen (tyver.min spillminutter inne i
+    //           leiren) og tar bare varer, ikke penger.
+    PLAN: { omvei: { meter: 1200, vinkel: 1.4, spenn: .5 }, speider: { menn: 3, vinkel: 1.6, spenn: .6, start: [2000, 2600] }, tyver: { min: 35, natt: [22, 5] } },
+    PLANER: ['rett', 'omvei', 'speider', 'tyver'],
+    PLAN_TEKST: { omvei: 'Vaktene tror de tar en omvei.', speider: 'Et lite lag går foran – trolig for å prøve forsvaret.', tyver: 'De er ute etter lageret i mørket.' },
+    // velgPlan(nr, r, time, sist): r = tilfeldig tall 0–1, time = klokka (0–24) når de drar ut, sist = planen forrige bølge
+    velgPlan(nr, r, time, sist) { if (nr <= 1) return 'rett'; const N = Trussel.PLAN.tyver.natt, natt = time >= N[0] || time < N[1];
+      const mulige = Trussel.PLANER.filter(p => p !== sist && (p !== 'tyver' || natt)); return mulige[Math.min(mulige.length - 1, Math.floor(Math.max(0, r) * mulige.length))]; },
+    // omveien: punktet de går via. leir, start: { x, y }; side: −1 eller 1; r: 0–1
+    omveiPunkt(leir, start, side, r) { const O = Trussel.PLAN.omvei, v = Math.atan2(start.y - leir.y, start.x - leir.x) + side * (O.vinkel + (r - .5) * O.spenn);
+      return { x: leir.x + Math.cos(v) * O.meter, y: leir.y + Math.sin(v) * O.meter }; },
+    // speiderne: startstedet (en annen kant enn hovedlaget). side: −1 eller 1; r1, r2: 0–1
+    speiderStart(leir, start, side, r1, r2) { const P = Trussel.PLAN.speider, v = Math.atan2(start.y - leir.y, start.x - leir.x) + side * (P.vinkel + (r1 - .5) * P.spenn), d = P.start[0] + r2 * (P.start[1] - P.start[0]);
+      return { x: leir.x + Math.cos(v) * d, y: leir.y + Math.sin(v) * d, retning: retning(Math.cos(v), Math.sin(v)), meter: d }; },
     varsel: (nr, n, s) => `Varsel: ${n === 1 ? 'et røverlag' : n + ' røverlag'} er på vei mot leiren fra ${s.retning} (${(s.meter / 1000).toFixed(1).replace('.', ',')} km unna). Bølge ${nr}.`,
   };
 
