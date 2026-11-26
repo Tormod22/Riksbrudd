@@ -24,4 +24,20 @@ ok(/2 venter/.test(L[0].tekst) && /900 m mot nord/.test(L[0].tekst) && /2400000 
 ok(/leter etter skog/.test(L[1].tekst) && /12 m³ tre/.test(L[2].tekst), 'linjer: hogstlaget leter, og tre på lager kan selges');
 const L2 = P.linjer({ oppdrag: [], hogst: { folk: 0 }, tettsteder: { antall: 2, kr: 230000 }, lager: {} }, kr);
 ok(/ingen akkurat nå/.test(L2[0].tekst) && /ingen på hogst/.test(L2[1].tekst) && /2 er deres/.test(L2[3].tekst) && /230000 kr/.test(L2[3].tekst), 'linjer: uten oppdrag, uten hogst, med tettsteder');
+// (R3-løkka 26. nov) kategoriene i dagboka: byggingen var «annet», og «annet» sto to ganger
+{ const st = (...r) => ['Error', '    at gi (http://x/dovre-fliser/spill/penger-visning.js?v=1:132:5)', ...r.map(([fn, f]) => `    at ${fn} (http://x/dovre-fliser/spill/${f}.js?v=abc:10:3)`)].join('\n');
+  ok(P.hvaFra(st(['bygg', 'leir'], ['bekreft', 'leir-visning']), false) === 'bygg', 'Leir.bygg -> bygg (før: annet)');
+  ok(P.hvaFra(st(['kjøpDrivstoff', 'leir'], ['HTMLButtonElement.onclick', 'leir-visning']), false) === 'diesel', 'Leir.kjøpDrivstoff -> diesel');
+  ok(P.hvaFra(st(['kjøpMateriale', 'leir']), false) === 'materialer' && P.hvaFra(st(['selgMateriale', 'leir']), true) === 'salg', 'materialer kjøpt og solgt');
+  ok(P.hvaFra(st(['reparer', 'leir'], ['Array.forEach', 'forsvar-visning']), false) === 'reparasjoner', 'reparasjon');
+  ok(P.hvaFra(st(['lønnSteg', 'folk'], ['x', 'folk-visning']), false) === 'lønn' && P.hvaFra(st(['kjøpMat', 'folk']), false) === 'mat', 'lønn og mat fra folk.js (før: annet)');
+  ok(P.hvaFra(st(['api.vernAvtale', 'krig-visning']), false) === 'avtaler' && P.hvaFra(st(['api.fred', 'krig-visning']), false) === 'avtaler', 'avtalen med bygdevernet og våpenhvile -> avtaler');
+  ok(P.hvaFra(st(['heliStart', 'krig-visning']), false) === 'krig og forsvar', 'annet i krig -> krig og forsvar');
+  ok(P.hvaFra(st(['lever', 'region-visning']), true) === 'skatt' && P.hvaFra(st(['kjøp', 'region-visning']), false) === 'svartebørs', 'skatt og svartebørs');
+  ok(P.hvaFra(st(['x', 'selskap-visning']), true) === 'kontrakter' && P.hvaFra(st(['x', 'selskap-visning']), false) === 'bøter', 'kontrakter og bøter');
+  ok(P.hvaFra('Error\n    at <anonymous>:1:1', false) === 'annet', 'ukjent = annet');
+  const D = { inn: 0, ut: 0, p: { bygg: -17e6, 'krig og forsvar': -8e6, avtaler: -1e6, annet: -5e5, lønn: -2e5, vedlikehold: -5e4 } }, t = P.poster(D, false, v => Math.round(v) + ' kr', 4);
+  const navn = t.split(', ').map(x => x.replace(/ \d+ kr$/, ''));
+  ok(new Set(navn).size === navn.length && /andre poster 250000 kr/.test(t), 'aldri to like navn: ' + t);
+  ok(!/andre poster/.test(P.poster({ p: { a: -3, b: -2, c: -1, d: -1 } }, false, v => v + ' kr', 3)), 'én post til vises som den er (ikke «andre poster» for én)'); }
 console.log(feil ? feil + ' FEIL' : 'alle pengetestene ok'); process.exit(feil ? 1 : 0);

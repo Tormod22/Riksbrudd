@@ -64,4 +64,14 @@ ok(R.type(500, { kai: 800, kraft: 100 }) === 'havn' && R.type(20000, { olje: 500
   ok(R.mistet(S, 9) && !R.mistet(S, 9) && S.byer[9].tapt && R.fraJSON(JSON.parse(JSON.stringify(S))).byer[9].tapt, 'mistet: merket (én gang) og lagret');
   const b = R.by(S, 9); ok(b.loj === R.REGLER.lojGjentatt && b.skatt === 'vanlig' && !b.tapt && b.gjentatt === 1, `tatt igjen: lojaliteten faller fra 90 til ${R.REGLER.lojGjentatt}, skatten vanlig`);
   const S2 = R.ny(); R.by(S2, 4).loj = 20; R.mistet(S2, 4); ok(R.by(S2, 4).loj === 20, 'en lav lojalitet stiger ikke av å bli tatt igjen'); }
+// (R3-løkka) forvaltning og innkjøring: et nytt tettsted betaler gradvis, og en del av skatten blir i tettstedet
+{ const st = { loj: 50, skatt: 'vanlig', strøm: true, rute: 'åpen' }, I = R.REGLER.innkjøring;
+  const s0 = R.skatt(20000, 'by', { ...st, holdt: 0 }), s3 = R.skatt(20000, 'by', { ...st, holdt: I.døgn }), gammel = R.skatt(20000, 'by', st);
+  ok(Math.abs(s3.netto - s3.brutto * (1 - R.REGLER.forvaltning)) < 1 && Math.abs(gammel.netto - s3.netto) < 1, `full skatt: ${Math.round(s3.brutto)} kr brutto, ${Math.round(s3.netto)} kr til leiren (forvaltningen tar ${R.REGLER.forvaltning * 100} %)`);
+  ok(Math.abs(s0.netto - s3.netto * I.start) < 1 && R.innkjøring(1.5) > I.start && R.innkjøring(1.5) < 1 && R.innkjøring(99) === 1, `nytt tettsted: ${Math.round(s0.netto)} kr det første døgnet, full etter ${I.døgn} døgn`);
+  ok(Math.abs(R.gir(20000, 'by', { ...st, holdt: 0 }).penger - s0.netto) < 1 && R.gir(20000, 'by', { ...st, holdt: 0 }).stål === R.gir(20000, 'by', st).stål, 'gir() gir netto skatt, og varene kommer fullt fra start');
+  ok(R.gir(1000, 'bygd', { ...st, skatt: 'støtte', holdt: 0 }).penger === -50000, 'støtten koster det samme som før');
+  ok(/30 %/.test(R.innkjøringTekst(0)) && R.innkjøringTekst(5) === '', 'teksten: ' + R.innkjøringTekst(0));
+  const S = R.ny(); ok(R.by(S, 1).holdt === 0 && R.fraJSON({ byer: { 2: { loj: 50, skatt: 'vanlig' } } }).byer[2].holdt === I.døgn && R.fraJSON(JSON.parse(JSON.stringify(S))).byer[1].holdt === 0, 'nye tettsteder begynner på 0 døgn; lagret uten «holdt» = innkjørt (som før)');
+  R.by(S, 1).holdt = 5; R.mistet(S, 1); ok(R.by(S, 1).holdt === 0, 'tatt igjen: innkjøringen begynner på nytt'); }
 console.log(feil ? `${feil} FEIL` : 'Alt ok'); process.exit(feil ? 1 : 0);

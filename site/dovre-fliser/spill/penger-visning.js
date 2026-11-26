@@ -55,7 +55,10 @@
     const K = T.kjøper, tak = K ? ` Markedet kjøper høyst ${K.tre} m³ tre, ${K.betong} m³ betong og ${K.stål} t stål per døgn.` : '';
     ut.push({ id: 'salg', tekst: (har.length ? `Salg: dere har ${har.map(k => `${tall(L[k])} ${k === 'stål' ? 't stål' : 'm³ ' + k}`).join(' og ')} – «Selg 10» under Materialer gir penger straks.` : 'Salg: tre, betong og stål dere hogger og river selv, kan selges under Materialer («Selg 10»).') + tak });
     const G = T.tettsteder || {};
-    ut.push({ id: 'region', tekst: G.antall ? `Tettsteder: ${G.antall} er deres og betaler ca. ${kr(rot.Region && Region.krRund ? Region.krRund(G.kr || 0) : G.kr || 0)} i skatt per døgn (Mer → Region).` : 'Tettsteder: flytt et lag inn i et tettsted og hold det – det betaler skatt hver dag (Mer → Region, Krig).' });
+    // (R3-løkka, kritikken: «‹Regionen ga det siste døgnet: 770 000 kr›, Lager ‹ca. 1,6 mill.›, Krig ‹1,5 mill.›») to tall med navn: anslaget
+    // nå (det samme som Region og Krig viser) og det som faktisk kom inn siste døgn (dagboka, kl. 06–06 – det samme som morgenrapporten)
+    const rund = v => (rot.Region && Region.krRund ? Region.krRund(v || 0) : v || 0);
+    ut.push({ id: 'region', tekst: G.antall ? `Tettsteder: ${G.antall} er deres. Anslag nå: ca. ${kr(rund(G.kr))} i skatt per døgn` + (Number.isFinite(G.siste) ? `; siste døgn kom det inn ${kr(rund(G.siste))}` : '') + ' (Mer → Region).' : 'Tettsteder: flytt et lag inn i et tettsted og hold det – det betaler skatt hver dag (Mer → Region, Krig).' });
     ut.push({ id: 'røvere', tekst: 'Røvere: slår dere tilbake et angrep, tar dere byttet deres.' });
     return ut;
   }
@@ -73,24 +76,55 @@
     return B;
   }
   const døgnSum = (B, døgn) => (B && B.d && B.d[døgn]) || { inn: 0, ut: 0, p: {} };
-  // «kontrakter 6,3 mill. kr» … for postene på én side (inn > 0, ut < 0), største først, høyst n
+  // «kontrakter 6,3 mill. kr» … for postene på én side (inn > 0, ut < 0), største først, høyst n.
+  // (R3-løkka 26. nov, kritikken: «Penger inn har to linjer som heter ‹annet›») resten slås sammen under REST – aldri samme navn som en post.
+  const REST = 'andre poster';
   function poster(D, inn, kr, n = 3) {
     const L = Object.entries((D && D.p) || {}).filter(([, v]) => (inn ? v > 0 : v < 0)).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
-    const v = L.slice(0, n).map(([k, x]) => `${k} ${kr(Math.abs(x))}`); if (L.length > n) v.push(`annet ${kr(L.slice(n).reduce((s, [, x]) => s + Math.abs(x), 0))}`); return v.join(', ');
+    // færre enn to i resten: vis dem som de er
+    const vis = L.length > n + 1 ? L.slice(0, n) : L, rest = L.slice(vis.length);
+    const v = vis.map(([k, x]) => `${k} ${kr(Math.abs(x))}`); if (rest.length) v.push(`${REST} ${kr(rest.reduce((s, [, x]) => s + Math.abs(x), 0))}`); return v.join(', ');
   }
   // én setning: «6,3 mill. kr inn (kontrakter 6,3 mill. kr), 1,1 mill. kr ut (lønn …)»
   const døgnTekst = (D, kr) => `${kr(D.inn)} inn` + (D.inn ? ` (${poster(D, true, kr)})` : '') + `, ${kr(D.ut)} ut` + (D.ut ? ` (${poster(D, false, kr)})` : '');
-  // hva pengene gjaldt, ut fra fila som kalte OppstartSpill.gi/betal (Claudes forslag; ukjent = «annet»)
-  const HVA = [[/selskap/, 'kontrakter', 'bøter'], [/folk-visning|folk\.js/, 'lønn'], [/penger-visning/, 'vedlikehold'], [/leir-visning|leir\.js|lager-visning|leirvirkning|kommando|anleggsarbeid|taster/, 'bygg og innkjøp'],
-    [/region/, 'skatt fra tettsteder'], [/spillet-visning|spillet\.js|marked/, 'marked og røvere'], [/morgen/, 'morgenmøtet'], [/leting|eventyr|lut|funn/, 'funn og belønninger'],
-    [/samfunn/, 'samfunnet'], [/kjoretoy|forsyning|okonomi|enheter|tropper|utstyr|karakter/, 'kjøretøy og utstyr'], [/scenario|krig|strategi|garnison|forsvar|strid|bakkekamp|kontrollrom/, 'krig og forsvar']];
+  // HVA PENGENE GJALDT, ut fra fila (og funksjonen) som kalte OppstartSpill.gi/betal. Claudes forslag; ukjent = «annet».
+  // (R3-løkka 26. nov, kritikken: «byggingen står under ‹annet›») Årsaken: navnet fra stakken er uten «.js» («leir»), men regelen krevde
+  // «leir\.js» – alle kjøp gjennom spill/leir.js (bygg, diesel, materialer, reparasjon) ble «annet». Nå sammenlignes navnet uten «.js», og
+  // funksjonsnavnet skiller kjøpene i leir.js. Kategoriene: bygg, materialer, diesel, reparasjoner, salg, lønn, mat, rekruttering,
+  // vedlikehold, kontrakter, bøter, skatt, støtte til tettsteder, svartebørs, avtaler, krig og forsvar, kjøretøy og utstyr, morgenmøtet,
+  // funn og belønninger, samfunnet, marked og røvere.
+  // HVA: [fil (navnet uten .js), inn, ut, [[funksjon, inn, ut], …]] – første fil som passer, så første funksjon som passer
+  const HVA = [
+    [/^selskap/, 'kontrakter', 'bøter'],
+    [/^folk(-visning)?$/, 'folk', 'folk', [[/lønn/i, 'lønn', 'lønn'], [/mat/i, 'mat', 'mat'], [/rekrutt/i, 'rekruttering', 'rekruttering']]],
+    [/^penger-visning$/, 'vedlikehold', 'vedlikehold'],
+    [/^(leir|leir-visning|lager-visning|leirvirkning|kommando|kommando-visning|anleggsarbeid-visning|anleggsarbeid|taster|byggesett|byggesett-visning|strom-visning)$/, 'bygg', 'bygg',
+      [[/drivstoff|diesel/i, 'diesel', 'diesel'], [/materiale/i, 'salg', 'materialer'], [/^selg/i, 'salg', 'salg'], [/reparer/i, 'reparasjoner', 'reparasjoner']]],
+    [/^region/, 'skatt', 'støtte til tettsteder', [[/^kjøp$/, 'svartebørs', 'svartebørs']]],
+    [/^krig/, 'krig og forsvar', 'krig og forsvar', [[/avtale|^fred$|vern/i, 'avtaler', 'avtaler']]],
+    [/^(spillet-visning|spillet|marked)/, 'marked og røvere'],
+    [/^morgen/, 'morgenmøtet'],
+    [/^(leting|eventyr|lut|funn)/, 'funn og belønninger'],
+    [/^samfunn/, 'samfunnet'],
+    [/^(kjoretoy|forsyning|okonomi|enheter|tropper|utstyr|karakter|kjor)/, 'kjøretøy og utstyr'],
+    [/^(scenario|strategi|garnison|forsvar|strid|bakkekamp|kontrollrom|eskalering)/, 'krig og forsvar']];
+  // stakken -> [{ fil, fn }] for filene i spill/ (Chrome: «at api.vernAvtale (…/spill/krig-visning.js?v=…:425:9)», Firefox: «fred@…/spill/…»)
+  function rammer(stakk) {
+    return String(stakk || '').split('\n').map(l => { const f = (l.match(/spill\/([\wæøå-]+)\.js/) || [])[1]; if (!f) return null;
+      const m = l.match(/at (?:new )?([^\s(]+) \(/) || l.match(/^\s*([^@\s]+)@/); const fn = m ? m[1].split('.').pop().replace(/[<>]/g, '') : '';
+      return { fil: f, fn }; }).filter(r => r && !/^(penger-visning|oppstart-visning|flerspiller-visning)$/.test(r.fil) || (r && r.fil === 'penger-visning' && r.fn === 'driftSteg'));
+  }
   function hvaFra(stakk, inn) {
-    const L = String(stakk || '').split('\n').map(l => (l.match(/spill\/([\wæøå-]+)\.js/) || [])[1]).filter(f => f && !/^(penger-visning|oppstart-visning|flerspiller-visning)$/.test(f));
-    const f = L[0] || ''; for (const [re, a, b] of HVA) if (re.test(f)) return inn || !b ? a : b; return 'annet';
+    const R = rammer(stakk), først = R[0]; if (!først) return 'annet';
+    for (const [re, a, b, fns] of HVA) { if (!re.test(først.fil)) continue;
+      // funksjonsnavnene i de første rammene fra samme fil (en bekreftelse kan ligge mellom knappen og kjøpet)
+      if (fns) for (const r of R.slice(0, 4)) { if (r.fil !== først.fil) continue; for (const [fre, fa, fb] of fns) if (fre.test(r.fn)) return inn || !fb ? fa : fb; }
+      return inn || !b ? a : b; }
+    return 'annet';
   }
   const tall = v => (Math.round((v || 0) * 10) / 10).toLocaleString('nb-NO');
   const km = m => (m >= 1000 ? (Math.round(m / 100) / 10).toLocaleString('nb-NO') + ' km' : Math.round(m / 10) * 10 + ' m');
-  const api = { REGLER, kandidater, velgFelt, konto, linjer, retning, km, før, døgnSum, poster, døgnTekst, hvaFra, DØGN_HUSK };
+  const api = { REGLER, kandidater, velgFelt, konto, linjer, retning, km, før, døgnSum, poster, døgnTekst, hvaFra, rammer, HVA, REST, DØGN_HUSK };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   rot.Penger = api;
   if (typeof document === 'undefined' || typeof KROKER === 'undefined') return;
@@ -159,7 +193,7 @@
     const R = rot.RessursSpill && RessursSpill.tilstand(), s = Sp(), j = R && R.jobber ? R.jobber.find(q => q.type === 'hogst' && !q.stoppet && q.gjort < q.arbeid) : null;
     const felt = j && s && s.leir ? { fram: Ressurser.fram(j), tre: j.mat.tre, avst: Math.hypot(j.x - s.leir.x, j.y - s.leir.y) } : null;
     const trePris = rot.Leir ? Leir.MATERIALER.tre.pris * Leir.REGLER.salg : 0;
-    let tettsteder = { antall: 0, kr: 0 }; try { if (rot.RegionSpill && RegionSpill.status) { const st = RegionSpill.status(); tettsteder = { antall: st.size, kr: st.size ? (RegionSpill.sum().penger || 0) : 0 }; } } catch (e) { /* regionen er ikke klar */ }
+    let tettsteder = { antall: 0, kr: 0 }; try { if (rot.RegionSpill && RegionSpill.status) { const st = RegionSpill.status(); tettsteder = { antall: st.size, kr: st.size ? (RegionSpill.sum().penger || 0) : 0, siste: døgnNå() > 1 ? (P.døgnSum(S && S.B, døgnNå() - 1).p.skatt || 0) : null }; } } catch (e) { /* regionen er ikke klar */ }
     const L = rot.LeirSpill && LeirSpill.tilstand();
     const kjøper = rot.SpilletSpill && SpilletSpill.knapt && SpilletSpill.knapt() && rot.Spillet ? Spillet.Marked.KJØPER : null;
     return { oppdrag, hogst: { folk, felt, trePris }, tettsteder, lager: L ? L.lager : {}, kjøper };

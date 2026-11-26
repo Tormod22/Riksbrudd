@@ -8,7 +8,8 @@
  *  - svartebørsen dukker opp av og til med sjeldne ting;
  *  - reparerer du en bru eller et kraftverk, blir tettstedene rundt mer lojale, og et nøytralt tettsted kan gå over til deg;
  *  - olje (tonn, basen) og diesel (liter, leiren) kan veksles.
- * «Døgn» er et handelsdøgn: et spilldøgn eller ti minutter ekte spilling (som markedet), det som kommer først.
+ * «Døgn» er et spilldøgn (kl. 06–06), det samme som lønna og dagboka. (Før R3-løkka 26. nov: et «handelsdøgn» = høyst ti minutter ekte
+ * spilling – på 60× ga tettstedene da 2,4 ganger så mye per spilldøgn som tallene sa, og «siste døgn» betydde noe annet i hver tekst.)
  * ALLE TALL ER CLAUDES FORSLAG (spillverdier, ikke fasit).
  */
 (function (rot) {
@@ -18,7 +19,7 @@
 
   // Claudes forslag – samlet her
   const REGLER = {
-    døgnEkteSek: 600,                       // et handelsdøgn er høyst ti minutter ekte spilling
+    døgnEkteSek: 600,                       // (brukes ikke lenger, R3-løkka: døgnet er et spilldøgn) – står for eldre kode
     // hva som gjør et tettsted til hva (meter til nærmeste)
     nær: { olje: 8000, kai: 1500, kraft: 6000 },
     byFolk: 5000,                            // fra så mange innbyggere er det en by
@@ -26,7 +27,17 @@
     // skatt i kroner per innbygger per døgn (ved «vanlig»), og taket per tettsted
     // (Runde 3: 300 kr ga 2,6 mill. kr per ti minutter med sju tettsteder i Ryfylke – for mye mot 40 mill. i startkasse. Med 100 kr gir de
     // samme sju ca. 0,9 mill., så et kontrollrom til 15 mill. tar rundt tre timer: inntekten merkes, men pengene er fortsatt knappe.)
-    skattKr: 100, skattMaks: 1.5e6,
+    // (R3-løkka 26. nov, kritikken: «Gjøvik gir 1,5–1,7 mill. kr i skatt per døgn mot 0,39 mill. kr i faste utgifter, og kassa steg fra
+    // 11,8 til 15,5 mill. med ti døde») taket 1,5 -> 1,2 mill. kr, og to ting til (Claudes forslag):
+    //  - forvaltning: en del av skatten går til bygdevern og forvaltning i tettstedet (folk som krever inn, vakter, drift av det offentlige)
+    //    – den kommer aldri til leiren;
+    //  - innkjøring: et tettsted du nettopp har tatt, betaler ikke full skatt med en gang. Det begynner på `start` av skatten og når full
+    //    skatt etter `døgn` døgn du har holdt det (folk må lære å stole på de nye herrene). Varene (mat, tre …) kommer fullt fra start.
+    // Målet: en mellomstor by (ca. 20 000) gir netto ca. 0,9 mill. kr per døgn når skatten er full – omtrent én rolig eskorte, under en
+    // middels kontrakt (hent person 1,5 mill.) – og ca. 0,3 mill. det første døgnet (test_balanse.js, «tettstedene»).
+    skattKr: 100, skattMaks: 1.2e6,
+    forvaltning: .25,
+    innkjøring: { start: .3, døgn: 3 },
     // lojalitet 0–100
     lojStart: 50, lojEtterOpprør: 30, opprørVed: 10,
     // (runde 4) et tettsted du har mistet og tar igjen, husker ikke den gamle lojaliteten: folk er lei av å bytte herre.
@@ -91,20 +102,40 @@
     const S = SKATT[st.skatt] || SKATT.vanlig;
     return S.f * lojFaktor(st.loj) * (st.strøm === false ? (st.utenStrøm || .4) : 1) * ruteFaktor(st.rute) * (st.uro ? REGLER.uro : 1);
   }
-  // Det tettstedet faktisk gir per døgn nå. «Støtte» gir ingen varer og koster penger (negativt tall).
+  // (R3-løkka) hvor stor del av skatten som kommer etter `holdt` døgn (undefined = et tettsted fra før regelen: full skatt)
+  function innkjøring(holdt) {
+    if (holdt === undefined || holdt === null || !Number.isFinite(+holdt)) return 1;
+    const I = REGLER.innkjøring; return I.start + (1 - I.start) * klem(+holdt / I.døgn, 0, 1);
+  }
+  // (R3-løkka) skatten delt opp: brutto (det tettstedet betaler), det som går til forvaltningen, det som holdes igjen fordi tettstedet er
+  // nytt, og netto (det som kommer til leiren). st som i faktor(), pluss st.holdt (døgn du har holdt det).
+  function skatt(folk, t, st) {
+    const brutto = grunn(folk, t).penger * faktor(st), andel = innkjøring(st.holdt);
+    const forv = brutto * REGLER.forvaltning, netto = (brutto - forv) * andel;
+    return { brutto, forvaltning: forv, holdtIgjen: brutto - forv - netto, netto, andel };
+  }
+  // Det tettstedet faktisk gir per døgn nå. «Støtte» gir ingen varer og koster penger (negativt tall). Pengene er netto (skatt()).
   function gir(folk, t, st) {
     const g = grunn(folk, t), f = faktor(st), ut = {}, S = SKATT[st.skatt] || SKATT.vanlig;
     for (const k of Object.keys(g)) ut[k] = g[k] * f;
+    if (ut.penger > 0) ut.penger = skatt(folk, t, st).netto;
     if (S.koster) ut.penger = -folk * S.koster;
     return ut;
+  }
+  // «skatten er 30 % nå – full om 2 døgn»
+  function innkjøringTekst(holdt) {
+    const a = innkjøring(holdt); if (a >= 1) return '';
+    const igjen = Math.max(0, REGLER.innkjøring.døgn - (+holdt || 0)), t = igjen < 1 ? 'under ett døgn' : `${Math.ceil(igjen)} døgn`;
+    return `nytt tettsted: ${Math.round(a * 100)} % av skatten nå, full om ${t}`;
   }
   // (løkka r1, kritiker I: Kvam ga «75 000 kr per døgn» i Krig, «39 761 kr» under Lager og «250 000 kr» i loggen) ÉN regel for hva et
   // tettsted gir per døgn. Holder du det: tilstanden b nå. Holder du det ikke: det det ville gitt rett etter at du tar det – samme
   // lojalitet som Region.by gir da (start, eller høyst lojGjentatt når du har mistet det før), vanlig skatt, ingen garnison, og
   // strømmen og handelsruta slik de er nå. holdt: b er ditt nå.
+  // (R3-løkka) holder du det ikke, regnes full skatt (som når innkjøringen er over); teksten sier at den kommer gradvis.
   function inntekt(folk, t, { b, holdt, strøm, rute, garnison, utenStrøm } = {}) {
     const loj = holdt && b ? b.loj : b ? (b.tapt ? Math.min(b.loj, REGLER.lojGjentatt) : b.loj) : REGLER.lojStart;
-    const st = { loj, skatt: holdt && b ? b.skatt : 'vanlig', strøm, rute: rute || 'åpen', uro: !!(holdt && b && b.uro), garnison: !!(holdt && garnison), utenStrøm };
+    const st = { loj, skatt: holdt && b ? b.skatt : 'vanlig', strøm, rute: rute || 'åpen', uro: !!(holdt && b && b.uro), garnison: !!(holdt && garnison), utenStrøm, holdt: holdt && b ? b.holdt : undefined };
     return gir(folk, t, st);
   }
   // kroner per døgn slik de står overalt: rundet til nærmeste tusen
@@ -249,22 +280,25 @@
   // ---------- tilstanden ----------
   // byer: id -> { loj, skatt, uro }, pott: varer på vei som ikke er hele ennå, har: kjøpt på svartebørsen
   const ny = () => ({ versjon: 1, byer: {}, pott: {}, døgn: 0, time: 0, børs: { tilbud: [], dag: -1 }, har: {}, sist: {}, medisin: 0 });
+  // (R3-løkka) holdt = døgn du har holdt det (innkjøringen av skatten); begynner på 0 når det tas, også når det tas igjen
   function by(S, id, start) { const b = S.byer[id];
     // (runde 4) tatt tilbake etter å ha vært mistet: lojaliteten faller til høyst lojGjentatt, skatten og uroen begynner på nytt
-    if (b && b.tapt) { b.tapt = false; b.loj = Math.min(b.loj, REGLER.lojGjentatt); b.skatt = 'vanlig'; b.uro = false; b.gjentatt = (b.gjentatt || 0) + 1; }
-    return b || (S.byer[id] = { loj: start === undefined ? REGLER.lojStart : start, skatt: 'vanlig', uro: false }); }
+    if (b && b.tapt) { b.tapt = false; b.loj = Math.min(b.loj, REGLER.lojGjentatt); b.skatt = 'vanlig'; b.uro = false; b.gjentatt = (b.gjentatt || 0) + 1; b.holdt = 0; }
+    return b || (S.byer[id] = { loj: start === undefined ? REGLER.lojStart : start, skatt: 'vanlig', uro: false, holdt: 0 }); }
   // (runde 4) du har mistet tettstedet: merk det, så lojaliteten faller når du tar det igjen
   function mistet(S, id) { const b = S.byer[id]; if (!b || b.tapt) return false; b.tapt = true; return true; }
   function settSkatt(S, id, skatt) { if (!SKATT[skatt]) return false; by(S, id).skatt = skatt; return true; }
   function fraJSON(d) { const S = ny(); if (!d || typeof d !== 'object') return S;
-    for (const [id, b] of Object.entries(d.byer || {})) S.byer[id] = { loj: klem(+b.loj || 0, 0, 100), skatt: SKATT[b.skatt] ? b.skatt : 'vanlig', uro: !!b.uro, tapt: !!b.tapt, gjentatt: +b.gjentatt || 0 };
+    for (const [id, b] of Object.entries(d.byer || {})) S.byer[id] = { loj: klem(+b.loj || 0, 0, 100), skatt: SKATT[b.skatt] ? b.skatt : 'vanlig', uro: !!b.uro, tapt: !!b.tapt, gjentatt: +b.gjentatt || 0,
+      // lagret før R3-løkka (uten holdt): regnes som innkjørt, så et lagret spill betaler som før
+      holdt: Number.isFinite(+b.holdt) && b.holdt !== null && b.holdt !== undefined ? Math.max(0, +b.holdt) : REGLER.innkjøring.døgn };
     for (const k of VARER) if (d.pott && d.pott[k] > 0) S.pott[k] = +d.pott[k];
-    S.døgn = +d.døgn || 0; S.time = +d.time || 0; S.medisin = +d.medisin || 0;
+    S.døgn = +d.døgn || 0; S.time = +d.time || 0; S.medisin = +d.medisin || 0; if (Number.isFinite(+d.dag) && d.dag > 0) S.dag = +d.dag;
     if (d.børs && Array.isArray(d.børs.tilbud)) S.børs = { tilbud: d.børs.tilbud.filter(id => BØRS[id]), dag: +d.børs.dag || 0 };
     for (const id of Object.keys(BØRS)) if (d.har && d.har[id] > 0) S.har[id] = Math.floor(d.har[id]);
     return S; }
 
-  const api = { REGLER, TYPER, VARER, ENHET, SKATT, SKATTER, type, grunn, faktor, lojFaktor, ruteFaktor, gir, inntekt, krRund, girTekst, lojMål, lojSteg, opprør, lojOrd,
+  const api = { REGLER, TYPER, VARER, ENHET, SKATT, SKATTER, type, grunn, faktor, lojFaktor, ruteFaktor, innkjøring, innkjøringTekst, skatt, gir, inntekt, krRund, girTekst, lojMål, lojSteg, opprør, lojOrd,
     tilLinje, tilSti, stiLengde, ledd, kjede, rute, ruteOrd, mistet, gjenoppbygg, FORDEL, fordel, Veksle, Bors, ny, by, settSkatt, fraJSON };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Region = api;

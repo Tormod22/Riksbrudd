@@ -83,7 +83,7 @@
     for (let i = 0; i < r.noder.length; i += steg) sti.push(g.punkt(r.noder[i])); sti.push(g.punkt(r.noder[r.noder.length - 1]), [job.b.x, job.b.y]);
     const brutt = r.lenker.filter(e => spSett.has(e)); VEG.set(job.k, { sti, brutt: brutt.length ? brutteNavn(g, brutt) : null, meter: r.meter }); statusTid = -1e9; }
   setInterval(() => { if (!klar || !vegKø.length || !window.VEGNETT) return; const t0 = performance.now(); while (vegKø.length && performance.now() - t0 < 40) regnVeg(vegKø.shift()); }, 500);
-  const stFor = q => ({ loj: q.b.loj, skatt: q.b.skatt, strøm: q.strøm, rute: q.rute.status, uro: q.b.uro, garnison: q.garnison, utenStrøm: G.REGLER.strøm.uten });
+  const stFor = q => ({ loj: q.b.loj, skatt: q.b.skatt, strøm: q.strøm, rute: q.rute.status, uro: q.b.uro, garnison: q.garnison, utenStrøm: G.REGLER.strøm.uten, holdt: q.b.holdt });
   // vanskelighetsgraden (window.SPILLREGLER.faktor.penger: lett 1,5, vanlig 1, hard 0,6) gjelder også skatten fra tettstedene
   const pf = () => { const f = window.SPILLREGLER && SPILLREGLER.faktor ? +SPILLREGLER.faktor.penger : 1; return f > 0 ? Math.max(.4, Math.min(1.5, f)) : 1; };
   const medPf = g => { if (g.penger > 0) g.penger *= pf(); return g; };
@@ -106,6 +106,8 @@
     const ST = status();
     for (const q of ST.values()) { const b = q.b, navn = q.by.e.navn, st = stFor(q);
       b.loj = RG.lojSteg(b.loj, st, d);
+      // (R3-løkka) døgn holdt: skatten kjøres inn (Region.innkjøring)
+      b.holdt = (Number.isFinite(+b.holdt) ? +b.holdt : 0) + d;
       const o = RG.opprør(b.loj, q.garnison);
       if (o === 'tapt') { TETTSTEDER.set(q.by.e.id, { eier: null, inntar: null }); b.loj = R.lojEtterOpprør; b.uro = false; b.skatt = 'vanlig'; statusTid = -1e9; skitten = true;
         logg(`OPPRØR i ${navn}! Folket har jaget skatteoppkreverne dine, og tettstedet er nøytralt igjen. Hard skatt uten garnison går ikke i lengden.`); continue; }
@@ -120,10 +122,16 @@
       meldtStrøm.set(q.by.e.id, q.strøm);
       const g = medPf(RG.gir(q.by.e.folk || 0, q.type, st)); for (const k of RG.VARER) if (g[k]) S.pott[k] = (S.pott[k] || 0) + g[k] * d;
     }
-    const t0 = Math.floor(S.time), d0 = Math.floor(S.døgn); S.time += d * 24; S.døgn += d;
+    const t0 = Math.floor(S.time); S.time += d * 24; S.døgn += d;
     if (Math.floor(S.time) !== t0) lever();
-    if (Math.floor(S.døgn) !== d0) nyttDøgn();
+    // (R3-løkka) rapporten følger spilldøgnet kl. 06–06 (som lønna, dagboka og morgenmøtet), så «det siste døgnet» er samme døgn overalt
+    const dag = dagNå(); if (!Number.isFinite(S.dag)) S.dag = dag; else if (dag > S.dag) { nyttDøgn(S.dag); S.dag = dag; }
   }
+  const dagNå = () => Math.floor((typeof tid === 'number' && Number.isFinite(tid) ? tid : 0) / 1440) + 1;
+  // skatten som faktisk kom inn et døgn (dagboka i spill/penger-visning.js), eller null
+  function skattDøgn(n) { try { if (!window.PengerSpill || !PengerSpill.tilstand || !PengerSpill.tilstand() || !(n >= 1)) return null; return (PengerSpill.døgn(n).p || {}).skatt || 0; } catch (e) { return null; } }
+  const sisteSkatt = () => skattDøgn(dagNå() - 1);
+  const sisteTekst = () => { const v = sisteSkatt(); return v === null ? '' : ` Siste døgn (dag ${dagNå() - 1}, kl. 06–06) kom det inn ${kr(RG.krRund(v))} i skatt.`; };
   // Det som har kommet fram, legges i leiren (hele rasjoner og liter, materialer i tideler). Fullt lager = resten venter (høyst et døgn).
   function lever() {
     const l = L(), f = F(), P = S.pott, fikk = (k, v) => { if (v) S.sist[k] = (S.sist[k] || 0) + v; };
@@ -138,8 +146,9 @@
       if (OppstartSpill.betal(v)) fikk('penger', -v); else { for (const b of Object.values(S.byer)) if (b.skatt === 'støtte') b.skatt = 'vanlig'; logg('Kassa er tom: støtten til tettstedene er stoppet, og de betaler vanlig skatt igjen.'); } }
     lagre(); if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); vis();
   }
-  function nyttDøgn() {
-    if (mine().length) { const t = RG.girTekst(S.sist, kr); logg(t === 'ingenting' ? 'Regionen: ingenting kom fram til leiren det siste døgnet.' : `Regionen ga det siste døgnet: ${t}.`); }
+  function nyttDøgn(dag) {
+    const nr = Number.isFinite(dag) ? ` (dag ${dag})` : '';
+    if (mine().length) { const t = RG.girTekst(S.sist, kr); logg(t === 'ingenting' ? `Regionen: ingenting kom fram til leiren det siste døgnet${nr}.` : `Regionen ga det siste døgnet${nr}: ${t}.`); }
     S.sist = {};
     // svartebørsen: gårsdagens selger drar, kanskje kommer en ny
     S.børs = { tilbud: RG.Bors.tilbud(tilfV, S.har), dag: Math.floor(S.døgn) };
@@ -149,7 +158,7 @@
     lagre();
   }
   KROKER.sim.push(dt => { spillAkk += dt / 1440; });
-  setInterval(() => { if (!klar || !leir()) return; if (typeof tempo !== 'undefined' && tempo > 0 && !document.hidden) { const d = Math.max(spillAkk, 1 / R.døgnEkteSek); spillAkk = 0; if (auto()) steg(d); } else spillAkk = 0;
+  setInterval(() => { if (!klar || !leir()) return; if (typeof tempo !== 'undefined' && tempo > 0 && !document.hidden) { const d = spillAkk; spillAkk = 0; if (auto() && d > 0) steg(d); } else spillAkk = 0;
     if (åpen) { const lm = document.getElementById('leirmeny'); if ((window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen()) || (lm && lm.classList.contains('på') && performance.now() - åpnet > 1500)) lukk(); else vis(); } }, 1000);
 
   // ---------- svartebørsen ----------
@@ -240,7 +249,10 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
     const by = q.by, b = q.b, T = RG.TYPER[q.type], g = girNå(q), ro = RUTEORD[q.rute.status], fare = q.rute.status !== 'åpen' || b.loj < 30 || !q.strøm;
     const k = el('div', { klasse: 'by' + (fare ? ' fare' : ''), 'data-by': by.e.id });
     k.append(el('div', { klasse: 'n' }, el('b', {}, by.e.navn), el('small', {}, `${T.navn} · ${(by.e.folk || 0).toLocaleString('nb-NO')} innb.`)));
-    k.append(el('div', { klasse: 'gir' }, 'Gir nå per døgn: ', el('b', {}, RG.girTekst(g, kr))));
+    k.append(el('div', { klasse: 'gir' }, 'Gir nå (anslag per døgn): ', el('b', {}, RG.girTekst(g, kr))));
+    // (R3-løkka) skatten delt opp: det tettstedet betaler, forvaltningen og innkjøringen
+    { const sk = RG.skatt(by.e.folk || 0, q.type, stFor(q)), it = RG.innkjøringTekst(b.holdt);
+      if (sk.brutto > 0) k.append(el('small', { 'data-skatt-del': '' }, `Skatten: ${kr(RG.krRund(sk.brutto * pf()))} betales, ${kr(RG.krRund(sk.forvaltning * pf()))} går til bygdevern og forvaltning` + (it ? `, ${it}` : '') + '.')); }
     k.append(el('div', { klasse: 'loj ' + (b.loj < 30 ? 'lav' : b.loj < 50 ? 'mid' : '') }, el('i', { style: `width:${Math.round(b.loj)}%` })));
     k.append(el('small', {}, `Lojalitet ${Math.round(b.loj)} av 100 – ${RG.lojOrd(b.loj)}` + (b.uro ? ' (uro: gir halvparten)' : '') + `. Går mot ${RG.lojMål(stFor(q))}.`));
     const br = el('div', { klasse: 'brikker' });
@@ -261,10 +273,10 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   function bygg() {
     const ut = el('div'), ST = status(true), l = leir(), s = sum();
     ut.append(kn('×', lukk, { klasse: 'lukk', 'aria-label': 'Lukk' }), el('h2', {}, 'Regionen'));
-    ut.append(el('small', { klasse: 'ingress' }, 'Tettstedene du holder, sender varer og skatt til leiren hver time. Tallene «per døgn» regnes i spilldøgn. Står du lenge på 1× (sanntid), går regionens døgn likevel høyst ti minutter ved skjermen – du må ikke vente et ekte døgn.'));
+    ut.append(el('small', { klasse: 'ingress' }, `Tettstedene du holder, sender varer og skatt til leiren hver spilltime. «Per døgn» er et spilldøgn (kl. 06–06) – det samme døgnet som lønna og dagboka. «Nå» er et anslag med lojaliteten, ruta og strømmen slik de er nå; «siste døgn» er det som faktisk kom inn. ${Math.round(R.forvaltning * 100)} % av skatten går til bygdevern og forvaltning i tettstedet, og et nytt tettsted betaler ${Math.round(R.innkjøring.start * 100)} % av skatten det første døgnet og full skatt etter ${R.innkjøring.døgn} døgn.`));
     bestillVegnett();
     if (!ST.size) ut.append(el('div', { klasse: 'sum' }, 'Du holder ingen tettsteder ennå. Et lag som står 30 minutter i et tettsted uten fiender, tar det – se under hva de nærmeste er verdt.'));
-    else { ut.append(el('div', { klasse: 'sum', id: 'regionsum' }, `${ST.size} tettsted${ST.size === 1 ? '' : 'er'} gir nå per døgn: `, el('b', {}, RG.girTekst(s, kr)), '.'));
+    else { ut.append(el('div', { klasse: 'sum', id: 'regionsum' }, `${ST.size} tettsted${ST.size === 1 ? '' : 'er'} gir nå (anslag per døgn): `, el('b', {}, RG.girTekst(s, kr)), '.' + sisteTekst()));
       if (!auto()) ut.append(el('small', {}, 'Test: leveransene står stille.'));
       if (ST.size > 1) { const alle = el('div', { klasse: 'skatt' }); for (const id of RG.SKATTER) alle.append(kn('Alle: ' + RG.SKATT[id].navn.toLowerCase(), () => settAlle(id))); ut.append(alle); }
       ut.append(el('h3', {}, 'Tettstedene dine'));
@@ -357,12 +369,13 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
     const boks = el('div', { klasse: 'regionlinje', style: 'margin-top:5px;color:#d9c48a;font-size:12.5px;line-height:1.35' }, el('b', { style: 'color:#f0d79a' }, `${T.navn}`), ` – ${T.tekst}.`);
     const linje = tekst => boks.append(el('div', {}, tekst));
     if (e === 'blå') { const q = status().get(by.e.id) || status(true).get(by.e.id);
-      if (q) { linje(`Gir deg nå per døgn: ${RG.girTekst(girNå(q), kr)}, og ${tall(oljeDøgn(by, st))} t olje til basen.`);
+      if (q) { const it = RG.innkjøringTekst(q.b.holdt); linje(`Gir deg nå (anslag per døgn): ${RG.girTekst(girNå(q), kr)}, og ${tall(oljeDøgn(by, st))} t olje til basen.` + (it ? ` Skatten: ${it}.` : ''));
         linje(`Strøm: ${strømOrd}. Lojalitet ${Math.round(q.b.loj)} (${RG.lojOrd(q.b.loj)}), skatt ${RG.SKATT[q.b.skatt].navn.toLowerCase()}, handelsruta ${q.rute.status}` + (q.rute.brutt && q.rute.brutt.length ? ` (${q.rute.brutt[0]})` : '') + '.'); }
       return boks; }
     // (løkka r1) samme tall som Lager og loggen får når du har tatt det: lojaliteten du starter med og handelsruta slik den er nå
     const g = inntektFor(by), ru = (() => { try { const l = leir(); if (!l) return null; const p = { id: by.e.id, navn: by.e.navn, x: midt(by).x, y: midt(by).y }; return RG.rute(p, [...mine().map(b => ({ id: b.e.id, navn: b.e.navn, x: midt(b).x, y: midt(b).y })), p], l, fiender(), egne(), veger).status; } catch (e) { return null; } })();
-    linje(`Hvis du tar det, per døgn: ${RG.girTekst(g, kr)}, og ${tall(oljeDøgn(by, st))} t olje til basen. Strøm: ${strømOrd}.` + (ru && ru !== 'åpen' ? ` Handelsruta hjem er ${ru} nå (${ru === 'truet' ? 'halvparten kommer fram' : 'ingenting kommer fram'}).` : ''));
+    linje(`Hvis du tar det, per døgn med full skatt: ${RG.girTekst(g, kr)}, og ${tall(oljeDøgn(by, st))} t olje til basen. Strøm: ${strømOrd}.` + (ru && ru !== 'åpen' ? ` Handelsruta hjem er ${ru} nå (${ru === 'truet' ? 'halvparten kommer fram' : 'ingenting kommer fram'}).` : ''));
+    if (g && g.penger > 0) linje(`Skatten kommer gradvis: ${Math.round(R.innkjøring.start * 100)} % det første døgnet, full etter ${R.innkjøring.døgn} døgn. ${Math.round(R.forvaltning * 100)} % går til bygdevern og forvaltning (er trukket fra).`);
     const b = S.byer[by.e.id]; if (b && b.tapt) linje(`Du har holdt det før: lojaliteten starter på høyst ${R.lojGjentatt}.`);
     if (e && e !== 'blå') linje(`Nå gir det ${sideNavn(e)}: ${fordelTekst(t)}` + (auto() ? '' : ' (står stille i testene)') + '.');
     return boks; }
@@ -382,8 +395,8 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
       if (n.length) h.textContent = `Gir strøm til ${n.length === 1 ? n[0].e.navn : n.length + ' av tettstedene dine'}: uten strøm gir de ${Math.round(G.REGLER.strøm.uten * 100)} % og blir misfornøyde. ` + h.textContent; return; }
     if (o.lag !== 'tettsted') return;
     const t = typeAv(o), T = RG.TYPER[t], q = status(true).get(o.e.id);
-    h.textContent += ` ${T.navn} (${T.tekst}): ` + (q ? `gir nå ${RG.girTekst(girNå(q), kr)} per døgn. Lojalitet ${Math.round(q.b.loj)} (${RG.lojOrd(q.b.loj)}), skatt: ${RG.SKATT[q.b.skatt].navn.toLowerCase()}, handelsruta er ${q.rute.status}. Skatten velger du i «Region».`
-      : `som ditt gir det ${RG.girTekst(grunnFor(o.e.folk || 0, t), kr)} per døgn til leiren.`); });
+    h.textContent += ` ${T.navn} (${T.tekst}): ` + (q ? `gir nå (anslag) ${RG.girTekst(girNå(q), kr)} per døgn. Lojalitet ${Math.round(q.b.loj)} (${RG.lojOrd(q.b.loj)}), skatt: ${RG.SKATT[q.b.skatt].navn.toLowerCase()}, handelsruta er ${q.rute.status}. Skatten velger du i «Region».`
+      : `som ditt gir det ${RG.girTekst(inntektFor(o) || grunnFor(o.e.folk || 0, t), kr)} per døgn til leiren med full skatt (det første døgnet ${Math.round(R.innkjøring.start * 100)} % av skatten).`); });
 
   // (R2-løkka 26. nov, pakke «krig», kritikken: «Tettstedspanelet (Elverum) har ingen "Send"-knapp og viser ikke bygdevernets styrke»)
   // et tettsted du ikke holder: forsvaret (bygdevernet og fiender dere vet om), ett tall for hvor mange mann som trengs (Strategi.anbefalt),
@@ -407,7 +420,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el: e, knapp }) => { if (!klar) return;
     hode.append(e('h3', { 'data-fane': 'lager' }, 'Regionen'));
     const n = mine().length, s = n ? sum() : null;
-    hode.append(e('small', {}, n ? `${n} tettsted${n === 1 ? '' : 'er'} gir nå ${RG.girTekst(s, kr)} per døgn.` : 'Du holder ingen tettsteder. De gir mat, materialer, diesel, folk og skatt.'));
+    hode.append(e('small', {}, n ? `${n} tettsted${n === 1 ? '' : 'er'} gir nå (anslag) ${RG.girTekst(s, kr)} per døgn.` + sisteTekst() : 'Du holder ingen tettsteder. De gir mat, materialer, diesel, folk og skatt.'));
     hode.append(knapp('Åpne Region: tettsteder, ruter, skatt, svartebørs', () => åpne(), { id: 'regionknapp' })); });
   (window.KOMMANDO_TILLEGG = window.KOMMANDO_TILLEGG || []).push({ k: 'region', navn: 'Region', tast: '', ikon: "<path d='M3 20h18'/><path d='M5 20v-7l4-3v10'/><path d='M9 20V6l6-2v16'/><path d='M15 20v-9l4 2v7'/><path d='M12 8v1M12 12v1M12 16v1'/>",
     fins: () => klar, på: () => åpen, trykk: () => (åpen ? lukk() : åpne()), tittel: 'Regionen: hva tettstedene gir, handelsruter, skatt og lojalitet, svartebørs',
@@ -416,7 +429,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   // ---------- start ----------
   function start() { const s = Sp(); if (!s || !s.leir) return; leirId = Math.round(s.leir.x) + ',' + Math.round(s.leir.y); S = RG.fraJSON(les()); startTid = performance.now(); STATUS = new Map(); statusTid = -1e9; meldtRute = new Map(); meldtStrøm = new Map(); klar = true; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  Object.assign(api, { glemFordel: () => { fordelTid = -1e9; BYID = null; }, start, åpne, lukk, erÅpen: () => åpen, vis, tilstand: () => S, status: () => status(true), sum, steg, lever, nyttDøgn, girFor: id => { const q = status(true).get(id); return q ? girNå(q) : null; }, inntekt: id => inntektFor(byMedId(id) || byMedId(+id)), inntektTekst: id => inntektTekst(byMedId(id) || byMedId(+id)), settSkatt, settAlle, kjøp, brukMedisin, veksle, gjenoppbygg, typeAv, omgivelser, lagre, fordel, pyntKrig,
+  Object.assign(api, { glemFordel: () => { fordelTid = -1e9; BYID = null; }, start, åpne, lukk, erÅpen: () => åpen, vis, tilstand: () => S, status: () => status(true), sum, steg, lever, nyttDøgn, sisteSkatt, skattDøgn, girFor: id => { const q = status(true).get(id); return q ? girNå(q) : null; }, inntekt: id => inntektFor(byMedId(id) || byMedId(+id)), inntektTekst: id => inntektTekst(byMedId(id) || byMedId(+id)), settSkatt, settAlle, kjøp, brukMedisin, veksle, gjenoppbygg, typeAv, omgivelser, lagre, fordel, pyntKrig,
     børsNå: ider => { S.børs = { tilbud: ider.filter(id => RG.Bors.VARER[id]), dag: Math.floor(S.døgn) }; vis(true); }, sett: n => { S = RG.fraJSON(n); statusTid = -1e9; vis(true); }, klar: () => klar });
   window.RegionSpill = api;
 })();
