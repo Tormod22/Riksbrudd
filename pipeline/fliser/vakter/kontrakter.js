@@ -15,10 +15,12 @@ module.exports = { navn: 'den røde tråden: første kontrakt, stegene, betaling
       const k = SS.førsteKontrakt(true), S = SS.tilstand();
       krev(k && k.første && k.type === 'forsyning' && S.tilbud[0] === k, 'nytt spill ga ingen første kontrakt'); if (!k) return ut;
       ut.kontrakt = k.tittel; krev(SS.tråd() && SS.tråd().id === 'ta', 'tråden starter ikke på «ta»');
-      await vent(700); const lappEl = document.getElementById('nestelapp');
+      // (kritikerløkka r1) på telefon skjules lappen mens et stort panel er åpent (kompakt.js: body.tlfpanel) – lukk panelene først
+      if (window.lukkPanel) try { lukkPanel(); } catch (e) { /* ok */ } for (const id of ['leirmeny', 'folkmeny', 'tropppanel', 'karakterark', 'krig']) { const e = document.getElementById(id); if (e && e.classList.contains('på')) e.classList.remove('på'); }
+      await vent(900); const lappEl = document.getElementById('nestelapp');
       ut.lapp = lappEl && lappEl.textContent; krev(SS.lapp() && /Ta kontrakten/.test(SS.lapp().tekst), 'lappen sier ikke «Ta kontrakten»');
       const bar = ['kommando', 'mkom'].map(id => document.getElementById(id)).find(e => e && e.classList.contains('på'));
-      if (bar) krev(lappEl.classList.contains('på') && lappEl.getBoundingClientRect().bottom <= bar.getBoundingClientRect().top + 1, 'lappen vises ikke over bunnmenyen');
+      if (bar && !document.body.classList.contains('tlfpanel')) krev(lappEl.classList.contains('på') && lappEl.getBoundingClientRect().bottom <= bar.getBoundingClientRect().top + 1, 'lappen vises ikke over bunnmenyen');
       // 2) ta kontrakten med knappen i panelet (kommandolaget)
       SS.vis(true); const kn = document.querySelector(`#selskap [data-s="ta"][data-id="${k.id}"]`); krev(kn && !kn.disabled, 'Ta-knappen mangler'); if (kn) kn.click();
       SS.oppdaterTråd(); krev(k.status === 'aktiv' && SS.tråd().id === 'tropp', 'kontrakten ble ikke tatt: ' + k.status + ' / ' + (SS.tråd() && SS.tråd().id)); ut.steg.push('ta'); SS.vis(false);

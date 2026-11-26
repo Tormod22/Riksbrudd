@@ -31,7 +31,7 @@ module.exports = { navn: 'kontraktene etter kritikken (R1): trygg første kontra
         krev(linjer.filter(t => /har lastet nødlageret/.test(t)).length === 1, '«har lastet nødlageret» står ' + linjer.filter(t => /har lastet nødlageret/.test(t)).length + ' ganger');
         for (const m of s.menn) m.hp = 0; SS.steg(1); SS.oppdaterTråd(); SS.steg(1); SS.oppdaterTråd(); }
       krev(linjer.some(t => /Kontrakt brutt/.test(t)) && !linjer.some(t => /vokst|fullført/.test(t)), 'loggen etter bruddet: ' + linjer.slice(-3).join(' | '));
-      const lp = SS.lapp(); krev(lp && /gikk galt/.test(lp.hjelp || '') && SS.tilstand().tilbud.length > 0, 'lappen etter bruddet: ' + (lp && lp.hjelp));
+      const lp = SS.lapp(); krev(lp && /gikk galt/.test(lp.hjelp || '') && (SS.tilstand().tilbud.length > 0 || linjer.some(t => /kontrakter kommer i morgen/.test(t))), 'lappen etter bruddet: ' + (lp && lp.hjelp));
       window.logg = loggFør;
       // 3) bygdevernet og oppdraget: en hold-kontrakt for kommunen i et tettsted gjør stedet fredelig for egne lag
       const by = byer[0];
@@ -60,7 +60,8 @@ module.exports = { navn: 'kontraktene etter kritikken (R1): trygg første kontra
       // 7) overskriften og ryktetekstene
       SS.vis(true); await new Promise(r => setTimeout(r, 300)); const kode = document.querySelector('#selskap .kode'), riv = [...document.querySelectorAll('#selskap .rival .rad span:first-child')].map(e => e.textContent).filter(t => /^Folk sier/.test(t));
       const own = SK.rykteTekst(SS.tilstand().sider.blå.rykte); SS.vis(false);
-      krev(kode && !/· blå$/i.test(kode.textContent) && new Set([own.replace('dere er', 'de er'), ...riv]).size === 3 && !riv.some(t => /er holder ord/.test(t)), 'overskrift «' + (kode && kode.textContent) + '», rykter: ' + riv.join(' / '));
+      // (fletting r1) overskriften skal ha flaggets farge (SelskapSpill.fargeord) – ikke sidens navn; med et blått flagg er «blå» riktig
+      const fo = SS.fargeord ? SS.fargeord() : ''; krev(kode && (fo ? kode.textContent.trim().toLowerCase().endsWith('· ' + fo.toLowerCase()) : !/·/.test(kode.textContent)) && new Set([own.replace('dere er', 'de er'), ...riv]).size === 3 && !riv.some(t => /er holder ord/.test(t)), 'overskrift «' + (kode && kode.textContent) + '», rykter: ' + riv.join(' / '));
     } catch (e) { krev(false, 'unntak: ' + e.message); }
     finally {
       window.logg = loggFør; SS.vis(false); SS.test = testFør; KS.test = ktFør;

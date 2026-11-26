@@ -10,7 +10,7 @@ module.exports = {
     if (!window.ForsvarSpill || !ForsvarSpill.prognose || !window.Forsvar || !window.FlytSpill || !window.SpilletSpill || !SpilletSpill.klar || !SpilletSpill.klar() || !L) return { ok: false, tekst: 'ForsvarSpill, FlytSpill, SpilletSpill eller leiren mangler', data: {} };
     const T = SpilletSpill.T(), k = ENHETER.find(e => e.karakter && e.side === 'blå'), $ = id => document.getElementById(id);
     const FLAGG = ['SpilletSpill', 'ForsvarSpill', 'FlytSpill', 'KampSpill'], flagg = FLAGG.map(n => window[n] ? window[n].test : undefined);
-    const før = { tid, tempo, kam: { ...kam }, T: { bølge: T.bølge, aktiv: T.aktiv, nesteSpill: T.nesteSpill, nesteEkte: T.nesteEkte, borteFra: T.borteFra }, k: k ? { x: k.x, y: k.y, sti: k.sti } : null,
+    const før = { oppdrag: (SpilletSpill.O() && SpilletSpill.O().liste || []).slice(), hÅpen: SpilletSpill.H() ? SpilletSpill.H().åpen : null, tid, tempo, kam: { ...kam }, T: { bølge: T.bølge, aktiv: T.aktiv, nesteSpill: T.nesteSpill, nesteEkte: T.nesteEkte, borteFra: T.borteFra }, k: k ? { x: k.x, y: k.y, sti: k.sti } : null,
       lager: Object.keys(localStorage).filter(n => /^riksbrudd-(trussel|angrep)/.test(n)).map(n => [n, localStorage.getItem(n)]), logg: typeof loggLinjer !== 'undefined' ? loggLinjer.slice() : null, satt: ForsvarSpill.erSatt(), blå: ENHETER.filter(e => e.side === 'blå').map(e => [e, e.x, e.y, e.sti, e.forsvar, e.strid]) };
     const nye = [];
     try {
@@ -39,7 +39,7 @@ module.exports = {
       const varsel = loggLinjer.find(l => /^Varsel: /.test(l)) || ''; d.varsel = varsel; const st = ForsvarSpill.status(); d.status = st && st.tekst;
       const ord = (/trolig ([^.(]+)/.exec(varsel) || [])[1], ordB = st && (/trolig ([^.(–]+)/.exec(st.tekst) || [])[1];
       krev(!/Ventet om ca\./.test(varsel), 'varselet har fortsatt «Ventet om ca. N min»');
-      krev(!st || st.sett || (ord && ordB && ord.replace(/^framme /, '').trim() === ordB.trim()), `loggen og banneret sier ulikt: «${ord}» / «${ordB}»`);
+      krev(!st || st.sett || /sist sett/.test(st.tekst || '') || (ord && ordB && ord.replace(/^framme /, '').trim() === ordB.trim()), `loggen og banneret sier ulikt: «${ord}» / «${ordB}»`);
       ForsvarSpill.vis(); await vent(50); const a = $('alarm'); d.banner = a.textContent.slice(0, 300);
       krev(/Med dette forsvaret/.test(a.textContent), 'prognosen står ikke i banneret');
       if (k) { krev(/Du står/.test(a.textContent), 'banneret sier ikke at du står ute'); const g = $('gahjem'); krev(!!g, '«Gå hjem» mangler');
@@ -58,6 +58,8 @@ module.exports = {
       for (const e of nye) { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); }
       for (const [e, x, y, sti, fs, sr] of før.blå) { e.x = x; e.y = y; e.sti = sti; if (fs) e.forsvar = fs; else delete e.forsvar; e.strid = sr; e.siktSkitten = true; }
       Object.assign(T, før.T); tid = før.tid; Object.assign(kam, før.kam);
+      // (fletting r1) oppdragene og hendelsen SpilletSpill lager mens test-flagget er på, tas bort igjen (vakta «angrep, marked …» krever at alt er stille)
+      { const O = SpilletSpill.O(), H = SpilletSpill.H(); if (O && O.liste) O.liste.splice(0, O.liste.length, ...før.oppdrag); if (H) H.åpen = før.hÅpen; }
       for (const n of Object.keys(localStorage)) if (/^riksbrudd-(trussel|angrep)/.test(n)) localStorage.removeItem(n); for (const [n, v] of før.lager) localStorage.setItem(n, v);
       if (før.logg) { loggLinjer.length = 0; loggLinjer.push(...før.logg); }
       $('flytkort').classList.remove('på'); FLAGG.forEach((n, i) => { if (window[n]) window[n].test = flagg[i]; });

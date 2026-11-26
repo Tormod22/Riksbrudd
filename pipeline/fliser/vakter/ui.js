@@ -118,7 +118,8 @@ module.exports = { navn: 'ui', kjør: async (pg, profil) => {
       // (1) toppstripa: hver flis har et ord foran eller en enhet bak (klokka, kassa og været forklarer seg selv); telefonraden er ikke kuttet
       SpillHud.passInn(); await vent(30);
       const fl6 = [...document.querySelectorAll('.stats > div')].filter(q => q.getClientRects().length && q.id !== 'flismer' && !q.dataset.teknisk);
-      const utenOrd = fl6.filter(q => !['sPenger', 'sVaer', 'sDag', 'sAar'].includes(q.dataset.s) && !q.dataset.ord && !(q.querySelector('b[data-enhet]'))).map(q => q.dataset.s);
+      // (kritikerløkka r1, Jonas: diesel og strøm manglet på telefon) på smal telefon står flisene med ikon uten ord, så alle får plass
+      const smal = document.body.classList.contains('smal'), utenOrd = fl6.filter(q => !['sPenger', 'sVaer', 'sDag', 'sAar'].includes(q.dataset.s) && !q.dataset.ord && !(q.querySelector('b[data-enhet]')) && !(smal && q.dataset.ikon)).map(q => q.dataset.s);
       krev(utenOrd.length === 0, 'fliser uten ord eller enhet: ' + utenOrd.join());
       if (!spill) { const S = document.querySelector('.stats'); r6.rad = [S.scrollWidth, S.clientWidth]; krev(S.scrollWidth <= S.clientWidth + 2, 'telefonraden øverst er kuttet (' + S.scrollWidth + ' > ' + S.clientWidth + ')'); }
       if (window.Skjermlag) { const st0 = Skjermlag.test, tempo0 = typeof tempo !== 'undefined' ? tempo : 1, fart0 = [...document.querySelectorAll('[id^=sp].på')].map(b => b.id)[0];

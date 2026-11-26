@@ -26,7 +26,7 @@ module.exports = {
       const vår = h => h.type === 'kontakt' && /Vaktprøve tropp/.test(h.tekst), kh = hendelser.filter(vår); d.kontakt = kh.map(h => h.tekst);
       krev(kh.length === 1, `${kh.length} kamphendelser (skal være én)`); krev(kh[0] && /^⚔ Vaktprøve tropp er i kamp med /.test(kh[0].tekst), 'kampmeldingen navngir ikke laget');
       krev(kh[0] && Number.isFinite(kh[0].x) && Number.isFinite(kh[0].y), 'kamphendelsen har ikke stedet');
-      krev(tempo === 1 && !FlytSpill.spoler(), '⏭ stoppet ikke for kampen'); krev(!!document.getElementById('flytvis'), 'stoppkortet mangler «Vis»');
+      krev(tempo === 1 && !FlytSpill.spoler(), '⏭ stoppet ikke for kampen'); krev(!!document.getElementById('flytvis') || [...document.querySelectorAll('#alarm .alinje button')].some(b => /^Vis/.test(b.textContent.trim())), 'stoppkortet mangler «Vis»');   // (kritikerløkka r1) under et angrep står stoppbeskjeden som en linje i angrepsbanneret
       for (let i = 0; i < 6; i++) { e.skyterPå = new Set(); tid += 8; await vent(120); e.skyterPå = new Set([s]); await vent(120); }
       krev(hendelser.filter(vår).length === 1, 'samme kamp ble meldt flere ganger');
       const ft = FolkRegler.falneTekst([s.menn[0].navn], s.navn); d.falne = ft; krev(/falt for /.test(ft), 'årsaken mangler når noen faller: ' + ft);
