@@ -571,7 +571,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           KS.info(B).sist = {}; KS.info(B).før = { marsj: false, ute: B.menn.filter(q => q.hp < 1).length }; KS.rapport(B, tid + 5000);
           r3.rutine = KS.radiolog()[0] && KS.radiolog()[0].tekst === Kontrollrom.RUTINE; r3.rutineILogg = loggLinjer.some(t => /Alt rolig/.test(t));
           r3.skjerm = document.getElementById('kontrollrom').classList.contains('på');
-          r3.ordreA = KROKER.kanOrdre.every(f => f(A)); KS.gåUt(); r3.mUte = KS.modus(); r3.bSkjultUte = skjul(B);
+          r3.ordreA = KROKER.kanOrdre.every(f => f(A)); KS.gåUt(); r3.mUte = KS.modus(); r3.bSkjultUte = skjul(B);   // (kritikerløkka r2, Ingrid: egne lag med radiokontakt sto som «sist meldt») – ute ser du nå lag du har kontakt med
           // VAKT brukerens valg 12. nov (regler, se CLAUDE.md «BRUKERENS VALG»): (1) utposter er lov, men byggelaget må reise dit – reisetiden
           // står i banneret før du bekrefter, i menyen og byggpanelet, og laget melder seg framme; (2) radiomastens nivå gir feltradioene
           // 15, 25 og 40 km (8 km uten), og panelene sier det; (3) en byggeplass ødelegges av en fiende og gir de ubrukte materialene tilbake;
@@ -642,7 +642,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         if (!rgok) { feil++; console.log(JSON.stringify(rg)); }
         console.log(`${rgok ? 'ok  ' : 'FEIL'} ${navn} brukerens valg (regler): utpost ${rg.venta} min reise i banneret, menyen og byggpanelet, laget kom fram; byggeplassen ødelagt av en fiende ga ${rg.stål} t stål tilbake; feltradio ${(rg.nivå || []).map(v => v / 1000).join('/')} km med mast nivå 1/2/3 (${rg.uten / 1000} km uten) og «${rg.status}»; diesel og olje forklart i Leir-menyen ${rg.diesel}, basen ${rg.base}, kjøretøyet ${rg.kj} og hjelpen ${rg.hjelp}`);
         const k3 = k1.k3 || {}, k3ok = k3.inn && k3.mInne === 'kontrollrom' && !k3.aKontakt && k3.bKontakt && k3.aSkjult && !k3.bSkjult && /Framme/.test(k3.melding || '')
-          && k3.skjerm && k3.ordreA === false && k3.mUte === 'ute' && k3.bSkjultUte && k3.avNøytral && k3.rutine && !k3.rutineILogg;
+          && k3.skjerm && k3.ordreA === false && k3.mUte === 'ute' && !k3.bSkjultUte && k3.avNøytral && k3.rutine && !k3.rutineILogg;
         if (!k3ok) { feil++; console.log(JSON.stringify(k3)); }
         console.log(`${k3ok ? 'ok  ' : 'FEIL'} ${navn} kontrollrommet (K3): gikk inn, lag 6 km unna uten kontakt skjult, lag 1 km unna med kontakt vist, melding «${k3.melding}», ordre uten kontakt stoppet, ute bare «sist meldt»`);
         console.log(`${k2ok ? 'ok  ' : 'FEIL'} ${navn} leiren (K2): materialer kjøpt, kontrollrom, aggregat og tank bygget (${k2.penger / 1e6} mill. kr igjen), opptatt plass avvist, strøm ${k2.strøm && k2.strøm[0]}/${k2.strøm && k2.strøm[1]} kW, lagret; byggpanel (${k2.panel}), aggregat nivå ${k2.nivå}, revet tank ga ${k2.riv / 1e6} mill., lukket gjerde, port festet i gjerdet, FPS-teller, menyen kan blas i`);
