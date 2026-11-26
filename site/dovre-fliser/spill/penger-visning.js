@@ -55,7 +55,7 @@
     const K = T.kjøper, tak = K ? ` Markedet kjøper høyst ${K.tre} m³ tre, ${K.betong} m³ betong og ${K.stål} t stål per døgn.` : '';
     ut.push({ id: 'salg', tekst: (har.length ? `Salg: dere har ${har.map(k => `${tall(L[k])} ${k === 'stål' ? 't stål' : 'm³ ' + k}`).join(' og ')} – «Selg 10» under Materialer gir penger straks.` : 'Salg: tre, betong og stål dere hogger og river selv, kan selges under Materialer («Selg 10»).') + tak });
     const G = T.tettsteder || {};
-    ut.push({ id: 'region', tekst: G.antall ? `Tettsteder: ${G.antall} er deres og betaler ca. ${kr(G.kr || 0)} i skatt per døgn (Mer → Region).` : 'Tettsteder: flytt et lag inn i et tettsted og hold det – det betaler skatt hver dag (Mer → Region, Krig).' });
+    ut.push({ id: 'region', tekst: G.antall ? `Tettsteder: ${G.antall} er deres og betaler ca. ${kr(rot.Region && Region.krRund ? Region.krRund(G.kr || 0) : G.kr || 0)} i skatt per døgn (Mer → Region).` : 'Tettsteder: flytt et lag inn i et tettsted og hold det – det betaler skatt hver dag (Mer → Region, Krig).' });
     ut.push({ id: 'røvere', tekst: 'Røvere: slår dere tilbake et angrep, tar dere byttet deres.' });
     return ut;
   }

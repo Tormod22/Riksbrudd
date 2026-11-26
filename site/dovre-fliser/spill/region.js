@@ -98,11 +98,22 @@
     if (S.koster) ut.penger = -folk * S.koster;
     return ut;
   }
+  // (løkka r1, kritiker I: Kvam ga «75 000 kr per døgn» i Krig, «39 761 kr» under Lager og «250 000 kr» i loggen) ÉN regel for hva et
+  // tettsted gir per døgn. Holder du det: tilstanden b nå. Holder du det ikke: det det ville gitt rett etter at du tar det – samme
+  // lojalitet som Region.by gir da (start, eller høyst lojGjentatt når du har mistet det før), vanlig skatt, ingen garnison, og
+  // strømmen og handelsruta slik de er nå. holdt: b er ditt nå.
+  function inntekt(folk, t, { b, holdt, strøm, rute, garnison, utenStrøm } = {}) {
+    const loj = holdt && b ? b.loj : b ? (b.tapt ? Math.min(b.loj, REGLER.lojGjentatt) : b.loj) : REGLER.lojStart;
+    const st = { loj, skatt: holdt && b ? b.skatt : 'vanlig', strøm, rute: rute || 'åpen', uro: !!(holdt && b && b.uro), garnison: !!(holdt && garnison), utenStrøm };
+    return gir(folk, t, st);
+  }
+  // kroner per døgn slik de står overalt: rundet til nærmeste tusen
+  const krRund = v => Math.round((+v || 0) / 1000) * 1000;
   // «36 rasjoner, 6 m³ tre og 360 000 kr»
   function girTekst(g, kroner) {
     const d = [];
     for (const k of VARER) { const v = g[k]; if (!v) continue;
-      if (k === 'penger') d.push(kroner ? kroner(Math.round(v / 1000) * 1000) : Math.round(v) + ' kr');
+      if (k === 'penger') d.push(kroner ? kroner(krRund(v)) : krRund(v) + ' kr');
       else if (k === 'folk') d.push(String(r1(v)).replace('.', ',') + (r1(v) === 1 ? ' rekrutt' : ' rekrutter'));
       else d.push((v >= 20 ? Math.round(v) : String(r1(v)).replace('.', ',')) + ' ' + ENHET[k]); }
     return d.length ? d.join(', ') : 'ingenting';
@@ -253,7 +264,7 @@
     for (const id of Object.keys(BØRS)) if (d.har && d.har[id] > 0) S.har[id] = Math.floor(d.har[id]);
     return S; }
 
-  const api = { REGLER, TYPER, VARER, ENHET, SKATT, SKATTER, type, grunn, faktor, lojFaktor, ruteFaktor, gir, girTekst, lojMål, lojSteg, opprør, lojOrd,
+  const api = { REGLER, TYPER, VARER, ENHET, SKATT, SKATTER, type, grunn, faktor, lojFaktor, ruteFaktor, gir, inntekt, krRund, girTekst, lojMål, lojSteg, opprør, lojOrd,
     tilLinje, tilSti, stiLengde, ledd, kjede, rute, ruteOrd, mistet, gjenoppbygg, FORDEL, fordel, Veksle, Bors, ny, by, settSkatt, fraJSON };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Region = api;

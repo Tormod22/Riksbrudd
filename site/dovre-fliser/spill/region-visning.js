@@ -89,6 +89,15 @@
   const medPf = g => { if (g.penger > 0) g.penger *= pf(); return g; };
   const grunnFor = (folk, t) => medPf(RG.grunn(folk, t));
   const girNå = q => medPf(RG.gir(q.by.e.folk || 0, q.type, stFor(q)));
+  // (løkka r1) ÉN regel for hva et tettsted gir per døgn (Region.inntekt): holder du det, det det gir nå (= det Lager og Region viser);
+  // ellers det det ville gitt rett etter at du tar det, med handelsruta og strømmen slik de er nå (Krig, loggen når du tar det)
+  function inntektFor(by) {
+    if (!by || !by.e) return null; const q = status().get(by.e.id) || (eier(by) === 'blå' ? status(true).get(by.e.id) : null); if (q) return girNå(q);
+    const l = leir(), t = typeAv(by), p = { id: by.e.id, navn: by.e.navn, x: midt(by).x, y: midt(by).y };
+    let rute = 'åpen'; try { if (l) { const P = [...mine().map(b => ({ id: b.e.id, navn: b.e.navn, x: midt(b).x, y: midt(b).y })), p]; rute = RG.rute(p, P, l, fiender(), egne(), veger).status; } } catch (e) { rute = 'åpen'; }
+    return medPf(RG.inntekt(by.e.folk || 0, t, { b: S.byer[by.e.id], holdt: false, strøm: strøm(by), rute, utenStrøm: G.REGLER.strøm.uten })); }
+  // «ca. 40 000 kr per døgn» (bare skatten), eller '' når tettstedet ikke gir penger
+  const inntektTekst = by => { const g = inntektFor(by); return g && g.penger > 0 ? `ca. ${kr(RG.krRund(g.penger))} per døgn` : ''; };
   function sum() { const ut = {}; for (const q of status().values()) { const g = girNå(q); for (const k of RG.VARER) if (g[k]) ut[k] = (ut[k] || 0) + g[k]; } return ut; }
 
   // ---------- takten ----------
@@ -351,12 +360,13 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
       if (q) { linje(`Gir deg nå per døgn: ${RG.girTekst(girNå(q), kr)}, og ${tall(oljeDøgn(by, st))} t olje til basen.`);
         linje(`Strøm: ${strømOrd}. Lojalitet ${Math.round(q.b.loj)} (${RG.lojOrd(q.b.loj)}), skatt ${RG.SKATT[q.b.skatt].navn.toLowerCase()}, handelsruta ${q.rute.status}` + (q.rute.brutt && q.rute.brutt.length ? ` (${q.rute.brutt[0]})` : '') + '.'); }
       return boks; }
-    const g = grunnFor(by.e.folk || 0, t), uten = st ? g : RG.gir(by.e.folk || 0, t, { loj: R.lojStart, skatt: 'vanlig', strøm: false, rute: 'åpen', utenStrøm: G.REGLER.strøm.uten });
-    linje(`Hvis du tar det, per døgn: ${RG.girTekst(st ? g : medPf(uten), kr)}, og ${tall(oljeDøgn(by, st))} t olje til basen. Strøm: ${strømOrd}.`);
+    // (løkka r1) samme tall som Lager og loggen får når du har tatt det: lojaliteten du starter med og handelsruta slik den er nå
+    const g = inntektFor(by), ru = (() => { try { const l = leir(); if (!l) return null; const p = { id: by.e.id, navn: by.e.navn, x: midt(by).x, y: midt(by).y }; return RG.rute(p, [...mine().map(b => ({ id: b.e.id, navn: b.e.navn, x: midt(b).x, y: midt(b).y })), p], l, fiender(), egne(), veger).status; } catch (e) { return null; } })();
+    linje(`Hvis du tar det, per døgn: ${RG.girTekst(g, kr)}, og ${tall(oljeDøgn(by, st))} t olje til basen. Strøm: ${strømOrd}.` + (ru && ru !== 'åpen' ? ` Handelsruta hjem er ${ru} nå (${ru === 'truet' ? 'halvparten kommer fram' : 'ingenting kommer fram'}).` : ''));
     const b = S.byer[by.e.id]; if (b && b.tapt) linje(`Du har holdt det før: lojaliteten starter på høyst ${R.lojGjentatt}.`);
     if (e && e !== 'blå') linje(`Nå gir det ${sideNavn(e)}: ${fordelTekst(t)}` + (auto() ? '' : ' (står stille i testene)') + '.');
     return boks; }
-  function krigTrekk(by) { if (!klar || !by || !by.e) return null; const t = typeAv(by); return `${RG.TYPER[t].navn}: ville gitt ${RG.girTekst(grunnFor(by.e.folk || 0, t), kr)} per døgn`; }
+  function krigTrekk(by) { if (!klar || !by || !by.e) return null; const t = typeAv(by); return `${RG.TYPER[t].navn}: ville gitt ${RG.girTekst(inntektFor(by) || grunnFor(by.e.folk || 0, t), kr)} per døgn`; }
   function krigSide(sd) { if (!klar) return null; if (sd === 'blå') { const n = status().size; return n ? `Tettstedene dine gir per døgn: ${RG.girTekst(sum(), kr)}.` : null; }
     fordelTid = -1e9; const f = fordel(sd); if (!f.antall) return null;
     const d = []; if (f.treff > 1.001) d.push(`treff +${Math.round((f.treff - 1) * 100)} %`); if (f.forsterk > 1.001) d.push(`forsterkninger ${Math.round((f.forsterk - 1) * 100)} % raskere`);
@@ -388,7 +398,7 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   // ---------- start ----------
   function start() { const s = Sp(); if (!s || !s.leir) return; leirId = Math.round(s.leir.x) + ',' + Math.round(s.leir.y); S = RG.fraJSON(les()); startTid = performance.now(); STATUS = new Map(); statusTid = -1e9; meldtRute = new Map(); meldtStrøm = new Map(); klar = true; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  Object.assign(api, { glemFordel: () => { fordelTid = -1e9; BYID = null; }, start, åpne, lukk, erÅpen: () => åpen, vis, tilstand: () => S, status: () => status(true), sum, steg, lever, nyttDøgn, girFor: id => { const q = status(true).get(id); return q ? girNå(q) : null; }, settSkatt, settAlle, kjøp, brukMedisin, veksle, gjenoppbygg, typeAv, omgivelser, lagre, fordel, pyntKrig,
+  Object.assign(api, { glemFordel: () => { fordelTid = -1e9; BYID = null; }, start, åpne, lukk, erÅpen: () => åpen, vis, tilstand: () => S, status: () => status(true), sum, steg, lever, nyttDøgn, girFor: id => { const q = status(true).get(id); return q ? girNå(q) : null; }, inntekt: id => inntektFor(byMedId(id) || byMedId(+id)), inntektTekst: id => inntektTekst(byMedId(id) || byMedId(+id)), settSkatt, settAlle, kjøp, brukMedisin, veksle, gjenoppbygg, typeAv, omgivelser, lagre, fordel, pyntKrig,
     børsNå: ider => { S.børs = { tilbud: ider.filter(id => RG.Bors.VARER[id]), dag: Math.floor(S.døgn) }; vis(true); }, sett: n => { S = RG.fraJSON(n); statusTid = -1e9; vis(true); }, klar: () => klar });
   window.RegionSpill = api;
 })();

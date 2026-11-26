@@ -136,7 +136,7 @@
   function kobling(h) {
     const k = h.k;
     try { if (k.sted && k.sted.slag === 'tettsted' && k.sted.id != null && window.Garnison && typeof TETTSTEDER !== 'undefined' && Garnison.tilstand(TETTSTEDER, k.sted.id).eier === ID) {
-      const ekstra = Math.round(k.betaling * SK.REGLER.egetSted / 10000) * 10000; if (ekstra > 0) { OppstartSpill.gi(ekstra); logg(`${k.sted.navn} er deres: folket la til ${kr(ekstra)}.`); } } } catch (e) { /* krigskartet er ikke klart */ }
+      const ekstra = Math.round(k.betaling * SK.REGLER.egetSted / 10000) * 10000; if (ekstra > 0) { OppstartSpill.gi(ekstra); logg(`${k.sted.navn} er deres: folket la til ${kr(ekstra)} i dag (engangsbeløp)` + ((t => (t ? `. Deretter gir ${k.sted.navn} ${t} i skatt` : ''))(window.RegionSpill && RegionSpill.inntektTekst ? RegionSpill.inntektTekst(k.sted.id) : '')) + '.'); } } } catch (e) { /* krigskartet er ikke klart */ }
     if (h.nivåOpp) logg(`Nytt nivå for selskapet: ${h.nivåOpp.nr} «${h.nivåOpp.navn}». Større og bedre betalte kontrakter er låst opp.`);
     if (h.rekrutt && auto()) { try { const F = window.FolkSpill && FolkSpill.tilstand(), Lr = window.LeirSpill && LeirSpill.tilstand();
       if (F && Lr && window.FolkRegler) { const r = FolkRegler.rekrutter(F, Lr, () => true); if (!r.feil && r.person) logg(`${r.person.navn} (${r.person.yrke}) hørte om ${egetNavn()} og vil bli med – gratis.`); } } catch (e) { /* uten folk */ } }
