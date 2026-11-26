@@ -370,4 +370,48 @@
       R.himmelLys.intensity = H.base.himmel * (1 + 2.2 * l); R.kuppel.material.color.setScalar(1 + 1.6 * l);
       R.scene.background.copy(H.base.bak).multiplyScalar(1 + 1.6 * l); R.skyer.material.color.copy(H.base.sky).multiplyScalar(1 + 1.2 * l); }
   });
+  // ---------- (kritikerløkka r2, Jonas: «fra lufta i 3D er leiren nesten usynlig, uten bål og uten lys») LEIRENS LYS OM NATTA ----------
+  // Ingen nye lys i scenen: additive glødpunkter (som gatelysene over) – bålet midt i leiren (stor glød og en lysflekk på bakken),
+  // vinduslys i hvert ferdige bygg og lykta i vakttårnet – og de samme punktene i fast skjermstørrelse, så leiren synes som små
+  // varme prikker også fra høyt oppe. Fram når mørket kommer (samme overgang som gatelysene). Lages på nytt når leirens bygg endres.
+  // Størrelsene (meter, punkter på skjermen) og høydene er Claudes forslag.
+  const LEIRLYS = { bål: 30, flekk: 56, bygg: 9, telt: 6, tårn: 12, prikk: 6, prikkBål: 13, høyde: { bål: 1.2, bygg: 2.2, telt: 1.1, tårn: 7 } };
+  let leirLysTex = null, leirLysNøkkel = '', leirLysU = null, leirLysSjekk = 0;
+  function leirLysFjern(R) { for (const o of R.leirLys || []) { R.scene.remove(o); if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); } R.leirLys = []; }
+  function leirLysNøkkelNå() { const S = window.OppstartSpill && OppstartSpill.tilstand(), L = window.LeirSpill && LeirSpill.tilstand();
+    if (!S || !S.leir) return ''; return Math.round(S.leir.x) + ',' + Math.round(S.leir.y) + '|' + leirTing().length + '|' + (L ? L.bygg.filter(b => window.Leir && Leir.ferdig(b)).map(b => b.id + ':' + Math.round(b.x) + ':' + Math.round(b.y)).join(',') : ''); }
+  // telt og bål fra leir-visning.js (spill/byggeplass3d.js lagLeir: userData.leirting)
+  const leirTing = () => (typeof R3 !== 'undefined' && R3 && R3.scene ? R3.scene.children.filter(o => o.isMesh && o.userData && (o.userData.leirting === 'telt' || o.userData.leirting === 'bål')) : []);
+  function leirLys(u, R) {
+    leirLysFjern(R); leirLysNøkkel = leirLysNøkkelNå(); leirLysU = u;
+    const S = window.OppstartSpill && OppstartSpill.tilstand(); if (!S || !S.leir || typeof THREE === 'undefined') return;
+    const LS = window.LeirSpill && LeirSpill.tilstand(), B = window.Leir && Leir.BYGG, H0 = (x, y) => (hoyde3d(x, y, u) - u.h0) * R.EX;
+    const lx = S.leir.x - u.cx, ly = S.leir.y - u.cy; if (Math.abs(lx) > u.S - 5 || Math.abs(ly) > u.S - 5) return;
+    if (!leirLysTex) leirLysTex = rund(64, [[0, 'rgba(255,214,150,1)'], [.25, 'rgba(255,180,100,.55)'], [.6, 'rgba(255,150,70,.15)'], [1, 'rgba(255,140,60,0)']]);
+    // punktene: [x, y, z, størrelse (m)]; bålet først
+    const ting = leirTing(), bål = ting.find(o => o.userData.leirting === 'bål');
+    const pkt = [bål ? [bål.position.x, bål.position.y, bål.position.z + LEIRLYS.høyde.bål, LEIRLYS.bål] : [lx, ly, H0(S.leir.x, S.leir.y) + LEIRLYS.høyde.bål, LEIRLYS.bål]];
+    // en lykt ved hvert telt (ved inngangen, litt over bakken)
+    for (const t of ting) if (t.userData.leirting === 'telt') pkt.push([t.position.x + Math.cos(t.rotation.z) * 1.9, t.position.y + Math.sin(t.rotation.z) * 1.9, t.position.z + LEIRLYS.høyde.telt, LEIRLYS.telt]);
+    for (const b of LS && B ? LS.bygg : []) { const T = B[b.type]; if (!T || T.linje || T.veg || T.del || !Leir.ferdig(b)) continue; const x = b.x - u.cx, y = b.y - u.cy; if (Math.abs(x) > u.S - 5 || Math.abs(y) > u.S - 5) continue;
+      const tårn = /tårn/.test(b.type); pkt.push([x, y, H0(b.x, b.y) + (tårn ? LEIRLYS.høyde.tårn : LEIRLYS.høyde.bygg), tårn ? LEIRLYS.tårn : LEIRLYS.bygg]); }
+    const lag = (størrelse, fast, liste) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(liste.flatMap(p => p.slice(0, 3))), 3));
+      const o = new THREE.Points(g, new THREE.PointsMaterial({ size: størrelse, sizeAttenuation: !fast, map: leirLysTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+      o.frustumCulled = false; o.visible = false; o.renderOrder = 2; R.scene.add(o); R.leirLys.push(o); return o; };
+    // glød i meter (bålet for seg, de andre etter størrelsen sin) og prikker i fast skjermstørrelse
+    lag(LEIRLYS.bål, false, pkt.slice(0, 1)); for (const st of [LEIRLYS.bygg, LEIRLYS.telt, LEIRLYS.tårn]) { const l = pkt.slice(1).filter(p => p[3] === st); if (l.length) lag(st, false, l); }
+    lag(LEIRLYS.prikkBål, true, pkt.slice(0, 1)); if (pkt.length > 1) lag(LEIRLYS.prikk, true, pkt.slice(1));
+    // lysflekken fra bålet på bakken
+    const fl = new THREE.Mesh(new THREE.PlaneGeometry(LEIRLYS.flekk, LEIRLYS.flekk), new THREE.MeshBasicMaterial({ map: leirLysTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 }));
+    fl.position.set(lx, ly, pkt[0][2] - LEIRLYS.høyde.bål + .3); fl.visible = false; R.scene.add(fl); R.leirLys.push(fl);
+    N.leirLys = pkt.length; }
+  KROKER.sett3d.push((u, R) => { try { leirLys(u, R); } catch (e) { console.error('leirlys', e); } });
+  KROKER.ramme3d.push(R => {
+    if (!R.ut) return;
+    // leiren endret seg (nytt bygg, ny leir): lag punktene på nytt – sjekkes høyst hvert 2. sekund
+    const nå = performance.now(); if (nå - leirLysSjekk > 2000) { leirLysSjekk = nå; if (leirLysU !== R.ut || leirLysNøkkelNå() !== leirLysNøkkel) { try { leirLys(R.ut, R); } catch (e) { console.error('leirlys', e); } } }
+    if (!R.leirLys || !R.leirLys.length) return;
+    const a = trinn(.3, .7, N.mørke || 0), t = nå / 1000, fl = 1 + .08 * Math.sin(t * 9.3) + .05 * Math.sin(t * 23.1);
+    for (const o of R.leirLys) { o.visible = a > .01; o.material.opacity = Math.min(1, a * (o.isMesh ? .55 : .95) * fl); }
+  });
 })();

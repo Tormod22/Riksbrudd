@@ -293,7 +293,10 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     let dx = -Math.sin(a) * fram + Math.cos(a) * side, dy = Math.cos(a) * fram + Math.sin(a) * side; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
     for (const [, I] of dører()) { const m = Gaavalg.dørTrekk(I, kropp.x, kropp.y, dx, dy, dt); if (!m) continue;
       const nx = kropp.x + I.ux * m, ny = kropp.y + I.uy * m;
-      if (typeof hindring3d !== 'function' || !hindring3d(nx, ny)) { kropp.x = nx; kropp.y = ny; }
+      // (kritikerløkka r2, Jonas: kameraet havnet i låveveggen) trekket langs veggen mot døra prøvde bare midten – nå hele kroppen
+      // (Bevegelse.fri), så hodet aldri kommer nærmere veggen enn kroppens radius; står du alt fast, holder midten
+      const h = typeof hindring3d === 'function' ? (x, y) => hindring3d(x, y) : null, kan = !h || (window.Bevegelse && Bevegelse.fri ? (Bevegelse.fri(nx, ny, h) || (!Bevegelse.fri(kropp.x, kropp.y, h) && !h(nx, ny))) : !h(nx, ny));
+      if (kan) { kropp.x = nx; kropp.y = ny; }
       return; }
   }
 
@@ -400,9 +403,15 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     // litt større synsfelt når du løper
     // (22. nov, W2) siktekikkerten (spill/bakkekamp-visning.js) deler synsfeltet på zoomen
     { const BK = window.BakkekampSpill, mål = kropp.løper && kropp.fart > Bevegelse.REGLER.gå * 1.5 ? 74 : 68; fov += ((BK ? BK.fov(mål) : mål) - fov) * Math.min(1, dt * (BK && BK.sikter() ? 14 : 6)); }
-    R.scene.fog.near = 120; R.scene.fog.far = u.S * .95; c.fov = fov; c.aspect = VW / VH; c.near = .2; c.far = u.S * 4 + 3000; c.updateProjectionMatrix();
+    R.scene.fog.near = 120; R.scene.fog.far = u.S * .95; c.fov = fov; c.aspect = VW / VH; c.near = nærPlan(k); c.far = u.S * 4 + 3000; c.updateProjectionMatrix();
     b.yaw = f.a;
   }
+  // (kritikerløkka r2, Jonas: «kameraet går inn i veggen og skjermen blir brunsvart») kameraets near-plan: 0,2 m som før (dybdepresisjonen
+  // langt unna), men står en vegg innen NÆR.vegg m fra hodet, 0,05 m – så veggen ikke kuttes bort foran deg. Claudes forslag.
+  const NÆR = { vanlig: .2, tett: .05, vegg: .7 };
+  function nærPlan(k) { if (typeof hindring3d !== 'function') return NÆR.vanlig; const r = NÆR.vegg;
+    for (let i = 0; i < 8; i++) { const v = i * Math.PI / 4; if (hindring3d(k.kx + Math.cos(v) * r, k.ky + Math.sin(v) * r)) return NÆR.tett; }
+    return hindring3d(k.kx, k.ky) ? NÆR.tett : NÆR.vanlig; }
   // Pekerne i 3D mens du går: styrespak (nede til venstre på smale skjermer) eller se rundt. Gir true når hendelsen er brukt.
   // RASK SNUING (runde 8, kritikken: «å snu seg med musa frøs bildet i minutter»): med programvare-grafikk tar hvert bilde i førsteperson
   // flere sekunder, og hver bevegelse med musa ventet på et nytt bilde. Er bildene trege, tegnes 3D i halv oppløsning (R3.målPr, som
