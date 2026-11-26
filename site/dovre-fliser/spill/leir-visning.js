@@ -349,7 +349,11 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     const gml = menyDeler && menyDeler.el.every(n => n.parentNode === menyEl) ? menyDeler : null;
     if (gml) { const nye = [hode, liste, hale]; nye.forEach((n, i) => { if (i !== 1 || deler[i] !== gml.html[i]) gml.el[i].replaceWith(n); else nye[i] = gml.el[i]; }); menyDeler = { el: nye, html: deler }; }
     else { menyEl.innerHTML = ''; menyEl.append(hode, liste, hale); menyDeler = { el: [hode, liste, hale], html: deler }; }
-    menyNøkkel = nøkkel; menyEl.scrollTop = rulle;
+    menyNøkkel = nøkkel;
+    // (r3, telefon) ikonene (spill/ikoner.js) settes med en gang – ellers var hodet et øyeblikk lavere (flisene uten ikon), og kortet ble
+    // rettet feil i ett bilde
+    if (window.Ikoner && Ikoner.merk) try { Ikoner.merk(); } catch (e) { /* uten ikoner */ }
+    menyEl.scrollTop = rulle;
     // (andre deler pynter menyen like etter – fanelinja på telefon, spill/telefon.js – så kortet rettes også i neste bilde og litt etter)
     if (anker) { const rett = () => { const ny = menyEl.querySelectorAll(`.bygg.kort[data-type="${anker.type}"]`)[anker.nr]; if (ny && ny.getClientRects().length) { const d = ny.getBoundingClientRect().top - anker.top; if (Math.abs(d) >= 1) menyEl.scrollTop += d; } };
       rett(); requestAnimationFrame(rett); setTimeout(rett, 160); }
