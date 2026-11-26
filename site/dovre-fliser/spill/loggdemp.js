@@ -40,6 +40,12 @@
     // (R2-løkka 26. nov, kritikken: «planlegger rute … (×10)», «Speidertropp 1 er framme. (×5)») statusmeldinger om ett lag som gjentar seg,
     // vises bare én gang så lenge de kommer oftere enn hver STILLE.hver spillminutter – uten «×n» (det er ikke nyheter)
     STILLE: { re: /(: planlegger rute …| er framme\.)$/, hver: 180 },
+    // (kritikerløkka r3, Ingrid: «loggen druknet i Radiomasten fanget opp samband: …», flere per spilltime) – avlyttingene SAMLES: alle
+    // som kommer innen SAMLE.hver spillminutter etter den første, står på én linje med antallet og den siste avlyttingen
+    SAMLE: [{ slag: 'samband', re: /^Radiomasten fanget opp samband: /, linje: /^Radiomasten fanget opp samband[ :]/, hver: 60, tekst: (t, n) => t.replace(/^Radiomasten fanget opp samband: /, `Radiomasten fanget opp samband (${n} ganger siste time) – sist: `) }],
+    // (r3, Ingrid: «Handelsruta fra Gjøvik er truet / STENGT / åpen igjen» vekslet mange ganger per døgn) – et skifte på ruta meldes først
+    // når det har STÅTT i UTSETT.stå spillminutter; skifter ruta tilbake før det, meldes ingenting (det var bare et blaff)
+    UTSETT: [{ slag: 'rute', re: /^Handelsruta fra (.+?) er (STENGT|truet|åpen igjen)/, stå: 90, tilstand: m => (m[2] === 'åpen igjen' ? 'åpen' : m[2]), før: 'åpen' }],
   };
   // «Kamp om Bryne … (×4)» og «… (20 m)!» / «… (35 m)!» gir samme nøkkel: tall og «×n» regnes ikke med
   const nøkkel = t => String(t).replace(/\s*\(×\d+\)\s*$/, '').replace(/[\d\s.,]*\d/g, '#').trim();
@@ -49,6 +55,9 @@
 
   function lag(R = REGLER, tips = new Set()) {
     const sist = new Map(), sett = new Map(), engang = new Map(), stille = new Map(), rutine = {}; let vær = { stor: false, t: -1e9, tekst: '' };
+    // SAMLE: slag -> { t0, n }; UTSETT: nøkkel -> { tekst, t, tilstand } som venter, og den tilstanden som sist ble meldt; slipp = meldinger
+    // som har ventet ferdig og nå skal gjennom (logg() kalles på nytt med dem)
+    const samle = new Map(), venter = new Map(), meldt = new Map(), slipp = new Set();
     const nær = (a, b, v) => Math.abs(a - b) <= v;
     function glem(kart) { if (kart.size <= R.maks) return; const n = kart.size - R.maks; let i = 0; for (const k of kart.keys()) { if (i++ >= n) break; kart.delete(k); } }
     // svar: null = hold tilbake, ellers { tekst, fjern } (fjern = indeksen til en gammel linje som skal bort, −1 = ingen)
@@ -56,6 +65,11 @@
     function vurder(t, linjer, nå, gammelt) {
       t = String(t == null ? '' : t); if (!t.trim()) return null; nå = +nå || 0; linjer = linjer || [];
       if (gammelt && R.OPPSTART.test(t)) return null;
+      // UTSETT: et skifte som ikke har stått lenge nok, holdes tilbake (modne() slipper det senere)
+      if (slipp.has(t)) slipp.delete(t);
+      else for (const u of R.UTSETT || []) { const m = u.re.exec(t); if (!m) continue;
+        const k = u.slag + '|' + m[1], ti = u.tilstand(m), før = meldt.has(k) ? meldt.get(k) : u.før;
+        if (ti === før) venter.delete(k); else venter.set(k, { tekst: t, t: nå, tilstand: ti, stå: u.stå }); glem(venter); return null; }
       // 3: været
       if (R.vær.test(t)) {
         const første = setninger(t)[0], stor = R.storVær.test(t);
@@ -80,6 +94,10 @@
       } else if (R.tips.test(t)) { if (tips.has(t)) return null; tips.add(t); }
       // STILLE: statusmeldinger om et lag – samme melding (med tallene: «Speidertropp 2» er et annet lag enn «Speidertropp 1») innen STILLE.hver holdes tilbake (vinduet flyttes med hver gjentakelse)
       if (R.STILLE && R.STILLE.re.test(t)) { const sk = String(t).replace(/\s*\(×\d+\)\s*$/, ''), f = stille.get(sk); stille.set(sk, nå); glem(stille); if (f !== undefined && nær(nå, f, R.STILLE.hver)) return null; }
+      // SAMLE: avlyttinger innen samme time blir én linje (den forrige linja tas bort)
+      for (const g of R.SAMLE || []) { if (!g.re.test(t)) continue; const q = samle.get(g.slag);
+        if (q && nå >= q.t0 && nå - q.t0 < g.hver) { q.n++; const ny = g.tekst(t, q.n), i = linjer.findIndex(l => (g.linje || g.re).test(l)); return { tekst: ny, fjern: i }; }
+        samle.set(g.slag, { t0: nå, n: 1 }); break; }
       // 1: samme melding innen vinduet
       const k = nøkkel(t), før = sist.get(k);
       const n = før && nær(nå, før.t, R.vindu) ? før.n + 1 : 1;
@@ -89,7 +107,9 @@
       const fjern = n > 1 ? linjer.findIndex(l => nøkkel(l) === k) : -1;
       return { tekst: n > 1 ? t + ' (×' + n + ')' : t, fjern };
     }
-    return { vurder, tips, nullstill: () => { sist.clear(); sett.clear(); engang.clear(); stille.clear(); for (const k of Object.keys(rutine)) delete rutine[k]; vær = { stor: false, t: -1e9, tekst: '' }; } };
+    // modne(nå): meldingene som har ventet lenge nok (UTSETT) – de skal nå i loggen
+    function modne(nå) { const ut = []; for (const [k, v] of [...venter]) if (nå - v.t >= v.stå || nå < v.t) { venter.delete(k); meldt.set(k, v.tilstand); slipp.add(v.tekst); ut.push(v.tekst); } return ut; }
+    return { vurder, modne, venter: () => [...venter.values()], tips, nullstill: () => { sist.clear(); sett.clear(); engang.clear(); stille.clear(); samle.clear(); venter.clear(); meldt.clear(); slipp.clear(); for (const k of Object.keys(rutine)) delete rutine[k]; vær = { stor: false, t: -1e9, tekst: '' }; } };
   }
 
   const api = { REGLER, nøkkel, setninger, lag };
@@ -102,5 +122,8 @@
   const gammelt = () => { const S = rot.OppstartSpill && OppstartSpill.tilstand && OppstartSpill.tilstand(); return !!(S && S.leir && rot.LagringSpill && LagringSpill.nyttSpill && !LagringSpill.nyttSpill()); };
   rot.LoggDemp = Object.assign(api, { vurder(t, linjer, nå) { const r = D.vurder(t, linjer, nå, gammelt());
       if (tips.size !== antall) { antall = tips.size; try { localStorage.setItem(NØKKEL, JSON.stringify([...tips].slice(-100))); } catch (e) { /* fullt eller sperret */ } }
-      return r; }, nullstill: D.nullstill, tips });
+      return r; }, nullstill: D.nullstill, tips, modne: D.modne, venter: D.venter });
+  // skifter som har ventet lenge nok (UTSETT), skrives i loggen
+  setInterval(() => { if (typeof rot.logg !== 'function') return; let nå = 0; try { nå = rot.tid !== undefined ? rot.tid : (typeof tid !== 'undefined' ? tid : 0); } catch (e) { return; }
+    for (const t of D.modne(nå)) rot.logg(t); }, 500);
 })(typeof globalThis !== 'undefined' ? globalThis : this);

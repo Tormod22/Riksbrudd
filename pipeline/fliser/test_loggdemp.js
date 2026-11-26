@@ -51,4 +51,20 @@ ok(logg().d.vurder('', [], 0) === null && logg().d.vurder(null, [], 0) === null,
   ok(!!g.inn('Speidertropp 2: planlegger rute …', 50), 'et annet lag meldes'); let f = 0; for (let i = 0; i < 5; i++) if (g.inn('Speidertropp 1 er framme.', 60 + i * 20)) f++;
   ok(f === 1, `«er framme» fem ganger: vist ${f} gang`); ok(!!g.inn('Speidertropp 1 er framme.', 60 + 4 * 20 + 200), 'etter en lang pause meldes det igjen'); }
 { const d = D.lag(); ok(d.vurder('Motstanderne samler styrker de første 3 døgnene og tar ingen tettsteder ennå.', [], 10, true) === null, 'etter omlasting: «Motstanderne samler styrker …» står ikke på nytt'); }
+// (kritikerløkka r3) avlyttinger fra radiomasten innen en time står på én linje med antallet
+{ const g = logg(); g.inn('Radiomasten fanget opp samband: Røvere 1 skal angripe leiren. Omtrentlig sted er merket i kartet.', 100);
+  g.inn('Noe annet.', 101); g.inn('Radiomasten fanget opp samband: Ravnsund 2 flytter mot Dombås. Omtrentlig sted er merket i kartet.', 120);
+  g.inn('Radiomasten fanget opp samband: Mosevakt 1 graver seg ned. Omtrentlig sted er merket i kartet.', 150);
+  const r = g.L.filter(l => /Radiomasten/.test(l));
+  ok(r.length === 1 && /\(3 ganger siste time\) – sist: Mosevakt 1/.test(r[0]), 'tre avlyttinger på en time: én linje: ' + g.L.join(' | '));
+  g.inn('Radiomasten fanget opp samband: Røvere 2 går hjem. Omtrentlig sted er merket i kartet.', 200);
+  ok(/^Radiomasten fanget opp samband: Røvere 2 går hjem\./.test(g.L[0]), 'neste time: ny linje uten antall: ' + g.L[0]); }
+// (r3) handelsruta: et skifte meldes først når det har stått i 90 min, og blaff fram og tilbake meldes ikke
+{ const g = logg(); ok(g.inn('Handelsruta fra Gjøvik er truet: fiender i nærheten. Bare halvparten kommer fram – sett et lag til å vokte ruta.', 100) === null, 'truet holdes tilbake først');
+  ok(g.inn('Handelsruta fra Gjøvik er åpen igjen.', 130) === null && g.d.modne(400).length === 0, 'åpen igjen etter 30 min: ingenting meldes (blaff)');
+  g.inn('Handelsruta fra Gjøvik er STENGT av fiender. Ingenting kommer fram.', 500);
+  ok(g.d.modne(560).length === 0, 'STENGT: ikke meldt etter 60 min'); const m = g.d.modne(600);
+  ok(m.length === 1 && /STENGT/.test(m[0]), 'STENGT meldes når det har stått i 90 min'); ok(!!g.inn(m[0], 600), '… og slipper gjennom loggen');
+  ok(g.inn('Handelsruta fra Gjøvik er STENGT av fiender. Ingenting kommer fram.', 700) === null && g.d.modne(900).length === 0, 'samme tilstand igjen: meldes ikke på nytt');
+  g.inn('Handelsruta fra Gjøvik er åpen igjen.', 1000); ok(g.d.modne(1100).length === 1, 'åpen igjen meldes når den har stått'); }
 console.log(feil ? feil + ' FEIL' : 'alle tester ok'); process.exit(feil ? 1 : 0);
