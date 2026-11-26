@@ -34,6 +34,9 @@ module.exports = {
       T.aktiv = 0; T.nesteSpill = T.nesteEkte = Infinity;
       await SpilletSpill.angrep(); await vent(1300);
       const raid = ENHETER.filter(e => e.raid === T.aktiv && T.aktiv > 0), lv = loggLinjer.slice(0, 15).map(l => (typeof l === 'string' ? l : l.t || l.tekst || JSON.stringify(l))).find(l => /Varsel: .* røverlag/.test(l)) || '';
+      // (fletting r3) en kameramast/radar fra andre vakter kan ha sett røverne ved startstedet (observasjonen går foran ruta med vilje) –
+      // her prøves det at varsel og banner bruker samme kilde når ingen har sett dem
+      for (const e of raid) delete e.sett; if (ForsvarSpill.settRetning) ForsvarSpill.settRetning(NaN);
       const st = ForsvarSpill.status(); d.varsel = lv.slice(0, 140); d.banner = st ? st.overskrift : null;
       krev(raid.length > 0 && st, 'SpilletSpill.angrep() satte ikke ut en bølge');
       if (st && lv) { const m = /Varsel: (et|\d+) røverlag .* fra (\S+?) \(/.exec(lv), n = m ? (m[1] === 'et' ? 1 : +m[1]) : NaN;
