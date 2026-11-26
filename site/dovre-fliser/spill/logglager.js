@@ -139,8 +139,8 @@ body.kort #loggvelkommen{ top:calc(var(--topp,44px) + 4px); font-size:13px; padd
     if (rot.Kortkø && Kortkø.vik) Kortkø.vik();
     const b = el('div', 'på'); b.id = 'loggvelkommen'; b.setAttribute('role', 'dialog'); b.setAttribute('aria-label', 'Velkommen tilbake');
     // (løkka r1) klokka spillet står på, og bare det siste som skjedde – hver melding med dag og klokkeslett
-    const n = o.nå || o.til, hva = o.stille ? 'Det siste som skjedde' : o.antall === 1 ? 'Det siste som skjedde' : `Det siste som skjedde (${o.antall} meldinger, eldste først)`;
-    b.append(el('h3', '', 'Velkommen tilbake'), el('small', '', `Spillet står på dag ${n.dag} kl. ${n.klokke}. ${hva}:` + (o.stille ? ` Etter dette var det stille til spillet ble lagret.` : '') + ' Spillet sto stille mens du var borte.'));
+    const n = o.nå || o.til, hva = o.stille ? 'Det siste som skjedde – etter det var det stille til spillet ble lagret' : o.antall === 1 ? 'Det siste som skjedde' : 'Det siste som skjedde, eldste først';
+    b.append(el('h3', '', 'Velkommen tilbake'), el('small', '', `Spillet står på dag ${n.dag} kl. ${n.klokke} (det sto stille mens du var borte). ${hva}:`));
     const ul = el('ul'); for (const v of o.viktige) { const li = el('li'); li.append(el('i', '', `dag ${v.dag} ${v.klokke}`), document.createTextNode(v.tekst)); ul.appendChild(li); } b.appendChild(ul);
     const rad = el('div', 'rad'); rad.append(kn('Hele loggen', () => { lukkVelkommen(false); visHele(true); }, 'loggvelkommen-hele'), kn('Fortsett', () => lukkVelkommen(true), 'loggvelkommen-ok')); b.appendChild(rad);
     document.body.appendChild(b);

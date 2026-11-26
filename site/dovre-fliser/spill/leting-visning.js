@@ -76,9 +76,10 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
     const navn = P.leir ? 'Bygget' : NAVN[P.bygg.kl] || 'Bygget', ny = [];
     const x = lagEl('button', '×', 'x'); x.type = 'button'; x.setAttribute('aria-label', 'Lukk'); x.onclick = lukkFunn; ny.push(x);
     ny.push(lagEl('h3', d.tittel || `${navn} er gjennomsøkt`));
-    if (d.stemning) ny.push(lagEl('p', d.stemning, 'stemning'));
     const leir = []; for (const m of ['mat', 'tre', 'betong', 'stål', 'diesel', 'penger']) { const n = d.fikk && d.fikk[m]; if (n > 0) { const li = lagEl('li'); li.append(lagEl('b', `${tall2(n)} ${NAVN2[m](n)}`), lagEl('small', ` → ${DIT[m]}`)); leir.push(li); } }
     if (d.tomt) ny.push(lagEl('p', d.tomt));
+    // (løkka r1) setningen om stedet: under «Huset var tomt», ellers rett under overskriften
+    if (d.stemning) ny.push(lagEl('p', d.stemning, 'stemning'));
     if (leir.length) { ny.push(lagEl('h4', d.hentet ? 'Hentet til leiren' : 'Til leiren (ikke i sekken)')); const ul = lagEl('ul'); ul.append(...leir); ny.push(ul); }
     else if (!d.tomt && !d.hentet) ny.push(lagEl('p', 'Ingenting leiren kunne ta imot.'));
     if (d.sekken && d.sekken.length) { ny.push(lagEl('h4', 'I sekken din')); const ul = lagEl('ul'); for (const t of d.sekken) ul.append(lagEl('li', t)); ny.push(ul); }
