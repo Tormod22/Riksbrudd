@@ -61,3 +61,13 @@ kroppen mot en tynn vegg, leirens lys i 3D.
 ## Ikke gjort
 - Lagring av plan-flaggene på røverlagene (trussel-lagring.js er ikke min).
 - Lyskaster i vakttårnet som kjegle (bare et glødpunkt).
+
+## Etter beskjed fra koordinatoren
+- forsvar-oppgjor.js `folkTekst`: «forlot gjengen» bare for så mange som folk.js telte som gått på lav moral (`borte`); de andre
+  «er ikke lenger i leiren» (grunnen er ukjent der). Test i test_forsvar_oppgjor.js.
+- gange.js `startValg`: et nytt valg rydder ventingen på kartet fra et tidligere «Gå inn i huset» / «Reis hit» (ellers startet gangen
+  av seg selv midt i det nye valget – samme årsak som i ga-vakta).
+
+## Prøvd
+- ga.js på telefon 3 av 3 grønne (før: feilet av og til), og 1 på PC; granater.js på PC 4 av 4; lokke-r2-angrep3d.js på PC og telefon.
+- Bilder: scratchpad lokke/r2/angrep3d/natt-pc-natt-luft.png og natt-mob-natt-luft.png (bålet og teltlyktene fra lufta om natta).
