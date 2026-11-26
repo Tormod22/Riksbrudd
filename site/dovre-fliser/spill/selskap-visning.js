@@ -46,6 +46,16 @@
       + `<path d="M50 16 L78 25 V48 C78 66 65 77 50 84 Z" fill="rgba(0,0,0,.18)"/><path d="M22 36 H78" stroke="${esc(aks)}" stroke-width="3" opacity=".8"/>`
       + `<text x="50" y="66" text-anchor="middle" font-family="Cormorant Garamond, serif" font-weight="700" font-size="${bokst.length > 2 ? 24 : 30}" fill="#f3efe4" letter-spacing="1">${esc(bokst)}</text></svg>`;
   }
+  // (R1-løkka, kritikken: «PRIVAT MILITÆRSELSKAP · BLÅ» med lilla flagg) fargen i overskriften er navnet på flaggets hovedfarge
+  function fargeNavn(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim()); if (!m) return '';
+    const n = parseInt(m[1], 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255, maks = Math.max(r, g, b), min = Math.min(r, g, b), l = (maks + min) / 2, d = maks - min;
+    if (d < .12) return l < .2 ? 'svart' : l > .8 ? 'hvit' : 'grå';
+    let h = maks === r ? ((g - b) / d) % 6 : maks === g ? (b - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360;
+    if (l < .3 && h > 15 && h < 50) return 'brun';
+    return h < 15 || h >= 345 ? 'rød' : h < 40 ? 'oransje' : h < 68 ? 'gul' : h < 160 ? 'grønn' : h < 195 ? 'blågrønn' : h < 255 ? 'blå' : h < 295 ? 'lilla' : 'rosa';
+  }
+  function fargeord() { const f = fraksjon(), fl = f && f.flagg; if (!fl || !fl.farger) return ''; return fargeNavn(window.Oppstart && Oppstart.hovedfarge ? Oppstart.hovedfarge(fl) : fl.farger[0]); }
   // Ravnsund: sittende ravn med tungt nebb over to streker (sundet). Mosevakt: gran i tre lag i et sikte.
   function rivalMerke(side, px) {
     const R = RIVALER[side], f = R.farge;
@@ -112,13 +122,14 @@
     // forsyning (den første kontrakten, R18-A): et eget lag henter forsyningene ved stedet og tar dem med hjem
     if (k.type === 'forsyning') { let bær = k.bærer ? ENHETER.find(q => q.navn === k.bærer && q.side === ID) : null;
       if (k.hentet && (!bær || !levende(bær))) return { tapt: true };
-      if (!k.hentet) { const her = egneLag().find(q => Math.hypot(q.x - k.sted.x, q.y - k.sted.y) <= SK.REGLER.første.nær); if (her) { k.bærer = her.navn;
+      // (R1-løkka, kritikken: «har lastet nødlageret (×22)») vurder kalles også av lappen og panelet: hentet settes her, så meldingen kommer én gang
+      if (!k.hentet) { const her = egneLag().find(q => Math.hypot(q.x - k.sted.x, q.y - k.sted.y) <= SK.REGLER.første.nær); if (her) { k.bærer = her.navn; k.hentet = true; lagre();
         logg(`${her.navn} har lastet nødlageret. Gi troppen ordre hjem til leiren – da betaler ${k.giver.navn}.`); return { hentet: true }; } return {}; }
       return { i: !!(L && bær && Math.hypot(bær.x - L.x, bær.y - L.y) <= N.leir), hentet: true }; }
     // hent: et eget lag henter personen ved stedet og tar vedkommende med hjem
     let bærer = k.bærer ? ENHETER.find(q => q.navn === k.bærer && q.side === ID) : null;
     if (k.hentet && (!bærer || !levende(bærer))) return { tapt: true };
-    if (!k.hentet) { const her = egneLag().find(q => Math.hypot(q.x - k.sted.x, q.y - k.sted.y) <= N.hent); if (her) { k.bærer = her.navn; bærer = her;
+    if (!k.hentet) { const her = egneLag().find(q => Math.hypot(q.x - k.sted.x, q.y - k.sted.y) <= N.hent); if (her) { k.bærer = her.navn; bærer = her; k.hentet = true; lagre();
       logg(`${her.navn} har med seg ${k.person}. Ta vedkommende med til leiren.`); return { hentet: true }; } return {}; }
     return { i: !!(L && bærer && Math.hypot(bærer.x - L.x, bærer.y - L.y) <= N.leir), hentet: true };
   }
@@ -126,10 +137,29 @@
 
   // ---------- R18-A: DEN RØDE TRÅDEN ----------
   // det leiren har til kravene i Selskap.kanTa: friske i det største egne laget, og egne kjøretøy uten kontrakt
-  function har() {
+  // (R1-løkka) med k: også det kjente forsvaret ved stedet (forsvarVed), så kortet bruker samme vurdering som krigskartet
+  function har(k) {
     let størsteLag = 0; for (const q of egneLag()) størsteLag = Math.max(størsteLag, q.menn.filter(m => m.hp >= 1).length);
     const kjøretøy = (window.KJORETOY || []).filter(q => q.side !== 'rød' && q.side !== 'grønn' && !q.kontrakt && q.antall >= 1).length;
-    return { størsteLag, kjøretøy };
+    const h = { størsteLag, kjøretøy }; if (k) { const f = forsvarVed(k); if (f) { h.forsvar = f.mann; h.forsvarTekst = f.tekst; } }
+    return h;
+  }
+  // Det kjente forsvaret ved kontraktens sted: StrategiSpill.kjentForsvar (fiender dere ser eller nylig så, anslått garnison og
+  // bygdevernet) – uten bygdevernet når jobben er for bygda/kommunen der (de slipper dere inn). Gir { mann, tekst } eller null.
+  function forsvarVed(k) {
+    if (!k || !k.sted || k.type === 'forsyning') return null; const SP = window.StrategiSpill;
+    try {
+      if (k.sted.slag === 'tettsted' && k.sted.id != null && SP && SP.kjentForsvar) {
+        let by = SP.område ? SP.område().find(b => b.id === k.sted.id) : null;
+        if (!by && typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) { const o = INFRA.tettsted.find(q => q.e && q.e.id === k.sted.id); if (o) by = { id: o.e.id, navn: o.e.navn, x: k.sted.x, y: k.sted.y, folk: o.e.folk || 0, ref: o }; }
+        if (!by) return null; const kf = SP.kjentForsvar(by), egen = k.giver && k.giver.slag !== 'firma' && k.giver.by === k.sted.id;
+        const mann = Math.max(0, kf.mann - (egen ? kf.vern : 0)); if (!mann) return null; const d = [];
+        if (kf.vern && !egen) d.push(`bygdevernet ${kf.vern}`); if (kf.sett) d.push(`fiender sett ca. ${kf.sett}`); if (kf.anslag) d.push(`garnison ca. ${kf.anslag}`);
+        return { mann, tekst: d.join(' + ') }; }
+      // bruer og andre steder: fiender dere ser innen 2,5 km
+      let m = 0; for (const f of fiender()) { let ser = false; try { ser = synlig(f); } catch (e) { ser = false; } if (ser && Math.hypot(f.x - k.sted.x, f.y - k.sted.y) <= 2500) m += window.Fraksjoner ? Fraksjoner.styrke(f) : 8; }
+      return m ? { mann: Math.round(m), tekst: 'fiender sett' } : null;
+    } catch (e) { return null; }
   }
   const nivåNå = () => (S ? SK.nivå(S.sider[ID]) : SK.REGLER.NIVÅER[0]);
   // koblingene ved levering: tettsted dere holder (ekstra), nytt nivå, motangrep mot leiren (forsvaret), en ny person vil bli med (folk)
@@ -155,14 +185,18 @@
   function tråd() {
     if (!S || !S.tråd || S.tråd.slutt) return; const nye = SK.oppdaterTråd(S, trådBilde()); if (!nye.length) return; lagre();
     const st = SK.trådSteg(S), k = førsteK();
-    if (st && k && !navigator.webdriver) logg(`Kontrakten: ${st.tekst(k)}`);
-    if (!st) logg('Første kontrakt er fullført. Fra nå av er det Selskapet som gir dere arbeid – ryktet låser opp større kontrakter.');
+    // (R1-løkka) etter et brudd står det hva som skjedde (steget «neste» sier det, og brudd-meldingen i loggen) – ingen «fullført»
+    if (st && k && !navigator.webdriver && !(S.tråd.brutt && st.id === 'neste')) logg(`Kontrakten: ${st.tekst(k, knappFor())}`);
+    if (!st) logg(S.tråd.brutt ? 'Ny kontrakt tatt. Fra nå av er det Selskapet som gir dere arbeid – ryktet låser opp større kontrakter.'
+      : 'Første kontrakt er fullført. Fra nå av er det Selskapet som gir dere arbeid – ryktet låser opp større kontrakter.');
   }
+  // (R1-løkka, kritikken: «trykk «Marsjer»» når knappen heter «Kjør dit») navnet på knappen den nærmeste egne troppen har nå (index.html)
+  function knappFor() { const t = egneLag().filter(q => q.fraFolk); const s = (typeof valgt !== 'undefined' && valgt && t.includes(valgt)) ? valgt : t[0]; return { knapp: s && s.ombord ? 'Kjør dit' : 'Marsjer' }; }
   const trådAktiv = () => !!(klar && S && S.tråd && !S.tråd.slutt && SK.trådSteg(S));
   // hva «Neste»-lappen sier: { tekst, pek, k } – tråden først, så den aktive kontrakten med kortest frist, så ledige tilbud
   function lapp() {
     if (!klar || !S) return null; const st = SK.trådSteg(S), fk = førsteK();
-    if (st && fk) return { tekst: st.lapp(fk), pek: st.id === 'send' || st.id === 'hjem' ? 'kart' : st.pek, k: fk, steg: st.id, hjelp: st.tekst(fk) };
+    if (st && fk) return { tekst: st.lapp(fk), pek: st.id === 'send' || st.id === 'hjem' ? 'kart' : st.pek, k: fk, steg: st.id, hjelp: st.tekst(fk, knappFor()) };
     const ak = S.sider[ID].aktive.slice().sort((a, b) => a.frist - b.frist)[0];
     if (ak) { const v = vurder(ak); return { tekst: SK.lappFor(ak, v, tid) + ' · ' + SK.fristTekst(ak, tid), pek: klarTilLevering(ak) ? 'selskap' : 'kart', k: ak, hjelp: SK.kravTekst(ak) }; }
     const n = S.tilbud.filter(q => SK.kanTa(q, har(), S.sider[ID]).ok).length;
@@ -191,8 +225,11 @@
       if (h.type === 'levert') { if (window.OppstartSpill) OppstartSpill.gi(h.kr); logg(`Kontrakt levert: ${k.tittel}. ${k.giver.navn} betalte ${kr(h.kr)}.`); rydd(k); kobling(h);
         try { window.dispatchEvent(new CustomEvent('riksbrudd-kontrakt', { detail: { type: 'levert', id: k.id, kr: h.kr } })); } catch (e) { /* gammel nettleser */ } }
       else if (h.type === 'brutt') { const bot = Math.min(h.kr || 0, (Sp() && Sp().penger) || 0); if (bot > 0) OppstartSpill.betal(bot);
-        const grunn = h.grunn === 'frist' ? 'fristen gikk ut' : h.grunn === 'tapt' ? (k.type === 'eskorte' ? 'bilen gikk tapt' : 'laget med personen ble slått ut') : 'dere avbrøt den';
-        logg(`Kontrakt brutt (${grunn}): ${k.tittel}. Bot ${kr(bot)}.`); rydd(k); }
+        const grunn = SK.bruttTekst(k) || (h.grunn === 'frist' ? 'fristen gikk ut' : 'dere avbrøt den');
+        // (R1-løkka, kritikken: tre motstridende meldinger etter et brudd) den første kontrakten: ingen bot, og nye tilbud straks
+        if (k.første) { logg(`Kontrakt brutt (${grunn}): ${k.tittel}. Ingen bot for den første jobben, men ryktet fikk en ripe.`); rydd(k); const n = nyeTilbud();
+          logg(n.length ? `${n.length} nye kontrakter står i Selskapet. Velg en dere har det som trengs til, og send et lag som er sterkt nok.` : 'Nye kontrakter kommer i morgen tidlig. Bygg opp leiren og troppene imens.'); }
+        else { logg(`Kontrakt brutt (${grunn}): ${k.tittel}. Bot ${kr(bot)}.`); rydd(k); } }
       else if (h.type === 'rivalFørst') { logg(`${navnFor(h.rival)} kom først: ${k.tittel}. Kontrakten er tapt, men uten bot.`); rydd(k); }
       else if (h.type === 'angrep') { const b = bilFor(k); if (b) { const v = (window.Tilfeldig ? Tilfeldig.verden() : .5) * Math.PI * 2, a = nyttLag(`${navnFor(h.rival)}, angrepslag`, b.x + Math.cos(v) * 700, b.y + Math.sin(v) * 700, h.rival);
         a.menn.length = 6; a.angrepslag = true; a.kontrakt = k.id; ENHETER.push(a); try { ordre(a, b.x, b.y, true); } catch (e) { /* uten ordre */ }
@@ -281,9 +318,9 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
   function tilbudKort(k) {
     const igjen = Math.max(0, k.utløper - tid), går = igjen >= 60 ? `${Math.round(igjen / 60)} t` : `${Math.round(igjen)} min`;
     // (R18-A) kravet: låst nivå gir en grå knapp; mangler leiren noe, står det rødt (knappen forklarer det når du trykker)
-    const kt = SK.kanTa(k, har(), S.sider[ID]), K = SK.kravFor(k), låst = K.nivå > nivåNå().nr;
+    const kt = SK.kanTa(k, har(k), S.sider[ID]), K = SK.kravFor(k), låst = K.nivå > nivåNå().nr, adv = kt.advarsel && kt.advarsel.length;
     const kravLinje = k.første ? `<div class="rad"><span class="krav ok">Din første kontrakt – vi viser deg hvert steg.</span></div>`
-      : `<div class="rad"><span class="krav${kt.ok ? ' ok' : ''}">${kt.ok ? '✓ Dere har det som trengs' : 'Krever ' + esc(kt.mangler.join(' og '))}${SK.kravKort(k) && kt.ok ? ' (' + esc(SK.kravKort(k)) + ')' : ''}</span></div>`;
+      : `<div class="rad"><span class="krav${kt.ok && !adv ? ' ok' : ''}"${adv ? ' data-svak="1"' : ''}>${kt.ok && adv ? '⚠ ' + esc(kt.advarsel.join('; ')) + ' – samme vurdering som i Krig. Send et sterkere lag.' : kt.ok ? '✓ Dere har det som trengs' : 'Krever ' + esc(kt.mangler.join(' og '))}${SK.kravKort(k) && kt.ok && !adv ? ' (' + esc(SK.kravKort(k)) + ')' : ''}</span></div>`;
     return `<div class="kort${låst ? ' låst' : ''}${k.første ? ' første' : ''}" data-kontrakt="${k.id}"><b>${låst ? '🔒 ' : ''}${esc(k.tittel)}</b><div class="fra">${esc(typeNavn(k))} · ${esc(k.giver.navn)} · ${esc(avstand(k))}</div><p>${esc(SK.kravTekst(k))}</p>`
       + `<div class="rad"><span>Betaling <span class="kr tall">${kr(k.betaling)}</span></span><span>Bot ved brudd <span class="bot tall">${kr(k.bot)}</span></span><span>Frist <span class="tall">${k.timer} t</span> etter at dere tar den</span></div>`
       + (k.konkurrent ? `<div class="rad"><span>${esc(navnFor(k.konkurrent))} vil også ha den – vær raske.</span></div>` : '')
@@ -303,7 +340,7 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
   function html() {
     if (!S) return `<button class="lukk" data-s="lukk" aria-label="Lukk">×</button><p class="tom">Selskapet kommer når leiren er lagt.</p>`;
     const sd = S.sider[ID], r = sd.rykte, sum = sd.sum;
-    let h = `<button class="lukk" data-s="lukk" aria-label="Lukk">×</button><div class="hode">${egetMerke(58)}<div><div class="kode">Privat militærselskap · blå</div><h2>${esc(egetNavn())}</h2><div class="motto">${esc(SK.rykteTekst(r))}</div></div></div>`;
+    let h = `<button class="lukk" data-s="lukk" aria-label="Lukk">×</button><div class="hode">${egetMerke(58)}<div><div class="kode">Privat militærselskap${fargeord() ? ' · ' + esc(fargeord()) : ''}</div><h2>${esc(egetNavn())}</h2><div class="motto">${esc(SK.rykteTekst(r))}</div></div></div>`;
     { const nv = nivåNå(), nn = SK.nesteNivå(sd);
       h += `<h3>Nivå ${nv.nr} · ${esc(nv.navn)} <small>betaling ×${String(nv.faktor).replace('.', ',')}</small></h3>`
         + (nn ? `<div class="nivaa" data-nivaa="${nn.nivå.nr}">Neste nivå: <b>${esc(nn.nivå.navn)}</b> (betaling ×${String(nn.nivå.faktor).replace('.', ',')}, lag på ${nn.nivå.menn}+ til de store holdejobbene). Mangler: ${esc(nn.mangler.join(' og '))}.</div>`
@@ -347,6 +384,7 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     g.save(); g.font = '600 12px "Cormorant Garamond", serif'; g.textAlign = 'center';
     // (R18-A) den første kontrakten vises i kartet også før den er tatt, så spilleren ser hvor det bærer
     for (const k of [...S.sider[ID].aktive, ...S.tilbud.filter(q => q.første)]) {
+      if (k.type === 'forsyning') { tegnLager(g, k, P); continue; }
       const [x, y] = P(k.sted.x, k.sted.y), r = k.type === 'hold' ? Math.max(8, SK.REGLER.nær.hold / m) : 9;
       g.strokeStyle = '#d9a441'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke(); g.setLineDash([]);
       g.fillStyle = '#d9a441'; g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x + 5, y); g.lineTo(x, y + 6); g.lineTo(x - 5, y); g.closePath(); g.fill();
@@ -357,6 +395,22 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     }
     g.restore();
   });
+  // (R1-løkka, kritikken: «vis nødlageret tydelig i kartet») nødlageret: en kasse med navn, en stiplet linje fra leiren og
+  // avstanden; når troppen bærer det, står «Lever her» ved leiren
+  function tegnLager(g, k, P) {
+    const s = Sp(), L = s && s.leir, [x, y] = P(k.sted.x, k.sted.y), m = kam.m;
+    if (L) { const [lx, ly] = P(L.x, L.y); g.strokeStyle = 'rgba(242,214,138,.75)'; g.lineWidth = 2; g.setLineDash([6, 6]); g.beginPath(); g.moveTo(lx, ly); g.lineTo(x, y); g.stroke(); g.setLineDash([]); }
+    if (!k.hentet) {
+      const r = Math.max(9, SK.REGLER.første.nær / m); g.strokeStyle = '#f2d68a'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke(); g.setLineDash([]);
+      // kassa
+      g.fillStyle = '#8a6a32'; g.fillRect(x - 8, y - 6, 16, 12); g.strokeStyle = '#f2d68a'; g.lineWidth = 1.5; g.strokeRect(x - 8, y - 6, 16, 12);
+      g.beginPath(); g.moveTo(x - 8, y - 6); g.lineTo(x + 8, y + 6); g.moveTo(x + 8, y - 6); g.lineTo(x - 8, y + 6); g.stroke();
+      const d = L ? Math.hypot(k.sted.x - L.x, k.sted.y - L.y) : 0, t = `Nødlageret${d ? ' · ' + meter(d) : ''}`;
+      const w = g.measureText(t).width + 12, ty = y - r - 12;
+      g.fillStyle = 'rgba(18,20,23,.88)'; g.fillRect(x - w / 2, ty - 12, w, 17); g.fillStyle = '#f2d68a'; g.fillText(t, x, ty + 1);
+    } else if (L) { const [lx, ly] = P(L.x, L.y), t = 'Lever nødlageret her', w = g.measureText(t).width + 12;
+      g.fillStyle = 'rgba(18,20,23,.88)'; g.fillRect(lx - w / 2, ly + 14, w, 17); g.fillStyle = '#a9c27a'; g.fillText(t, lx, ly + 27); }
+  }
   KROKER.sim.push(dt => { try { steg(dt); } catch (e) { console.error('selskap', e); } });
   // sprengte bruer, kraftverk og dammer gjør selskapet mer hardhendt (spill/odeleggelse-visning.js kaller KROKER.ødelagt)
   if (KROKER.ødelagt) KROKER.ødelagt.push((o, hva) => { if (S && hva === 'ødelegg') { SK.hardhendt(S, ID, SK.REGLER.sprengt); lagre(); } });
@@ -426,26 +480,44 @@ body.kort #nestelapp small{ display:none; }
     const s = Sp(); if (!s || !s.leir) return; const id = Math.round(s.leir.x) + ',' + Math.round(s.leir.y);
     if (klar && id === leirId) return; leirId = id;
     S = les(s.leir) || SK.ny(s.leir, {}); settNavn(); klar = true; sistHtml = '';
+    // (R1-løkka) eldre lagrede spill: de andre selskapene som ikke har gjort noe ennå, får sitt eget startrykte
+    for (const id of Object.keys(SK.REGLER.rykte.sider)) { const q = S.sider[id], st = SK.REGLER.rykte.start; if (q && !q.sum.levert && Object.keys(st).every(k => q.rykte[k] === st[k])) Object.assign(q.rykte, SK.REGLER.rykte.sider[id]); }
     // (R18-A) et nytt spill (selskapet har aldri hatt en kontrakt) får den første kontrakten med en gang
     if (S.nr === 0 && !S.tråd && auto()) førsteKontrakt();
     if (åpen) tegn(true);
   }
-  // den første kontrakten: nærmeste tettsted/bru rundt 2 km, ellers et forsyningslager på land 1,6 km fra leiren
+  // (R1-løkka 26. nov, kritikken: «den første kontrakten er en felle») nødlageret ligger i en låve F.avstand fra leiren – så nær at
+  // radioen aldri mister kontakten (se REGLER.første) – i retning bygda som gir jobben, på land, i spillkartet og minst F.utenfor
+  // meter utenfor alle tettsteder (der står bygdevernet). Retningene prøves fra bygdas retning og utover til begge sider.
+  function lagerPlass(L) {
+    const F = SK.REGLER.første, byer = (typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || [], G = window.Garnison;
+    const bygd = steder().filter(q => q.slag === 'tettsted').map(q => ({ q, d: Math.hypot(q.x - L.x, q.y - L.y) })).filter(o => o.d >= F.min && o.d <= F.maks).sort((a, b) => Math.abs(a.d - F.ønsket) - Math.abs(b.d - F.ønsket))[0];
+    const v0 = bygd ? Math.atan2(bygd.q.y - L.y, bygd.q.x - L.x) : .3;
+    const fri = (x, y) => { const hh = typeof hoydeVed === 'function' ? hoydeVed(x, y) : null; if (hh !== null && hh <= 1) return false;
+      if (typeof OMRÅDE_OK === 'function' && !OMRÅDE_OK(x, y)) return false;
+      if (G && G.avstand) for (const by of byer) { if (!by.bb || x < by.bb[0] - F.utenfor || x > by.bb[2] + F.utenfor || y < by.bb[1] - F.utenfor || y > by.bb[3] + F.utenfor) continue; if (G.avstand(by, x, y) < F.utenfor) return false; }
+      return true; };
+    for (const d of [F.avstand, F.avstand * .75, F.avstand * .55]) for (let i = 0; i < 16; i++) { const v = v0 + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * Math.PI / 8, x = L.x + Math.cos(v) * d, y = L.y + Math.sin(v) * d;
+      if (fri(x, y)) return { x: Math.round(x), y: Math.round(y) }; }
+    return { x: Math.round(L.x + Math.cos(v0) * F.avstand * .55), y: Math.round(L.y + Math.sin(v0) * F.avstand * .55) };
+  }
+  // den første kontrakten: nødlageret (lagerPlass) for bygdelaget i nærmeste tettsted
   function førsteKontrakt(nullstill) {
     const s = Sp(); if (!s || !s.leir) return null; if (nullstill) { S = SK.ny(s.leir, {}); settNavn(); }
-    const F = SK.REGLER.første, L = s.leir; let reserve = null;
-    for (let i = 0; i < 16 && !reserve; i++) { const v = i * Math.PI / 8 + .3, x = L.x + Math.cos(v) * F.reserve, y = L.y + Math.sin(v) * F.reserve;
-      const hh = typeof hoydeVed === 'function' ? hoydeVed(x, y) : null, vann = hh !== null && hh <= 1; const lov = typeof OMRÅDE_OK !== 'function' || OMRÅDE_OK(x, y); if (!vann && lov) reserve = { x, y, navn: 'nødlageret' }; }
-    if (!reserve) reserve = { x: L.x + F.reserve, y: L.y, navn: 'nødlageret' };
+    const reserve = lagerPlass(s.leir);
     const k = SK.førsteKontrakt(S, ID, tid, steder(), reserve); if (!k) return null;
     if (S.dag < 0) S.dag = dagNå(); lagre(); skitten = true;
     if (!navigator.webdriver) setTimeout(() => logg(`${k.giver.navn} har en jobb til dere: ${k.tittel} (${kr(k.betaling)}). Trykk på lappen nederst.`), 1200);
     sistHtml = ''; if (åpen) tegn(true); return k;
   }
+  // (R1-løkka, kritikken: «bygdevernet angriper folkene som ga oss jobben») er dere på oppdrag for bygda/kommunen i tettstedet byId?
+  // Gir kontrakten (aktiv, fra bygdelaget eller kommunen der), ellers null. Bygdevernet (spill/krig-visning.js) og krigskartets
+  // vurdering (spill/strategi-visning.js) bruker den.
+  function oppdragFor(byId) { if (!S || byId == null) return null; return S.sider[ID].aktive.find(k => k.giver && k.giver.slag !== 'firma' && (k.giver.by === byId || (k.sted && k.sted.by === byId))) || null; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   Object.assign(api, { start, vis, erÅpen: () => åpen, tilstand: () => S, sett: d => { S = SK.fraJSON(d) || S; settNavn(); tegn(true); }, ta, avslå, lever, avbryt, pris, nyeTilbud, steder,
     vurder, klar: klarTilLevering, steg: dt => { akk = 0; steg(Math.max(1, dt)); }, lagre, NØKKEL,
-    førsteKontrakt, tråd: () => (S ? SK.trådSteg(S) : null), trådAktiv, oppdaterTråd: tråd, lapp, følgLapp, har, nivå: nivåNå,
+    førsteKontrakt, lagerPlass, oppdragFor, forsvarVed, fred: byId => !!oppdragFor(byId), knappFor, fargeNavn, tråd: () => (S ? SK.trådSteg(S) : null), trådAktiv, oppdaterTråd: tråd, lapp, følgLapp, har, nivå: nivåNå,
     rett: { kontraktTa: ta, kontraktAvslå: avslå, kontraktLever: id => lever(id), kontraktAvbryt: avbryt, kontraktPris: pris }, RIVALER, merke: (side, px) => (side === ID ? egetMerke(px || 40) : rivalMerke(side, px || 40)) });
   window.SelskapSpill = api;
 })();

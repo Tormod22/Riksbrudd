@@ -1018,7 +1018,9 @@ async function ordre(s, X, Y, stille) {
   s.planlegger = true; if (!stille) logg(s.navn + ': planlegger rute …');
   try {
     const v = await lagVindu([Math.min(s.x, X) - pad, Math.min(s.y, Y) - pad, Math.max(s.x, X) + pad, Math.max(s.y, Y) + pad], true);
-    const r = Terreng.ruteTil(v, s.x, s.y, X, Y);
+    let r = Terreng.ruteTil(v, s.x, s.y, X, Y);
+    // (R1-løkka 26. nov) KROKER.rute (spill/krig-visning.js): en krok kan gi en annen rute, f.eks. utenom fiendtlige tettsteder
+    if (r) for (const f of KROKER.rute || []) { try { const n = f(s, v, r, X, Y, stille); if (n) r = n; } catch (e) { console.error('rute', e); } }
     if (!r) { if (!stille) logg('Ingen framkommelig rute dit.'); return; }
     s.sti = r.sti; s.steg = r.steg; s.seg = 0; s.prog = 0; s.timerIgjen = r.timer; s.siktSkitten = true;
     let km = 0; for (let i = 1; i < r.sti.length; i++) km += Math.hypot(r.sti[i][0] - r.sti[i - 1][0], r.sti[i][1] - r.sti[i - 1][1]) / 1000;

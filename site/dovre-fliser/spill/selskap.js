@@ -231,7 +231,13 @@
     if (K.nivå > nv) m.push(`nivå ${K.nivå} «${REGLER.NIVÅER[K.nivå - 1].navn}» (dere er på nivå ${nv})`);
     if (har && K.menn && tall(har.størsteLag) < K.menn) m.push(`et lag med minst ${K.menn} friske (største lag nå: ${tall(har.størsteLag)})`);
     if (har && K.kjøretøy && tall(har.kjøretøy) < K.kjøretøy) m.push('et eget kjøretøy til eskorten (bestill et ved basen: trykk på basen i kartet)');
-    return { ok: !m.length, mangler: m };
+    // (R1-løkka 26. nov, kritikken: «✓ Dere har det som trengs (lag på 3+)» mens Krig sa «for svakt: 4 mann mot 5») har.forsvar = det
+    // kjente forsvaret ved stedet i mann (samme tall som krigskartet). Samme regel som Strategi.kravFor: forsvaret minst like stort som
+    // laget = for svakt. Det stopper ikke kontrakten (som «Send likevel» i Krig), men kortet viser det i stedet for ✓.
+    const advarsel = [];
+    if (har && (K.menn || k.type === 'hent' || k.type === 'eskorte') && tall(har.forsvar) > 0 && tall(har.størsteLag) <= tall(har.forsvar))
+      advarsel.push(`For svakt: ${tall(har.størsteLag)} mann mot et forsvar på ca. ${Math.round(tall(har.forsvar))}${har.forsvarTekst ? ' (' + har.forsvarTekst + ')' : ''}`);
+    return { ok: !m.length, mangler: m, advarsel };
   }
   const kravKort = k => { const K = kravFor(k), d = []; if (K.nivå > 1) d.push(`nivå ${K.nivå}`); if (K.menn) d.push(`lag på ${K.menn}+`); if (K.kjøretøy) d.push('kjøretøy'); return d.join(', '); };
 

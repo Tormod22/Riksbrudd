@@ -176,3 +176,8 @@ ok(S0.fristTekst({ frist: 839.6 }, 0) === '14 t 0 min igjen' && S0.fristTekst({ 
   T8.tilbud.push(ry); S0.godta(T8, 'blå', 'r1', 0); const hv = S0.lever(T8, 'blå', ry, 1, () => .01); ok(hv.motangrep && hv.rekrutt, 'motangrep og rekruttering');
 }
 console.log(`Alle ${n} testene for selskap.js er ok`);
+// (R1-løkka 26. nov) kravet bruker samme vurdering som krigskartet: forsvaret minst like stort som laget = «For svakt» (stopper ikke)
+{ const sd = S0.side(S0.ny({ x: 0, y: 0 }), 'blå'), k = { type: 'hold', nivå: 1 };
+  const a = S0.kanTa(k, { størsteLag: 4, kjøretøy: 0, forsvar: 5, forsvarTekst: 'bygdevernet 5' }, sd); assert.ok(a.ok && a.advarsel.length === 1 && /For svakt: 4 mann mot et forsvar på ca\. 5/.test(a.advarsel[0]), JSON.stringify(a));
+  const b = S0.kanTa(k, { størsteLag: 6, kjøretøy: 0, forsvar: 5 }, sd); assert.ok(b.ok && !b.advarsel.length, 'sterkere enn forsvaret: ingen advarsel');
+  console.log('ok   kravet bruker krigskartets vurdering (For svakt)'); }

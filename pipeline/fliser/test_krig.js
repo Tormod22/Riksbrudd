@@ -104,3 +104,17 @@ console.log(`ok   krig: ${n} sjekker`);
   const g = K2.klynger([{ x: 100, y: 100, side: 'rød', navn: 'Ravnsunds 3. lag', t: 10 }, { x: 120, y: 110, side: 'rød', navn: 'Ravnsunds 4. lag', t: 12 }, { x: 300, y: 100, side: 'rød', navn: 'Ravnsunds 5. lag', t: 5 }, { x: 105, y: 100, side: 'grønn', navn: 'Mosevakts 1. lag', t: 12 }]);
   a.strictEqual(g.length, 3); a.strictEqual(g[0].n, 2); a.strictEqual(g[0].y, 110); a.strictEqual(K2.klyngeTekst(g[0], 12, 'Ravnsund'), 'Ravnsund: 2 lag · nå'); a.strictEqual(K2.klyngeTekst(g[1], 12, 'Ravnsund'), 'Ravnsunds 5. lag · 7 min siden');
   console.log('ok   krig (runde 8): meldte fiender nær hverandre får én lapp'); }
+// (R1-løkka 26. nov) ruter utenom fiendtlige tettsteder: gjennomByer finner byene ruta går gjennom, sperrByer stenger dem i vinduet,
+// og Terreng.ruteTil går da utenom; omvegOk sier om omvegen er god nok
+{ const K2 = require('../../site/dovre-fliser/spill/krig'), T0 = require('../../site/dovre-fliser/terreng.js'), T = T0.Terreng || T0, a = require('assert');
+  // en by som et rektangel 1000–2000 × −300–300 (inni = innenfor rektangelet)
+  const by = { bb: [1000, -300, 2000, 300] }, inni = (b, x, y) => x >= b.bb[0] && x <= b.bb[2] && y >= b.bb[1] && y <= b.bb[3], byer = [{ by, navn: 'Otta' }];
+  a.strictEqual(K2.gjennomByer([[0, 0], [3000, 0]], byer, inni).length, 1, 'rett linje gjennom byen');
+  a.strictEqual(K2.gjennomByer([[0, 0], [0, 1000], [3000, 1000], [3000, 0]], byer, inni).length, 0, 'utenom byen');
+  // et vindu 3200 × 2400 m i 32 m-ruter, hei overalt (fart 3), med byen midt i
+  const r = 32, w = 100, h = 75, v = { x0: 0, y0: 1200, r, w, h, H: new Float32Array(w * h).fill(500), K: new Uint8Array(w * h).fill(2), V: new Uint8Array(w * h) };
+  const r1 = T.ruteTil(v, 100, 0, 3100, 0); a.ok(r1 && K2.gjennomByer(r1.sti, byer, inni).length === 1, 'første rute går gjennom byen');
+  const sp = K2.sperrByer(v, byer, inni); a.ok(sp.sperret > 0 && v.K[0] === 2, 'kopien er sperret, originalen urørt');
+  const r2 = T.ruteTil(sp.v, 100, 0, 3100, 0); a.ok(r2 && !K2.gjennomByer(r2.sti, byer, inni).length, 'ruta med sperringen går utenom');
+  a.ok(K2.omvegOk(r1.timer, r2.timer) && !K2.omvegOk(1, 3) && !K2.omvegOk(1, Infinity), 'omvegen er god nok: ' + r1.timer.toFixed(2) + ' -> ' + r2.timer.toFixed(2) + ' t');
+  console.log('ok   krig (R1-løkka): ruter utenom fiendtlige tettsteder'); }

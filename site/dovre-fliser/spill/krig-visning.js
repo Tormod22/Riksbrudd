@@ -352,12 +352,17 @@
   function fredSteg() { for (const side of Object.keys(T.fred)) if (T.fred[side] <= tid) { delete T.fred[side]; fredTilAI(); logg(`Våpenhvilen med ${fnavn(side)} er over.`); hend('annet', `Våpenhvilen med ${fnavn(side)} er over`); lagre(); } }
 
   // ---------- bygdevern ----------
-  let vernAktive = [], vernAkk = 0;
+  let vernAktive = [], vernAkk = 0; const oppdragMeldt = new Set();
   // Vernet gjelder alle som går inn i et tettsted ingen eier – også motstanderne (de kan ikke gjøre avtaler og må slåss).
   function vern(min) {
     vernAktive = []; if (!auto() || !window.Garnison) return;
     const alle = ENHETER.filter(s => erLag(s) && levende(s) && !s.karakter && !s.iLufta && !s.ombord);
-    for (const by of byer()) { if (eier(by)) continue; const inne = alle.filter(s => s.x > by.bb[0] && s.x < by.bb[2] && s.y > by.bb[1] && s.y < by.bb[3] && Garnison.inni(by, s.x, s.y)); if (!inne.length) continue;
+    for (const by of byer()) { if (eier(by)) continue; let inne = alle.filter(s => s.x > by.bb[0] && s.x < by.bb[2] && s.y > by.bb[1] && s.y < by.bb[3] && Garnison.inni(by, s.x, s.y)); if (!inne.length) continue;
+      // (R1-løkka 26. nov, kritikken: «bygdevernet angrep folkene som ga oss jobben») egne lag er i fred når dere har en kontrakt for
+      // bygdelaget eller kommunen her (SelskapSpill.oppdragFor) – vernet vet om jobben
+      const opp = window.SelskapSpill && SelskapSpill.oppdragFor ? SelskapSpill.oppdragFor(by.e.id) : null;
+      if (opp) { const fredet = inne.filter(s => s.side === 'blå'); if (fredet.length) { inne = inne.filter(s => s.side !== 'blå'); const nøkkel = by.e.id + ':' + opp.id;
+        if (!oppdragMeldt.has(nøkkel)) { oppdragMeldt.add(nøkkel); logg(`Bygdevernet i ${by.e.navn} slipper ${fredet[0].navn} inn – dere er her på oppdrag for ${opp.giver.navn}.`); } } if (!inne.length) continue; }
       const id = by.e.id, blå = inne.some(s => s.side === 'blå'); if (T.vern[id] === undefined) { T.vern[id] = K.vernMenn(by.e.folk);
         if (blå) logg(`Bygdevernet i ${by.e.navn} (${T.vern[id]} mann) vil ikke slippe dere inn. Gjør en avtale (Leir → Mål, ${kr(K.vernPris(by.e.folk))}) eller ta stedet med makt.`); lagre(); }
       // en avtale gjelder bare dine lag; har vernet gitt opp eller gjort avtale, slipper alle inn
@@ -369,6 +374,37 @@
         if (blå) { logg(`Bygdevernet i ${by.e.navn} har gitt opp. Folk i leiren liker det dårlig (moral −${R.vern.moral}).`); hend('annet', `Bygdevernet i ${by.e.navn} har gitt opp`); } else if (inne.some(synlig)) logg(`${fnavn(inne[0].side)} har knust bygdevernet i ${by.e.navn}.`); }
       lagre(); }
   }
+  // ---------- RUTER UTENOM FIENDTLIGE TETTSTEDER (R1-løkka 26. nov) ----------
+  // De tettstedene et eget lag ikke kan gå gjennom uten kamp: bygdevern som står (ikke møtt ennå, eller mann igjen – ikke avtale, ikke
+  // gitt opp, og ikke på oppdrag for bygda: SelskapSpill.oppdragFor), eller en motstanders tettsted. unntak = punkter ([x, y]) som ligger
+  // i byer som ikke skal regnes med (der laget står, og målet). Gir [{ by, navn, grunn, mann }].
+  function fiendtligeByer(unntak = []) {
+    const ut = [];
+    for (const by of byer()) { if (!by.bb || !by.e) continue; if (unntak.some(p => p && p[0] > by.bb[0] && p[0] < by.bb[2] && p[1] > by.bb[1] && p[1] < by.bb[3] && Garnison.inni(by, p[0], p[1]))) continue;
+      const e = eier(by);
+      if (e && e !== 'blå') { ut.push({ by, navn: by.e.navn, grunn: `${fnavn(e)} holder det`, mann: 0 }); continue; }
+      if (e) continue; const st = T.vern[by.e.id]; if (st === -1 || st === 0) continue;
+      if (window.SelskapSpill && SelskapSpill.oppdragFor && SelskapSpill.oppdragFor(by.e.id)) continue;
+      const mann = st > 0 ? st : K.vernMenn(by.e.folk); ut.push({ by, navn: by.e.navn, grunn: `bygdevern ${mann} mann`, mann }); }
+    return ut;
+  }
+  const byTekst = L => L.map(b => `${b.navn} (${b.grunn})`).join(' og ');
+  const advart = new Map();
+  // Kroken i ordre() (index.html): s = laget, v = vinduet, r = ruta (Terreng.ruteTil). Går ruta gjennom fiendtlige tettsteder, prøves en
+  // rute med dem sperret; den brukes når den er god nok (Krig.omvegOk). Ellers står den første ruta, og loggen advarer (høyst hvert 10. min).
+  // Bare egne lag, og bare når ting skjer av seg selv (ikke i testene, der bygdevernet heller ikke slåss – KrigSpill.test slår det på).
+  (KROKER.rute = KROKER.rute || []).push((s, v, r, X, Y, stille) => {
+    if (!auto() || !r || !s || s.side !== 'blå' || s.ai || s.karakter || !window.Garnison) return null;
+    const fi = fiendtligeByer([[s.x, s.y], [X, Y]]); if (!fi.length) return null;
+    const gj = K.gjennomByer(r.sti, fi, Garnison.inni); if (!gj.length) return null;
+    const sp = K.sperrByer(v, gj, Garnison.inni), r2 = Terreng.ruteTil(sp.v, s.x, s.y, X, Y);
+    if (r2 && K.omvegOk(r.timer, r2.timer) && !K.gjennomByer(r2.sti, fi, Garnison.inni).length) {
+      if (!stille) logg(`${s.navn}: ruta går utenom ${byTekst(gj)}${r2.timer > r.timer * 1.05 ? ` – omvegen tar ca. ${nf.format(Math.round((r2.timer - r.timer) * 10) / 10)} t ekstra` : ''}.`);
+      return r2; }
+    const nøkkel = s.navn + '|' + gj.map(b => b.navn).join(','); if ((advart.get(nøkkel) || -1e9) > tid - 10) return null; advart.set(nøkkel, tid);
+    logg(`Advarsel: ${s.navn} sin rute går gjennom ${byTekst(gj)} – det finnes ingen god omveg. Gjør en avtale først (Krig), send et sterkere lag, eller gi ordren i etapper utenom.`);
+    return null; });
+  api.fiendtligeByer = fiendtligeByer; api.ruteGjennom = (sti, unntak) => K.gjennomByer(sti, fiendtligeByer(unntak || []), Garnison.inni);
   api.vernAvtale = id => { const by = byer().find(b => b.e.id === id); if (!by || !(T.vern[id] > 0)) return false; const p = K.vernPris(by.e.folk);
     if (!OppstartSpill.betal(p)) { logg(`Dere har ikke råd til avtalen med bygdevernet i ${by.e.navn} (${kr(p)}).`); return false; }
     T.vern[id] = -1; logg(`Avtale med bygdevernet i ${by.e.navn} (${kr(p)}): de slipper dere inn uten kamp.`); lagre(); return true; };

@@ -243,7 +243,32 @@
     return ut; }
   // teksten til en gruppe: «Ravnsunds 3. lag · nå» eller «Ravnsund: 2 lag · 5 min siden»
   const klyngeTekst = (k, tid, fraksjon) => (k.n === 1 ? `${k.navn} · ${alder(tid - k.t)}` : `${fraksjon || 'Fienden'}: ${k.n} lag · ${alder(tid - k.t)}`);
-  const api = { klynger, klyngeTekst, REGLER, vinkel, flanke, snu, husVern, husPunkter, egetGirSeg, sårede, sårFart, stell, omringet, girSeg, VÆREMÅTER, væremåte, VARIANTER, røverVariant, SABOTASJE_FRA, natt, nattSikt, klokkeTime,
+  // ---------- RUTER UTENOM FIENDTLIGE TETTSTEDER (R1-løkka 26. nov) ----------
+  // Kritikken: «marsjen til Kvam gikk rett gjennom Otta, og laget havnet i ildkamp med bygdevernet der – ingenting advarte». Marsjruta
+  // (Terreng.ruteTil) prøves på nytt med tettstedene som er fiendtlige (bygdevern som ikke har gitt opp eller gjort avtale, eller en
+  // motstanders tettsted) sperret, når den første ruta går gjennom dem. Claudes forslag: omvegen brukes når den tar høyst «omveg» ganger
+  // så lang tid; ellers går laget den første ruta, og spilleren får en advarsel. «steg» = avstand i meter mellom punktene som prøves.
+  REGLER.rute = { omveg: 2.5, steg: 40 };
+  // sti: [[X, Y], …]; byer: [{ by (med bb og deler), … }] – de fiendtlige; inni(by, x, y) = Garnison.inni. Gir de byene ruta går
+  // gjennom, i rekkefølge (hver én gang).
+  function gjennomByer(sti, byer, inni, R = REGLER.rute) {
+    const ut = [], sett = new Set(); if (!sti || sti.length < 2 || !byer || !byer.length) return ut;
+    for (let i = 1; i < sti.length; i++) { const [ax, ay] = sti[i - 1], [bx, by_] = sti[i], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by_ - ay) / R.steg));
+      for (let q = 0; q <= n; q++) { const x = ax + (bx - ax) * q / n, y = ay + (by_ - ay) * q / n;
+        for (const b of byer) { if (sett.has(b)) continue; const bb = b.by.bb; if (x < bb[0] || x > bb[2] || y < bb[1] || y > bb[3]) continue; if (inni(b.by, x, y)) { sett.add(b); ut.push(b); } } } }
+    return ut;
+  }
+  // En kopi av vinduet v (Terreng) der rutene inne i byene er sperret (klasse 255 «ingen data», ingen veg). Bare K og V kopieres.
+  function sperrByer(v, byer, inni) {
+    const K = new Uint8Array(v.K), V = new Uint8Array(v.V); let n = 0;
+    for (const b of byer) { const bb = b.by.bb, i0 = Math.max(0, Math.floor((bb[0] - v.x0) / v.r)), i1 = Math.min(v.w - 1, Math.floor((bb[2] - v.x0) / v.r)),
+      j0 = Math.max(0, Math.floor((v.y0 - bb[3]) / v.r)), j1 = Math.min(v.h - 1, Math.floor((v.y0 - bb[1]) / v.r));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const x = v.x0 + (i + .5) * v.r, y = v.y0 - (j + .5) * v.r; if (inni(b.by, x, y)) { const k = j * v.w + i; K[k] = 255; V[k] = 0; n++; } } }
+    return { v: Object.assign({}, v, { K, V }), sperret: n };
+  }
+  // er omvegen god nok? (timer for ruta gjennom og utenom)
+  const omvegOk = (gjennom, utenom, R = REGLER.rute) => Number.isFinite(utenom) && utenom <= gjennom * R.omveg;
+  const api = { gjennomByer, sperrByer, omvegOk, klynger, klyngeTekst, REGLER, vinkel, flanke, snu, husVern, husPunkter, egetGirSeg, sårede, sårFart, stell, omringet, girSeg, VÆREMÅTER, væremåte, VARIANTER, røverVariant, SABOTASJE_FRA, natt, nattSikt, klokkeTime,
     røykFaktor, iLys, beleiret, beleiringSteg, beleiringNå, fredPris, vernMenn, vernPris, vernRunde, heliMin, meld, rydd, oppfang, alder,
     inni, polyAvst, krysser, byggDekning, leirVern, byttePris, arbeidF, rømSjanse, rømmer, kanSpørres, jaSjanse, spør, forslagBytte };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Krig = api;
