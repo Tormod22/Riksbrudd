@@ -98,7 +98,25 @@
     return { mann: st > 0 ? st : K.vernMenn(by.folk), kjent: st > 0, pris }; }
   const vernTekst = v => (!v ? '' : v.oppdrag ? `bygdevernet slipper dere inn (oppdrag for ${v.oppdrag})` : v.avtale ? 'avtale med bygdevernet' : v.borte ? 'bygdevernet har gitt opp' : `bygdevernet: ${v.mann} mann`);
   // avtalen med bygdevernet før laget går inn (et vern dere ikke har møtt ennå, settes opp først – samme tall som når dere kommer)
-  function avtale(by) { const KS = window.KrigSpill, K = window.Krig; if (!KS || !KS.vernAvtale || !KS.T) return false; const T = KS.T(); if (T.vern[by.id] === undefined && K && K.vernMenn) T.vern[by.id] = K.vernMenn(by.folk); return KS.vernAvtale(by.id); }
+  function avtaleRett(by) { const KS = window.KrigSpill, K = window.Krig; if (!KS || !KS.vernAvtale || !KS.T) return false; const T = KS.T(); if (T.vern[by.id] === undefined && K && K.vernMenn) T.vern[by.id] = K.vernMenn(by.folk); return KS.vernAvtale(by.id); }
+  // (kritikerløkka r3, Ingrid: «Gjør avtale (8 mill. kr)» ble trukket uten bekreftelse, mens en brakke til 5 mill. må bekreftes, og hun visste
+  // ikke hva de 8 millionene kjøpte) avtalen må bekreftes i en boks som sier hva den gir og hva den IKKE gir. etter() kjøres når avtalen er
+  // gjort (send laget, tegn panelet på nytt). I testene (navigator.webdriver) som før – uten boksen – til StrategiSpill.test = true.
+  let avtaleEl = null;
+  function avtale(by, etter) {
+    if (!auto()) { const ok = avtaleRett(by); if (ok && etter) etter(); return ok; }
+    const v = vern(by), K = window.Krig, pris = v ? v.pris : K && K.vernPris ? K.vernPris(by.folk) : 0, mann = v && v.mann > 0 ? v.mann : K && K.vernMenn ? K.vernMenn(by.folk) : 0;
+    const minst = G && G.minstFor ? G.minstFor(by.folk) : 0, penger = window.OppstartSpill && OppstartSpill.tilstand() ? OppstartSpill.tilstand().penger : 0;
+    if (avtaleEl) avtaleEl.remove();
+    const lukk = () => { if (avtaleEl) { avtaleEl.remove(); avtaleEl = null; } };
+    const ja = knapp(`Ja, betal ${kroner(pris)}`, () => { lukk(); if (avtaleRett(by)) { sist = ''; if (etter) etter(); else if (åpen) vis(true); } }, Object.assign({ klasse: 'hoved', id: 'avtaleja' }, penger < pris ? { disabled: '', title: 'Dere har ikke nok penger' } : {}));
+    avtaleEl = el('div', { id: 'avtalekort', role: 'dialog', 'aria-label': 'Avtale med bygdevernet' },
+      el('b', {}, `Avtale med bygdevernet i ${by.navn} for ${kroner(pris)}?`),
+      el('div', {}, `Det gir: bygdevernet (ca. ${mann} mann) slåss ikke mot dere, og slipper lagene deres inn og gjennom ${by.navn} uten kamp.`),
+      el('div', {}, `Det gir ikke byen: for å ta ${by.navn} må minst ${minst} egne mann stå i byen til den er deres, og andre selskaper som holder til der, slåss fortsatt.`),
+      el('small', {}, 'Store kjøp må bekreftes: pengene trekkes først når du trykker «Ja».' + (penger < pris ? ` Dere har bare ${kroner(penger)}.` : '')),
+      el('div', { klasse: 'kn' }, ja, knapp('Nei, tilbake', lukk, { id: 'avtalenei' })));
+    document.body.appendChild(avtaleEl); return false; }
   // fiender som er sett i og rundt tettstedet (det kartet viser nå)
   const fienderVed = by => fiender().filter(f => Math.hypot(f.x - by.x, f.y - by.y) <= 2500);
   // speidertroppen (malen «Speidertropp» i Tropper): finner fienden uten å slåss
@@ -266,8 +284,8 @@
     const kn2 = el('div', { klasse: 'kn' });
     const vf = a.farer.find(f => f.id === 'vern'), sp = a.alle.filter(speider), farlig = a.farer.some(f => f.id === 'vern' || f.id === 'fiende');
     if (sp.length && farlig) kn2.append(knapp('Speid og meld', () => speid(a.by, sp), { klasse: 'hoved', 'data-advarsel': 'speid', title: `Stopper før ${a.by.navn} og melder hva som står der` }));
-    if (vf) kn2.append(knapp(`Gjør avtale (${kroner(vf.vern.pris)}) og send`, () => { if (!avtale(a.by)) return; send2(); }, { klasse: sp.length ? '' : 'hoved', 'data-advarsel': 'avtale' }));
-    for (const f of a.farer) if (f.id === 'rute' && f.gjennom) { const g = f.gjennom; kn2.append(knapp(`Avtale med ${g.navn} (${kroner(g.pris)}) og send`, () => { if (!avtale(g)) return; send2(); }, { 'data-advarsel': 'avtale-rute' })); }
+    if (vf) kn2.append(knapp(`Gjør avtale (${kroner(vf.vern.pris)}) og send`, () => { avtale(a.by, send2); }, { klasse: sp.length ? '' : 'hoved', 'data-advarsel': 'avtale' }));
+    for (const f of a.farer) if (f.id === 'rute' && f.gjennom) { const g = f.gjennom; kn2.append(knapp(`Avtale med ${g.navn} (${kroner(g.pris)}) og send`, () => { avtale(g, send2); }, { 'data-advarsel': 'avtale-rute' })); }
     kn2.append(knapp(a.ute.length || a.farer.some(f => f.alvor >= 1) ? 'Send likevel' : 'Send', send2, Object.assign({ 'data-advarsel': 'likevel' }, a.farer.some(f => f.id === 'svak' || f.id === 'forfå') ? { klasse: 'rød', title: 'Forsvaret er større enn laget' } : {})));
     if (a.ute.length && k && L) { const første = a.ute[0];
       // feltradio til dem som har håndradio, når feltradioen rekker (med terrenget)
@@ -324,6 +342,10 @@
 #krig button.rød, #krig .advarsel .kn button.rød[data-advarsel]{ border-color:#d0583e; background:#3a1a12; color:#ffc0a8; }
 #krig small.ingenkontakt{ display:block; color:#e8a46a; font-size:12.5px; } #krig .tips{ margin-top:10px; color:var(--ink-dim,#a99); font-size:12.5px; } #krig small.tillegg{ display:block; margin-top:3px; color:#d9c48a; font-size:12.5px; line-height:1.3; }
 body.smal #krig, body.kort #krig{ left:0; right:0; top:auto; bottom:0; width:auto; max-height:44vh; border-width:1px 0 0; }
+#avtalekort{ position:fixed; left:50%; top:calc(var(--topp,58px) + 70px); transform:translateX(-50%); z-index:41; width:min(400px, calc(100vw - 24px)); box-sizing:border-box;
+  background:linear-gradient(180deg,#2a2416,#18140c); border:1px solid #d9a441; box-shadow:0 10px 28px rgba(0,0,0,.6); color:#e9e4d6; padding:10px 12px; font-size:14px; line-height:1.4; border-radius:8px; }
+#avtalekort b{ display:block; font-family:'Cormorant Garamond', serif; font-size:19px; color:#f0e2b0; margin-bottom:4px; } #avtalekort div{ margin:4px 0; } #avtalekort small{ display:block; color:#b9ad92; margin-top:4px; }
+#avtalekort .kn{ display:flex; gap:6px; justify-content:flex-end; margin-top:8px; } #avtalekort button{ min-height:36px; padding:0 12px; }
 #krigkort{ position:fixed; inset:0; z-index:40; display:none; align-items:center; justify-content:center; background:rgba(10,8,5,.72); } #krigkort.på{ display:flex; }
 #krigkort div{ width:min(430px,90vw); padding:18px 20px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); text-align:center; } #krigkort h2{ margin:0 0 8px; font-size:26px; } #krigkort p{ margin:0 0 14px; }
 #krigkort > div{ max-height:90vh; overflow:auto; } #krigkort .valg{ width:auto; padding:0; border:0; background:none; margin:8px 0; } #krigkort .valg small{ display:block; margin-top:2px; color:var(--ink-dim,#a99); font-size:12.5px; } #krigkort .valg button{ min-width:210px; }
@@ -399,11 +421,11 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
     if (e === 'blå') { const g = garnison(by.id); rad.append(el('small', { klasse: 'tillegg' }, g ? `Garnison: ${g} lag. Hold byen.` : 'Ingen garnison – send et lag dit, ellers kan byen tas.')); return rad; }
     const t = T.trekk.find(q => q.by.id === by.id), v = vern(by), fl = forsvarLinje({ eier: e, by }), anb = t ? t.anbefalt : S.anbefalt(G.minstFor(by.folk), v && v.mann > 0 ? v.mann : 0);
     if (fl) rad.append(el('small', { klasse: 'tillegg', 'data-forsvar': by.id }, fl + '.'));
-    { const her = G.lagI(by.ref, egneLag()), inne = Math.floor(G.mann(her)); rad.append(el('small', { klasse: 'tillegg', 'data-krav': by.id }, `Send minst ${anb} mann` + (t ? ` – dere har ${t.har} innen ${S.REGLER.marsj / 1000} km` : '') + (inne ? `, ${inne} er alt i byen (${her.map(q => q.navn).join(', ')})` : '') + '.')); }
+    { const her = G.lagI(by.ref, egneLag()), inne = Math.floor(G.mann(her)); rad.append(el('small', { klasse: 'tillegg', 'data-krav': by.id }, (v && (v.avtale || v.oppdrag) ? `Avtalen gjelder: bygdevernet slipper dere inn uten kamp. For å ta byen må minst ${anb} egne mann stå der` : `Send minst ${anb} mann`) + (t ? ` – dere har ${t.har} innen ${S.REGLER.marsj / 1000} km` : '') + (inne ? `, ${inne} er alt i byen (${her.map(q => q.navn).join(', ')})` : '') + '.')); }
     const k = el('div', { klasse: 'kn' });
     if (t) { const uk = t.lag && t.lag.kontakt === false, n = t.flere && t.flere.length > 1 ? t.flere.length : 0;
       k.append(knapp(!t.lag ? 'Ingen ledige lag' : n ? `Send ${n} lag` : `Send ${t.lag.navn}`, () => send(by), Object.assign({ klasse: forSvak(t) || t.sterk ? 'rød' : 'hoved', 'data-scensend': by.id }, t.lag && t.innen && !uk ? {} : { disabled: '' }, uk ? { title: hvorforIkke(t.lag.lag) } : {}))); }
-    if (v && v.mann > 0) k.append(knapp(`Gjør avtale (${kroner(v.pris)})`, () => { if (avtale(by)) { sist = ''; vis(true); } }, { 'data-scenavtale': by.id, title: 'Bygdevernet slipper dere inn uten kamp' }));
+    if (v && v.mann > 0) k.append(knapp(`Gjør avtale (${kroner(v.pris)})`, () => { avtale(by, () => { sist = ''; vis(true); }); }, { 'data-scenavtale': by.id, title: 'Bygdevernet slipper dere inn uten kamp' }));
     k.append(knapp('Vis', () => { valgtBy = by; kam.x = by.x; kam.y = by.y; vis(true); skitten = true; }));
     rad.append(k); return rad; }
   // hva tettstedet forsvares med (bygdevernet eller fiender dere har sett)
@@ -452,7 +474,7 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
       const k = el('div', { klasse: 'kn' });
       if (e !== 'blå' && t) { const uk = t.lag && t.lag.kontakt === false; k.append(knapp(t.lag ? `Send ${t.lag.navn} (${km(t.km)})` : 'Ingen ledige lag', () => send(b), Object.assign({ klasse: forSvak(t) ? 'rød' : 'hoved', 'data-send': b.id }, t.lag && t.innen && !uk ? {} : { disabled: '' }, uk ? { title: hvorforIkke(t.lag.lag) } : {})));
         if (uk) boks.append(el('small', { klasse: 'tillegg ingenkontakt' }, hvorforIkke(t.lag.lag))); }
-      { const v = vern(b); if (v && v.mann > 0) k.append(knapp(`Avtale med bygdevernet (${kroner(v.pris)})`, () => { if (avtale(b)) { sist = ''; vis(true); } }, { 'data-avtale': b.id, title: 'De slipper dere inn uten kamp' })); }
+      { const v = vern(b); if (v && v.mann > 0) k.append(knapp(`Avtale med bygdevernet (${kroner(v.pris)})`, () => { avtale(b, () => { sist = ''; vis(true); }); }, { 'data-avtale': b.id, title: 'De slipper dere inn uten kamp' })); }
       if (e === 'blå' && !g) { const l = T.ledige.filter(q => !q.holder).sort((a, c) => Math.hypot(a.x - b.x, a.y - b.y) - Math.hypot(c.x - b.x, c.y - b.y))[0]; if (l) k.append(knapp(`Send ${l.navn} som garnison`, () => send(b, l.lag), { klasse: 'hoved' })); }
       k.append(knapp('Gå dit i kartet', () => { kam.x = b.x; kam.y = b.y; kam.m = Math.min(kam.m, 12); skitten = true; }), knapp('Fjern valget', () => { valgtBy = null; vis(true); skitten = true; }));
       boks.append(k); f.append(boks); }
@@ -627,6 +649,6 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
     const a = fk.getBoundingClientRect(); if (flyttetNed) { panel.style.top = ''; panel.style.bottom = ''; } const b = panel.getBoundingClientRect();
     if (a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom) { panel.style.top = Math.round(a.bottom + 6) + 'px'; panel.style.bottom = 'auto'; flyttetNed = true; } else if (flyttetNed) { panel.style.bottom = ''; flyttetNed = false; } }, 250);
   setInterval(takt, 2000); window.addEventListener('riksbrudd-spill', () => setTimeout(takt, 300));
-  const api = { test: false, boks, skjul, skjult: () => inne, passInn, friDel, nivå: () => meldt.nivå || 0, seire: () => meldt.seire || 0, størreRegion, sterkere, seierKort, område, åpne, lukk, erÅpen: () => åpen, bilde, send, advarsel: () => advarsel, kontakt, utenforRadio, terrengSjekk, terrengKjent, settTerreng: (p, blokk) => { if (blokk === null) TERRENG.delete(terrengNøkkel(p)); else TERRENG.set(terrengNøkkel(p), { blokk: !!blokk }); }, rekkeviddeTil, farer, vern, kjentForsvar, sjekkTap, tap: () => (meldt.tap || []), fredSlutt, hvorforIkkeTar, speid, speider, sendTil, varsel: () => flyt, mannTekst, scenarioBoks, velg: id => { valgtBy = område().find(b => b.id === id) || null; vis(true); skitten = true; return !!valgtBy; }, takt, tegn };
+  const api = { test: false, avtale: (id, etter) => { const by = område().find(b => b.id === id); return by ? avtale(by, etter) : false; }, boks, skjul, skjult: () => inne, passInn, friDel, nivå: () => meldt.nivå || 0, seire: () => meldt.seire || 0, størreRegion, sterkere, seierKort, område, åpne, lukk, erÅpen: () => åpen, bilde, send, advarsel: () => advarsel, kontakt, utenforRadio, terrengSjekk, terrengKjent, settTerreng: (p, blokk) => { if (blokk === null) TERRENG.delete(terrengNøkkel(p)); else TERRENG.set(terrengNøkkel(p), { blokk: !!blokk }); }, rekkeviddeTil, farer, vern, kjentForsvar, sjekkTap, tap: () => (meldt.tap || []), fredSlutt, hvorforIkkeTar, speid, speider, sendTil, varsel: () => flyt, mannTekst, scenarioBoks, velg: id => { valgtBy = område().find(b => b.id === id) || null; vis(true); skitten = true; return !!valgtBy; }, takt, tegn };
   window.StrategiSpill = api;
 })();

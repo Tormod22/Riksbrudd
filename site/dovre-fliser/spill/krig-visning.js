@@ -626,7 +626,7 @@
     if (window.AI && AI.fred) for (const side of AI.sider) { const på = (T.fred[side] || 0) > tid;
       rad(`Våpenhvile med ${fnavn(side)}`, på ? `varer ${Math.round((T.fred[side] - tid) / 60 * 10) / 10} t til` : `${kr(api.fredPris(side))} for ${R.fred.varer / 60} timer – de lar deg være, så du kan ta den andre`,
         på ? kn('Bryt', () => api.brytFred(side), { 'data-krig': 'bryt-' + side }) : kn('Avtal', () => api.fred(side), { 'data-krig': 'fred-' + side })); }
-    for (const by of byer()) { const n = T.vern[by.e.id]; if (n > 0) rad(`Bygdevernet i ${by.e.navn}`, `${n} mann holder stedet`, kn(`Avtale (${kr(K.vernPris(by.e.folk))})`, () => api.vernAvtale(by.e.id), { 'data-krig': 'vern' }));
+    for (const by of byer()) { const n = T.vern[by.e.id]; if (n > 0) rad(`Bygdevernet i ${by.e.navn}`, `${n} mann holder stedet`, kn(`Avtale (${kr(K.vernPris(by.e.folk))})`, () => (window.StrategiSpill && StrategiSpill.avtale ? StrategiSpill.avtale(by.e.id) : api.vernAvtale(by.e.id)), { 'data-krig': 'vern' }));
       const b = T.beleiring[by.e.id]; if (b !== undefined) rad(`Beleiring av ${by.e.navn}`, `${Math.round(b / 60 * 10) / 10} t – ${K.beleiringNå(b) === 'svekket' ? 'garnisonen er svekket' : 'garnisonen holder ennå'}`); }
     hode.append(boks);
   });
