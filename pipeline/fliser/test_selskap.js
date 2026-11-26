@@ -181,3 +181,11 @@ console.log(`Alle ${n} testene for selskap.js er ok`);
   const a = S0.kanTa(k, { størsteLag: 4, kjøretøy: 0, forsvar: 5, forsvarTekst: 'bygdevernet 5' }, sd); assert.ok(a.ok && a.advarsel.length === 1 && /For svakt: 4 mann mot et forsvar på ca\. 5/.test(a.advarsel[0]), JSON.stringify(a));
   const b = S0.kanTa(k, { størsteLag: 6, kjøretøy: 0, forsvar: 5 }, sd); assert.ok(b.ok && !b.advarsel.length, 'sterkere enn forsvaret: ingen advarsel');
   console.log('ok   kravet bruker krigskartets vurdering (For svakt)'); }
+// (R2-løkka 26. nov, pakke «krig») ingen jobb i et tettsted et annet selskap holder når det finnes andre; ellers sier teksten det ærlig
+{ const st = [{ navn: 'Løten', x: 205000, y: 6900000, slag: 'tettsted', id: 1, eier: 'grønn' }, { navn: 'Elverum', x: 200000, y: 6893000, slag: 'tettsted', id: 2 }];
+  let iLøten = 0; for (let i = 0; i < 30; i++) { const T = S0.ny(leir); for (const k of S0.lagTilbud(T, 'blå', i * 1440, st, S0.lagRand(i + 7))) if (k.sted.navn === 'Løten' && k.type !== 'eskorte') iLøten++; }
+  assert.strictEqual(iLøten, 0, 'ingen jobber (unntatt eskorte) i Løten, som Mosevakt holder');
+  let ærlig = 0, n2 = 0; for (let i = 0; i < 30; i++) { const T = S0.ny(leir); for (const k of S0.lagTilbud(T, 'blå', i * 1440, [st[0]], S0.lagRand(i + 3))) { if (k.type === 'eskorte') continue; n2++;
+    const t = S0.kravTekst ? S0.kravTekst(k) : ''; if (k.fare && (!S0.kravTekst || (/holdes av et annet selskap/.test(t) && !/slipper dere inn/.test(t)))) ærlig++; } }
+  assert.ok(n2 > 0 && ærlig === n2, `bare Løten: alle ${n2} jobbene sier at stedet holdes av et annet selskap (${ærlig})`);
+  console.log('ok   (R2-løkka) jobber i steder et annet selskap holder'); }

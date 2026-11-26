@@ -10,7 +10,7 @@ ok(K.modus(true, null) === 'kontrollrom' && K.modus(false, { har: true, batteri:
 const lag = { kontakt: true };
 ok(JSON.stringify(K.innsyn('kontrollrom', lag)) === '{"live":true,"fiender":true}', 'kontrollrom: laget og fiendene det ser, nå');
 ok(JSON.stringify(K.innsyn('nettbrett', lag)) === '{"live":true,"fiender":false}', 'nettbrett: laget nå, fiender bare meldt');
-ok(JSON.stringify(K.innsyn('ute', lag)) === '{"live":false,"fiender":false}' && K.innsyn('ute', { nær: true }).live, 'ute: bare sist meldt, men lag nær deg ser du');
+ok(JSON.stringify(K.innsyn('ute', lag)) === '{"live":true,"fiender":false}' && !K.innsyn('ute', { kontakt: false }).live && K.innsyn('ute', { nær: true }).live, 'ute (R2-løkka): lag med radiokontakt der de er, uten kontakt bare sist meldt, lag nær deg ser du');
 ok(!K.innsyn('kontrollrom', { kontakt: false }).live && K.innsyn(null, {}).live, 'uten radiokontakt: ikke nå; uten spill (før K1): alt som før');
 const nb = { har: true, batteri: 8 }; K.batteri(nb, 120, false, false); ok(nb.batteri === 6, 'nettbrettet: 2 t ute bruker 2 t batteri');
 K.batteri(nb, 30, true, true); ok(nb.batteri === 8, 'lades fullt i leiren med strøm (2 t for fullt, 30 min for 2 t)');

@@ -2,7 +2,8 @@
  * Hva du ser av lagene dine avhenger av hvor du er (brukeren 11. nov, «mellomting» + nettbrett):
  *  - i kontrollrommet (bygget, med strøm, og du har gått inn): lagene med radiokontakt vises der de er, og fiendene de ser;
  *  - ute med nettbrett (ladet): lagene med radiokontakt vises der de er, men fiender bare der de sist ble meldt;
- *  - ute uten nettbrett: lagene vises der de sist meldte seg på radio, fiender der de sist ble meldt.
+ *  - ute uten nettbrett: lagene med radiokontakt vises der de er (R2-løkka 26. nov), de uten kontakt der de sist meldte seg; fiender der
+ *    de sist ble meldt.
  * Lag nær deg (500 m) ser du alltid selv. Radioens rekkevidde avhenger av radioen laget har, leirens radio (mast eller ikke) og
  * terrenget mellom (brukeren: «spør på hvilken radio du har samt terreng samt om du har ekstra mast»). Tallene er forslag.
  * Radiomasten (brukeren 12. nov, etter feiljakten: nivå 2 og 3 hadde ingen virkning): nivået forlenger lagenes rekkevidde. Feltradio når
@@ -57,7 +58,10 @@
     if (lag.karakter || lag.nær) return { live: true, fiender: true };
     if (m === 'kontrollrom') return { live: lag.kontakt, fiender: lag.kontakt };
     if (m === 'nettbrett') return { live: lag.kontakt, fiender: false };
-    return { live: false, fiender: false };
+    // (R2-løkka 26. nov, kritikken: «i opplæringen sto speidertroppen 100 m fra leiren med radiokontakt, men kartet viste et spøkelse fra
+    // fem minutter før») ute ser du også egne lag med radiokontakt der de er – de melder posisjonen over radioen. «Sist meldt» bare når
+    // kontakten er borte. Fiendene de ser, er fortsatt bare meldt (kontrollrommet viser dem nå).
+    return { live: !!lag.kontakt, fiender: false };
   }
   // Nettbrettet: tømmes ute, lades i leiren når det er strøm. dt i spillminutter.
   function batteri(nb, dt, iLeiren, strøm) {

@@ -117,8 +117,18 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
   const eier = id => (window.Garnison ? Garnison.tilstand(TETTSTEDER, id).eier : null);
   const egneLag = () => ENHETER.filter(s => s.side === 'blå' && !s.karakter && levende(s));
   let nærmest = null, nærmestNøkkel = '';
-  function nærmesteBy() { const S = spill(), B = byer(), k = leirId + '|' + B.length; if (k === nærmestNøkkel) return nærmest; nærmestNøkkel = k; nærmest = null; let bd = 60000;
-    for (const b of B) { const [x, y] = midt(b); if (window.OMRÅDE_OK && !OMRÅDE_OK(x, y)) continue; const d = Math.hypot(x - S.leir.x, y - S.leir.y); if (d < bd) { bd = d; nærmest = b; } } return nærmest; }
+  // (R2-løkka 26. nov, kritikken: «2,4 km ved leirvalget og 6,5 km i scenariet, og merket "Scenariets by" står et annet sted enn navnet»)
+  // byen velges nå som ved leirvalget (spill/oppstart-visning.js): nærmeste tettsted målt til omrisset (Garnison.nærmeste), og den huskes i
+  // T.sc.målId. Et lagret spill som alt har holdt byen (holdtFra), beholder byen den gamle regelen (midten av rektangelet) ga.
+  // Merket, avstanden og ordrene bruker navnepunktet (navnP i index.html) – samme punkt som navnet i kartet og «Send» i Krig.
+  const np = b => { let p = null; try { if (typeof navnP === 'function') p = navnP(b); } catch (e) { p = null; } return p && isFinite(p[0]) ? [p[0], p[1]] : midt(b); };
+  function nærmesteBy() { const S = spill(), B = byer(), id = T && T.sc ? T.sc.målId : null, k = leirId + '|' + B.length + '|' + (id || ''); if (k === nærmestNøkkel) return nærmest; nærmestNøkkel = k; nærmest = null;
+    if (id != null) { nærmest = B.find(b => String(b.e.id) === String(id)) || null; if (nærmest) return nærmest; }
+    const ok = b => { const [x, y] = midt(b); return !window.OMRÅDE_OK || OMRÅDE_OK(x, y); };
+    if (T && T.sc && T.sc.holdtFra != null) { let bd = 60000; for (const b of B) { if (!ok(b)) continue; const [x, y] = midt(b), d = Math.hypot(x - S.leir.x, y - S.leir.y); if (d < bd) { bd = d; nærmest = b; } } }
+    else if (window.Garnison && Garnison.nærmeste) { const r = Garnison.nærmeste(B.filter(ok), S.leir.x, S.leir.y); nærmest = r && r.m < 60000 ? r.by : null; }
+    if (nærmest && T && T.sc && klar) { T.sc.målId = nærmest.e.id; nærmestNøkkel = leirId + '|' + B.length + '|' + nærmest.e.id; lagre(); }
+    return nærmest; }
   function nå() {
     const S = spill(), L = window.LeirSpill && LeirSpill.tilstand(), F = window.FolkSpill && FolkSpill.tilstand(); let egne = 0; if (window.TETTSTEDER) for (const t of TETTSTEDER.values()) if (t && t.eier === 'blå') egne++;
     let andel = 0; try { const K = window.StrategiSpill && StrategiSpill.bilde(); if (K) andel = K.st.sider.blå.andel; } catch (e) { andel = 0; }
@@ -131,11 +141,13 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
 
   // (runde 14, kritiker J) «Ravnsunds, 9 km NV»: eieren og retningen fra leiren til scenariets by
   const RETNING = ['Ø', 'NØ', 'N', 'NV', 'V', 'SV', 'S', 'SØ'];
-  function målOm(b) { const S = spill(), [x, y] = midt(b), e = eier(b.e.id), d = S && S.leir ? Math.hypot(x - S.leir.x, y - S.leir.y) : 0;
+  function målOm(b) { const S = spill(), [x, y] = np(b), e = eier(b.e.id), d = S && S.leir ? Math.hypot(x - S.leir.x, y - S.leir.y) : 0;
     const eierT = e === 'blå' ? 'ditt' : e ? (window.Fraksjoner && Fraksjoner.FRAKSJONER[e] ? Fraksjoner.FRAKSJONER[e].eieform : 'fiendens') : 'nøytralt';
     if (!S || !S.leir || d < 300) return eierT;
     const r = RETNING[((Math.round(Math.atan2(y - S.leir.y, x - S.leir.x) / (Math.PI / 4)) % 8) + 8) % 8], km = d < 10000 ? String(Math.round(d / 100) / 10).replace('.', ',') : String(Math.round(d / 1000));
-    return `${eierT}, ${km} km ${r}`; }
+    // (R2-løkka) avstanden til kanten (som ved leirvalget) står også, når den er over 1 km kortere enn til sentrum
+    const kant = window.Garnison && Garnison.avstand ? Garnison.avstand(b, S.leir.x, S.leir.y) : d, kk = String(Math.round(kant / 100) / 10).replace('.', ',');
+    return `${eierT}, ${km} km ${r}` + (d - kant > 1000 ? ` – ${kk} km til kanten` : ''); }
   // ---------- scenariet ----------
   // (runde 14) holdtFra lagres straks den endres (før ble den bare lagret når scenariet var ferdig, så en omlasting startet telleren på nytt)
   function scenarioNå() { const r = window.SPILLREGLER; if (!klar || !r.scenario) return null; const B = nå(), før = T.sc.holdtFra, s = SC.vurder(r.scenario, B, T.sc); s.navn = SC.SCENARIER[r.scenario].navn; s.målNavn = B.målNavn; s.mål = B.mål; s.målOm = B.målOm;
@@ -392,7 +404,7 @@ body.etterspill #kommando, body.etterspill #panel, body.etterspill #logg, body.e
   // ---------- (runde 14, kritiker J) SCENARIETS BY I KARTET OG I TETTSTEDSPANELET ----------
   // en dobbel gyllen ring rundt byen scenariet «Hold byen» gjelder, med «Scenariets by» under; tettstedspanelet sier det samme
   const scBy = () => { const r = window.SPILLREGLER; if (!klar || !r || r.scenario !== 'hold' || (T && T.sc && T.sc.ferdig)) return null; return nærmesteBy(); };
-  KROKER.tegn.push((g, vx0, vy1) => { const b = scBy(); if (!b) return; const [X, Y] = midt(b), m = kam.m, x = (X - vx0) / m, y = (vy1 - Y) / m;
+  KROKER.tegn.push((g, vx0, vy1) => { const b = scBy(); if (!b) return; const [X, Y] = np(b), m = kam.m, x = (X - vx0) / m, y = (vy1 - Y) / m;
     if (x < -80 || y < -80 || x > VW + 80 || y > VH + 80) return;
     const r = Math.max(16, Math.min(60, Math.hypot(b.bb[2] - b.bb[0], b.bb[3] - b.bb[1]) * .35 / m));
     g.save(); g.strokeStyle = 'rgba(20,16,10,.85)'; g.lineWidth = 5; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.stroke();

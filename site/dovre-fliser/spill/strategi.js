@@ -23,6 +23,9 @@
     // (R1-løkka 26. nov, kritikken: «forslag nr. 1 er Otta – rett etter at fire mann ble utslettet der») et sted der et eget lag nylig ble
     // slått ut (innen «radius» meter, de siste «tid» spillminuttene), trekkes ned («faktor» på poengene) og står etter de andre. Claudes forslag.
     tap: { radius: 3000, tid: 1440, faktor: .2 },
+    // (R2-løkka 26. nov) et sted der det kjente forsvaret er minst like stort som alle lagene dere kan sende: poengene ganges med dette
+    // (Claudes forslag)
+    sterk: .15,
   };
   // inntaket etter størrelsen (spill/garnison.js): mann som trengs for full fart og minst
   const GN = typeof module !== 'undefined' && module.exports ? require('./garnison') : null, G = () => GN || rot.Garnison;
@@ -73,22 +76,33 @@
   function nyligTapt(b, tap, R = REGLER) { if (!tap || !tap.liste || !R.tap) return null; let best = null;
     for (const q of tap.liste) { if (!q || !Number.isFinite(q.x) || tap.nå - q.tid > R.tap.tid || tap.nå < q.tid - 1) continue; if (avst(q, b) > R.tap.radius) continue; if (!best || q.tid > best.tid) best = q; }
     return best; }
-  function trekk(side, byer, eierAv, egne, fiender, R = REGLER, tap = null) {
+  // (R2-løkka 26. nov, kritikken: «Krig → Neste trekk foreslår Løten – Mosevakts hovedsete med 35 mann – som nr. 1») forsvarAv (valgfri):
+  // b -> mann i det kjente forsvaret (bygdevern, fiender sett, anslått garnison). Er forsvaret minst like stort som det dere kan sende
+  // (har), regnes stedet som «for sterkt»: det står etter stedene dere kan ta, og poengene ganges med REGLER.sterk (Claudes forslag .15).
+  function trekk(side, byer, eierAv, egne, fiender, R = REGLER, tap = null, forsvarAv = null) {
     const ut = [];
     for (const b of byer) { const e = eierAv(b.id); if (e === side) continue;
       let lag = null, km = Infinity; for (const s of egne || []) { const d = avst(s, b) / 1000; if (d < km) { km = d; lag = s; } }
       const forsvar = (fiender || []).filter(f => avst(f, b) <= 2500).reduce((a, f) => a + (f.styrke || 0), 0);
       const mann = mannFor(b.folk), minst = minstFor(b.folk), nære = (egne || []).filter(s => avst(s, b) <= R.marsj).sort((p, q) => avst(p, b) - avst(q, b));
-      const flere = []; let har = 0; for (const s of nære) { if (mann && har >= mann) break; flere.push(s); har += mennI(s); }
-      const nok = !minst || har >= minst, ettLag = !minst || (lag && mennI(lag) >= minst);
+      // (R2-løkka) det kjente forsvaret: lagene som sendes sammen, skal også være flere enn det (anbefalt), ikke bare nå inntakets krav
+      let kjent = 0; if (forsvarAv) { try { kjent = Math.max(0, Math.round(+forsvarAv(b) || 0)); } catch (x) { kjent = 0; } }
+      const anb = anbefalt(minst, kjent), mål = Math.max(mann, anb);
+      const flere = []; let har = 0; for (const s of nære) { if (mål && har >= mål) break; flere.push(s); har += mennI(s); }
+      const nok = !minst || har >= minst, ettLag = !anb || (lag && mennI(lag) >= anb);
       const poeng = Math.sqrt(1 + b.folk) / (4 + (km === Infinity ? 60 : km)) * (e ? .8 : 1.15) / (1 + forsvar / 8) * (nok ? 1 : .25) * (ettLag ? 1 : .7);
       const grunn = forsvar > 0 ? 'forsvart' : e ? 'fiendens, uten kjent forsvar' : 'nøytralt', tapt = nyligTapt(b, tap, R);
-      ut.push({ by: b, eier: e, km, lag, forsvar, innen: km * 1000 <= R.marsj, poeng: poeng * (tapt ? R.tap.faktor : 1), grunn, mann, minst, har: Math.floor(har), nok, ettLag, tapt, flere: nok && !ettLag ? flere : lag ? [lag] : [] }); }
+      // alle lagene innen marsjavstand (ikke bare dem som trengs for full fart) mot det kjente forsvaret
+      const alle = Math.floor(nære.reduce((a, s) => a + mennI(s), 0)), sterk = kjent > 0 && kjent >= alle;
+      ut.push({ by: b, eier: e, km, lag, forsvar, kjent, sterk, anbefalt: anb, innen: km * 1000 <= R.marsj, poeng: poeng * (tapt ? R.tap.faktor : 1) * (sterk ? R.sterk : 1), grunn, mann, minst, har: Math.floor(har), nok, ettLag, tapt, flere: nok && !ettLag ? flere : lag ? [lag] : [] }); }
     // det dere har mann nok til, står først (en storby dere ikke kan ta ennå, kommer etter); steder der dere nylig tapte et lag, etter
-    // de andre dere har mann nok til
-    const rang = t => (t.nok ? 2 : 0) + (t.tapt ? 0 : 1);
+    // de andre dere har mann nok til; steder der forsvaret er for sterkt for det dere har, regnes som steder dere ikke har mann nok til
+    const rang = t => (t.nok && !t.sterk ? 2 : 0) + (t.tapt ? 0 : 1);
     return ut.sort((a, b) => rang(b) - rang(a) || b.poeng - a.poeng);
   }
+  // (R2-løkka 26. nov, kritikken: radioen sa «send flere enn 7 mann», loggen «det trengs minst 9») ETT tall for hvor mange mann et sted
+  // krever: minst det inntaket krever (Garnison.minstFor), og flere enn det kjente forsvaret (bygdevern og fiender). minst og forsvar i mann.
+  const anbefalt = (minst, forsvar) => Math.max(Math.round(minst || 0), forsvar > 0 ? Math.round(forsvar) + 1 : 0);
   // «Her ble Speidertropp 1 slått ut for 2 t siden» (tom tekst uten tap)
   const tapTekst = (t, nå) => { if (!t || !t.tapt) return ''; const m = Math.max(0, Math.round(nå - t.tapt.tid)); return `${t.tapt.navn || 'Et lag'} ble slått ut her for ${m >= 60 ? Math.floor(m / 60) + ' t' : m + ' min'} siden – vurder et sterkere lag`; };
   // teksten om hva et trekk krever: «trenger minst 35 mann (69 for full fart) – dere har 12»
@@ -116,7 +130,7 @@
   const prosent = a => (a > 0 && a < .005 ? 'under 1' : Math.round(a * 100));
   // entall/flertall: «1 tettsted», «2 tettsteder»
   const tettsteder = n => `${n} tettsted${n === 1 ? '' : 'er'}`;
-  const api = { REGLER, område, stilling, utfall, rekkevidde, fronter, trekk, nyligTapt, tapTekst, trusler, prosent, kravTekst, kravFor, tettsteder };
+  const api = { REGLER, anbefalt, område, stilling, utfall, rekkevidde, fronter, trekk, nyligTapt, tapTekst, trusler, prosent, kravTekst, kravFor, tettsteder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Strategi = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
