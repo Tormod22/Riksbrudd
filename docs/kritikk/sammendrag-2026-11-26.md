@@ -59,4 +59,7 @@ kartdata) og skrev en anmeldelse (her i mappa). Så rettet 4–5 hjelpere det de
 - «Leirvakta forlater stillingen» rett etter «Forsvar leiren nå» (feltarbeid-visning.js) er ikke rettet.
 - Ingen av kritikerne hørte lyd (nettleseren var dempet) – lyden er ikke vurdert.
 
+Siste fulle kontroll (26. nov kl. 15 UTC): PC 166 av 166, telefon 165 av 166 (den ene var en vakt som ble rettet etterpå). Vakta «gå»
+på telefon og tre deler av «krig» (overgivelse/fanger/etterretning) har feilet av og til i fulle kjøringer også før løkka.
+
 Ingenting fra løkka er publisert – det ligger på grenen `claude/nattfiks` til brukeren sier «Publiser».
