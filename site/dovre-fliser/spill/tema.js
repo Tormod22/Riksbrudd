@@ -34,6 +34,9 @@ body.kort #logg div{ padding-bottom:0; border-bottom:4px solid transparent; } bo
 #varsler > *{ animation:panelned .2s ease-out; } #leirmeny .flis, #leirmeny .faner button{ transition:border-color .12s, background-color .12s, transform .1s; } #leirmeny .flis:hover{ border-color:#c9b26a; }
 #kommando button, #mkom button{ transition:transform .08s, border-color .12s, background .12s; } #mkom button:active{ transform:scale(.94); }
 @media (prefers-reduced-motion:reduce){ #leirmeny.på, #folkmeny.på, #tropppanel.på, #stridpanel.på, #sekk.på, #lagmeny.på, #degmeny.på, #hendelse.på, #alarm.på, #varsler > *{ animation:none; } button{ transition:none; } button:not(:disabled):active{ transform:none; } }`;
+  // (kritikerløkka r2, Jonas: «×0,8» og «0 kr» i Selskapet sto i en skrift med fast bredde midt i serif-teksten) – tallene får spillets egen
+  // skrift, med like brede sifre (tabular-nums) så kolonnene fortsatt står pent under hverandre
+  css.textContent += `\nbody #selskap .tall{ font-family:inherit; font-variant-numeric:lining-nums tabular-nums; letter-spacing:0; }`;
   document.head.appendChild(css);
   // loggen på små skjermer: siste melding i noen sekunder; trykk viser de siste, og den lukker seg selv igjen
   const L = document.getElementById('logg'); let ro = 0, lukk = 0;
