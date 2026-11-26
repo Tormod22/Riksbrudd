@@ -181,3 +181,15 @@ console.log(`Alle ${n} testene for selskap.js er ok`);
   const a = S0.kanTa(k, { størsteLag: 4, kjøretøy: 0, forsvar: 5, forsvarTekst: 'bygdevernet 5' }, sd); assert.ok(a.ok && a.advarsel.length === 1 && /For svakt: 4 mann mot et forsvar på ca\. 5/.test(a.advarsel[0]), JSON.stringify(a));
   const b = S0.kanTa(k, { størsteLag: 6, kjøretøy: 0, forsvar: 5 }, sd); assert.ok(b.ok && !b.advarsel.length, 'sterkere enn forsvaret: ingen advarsel');
   console.log('ok   kravet bruker krigskartets vurdering (For svakt)'); }
+// (R2-løkka 26. nov) eskortene har risiko: rolig rute betaler lite, meldt bakhold betaler godt og gir som oftest et bakhold
+{ let rolig = [], bakhold = [], angrepR = 0, angrepB = 0;
+  for (let i = 0; i < 80; i++) { const E = S0.ny(leir); for (const k of S0.lagTilbud(E, 'blå', i * 13, steder, S0.lagRand(i + 3))) { if (k.type !== 'eskorte') continue;
+    assert.ok(k.risiko === 'rolig' || k.risiko === 'bakhold', 'eskorten har risiko'); (k.risiko === 'rolig' ? rolig : bakhold).push(k);
+    assert.ok(k.bot === Math.round(k.betaling * S0.REGLER.bot / 10000) * 10000, 'bota følger betalingen');
+    assert.ok(k.risiko === 'bakhold' ? /bakhold/.test(S0.kravTekst(k)) : /rolig/.test(S0.kravTekst(k)), 'kravteksten sier risikoen');
+    S0.godta(E, 'blå', k.id, i * 13, S0.lagRand(i + 99)); if (k.angrep) { if (k.risiko === 'rolig') angrepR++; else angrepB++; } } }
+  const snitt = L => L.reduce((s, k) => s + k.betaling, 0) / (L.length || 1);
+  assert.ok(rolig.length > 5 && bakhold.length > 5, `begge slag eskorter kommer (${rolig.length} rolige, ${bakhold.length} med bakhold)`);
+  assert.ok(snitt(bakhold) >= 2 * snitt(rolig), `bakhold betaler minst dobbelt: ${Math.round(snitt(bakhold))} mot ${Math.round(snitt(rolig))}`);
+  assert.ok(angrepB / bakhold.length > .6 && angrepR / rolig.length < .3, `bakholdet kommer som oftest (${angrepB}/${bakhold.length}), sjelden på rolige ruter (${angrepR}/${rolig.length})`);
+  console.log(`ok   eskorte etter risiko: ${rolig.length} rolige (snitt ${Math.round(snitt(rolig) / 1000)} 000 kr), ${bakhold.length} med bakhold (snitt ${Math.round(snitt(bakhold) / 1000)} 000 kr)`); }

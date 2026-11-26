@@ -241,7 +241,7 @@
         // Et lag om bord eller i forkant kan slå dem ut; uten eskorte kan bilen gå tapt – og da er kontrakten brutt.
         const dx = k.sted.x - b.x, dy = k.sted.y - b.y, d = Math.hypot(dx, dy) || 1, fram = Math.min(900, d * .6), side = ((window.Tilfeldig ? Tilfeldig.verden() : .5) < .5 ? -1 : 1) * 90;
         const ax = b.x + dx / d * fram - dy / d * side, ay = b.y + dy / d * fram + dx / d * side, a = nyttLag(`${navnFor(h.rival)}, bakhold`, ax, ay, h.rival);
-        a.menn.length = 6; a.angrepslag = true; a.kontrakt = k.id; a.ingenAI = true; try { if (window.Strid && Strid.bevæpn) Strid.bevæpn(a, 'lett'); } catch (e) { /* uten stridsregler */ } ENHETER.push(a);
+        a.menn.length = 6; a.angrepslag = true; a.kontrakt = k.id; a.ingenAI = true; a.født = tid; try { if (window.Strid && Strid.bevæpn) Strid.bevæpn(a, 'lett'); } catch (e) { /* uten stridsregler */ } ENHETER.push(a);
         logg(`${navnFor(h.rival)} ligger i bakhold ${meter(fram)} foran ${k.bil}! Send et lag for å rydde vegen, eller kjør en annen veg – uten eskorte kan bilen gå tapt.`); } }
       else if (h.type === 'rivalTok') { /* stille: står i oversikten */ }
     }
@@ -260,9 +260,13 @@
 #levertkort button{ min-height:34px; padding:0 12px; background:#2a2318; border:1px solid #5a4a2a; color:#e7dcc3; font:inherit; font-size:13.5px; cursor:pointer; } #levertkort button.hoved{ border-color:#8fae5e; color:#dfeab8; }
 body.kort #levertkort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }`;
   document.head.appendChild(lcss);
-  let levertTid = 0;
-  function levertØyeblikk(k, beløp) {
-    if (!auto() || !k) return; const s = Sp(), gml = document.getElementById('levertkort'); if (gml) gml.remove(); clearTimeout(levertTid);
+  let levertTid = 0, levertVent = 0;
+  // kort og møter som står oppe: da venter leveringskortet (høyst ett minutt), og det går bort hvis et av dem kommer (aldri to oppå hverandre)
+  const annetKort = () => ['morgenkort', 'hendelse', 'samfunnkort', 'formkort', 'krigkort', 'loggvelkommen', 'angrepkort'].some(id => { const e = document.getElementById(id); return e && (e.classList.contains('på') || id === 'loggvelkommen') && e.getClientRects().length > 0; });
+  function levertØyeblikk(k, beløp, forsøk = 0) {
+    if (!auto() || !k) return; clearTimeout(levertVent);
+    if (annetKort()) { if (forsøk < 60) levertVent = setTimeout(() => levertØyeblikk(k, beløp, forsøk + 1), 1000); return; }
+    const s = Sp(), gml = document.getElementById('levertkort'); if (gml) gml.remove(); clearTimeout(levertTid);
     const b = document.createElement('div'); b.id = 'levertkort'; b.setAttribute('role', 'status');
     const kasse = s ? ` Kassa: ${kr(s.penger)}.` : '';
     const hva = k.første ? `Dette er selskapets første inntekt – og første rykte: «${egetNavn()}» holder ord. Pengene rekker til en brakke (flere senger) eller et vakttårn (ser røverne før de kommer).`
@@ -272,7 +276,8 @@ body.kort #levertkort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }`;
       + `<div class="knapper"><button type="button" class="hoved" data-l="neste">${k.første ? 'Åpne Leir' : 'Åpne Selskapet'}</button><button type="button" data-l="ok">OK</button></div>`;
     b.addEventListener('click', e => { const t = e.target.closest('button'); if (!t) return; b.remove(); clearTimeout(levertTid);
       if (t.dataset.l === 'neste') { if (k.første) { const lk = document.getElementById('leirknapp'); if (lk) lk.click(); if (window.LeirSpill && LeirSpill.fane) LeirSpill.fane('bygg'); } else vis(true); } });
-    document.body.appendChild(b); levertTid = setTimeout(() => b.remove(), 14000);
+    document.body.appendChild(b); const t0 = performance.now();
+    const se = () => { if (!b.isConnected) return; if (annetKort() || performance.now() - t0 > 14000) { b.remove(); return; } levertTid = setTimeout(se, 500); }; levertTid = setTimeout(se, 500);
   }
 
   // ---------- steget (KROKER.sim, dt i spillminutter) ----------
@@ -282,6 +287,12 @@ body.kort #levertkort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }`;
     // en sperre for en aktiv rydd-kontrakt som ikke finnes etter omlasting, settes ut igjen (fiendens lag lagres ikke)
     for (const k of S.sider[ID].aktive) { if (k.type === 'rydd' && !k.slått && !sperreFor(k)) { if (k.sperreSatt) k.slått = true; else { lagSperre(k); k.sperreSatt = true; } }
       if (k.type === 'eskorte' && !bilFor(k) && !k.bilSatt) { lagBil(k); k.bilSatt = true; } }
+    // (R2-løkka, koordinatoren: rivalens angrepslag kunne bli stående i et tettsted og sperre det) et angreps-/bakholdslag forsvinner når
+    // kontrakten ikke lenger er aktiv (levert, brutt, utløpt, avbrutt – også etter en omlasting), eller når det har stått i 6 spilltimer
+    { const aktive = new Set(S.sider[ID].aktive.map(q => q.id)); let ut = false;
+      for (let i = ENHETER.length - 1; i >= 0; i--) { const e = ENHETER[i]; if (!e.angrepslag) continue;
+        if (!aktive.has(e.kontrakt) || (Number.isFinite(e.født) && tid - e.født > 360) || !Number.isFinite(e.født) && (e.født = tid, false)) { ENHETER.splice(i, 1); ut = true; } }
+      if (ut) skitten = true; }
     const mål = {}; for (const k of S.sider[ID].aktive) mål[k.id] = vurder(k);
     hendelser(SK.steg(S, ID, tid, d, mål));
     const dag = dagNå();
@@ -561,7 +572,7 @@ body.kort #nestelapp small{ display:none; }
   // vurdering (spill/strategi-visning.js) bruker den.
   function oppdragFor(byId) { if (!S || byId == null) return null; return S.sider[ID].aktive.find(k => k.giver && k.giver.slag !== 'firma' && (k.giver.by === byId || (k.sted && k.sted.by === byId))) || null; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
-  Object.assign(api, { fargeord, start, vis, erÅpen: () => åpen, tilstand: () => S, sett: d => { S = SK.fraJSON(d) || S; settNavn(); tegn(true); }, ta, avslå, lever, avbryt, pris, nyeTilbud, steder,
+  Object.assign(api, { fargeord, levertØyeblikk, start, vis, erÅpen: () => åpen, tilstand: () => S, sett: d => { S = SK.fraJSON(d) || S; settNavn(); tegn(true); }, ta, avslå, lever, avbryt, pris, nyeTilbud, steder,
     vurder, klar: klarTilLevering, steg: dt => { akk = 0; steg(Math.max(1, dt)); }, lagre, NØKKEL,
     førsteKontrakt, lagerPlass, oppdragFor, forsvarVed, fred: byId => !!oppdragFor(byId), knappFor, fargeNavn, tråd: () => (S ? SK.trådSteg(S) : null), trådAktiv, oppdaterTråd: tråd, lapp, følgLapp, har, nivå: nivåNå,
     rett: { kontraktTa: ta, kontraktAvslå: avslå, kontraktLever: id => lever(id), kontraktAvbryt: avbryt, kontraktPris: pris }, RIVALER, merke: (side, px) => (side === ID ? egetMerke(px || 40) : rivalMerke(side, px || 40)) });

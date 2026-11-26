@@ -135,7 +135,7 @@
   }
   // endringer i kassa som ikke gikk gjennom gi/betal (røverbytte, scenarioer …), føres som «annet» når de oppdages
   function avstem() { const s = Sp(); if (!S || !s || !Number.isFinite(s.penger)) return; if (!Number.isFinite(S.sist)) { S.sist = s.penger; return; }
-    const d = s.penger - S.sist; if (Math.abs(d) >= 1) føring(d, d > 0 ? 'annet inn' : 'annet ut'); S.sist = s.penger; }
+    const d = s.penger - S.sist; if (Math.abs(d) >= 1) føring(d, 'annet'); S.sist = s.penger; }
   // ---------- LØPENDE DRIFT: vedlikehold av byggene (Leir.vedlikehold, Claudes forslag) – trekkes hver spilltime ----------
   const driftAuto = () => !navigator.webdriver || PS.driftTest === true;
   function vedlikehold() {
@@ -175,6 +175,7 @@
     ny.push(el('h3', { 'data-fane': 'lager', id: 'pengerinn' }, 'Penger inn'));
     // (R2-løkka) dagboka over inn og ut – de samme tallene som morgenmøtet
     ny.push(el('div', { klasse: 'penger sum', 'data-fane': 'lager', 'data-penger': 'sum' }, sumTekst()));
+    { const dt = detaljTekst(); if (dt) ny.push(el('div', { klasse: 'penger sum', 'data-fane': 'lager', 'data-penger': 'detalj' }, dt)); }
     ny.push(el('div', { klasse: 'penger', 'data-fane': 'lager', 'data-penger': 'faste' }, fasteTekst()));
     for (const l of P.linjer(bilde(), kr)) { const d = el('div', { klasse: 'penger', 'data-fane': 'lager', 'data-penger': l.id }, l.tekst);
       if (l.id === 'oppdrag' && rot.LeirSpill) d.appendChild(knapp('Vis oppdragene', () => LeirSpill.fane('mål')));
@@ -187,13 +188,21 @@
   });
 
   // «Kassa 20,9 mill. kr. Siste døgn (dag 2, kl. 06–06): … Siden kl. 06 i dag: …»
+  // beløpene rundes til nærmeste tusen (som morgenmøtet)
+  const krT = v => kr(Math.round((v || 0) / 1000) * 1000);
   function sumTekst() {
     const s = Sp(), d = døgnNå(), I = P.døgnSum(S && S.B, d - 1), N = P.døgnSum(S && S.B, d);
-    return `Kassa ${kr(s ? s.penger : 0)}. ` + (d > 1 ? `Siste døgn (dag ${d - 1} kl. 06 – dag ${d} kl. 06): ${P.døgnTekst(I, kr)}. ` : '') + `Siden kl. 06 i dag: ${P.døgnTekst(N, kr)}.`;
+    return `Kassa ${kr(s ? s.penger : 0)}. ` + (d > 1 ? `Siste døgn (dag ${d - 1} kl. 06 – dag ${d} kl. 06): ${krT(I.inn)} inn, ${krT(I.ut)} ut. ` : '') + `Så langt i dag: ${krT(N.inn)} inn, ${krT(N.ut)} ut.`;
+  }
+  // hva pengene gikk til og kom fra: siste hele døgn (eller i dag på dag 1)
+  function detaljTekst() {
+    const d = døgnNå(), D = P.døgnSum(S && S.B, d > 1 ? d - 1 : d), del = []; if (!D.inn && !D.ut) return '';
+    if (D.inn) del.push('inn: ' + P.poster(D, true, krT, 4)); if (D.ut) del.push('ut: ' + P.poster(D, false, krT, 4));
+    return `${d > 1 ? 'Siste døgn' : 'I dag'} – ${del.join('; ')}.`;
   }
   // de faste utgiftene per døgn: lønn (FolkSpill) og vedlikehold (Leir.vedlikehold)
   function faste() { let lønn = 0; try { lønn = rot.FolkSpill && FolkSpill.lønnNå ? FolkSpill.lønnNå() : 0; } catch (e) { lønn = 0; } const v = vedlikehold(); return { lønn, vedlikehold: v.perDøgn, bygg: v.antall, sum: lønn + v.perDøgn }; }
-  function fasteTekst() { const f = faste(); return `Faste utgifter: ca. ${kr(f.sum)} i døgnet – lønn ${kr(f.lønn)} og vedlikehold av ${f.bygg} bygg ${kr(f.vedlikehold)} (1 % av byggeprisen per døgn). Jo større leiren er, jo mer koster den å holde.`; }
+  function fasteTekst() { const f = faste(); return `Faste utgifter: ca. ${krT(f.sum)} i døgnet – lønn ${krT(f.lønn)} og vedlikehold av ${f.bygg} bygg ${krT(f.vedlikehold)} (${Math.round((rot.Leir ? Leir.REGLER.vedlikehold : .01) * 100)} % av byggeprisen per døgn). Jo større leiren er, jo mer koster den å holde.`; }
 
   // ---------- varselbrikken når kassa er lav ----------
   (rot.VARSEL_TILLEGG = rot.VARSEL_TILLEGG || []).push(() => {
@@ -244,5 +253,5 @@
       return r.jobb;
     } finally { leter = false; }
   }
-  const PS = rot.PengerSpill = { test: false, driftTest: false, start, bilde, finnHogst, tilstand: () => S, lagre, føring, døgn: n => P.døgnSum(S && S.B, n), døgnNå, sumTekst, faste, fasteTekst, vedlikehold, driftSteg, avstem };
+  const PS = rot.PengerSpill = { test: false, driftTest: false, start, bilde, finnHogst, tilstand: () => S, lagre, føring, døgn: n => P.døgnSum(S && S.B, n), døgnNå, sumTekst, detaljTekst, faste, fasteTekst, vedlikehold, driftSteg, avstem };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
