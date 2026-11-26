@@ -413,7 +413,8 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     // folk som er ute for morgenmøtet, er fortsatt ute etter en omlasting (FolkSpill har lagret p.borte); de uten plan kommer hjem
     const f = F(); if (f) for (const q of f.personer) if (q.morgen && !S.planer.some(p => p.folk && p.folk.includes(q.id))) { if (q.borte === BORTE) delete q.borte; delete q.morgen; }
     // beskyttelsen gjelder etter en omlasting (spillet-visning.js regner neste bølge på nytt ved start)
-    const T = rot.SpilletSpill && SpilletSpill.T ? SpilletSpill.T() : null; if (T && S.vernTil && !T.aktiv && Number.isFinite(T.nesteSpill) && T.nesteSpill < S.vernTil) T.nesteSpill = S.vernTil;
+    const T = rot.SpilletSpill && SpilletSpill.T ? SpilletSpill.T() : null; // (kritikerløkka r3) flyttes nedtellingen, står det i loggen hvorfor (den skal aldri gå opp uten en grunn spilleren ser)
+    if (T && S.vernTil && !T.aktiv && Number.isFinite(T.nesteSpill) && T.nesteSpill < S.vernTil) { T.nesteSpill = S.vernTil; if (S.vernTil - tid > 1 && auto()) logg('Beskyttelsen dere betalte røverne for, gjelder fortsatt: neste angrep kommer ikke før den er ute.'); }
     if (!S.oppFør) S.oppFør = snapOppgjør();
     tapKart = null; lagKart = null; byKart = null; tapFra = performance.now() + TAP_VENT;
     klar = true; koblValg(); lagre(); vistNøkkel = ''; if (S.kort && !S.kort.ferdig && auto()) vis(); }
