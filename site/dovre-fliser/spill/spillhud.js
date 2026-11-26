@@ -164,8 +164,9 @@ body.spill #kommer.på{ display:flex; animation:kommeropp .16s ease-out; } @keyf
     const enRad = () => { if (kort) return S.scrollWidth <= S.clientWidth + 1; let t = null; for (const d of S.children) { if (!d.getClientRects().length) continue; if (t === null) t = d.offsetTop; else if (Math.abs(d.offsetTop - t) > 4) return false; } return true; };
     const sett = n => { if (kort) delete S.dataset.trang; else S.dataset.trang = String(Math.min(n, 2)); let ant = 0; const navn = []; const k = kort ? n : n - 2; for (const d of barn) { const i = ut.indexOf(d.dataset.s), u = i >= 0 && i < k; if (u) { d.dataset.mer = '1'; if (!d.hidden && !d.dataset.tom && !d.dataset.teknisk) { ant++; navn.push(d.dataset.ord || ETIKETT[d.dataset.s] || (d.dataset.s === 'sVaer' ? 'været' : '')); } } else delete d.dataset.mer; } mer.classList.toggle('på', ant > 0); merAnt = ant;
       // (kritikerløkka r2, Jonas og Ingrid: «to Mer» – topplinja og fanelinja – og «+7 tall» på PC er uforståelig): flisa heter «Tall ▾» på
-      // telefon og «Flere tall» på PC (med prikk-ikonet); «Mer» er bare knappen i fanelinja/kommandolinja. Ordene er Claudes forslag.
-      { const t = kort ? 'Tall' : 'Flere', o = kort ? '▾' : 'tall'; if (merTall.textContent !== t) merTall.textContent = t; if (mer.dataset.ord !== o) mer.dataset.ord = o; }
+      // stående telefon og «Flere tall» på PC og liggende telefon (med prikk-ikonet); «Mer» er bare knappen i fanelinja/kommandolinja.
+      // Ordene er Claudes forslag.
+      { const smal = kort && document.body.classList.contains('smal'), t = smal ? 'Tall' : 'Flere', o = smal ? '▾' : 'tall'; if (merTall.textContent !== t) merTall.textContent = t; if (mer.dataset.ord !== o) mer.dataset.ord = o; }
       // (runde 13) forklaringen sier hvilke tall som står bak flisa
       const tips = `Flere tall|${ant} tall fikk ikke plass på raden${navn.filter(Boolean).length ? ': ' + navn.filter(Boolean).join(', ').toLowerCase() : ''}. Trykk for å se dem.`; if (mer.dataset.tips !== tips) mer.dataset.tips = tips; mer.setAttribute('aria-label', `${ant} tall til`); return ant; };
     let n = 0; sett(0); while (!enRad() && n < ut.length + 2) sett(++n);
