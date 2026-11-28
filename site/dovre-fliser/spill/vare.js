@@ -166,7 +166,7 @@
       return { ok, tekst: `${lager}${maskin} – ${ok ? (h >= trengs ? 'nok på lager nå' : 'rekker det') : `rekker ikke (mangler ca. ${mengdeTekst(k.vare, Math.ceil(trengs - får))})`}.` };
     }
     if (k.type === 'avtale') { const ok = p >= k.perDøgn || h >= k.perDøgn * (k.døgn - tall(k.døgnGjort));
-      return { ok, tekst: `${lager}${maskin} – ${ok ? 'rekker det' : p > 0 ? `maskinene gir mindre enn ${mengdeTekst(k.vare, k.perDøgn)} per døgn` : `lageret rekker ${Math.floor(h / k.perDøgn)} døgn`}.` }; }
+      return { ok, tekst: `${lager}${maskin} – ${ok ? 'rekker det' : p > 0 ? `maskinene gir mindre enn ${mengdeTekst(k.vare, k.perDøgn)} per døgn` : (h >= k.perDøgn ? `lageret rekker ${Math.floor(h / k.perDøgn)} døgn` : `lageret har ikke nok til den første hentingen (${mengdeTekst(k.vare, k.perDøgn)})`)}.` }; }
     return { ok: true, tekst: `${lager} ${V.navn} på lager.` };
   }
   // linja om vegen: «ca. 21 km langs ruta – lastebil ca. 0,4 t, til fots ca. 6 t»
