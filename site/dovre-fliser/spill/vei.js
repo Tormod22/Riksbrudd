@@ -401,9 +401,12 @@
     const K = o.kart || api.nå; if (!K) return null; const hvem = o.hvem || 'egne', nøkkel = (typeof mål === 'string' ? mål : JSON.stringify(mål)) + '|' + hvem;
     if (K.kart.has(nøkkel)) { const V = K.kart.get(nøkkel); K.kart.delete(nøkkel); K.kart.set(nøkkel, V); return V; }
     const t0 = Date.now(), kilder = typeof mål === 'string' ? (K.mål.get(mål) || []).map(q => q.node) : (Array.isArray(mål) && typeof mål[0] !== 'number' ? mål : [mål]).map(p => node(K, p, 4));
-    const dist = new Float32Array(K.N).fill(Infinity), neste = new Int32Array(K.N).fill(-1), H = new Haug();
+    // (28. nov, fiks c) avstandene i Float64Array og hver rute behandles én gang: med Float32Array ble en avstand over ca. 20 m rundet
+    // OPP når den ble lagret, så den samme veien så «kortere» ut hver gang – rutene ble lagt i haugen igjen og igjen til siden gikk tom
+    // for minne («Target crashed» i kontrollen etter at leiren hadde fått mange bygg)
+    const dist = new Float64Array(K.N).fill(Infinity), neste = new Int32Array(K.N).fill(-1), ferdig = new Uint8Array(K.N), H = new Haug();
     for (const n of kilder) if (n >= 0 && dist[n] > 0) { dist[n] = 0; H.push(n, 0); }
-    while (H.n.length) { const n = H.pop(), dn = dist[n]; if (H.p0 !== undefined) { /* ubrukt */ }
+    while (H.n.length) { const n = H.pop(), dn = dist[n]; if (ferdig[n]) continue; ferdig[n] = 1;
       naboer(K, n, hvem, null, (q, kost) => { const v = dn + kost; if (v < dist[q] - 1e-6) { dist[q] = v; neste[q] = n; H.push(q, v); } }); }
     const V = {
       mål, hvem, ms: Date.now() - t0, kilder: kilder.filter(n => n >= 0).length,

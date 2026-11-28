@@ -23,7 +23,11 @@ module.exports = {
       const s = nyttLag('Vaktprøve tropp', L.x + 2400, L.y + 1800, 'blå'), e = nyttLag('Vaktprøve fiende', L.x + 2700, L.y + 1800, 'rød'); ENHETER.push(s, e); nye.push(s, e);
       let hendelser = []; const lytt = ev => hendelser.push(ev.detail); window.addEventListener('riksbrudd-hendelse', lytt);
       tempo = 600; FlytSpill.spol(); await vent(250); e.skyterPå = new Set([s]); await vent(450);
+      // (28. nov, fiks c) under full last (mange vakter før, delte prosessorer) kan en ramme ta over 450 ms, og ildkampen i spillet kan
+      // sette skyterPå tilbake før KampSpill ser den: vi holder skuddene i gang og venter høyst 3 s til på meldingen
+      for (let i = 0; i < 30 && !hendelser.some(h => h.type === 'kontakt' && /Vaktprøve tropp/.test(h.tekst)); i++) { e.skyterPå = new Set([s]); await vent(100); }
       const vår = h => h.type === 'kontakt' && /Vaktprøve tropp/.test(h.tekst), kh = hendelser.filter(vår); d.kontakt = kh.map(h => h.tekst);
+      if (kh.length !== 1) d.kampDiag = { tempo, spoler: FlytSpill.spoler(), kamper: KampSpill.kamper().map(k => k.lag + ':' + !!k.leir + ':' + !!k.meldt), test: KampSpill.test, angrep: !!(ForsvarSpill.angrep && ForsvarSpill.angrep()), ser: levende(s) && levende(e) };
       krev(kh.length === 1, `${kh.length} kamphendelser (skal være én)`); krev(kh[0] && /^⚔ Vaktprøve tropp er i kamp med /.test(kh[0].tekst), 'kampmeldingen navngir ikke laget');
       krev(kh[0] && Number.isFinite(kh[0].x) && Number.isFinite(kh[0].y), 'kamphendelsen har ikke stedet');
       krev(tempo === 1 && !FlytSpill.spoler(), '⏭ stoppet ikke for kampen'); krev(!!document.getElementById('flytvis') || [...document.querySelectorAll('#alarm .alinje button')].some(b => /^Vis/.test(b.textContent.trim())), 'stoppkortet mangler «Vis»');   // (kritikerløkka r1) under et angrep står stoppbeskjeden som en linje i angrepsbanneret

@@ -15,8 +15,10 @@ module.exports = {
       ok(Luft.striper({ sky: .6, dis: .8, vær: 'skyet' }, 15) > .8, 'ingen lysstriper i delvis skyet vær med lav sol');
       ok(Luft.bygeMengde({ sky: .1, dis: 1, vær: 'klart' }) === 0 && Luft.bygeMengde({ sky: .8, dis: .75, vær: 'skyet' }) > .8, 'bygemengden følger ikke skydekket');
       ok(Luft.her([{ x: 0, y: 0, r: 900, a: .9 }], 10, 10).mengde > .8, 'her() gir ikke nedbør midt i en byge');
-      // (ut4-fiksa) three.js lastes nå i bakgrunnen i 2D (spill2d.js); tåka kobles først når 3D åpnes (init3d) – sjekk bare da
-      ok(typeof THREE === 'undefined' || typeof R3 === 'undefined' || !R3 || !R3.renderer || /uLuftF/.test(THREE.ShaderChunk.fog_fragment), 'disen er ikke koblet inn i three.js sin tåke');
+      // (28. nov, fiks c) three.js hentes i bakgrunnen selv om 3D aldri åpnes (SJEKK_DEL=rask) – disen kobles inn først i init3d, så
+      // uten 3D-scene sjekkes bare at init3d kaller Luft3d.init
+      const i3dLaget = typeof R3 !== 'undefined' && !!R3;
+      ok(typeof THREE === 'undefined' || (i3dLaget ? /uLuftF/.test(THREE.ShaderChunk.fog_fragment) : typeof init3d === 'function' && /Luft3d\.init\(/.test(String(init3d))), 'disen er ikke koblet inn i three.js sin tåke');
       for (let q = 0; q < 150 && typeof på3d !== 'undefined' && på3d && typeof R3 !== 'undefined' && R3 && (R3.bygger || !R3.ut); q++) await new Promise(r => setTimeout(r, 200));
       const R = typeof R3 !== 'undefined' && R3, i3d = !!(R && R.ut && R.mesh && typeof på3d !== 'undefined' && på3d && !R.bygger);
       ut.i3d = i3d; if (!i3d) return ut;
