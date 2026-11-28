@@ -436,7 +436,7 @@
     // aggregatene dekker det sola ikke klarer, så lenge det er drivstoff
     // strømnettet (spill/overlev.js: virker de første døgnene) dekker litt før aggregatene må gå
     // (Ø1) fyrkjelene gir strøm som nettet (api.maskinKW: kW fra kjelene som brenner nå, spill/produksjon.js)
-    const nett = (api.nettKW ? api.nettKW(L) : 0) * (api.nettFaktor ? api.nettFaktor(L) || 1 : 1) + (api.maskinKW ? Math.max(0, api.maskinKW(L) || 0) : 0);
+    const nettKW = (api.nettKW ? api.nettKW(L) : 0) * (api.nettFaktor ? api.nettFaktor(L) || 1 : 1), maskinKW = api.maskinKW ? Math.max(0, api.maskinKW(L) || 0) : 0, nett = nettKW + maskinKW;
     // BATTERIET: overskudd fra sol og nett lader det, underskudd tappes derfra før aggregatene må gå (dt i spillminutter -> kWt)
     const batKap = klare.reduce((s, b) => s + effekt(b).kwt, 0); L.batteri = Math.max(0, Math.min(batKap, L.batteri || 0));
     const fritt = solKW + nett - behov; let batKW = 0;
@@ -447,7 +447,7 @@
     const liter = aggKW * DRIVSTOFF.literPerKWt * dt / 60; L.drivstoff = Math.max(0, L.drivstoff - liter);
     let igjen = solKW + aggKW + nett + batUt; const mangler = new Set(avslått.map(b => b.id));
     for (const b of brukere) { const k = -BYGG[b.type].kw; if (igjen + 1e-9 >= k) igjen -= k; else mangler.add(b.id); }
-    return { agg: aggKW, aggMaks, aggInst, aggAntall: agg.length, batteri: L.batteri, batKap, batKW, avslått: avslått.length, nett, prod: solKW + aggKW + nett + batUt, kapasitet: solKW + aggMaks + nett + batUt, behov, mangler, liter, nyFerdig, ferdigArbeid, framme, sol: solKW, kø: Math.max(0, J.length - aktive.length), aktive: aktive.length };
+    return { agg: aggKW, aggMaks, aggInst, aggAntall: agg.length, batteri: L.batteri, batKap, batKW, avslått: avslått.length, nett: nettKW, maskin: maskinKW, prod: solKW + aggKW + nett + batUt, kapasitet: solKW + aggMaks + nett + batUt, behov, mangler, liter, nyFerdig, ferdigArbeid, framme, sol: solKW, kø: Math.max(0, J.length - aktive.length), aktive: aktive.length };
   }
   // Hvor mye drivstoff leiren kan ha: tankene + en liten tank i hvert aggregat
   // (drivstoffet blir liggende i tanken mens den flyttes eller er skadet, så ferdige tanker teller med full størrelse)

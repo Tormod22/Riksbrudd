@@ -71,6 +71,7 @@
     SS.leggTilKilde('sagaFolk', () => sagaAndel('folk'), { navn: 'Ingen folk', enhet: 't', graf: 'sagaSto' });
     SS.leggTilKilde('sagaStrøm', () => sagaAndel('strøm'), { navn: 'Uten strøm', enhet: 't', graf: 'sagaSto' });
     SS.leggTilKilde('sagaFullt', () => sagaAndel('fullt'), { navn: 'Lageret fullt', enhet: 't', graf: 'sagaSto' });
+    SS.leggTilKilde('sagaSlitt', () => sagaAndel('slitt'), { navn: 'Slitt (halv fart)', enhet: 't', graf: 'sagaSto' });
   }
 
   // ---------- kommandoen «maskin» { bygg, av } ----------
@@ -102,7 +103,7 @@
     for (const b of M) { const B = LB.BYGG[b.type], R = PR.REGLER.maskiner[b.type], s = sist.status[b.id] || { går: false, tekst: 'venter', folk: 0, drift: 0 };
       const strøm = R.gir ? `gir ${nf(s.kw || 0, 0)} av ${R.gir} kW` : `${R.kw} kW`;
       h += `<div class="by mrad" data-maskin="${b.id}"><span>${esc(B.navn)}<small>${esc(PR.oppskrift(b.type))}</small><small>Folk ${nf(s.folk || 0, 1)} av ${R.folk} · ${strøm} · slitt ${Math.round((1 - (b.hp || 0)) * 100)} %</small></span>`
-        + `<em class="${s.går ? 'grønn' : b.av ? '' : 'rød'}">${esc(s.går ? s.tekst : b.av ? 'slått av' : s.tekst)}</em>`
+        + `<em class="${s.går && s.drift >= .98 ? 'grønn' : s.går || b.av ? '' : 'rød'}">${esc(s.går ? s.tekst : b.av ? 'slått av' : s.tekst)}</em>`
         + `<button type="button" data-pr="av" data-id="${b.id}" data-av="${b.av ? '0' : '1'}">${b.av ? 'Slå på' : 'Slå av'}</button></div>`; }
     h += '<ul class="tall">' + VARER.map(([v, navn]) => `<li><span>${navn}</span><b>${nf((l.lager && l.lager[v]) || 0, 1)} av ${plass} m³</b></li>`).join('');
     h += `<li class="prfolk"><span>Folk på «Maskiner»</span><button type="button" data-pr="folk" data-r="minus" aria-label="Færre på maskinene">−</button><b>${n}${trenger ? ' av ' + trenger : ''}</b><button type="button" data-pr="folk" data-r="pluss" aria-label="Flere på maskinene">+</button></li>`;
@@ -120,7 +121,7 @@
   function etter(rot, ny) {
     kilder(); if (!window.StatistikkSpill) return;
     if (!ny && performance.now() - sistGraf < VIS.grafHvert) return; sistGraf = performance.now();
-    for (const e of rot.querySelectorAll('.prgraf[data-graf]')) { try { StatistikkSpill.graf(e, e.dataset.graf, { bredde: Math.min(520, rot.clientWidth - 8 || 300), høyde: 170 }); } catch (er) { /* */ } }
+    for (const e of rot.querySelectorAll('.prgraf[data-graf]')) { try { StatistikkSpill.graf(e, e.dataset.graf, { bredde: Math.min(520, rot.clientWidth - 8 || 300), høyde: 150 }); } catch (er) { /* */ } }
   }
   document.addEventListener('click', e => {
     const b = e.target.closest('#selskapet [data-pr]'); if (!b) return; e.stopPropagation(); const s = b.dataset.pr;
@@ -135,9 +136,9 @@
   if (typeof KROKER !== 'undefined') KROKER.tegn.push((g, vx0, vy1) => {
     const l = L(); if (!l || typeof kam === 'undefined' || kam.m > 4) return; const M = PR.maskinene(l); if (!M.length) return;
     g.save(); g.textAlign = 'center'; g.textBaseline = 'bottom';
-    for (const b of M) { const s = sist.status[b.id], x = (b.x - vx0) / kam.m, y = (vy1 - b.y) / kam.m - 16 / Math.max(.4, kam.m);
+    for (const b of M) { const s = sist.status[b.id], f = LB.BYGG[b.type].fot || [-3, 3, -3, 3], r = Math.max(...f.map(Math.abs)), x = (b.x - vx0) / kam.m, y = (vy1 - b.y) / kam.m - Math.min(60, r / kam.m) - 4;
       const t = PR.merke(b.type, s), går = s && s.går, under = !går && s ? s.tekst : b.av ? 'slått av' : '';
-      g.font = '600 12px "Cormorant Garamond", serif'; const w = Math.max(g.measureText(t).width, under && kam.m < 1.6 ? g.measureText(under).width : 0) + 10;
+      g.font = '600 13px "Cormorant Garamond", serif'; const w = Math.max(g.measureText(t).width, under && kam.m < 1.6 ? g.measureText(under).width : 0) + 10;
       g.fillStyle = 'rgba(20,17,12,.78)'; g.fillRect(x - w / 2, y - 16 - (under && kam.m < 1.6 ? 14 : 0), w, 17 + (under && kam.m < 1.6 ? 14 : 0));
       g.fillStyle = går ? '#a9d48a' : '#e0a070'; g.fillText(t, x, y);
       if (under && kam.m < 1.6) { g.font = '11px "Cormorant Garamond", serif'; g.fillStyle = '#d8c8a8'; g.fillText(under, x, y - 14); } }

@@ -206,7 +206,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   // STRØMTEKSTENE (runde 6, kritikken: «Alle bygg har strøm» sto mens ingen bygg brukte strøm, og «bruker 0 av 5 kW» uten aggregat –
   // de 5 kW kom fra strømnettet, men det sto ingen steder). Nå sier linja hvem som bruker strøm, og hvor den kommer fra.
   function strømKilde() { if (!siste) return ''; const d = [];
-    if (siste.nett > 0) d.push(`strømnettet ${kw(siste.nett)} kW (virker bare de første døgnene)`); if (siste.sol > 0) d.push(`sola ${kw(siste.sol)} kW`);
+    if (siste.nett > 0) d.push(`strømnettet ${kw(siste.nett)} kW (virker bare de første døgnene)`); if (siste.maskin > 0) d.push(`fyrkjelen ${kw(siste.maskin)} kW`); if (siste.sol > 0) d.push(`sola ${kw(siste.sol)} kW`);
     if (siste.aggInst > 0) d.push(L.drivstoff > 0 ? `aggregat ${kw(siste.aggInst)} kW` : 'aggregatet står (tom for diesel)'); if (siste.batKW > 0) d.push(`batteriet ${kw(siste.batKW)} kW`);
     return d.join(', '); }
   function strømLinje() {
