@@ -240,6 +240,6 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
   // et lagret spill der den første kontrakten alt er levert, får kortet én gang når spillet er klart
   window.addEventListener('riksbrudd-spill', () => setTimeout(() => { les(); sistHode = ''; sistKropp = ''; planleggStorlia(); }, 4000));
 
-  Object.assign(API, { vis, erÅpen: () => åpen, fane: () => fane, velgFane, tegn: () => tegn(true), trinn: regnTrinn, storlia: visStorlia, husk: () => (les(), { ...H }), nullstillHusk: d => { les(); Object.assign(H, d || {}); lagre(); }, NØKKEL });
+  Object.assign(API, { vis, erÅpen: () => åpen, fane: () => fane, velgFane, tegn: () => tegn(true), trinn: regnTrinn, storlia: visStorlia, husk: () => (les(), { ...H }), nullstillHusk: d => { les(); Object.assign(H, d || {}); lagre(); }, lesPåNytt: () => { H.leir = ''; les(); }, NØKKEL });
   window.SelskapetSpill = API;
 })();
