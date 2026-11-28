@@ -103,7 +103,7 @@ const ms = f => { const t = process.hrtime.bigint(); const r = f(); return [r, N
   V.lag({ leir: L, start: [0, 0] });
   // signaturen: lik leir gir samme kart, en ny dør gir nytt kart
   const K1 = V.oppdater({ leir: L, start: [0, 0] }), K1b = V.oppdater({ leir: L, start: [0, 0] });
-  const L3 = JSON.parse(JSON.stringify(L)); const v = L3.bygg.find(b => b.type === 'bs_vegg_tre' && b.bs.a === 'x'); v.type = 'bs_vegg_tre_dør'; const K3 = V.oppdater({ leir: L3, start: [0, 0] });
+  const L3 = JSON.parse(JSON.stringify(L)); const v = L3.bygg.find(b => b.type === 'bs_vegg_tre_1' && b.bs.a === 'x'); v.type = 'bs_vegg_tre_dør_1'; const K3 = V.oppdater({ leir: L3, start: [0, 0] });
   ok(K1 === K1b && K3 !== K1, 'Vei.oppdater: samme leir gir samme kart, en ny dør gir nytt kart');
   ok(V.endrerVei({ del: 'vegg', gjør: 'riv' }) && V.endrerVei({ del: 'åpning' }) && !V.endrerVei({ del: 'tak' }), 'endrerVei: vegg/åpning ja, tak nei');
   void K;

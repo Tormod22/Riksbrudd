@@ -1,21 +1,31 @@
-/* Fritt byggesett (12. nov, brukeren: «et enda bedre byggesystem» – fritt byggesett): regler uten DOM.
- * Node: require('./byggesett') (henter leir.js selv); nettleser: globalThis.Byggesett (lastes etter leir.js og før leir-visning.js).
- * Delene står på et rutenett med ruter på G = 2,4 m fra leirens midte, og etasjene er H = 3 m (høyst to etasjer):
- *  - gulv (betongfundament, tregulv) og tak (flatt tak, saltak) ligger i en rute; «dekket» n er høyden: 0 = bakken,
- *    1 = mellom 1. og 2. etasje (gulvet i 2. etasje eller taket over 1. etasje), 2 = taket over 2. etasje;
- *  - vegger (tre, betong, murstein; hel, med dør, vindu eller port) og forsvar (palisade, mur, jordvoll, piggtråd) står på en kant
- *    mellom to ruter: a = 'x' (kanten langs x, nede i ruta) eller 'y' (kanten langs y, til venstre i ruta), n = etasjen (0 eller 1).
- * Delene er vanlige bygg i Leir.BYGG (type 'bs_…', del: true): de koster kroner og materialer og bygges som jobber av byggelagene.
- * Plassen i rutenettet ligger på bygget som b.bs = { i, j, a, n, r } (r: saltakets møne, 0 = langs x, 1 = langs y, ellers automatisk).
- * Støtte (ingen svevende deler): vegger i 2. etasje står på en vegg under eller et gulv inntil; et dekke over bakken trenger en vegg under
- * på en av kantene, eller et nabodekke i samme høyde som har det. rom() finner lukkede rom (gulv + vegger rundt + tak over).
+/* Fritt byggesett, versjon 3 (28. nov, fase B4 i docs/plan-selskap-okonomi.md, kapittel 5.5): regler uten DOM.
+ * Node: require('./byggesett') (henter leir.js selv); nettleser: globalThis.ByggesettRegler (lastes etter leir.js og før leir-visning.js).
+ *
+ * RUTENETTET: alle plasser regnes i ruter på U = 1,2 m fra leirens midte (G = U). En del har en størrelse s (antall ruter):
+ *  - nye deler i det fine rutenettet: s = 1 (1,2 m; porten s = 2), i hallrutenettet («Hall 4,8 m»): s = 4;
+ *  - GAMLE deler (versjon 2, rutenett 2,4 m) står på sin plass med s = 2: de gamle typene (uten «_s» bak) har i, j i 2,4 m-ruter, som
+ *    ganges med 2 når de leses (fraBygg). Typen er den samme som før (bs_vegg_tre …), prisene og riving er som før. Valget: la gamle deler stå på sitt
+ *    rutenett (det tryggeste – ingen bygg deles opp, pris, framdrift, hp og jobber er urørt); de passer i det nye rutenettet fordi 2,4 = 2 × 1,2.
+ *    Nye deler har b.bs.g = 1 (rutene er 1,2 m).
+ * Delene (Leir.BYGG, type 'bs_…', del: true): gulv og tak i ruter (s × s), vegger, forsvar og bjelker på en kant (a = 'x' langs x nede i ruta,
+ * 'y' langs y til venstre), søyler i et hjørne, trapper over 1 × 3 ruter (r = retningen opp: 0 +x, 1 +y, 2 −x, 3 −y).
+ * n: gulv/tak = dekket (0 bakken, 1 mellom 1. og 2. etasje …, 4 = taket over 4. etasje); vegger, søyler, bjelker og trapper = etasjen (0–3).
+ * Etasjen er H = 3 m, høyst ETASJER = 4 (spørsmål 13 i planen: forslaget fire). Loft: saltak over et bygg som er minst 7,6 m bredt (Bygning).
+ * STØTTE (ingen svevende deler): vegger over 1. etasje står på en vegg eller et gulv inntil; et dekke trenger en vegg, søyle eller bjelke
+ * under på en kant/et hjørne, eller et nabodekke som har det; søyler står på bakken, et gulv eller en søyle under; bjelker hviler på
+ * vegg/søyle/bjelke i begge ender; trapper står på gulv.
+ * SPENN (kapittel 5.5): et dekke eller tak lenger fra en støtte enn halve spennet (tre 6 m, betong 9 m, stål 12 m) raser – regelen er
+ * Bygning.ras (spill/bygning.js), den samme som for husene i kartet. spenn() sier fra før noe bygges.
+ * ROM: rom() finner lukkede rom (gulv + vegger rundt + tak over); romType() sier hva rommet brukes til ut fra det som står der (ROMTYPER –
+ * B5 legger til maskiner/fabrikk).
  */
 (function (rot) {
   'use strict';
   const Leir = rot.Leir || (typeof require === 'function' ? require('./leir.js') : null);
-  const G = 2.4, H = 3, ETASJER = 2, SENG_M2 = 8;
-  // kat: gulv/tak (rute), vegg/forsvar (kant). stoff: materialet i 3D. v: dør/vindu/port. Prisene og tidene er Claudes forslag.
-  const DELER = {
+  const U = 1.2, G = U, H = 3, ETASJER = 4, SENG_M2 = 8, GROV = 4;
+  // ---------- delene ----------
+  // GAMLE deler (versjon 2, 2,4 m): uendret, så lagrede leirer koster og rives som før
+  const GAMLE = {
     bs_fundament: { navn: 'Betongfundament', kort: 'Fundament', kat: 'gulv', stoff: 'betong', pris: 40000, tid: .4, mat: { betong: 1.4 }, tekst: 'Gulv på bakken' },
     bs_tregulv: { navn: 'Tregulv', kort: 'Tregulv', kat: 'gulv', stoff: 'tre', pris: 25000, tid: .3, mat: { tre: .5 }, tekst: 'Gulv, også i 2. etasje' },
     bs_vegg_tre: { navn: 'Trevegg', kort: 'Hel', kat: 'vegg', stoff: 'tre', v: 'hel', pris: 20000, tid: .3, mat: { tre: .5 } },
@@ -37,175 +47,384 @@
     bs_voll: { navn: 'Jordvoll', kort: 'Voll', kat: 'forsvar', stoff: 'jord', pris: 10000, tid: .8, mat: {}, tekst: 'Gravd voll, 1,3 m (gratis materialer)' },
     bs_piggtråd: { navn: 'Piggtråd', kort: 'Piggtråd', kat: 'forsvar', stoff: 'stål', pris: 8000, tid: .15, mat: { stål: .05 }, tekst: 'Stolper med piggtråd, 1,3 m' },
   };
-  const KANT = d => DELER[d.type].kat === 'vegg' || DELER[d.type].kat === 'forsvar';
+  // STOFFENE (Claudes forslag): pris og tid per rute (en vegg på 1,2 m, et gulv/tak på 1,2 × 1,2 m), spennet dekket/taket tåler (m).
+  // tre: billig, raskt, brenner · mur: sterk, tung · betong: sterkest, tregest · stål/blikk: lett og raskt, for haller.
+  const STOFF = {
+    tre: { navn: 'Tre', spenn: 6, brenner: true }, stein: { navn: 'Mur', spenn: 9 }, betong: { navn: 'Betong', spenn: 9 }, blikk: { navn: 'Stål/blikk', spenn: 12 },
+    stål: { navn: 'Stål', spenn: 12 }, jord: { navn: 'Jord', spenn: 0 },
+  };
+  // Nye deler per rute (Claudes tall). str: størrelsene som finnes (1 = 1,2 m, 2 = 2,4 m, 4 = 4,8 m). Prisen ganges med s (kanter) eller s² (ruter).
+  const VEGG = { tre: { pris: 9000, tid: .12, mat: { tre: .2 } }, betong: { pris: 16000, tid: .25, mat: { betong: .6 } }, stein: { pris: 20000, tid: .4, mat: { betong: .7 } },
+    blikk: { pris: 10000, tid: .08, mat: { stål: .1 } } };
+  const VNAVN = { tre: 'Trevegg', betong: 'Betongvegg', stein: 'Mursteinsvegg', blikk: 'Blikkvegg' };
+  const NYE = {
+    bs_fundament: { navn: 'Betongfundament', kort: 'Fundament', kat: 'gulv', stoff: 'betong', pris: 9000, tid: .1, mat: { betong: .3 }, str: [1, 4], tekst: 'Gulv på bakken' },
+    bs_tregulv: { navn: 'Tregulv', kort: 'Tregulv', kat: 'gulv', stoff: 'tre', pris: 6000, tid: .08, mat: { tre: .1 }, str: [1, 4], tekst: 'Gulv, også i etasjene over (spenn 6 m)' },
+    bs_betongdekke: { navn: 'Betongdekke', kort: 'Betongdekke', kat: 'gulv', stoff: 'betong', pris: 12000, tid: .15, mat: { betong: .4 }, str: [1, 4], tekst: 'Gulv i etasjene over (spenn 9 m)' },
+    bs_tak_flatt: { navn: 'Flatt tretak', kort: 'Flatt tre', kat: 'tak', stoff: 'tre', tak: 'flatt', pris: 7000, tid: .1, mat: { tre: .1 }, str: [1, 4], tekst: 'Spenn 6 m' },
+    bs_tak_sal: { navn: 'Saltak', kort: 'Saltak', kat: 'tak', stoff: 'tre', tak: 'sal', pris: 8500, tid: .12, mat: { tre: .2 }, str: [1, 4], tekst: 'Tre, spenn 6 m; loft når bygget er bredt nok' },
+    bs_tak_betong: { navn: 'Betongtak', kort: 'Betong', kat: 'tak', stoff: 'betong', tak: 'flatt', pris: 12000, tid: .15, mat: { betong: .4 }, str: [1, 4], tekst: 'Flatt, spenn 9 m' },
+    bs_tak_blikk: { navn: 'Blikktak', kort: 'Blikk', kat: 'tak', stoff: 'blikk', tak: 'flatt', pris: 6000, tid: .06, mat: { stål: .1 }, str: [1, 4], tekst: 'Stål, spenn 12 m – for haller' },
+    bs_søyle_tre: { navn: 'Søyle i tre', kort: 'Tre', kat: 'søyle', stoff: 'tre', pris: 3000, tid: .05, mat: { tre: .1 }, str: [1], tekst: 'Bærer dekket eller taket over' },
+    bs_søyle_betong: { navn: 'Søyle i betong', kort: 'Betong', kat: 'søyle', stoff: 'betong', pris: 6000, tid: .1, mat: { betong: .2 }, str: [1], tekst: 'Bærer dekket eller taket over' },
+    bs_søyle_stål: { navn: 'Søyle i stål', kort: 'Stål', kat: 'søyle', stoff: 'stål', pris: 5000, tid: .05, mat: { stål: .1 }, str: [1], tekst: 'Bærer dekket eller taket over' },
+    bs_bjelke_tre: { navn: 'Bjelke i tre', kort: 'Tre', kat: 'bjelke', stoff: 'tre', pris: 4000, tid: .06, mat: { tre: .1 }, str: [1, 4], tekst: 'Under dekket; hviler på vegg eller søyle i begge ender' },
+    bs_bjelke_stål: { navn: 'Stålbjelke', kort: 'Stål', kat: 'bjelke', stoff: 'stål', pris: 6000, tid: .06, mat: { stål: .1 }, str: [1, 4], tekst: 'Under dekket; hviler på vegg eller søyle i begge ender' },
+    bs_trapp: { navn: 'Tretrapp', kort: 'Tre', kat: 'trapp', stoff: 'tre', pris: 15000, tid: .5, mat: { tre: .5 }, str: [1], tekst: '1,2 × 3,6 m opp til etasjen over (det må være åpent over den)' },
+    bs_trapp_betong: { navn: 'Betongtrapp', kort: 'Betong', kat: 'trapp', stoff: 'betong', pris: 30000, tid: .8, mat: { betong: 1 }, str: [1], tekst: '1,2 × 3,6 m opp til etasjen over (det må være åpent over den)' },
+    bs_palisade: { navn: 'Palisade', kort: 'Palisade', kat: 'forsvar', stoff: 'tre', pris: 7500, tid: .15, mat: { tre: .4 }, str: [1, 4], tekst: 'Spisse tømmerstokker, 2,6 m' },
+    bs_mur: { navn: 'Mur', kort: 'Mur', kat: 'forsvar', stoff: 'betong', pris: 20000, tid: .3, mat: { betong: .6 }, str: [1, 4], tekst: 'Betongmur, 2,2 m' },
+    bs_voll: { navn: 'Jordvoll', kort: 'Voll', kat: 'forsvar', stoff: 'jord', pris: 5000, tid: .4, mat: {}, str: [1, 4], tekst: 'Gravd voll, 1,3 m (gratis materialer)' },
+    bs_piggtråd: { navn: 'Piggtråd', kort: 'Piggtråd', kat: 'forsvar', stoff: 'stål', pris: 4000, tid: .08, mat: {}, str: [1, 4], tekst: 'Stolper med piggtråd, 1,3 m' },
+  };
+  // veggene: fire stoff × hel/dør/vindu/port (dør og vindu i 1,2 m, porten 2,4 m i det fine rutenettet; alt 4,8 m i hallrutenettet)
+  for (const [st, V] of Object.entries(VEGG)) for (const v of ['hel', 'dør', 'vindu', 'port']) {
+    const ekstra = v === 'hel' ? 0 : v === 'port' ? 2000 : 3000;
+    NYE[`bs_vegg_${st}${v === 'hel' ? '' : '_' + v}`] = { navn: VNAVN[st] + (v === 'hel' ? '' : ' med ' + v), kort: v === 'hel' ? 'Hel' : v[0].toUpperCase() + v.slice(1), kat: 'vegg', stoff: st, v,
+      pris: V.pris + ekstra, tid: V.tid * (v === 'hel' ? 1 : 1.2), mat: { ...V.mat, ...(v === 'port' ? { stål: Math.round(((V.mat.stål || 0) + .1) * 10) / 10 } : {}) }, str: v === 'port' ? [2, 4] : [1, 4] };
+  }
+  // Alle typene: de gamle (s = 2, gammel) og de nye «<grunn>_<s>»
+  const DELER = {};
+  for (const [id, D] of Object.entries(GAMLE)) DELER[id] = { ...D, s: 2, grunn: id, gammel: true };
+  const typeFor = (grunn, s) => `${grunn}_${s}`;
+  for (const [id, D] of Object.entries(NYE)) for (const s of D.str) {
+    const f = D.kat === 'gulv' || D.kat === 'tak' ? s * s : D.kat === 'søyle' || D.kat === 'trapp' ? 1 : s;
+    const mat = {}; for (const [k, v] of Object.entries(D.mat)) mat[k] = Math.round(v * f * 10) / 10;
+    DELER[typeFor(id, s)] = { ...D, str: undefined, s, grunn: id, pris: Math.round(D.pris * f), tid: Math.round(D.tid * f * 100) / 100, mat,
+      navn: D.navn + (s === 1 || D.kat === 'søyle' || D.kat === 'trapp' ? '' : ` ${String(s * U).replace('.', ',')} m`) };
+  }
+  const kat = d => (DELER[d.type] ? DELER[d.type].kat : null);
+  // Plassen i 1,2 m-ruter: en gammel type uten u (fra eldre kode/tester) har i, j i 2,4 m-ruter og gjøres om; alt annet er alt i 1,2 m-ruter.
+  // (fraBygg og plassering gir alltid u: true.)
+  const nrm = d => (d && DELER[d.type] && DELER[d.type].gammel && !d.u ? { ...d, i: d.i * 2, j: d.j * 2, s: 2, u: true } : d && DELER[d.type] && !d.s ? { ...d, s: DELER[d.type].s } : d);
+  const norm = deler => (deler || []).map(nrm);
+  const KANT = d => ['vegg', 'forsvar', 'bjelke'].includes(kat(d));
+  const RUTE = d => kat(d) === 'gulv' || kat(d) === 'tak';
   const erDel = type => !!DELER[type];
+  const størrelse = type => (DELER[type] ? DELER[type].s : 1);
   // Delene som vanlige bygg i Leir.BYGG (fot: omrisset rundt midten, ret 0 = langs x)
   function registrer(LB) {
     if (!LB || !LB.BYGG) return;
     for (const [id, D] of Object.entries(DELER)) {
-      const fot = D.kat === 'gulv' || D.kat === 'tak' ? [-G / 2, G / 2, -G / 2, G / 2] : [-G / 2, G / 2, D.kat === 'forsvar' && id === 'bs_voll' ? -.8 : -.15, D.kat === 'forsvar' && id === 'bs_voll' ? .8 : .15];
+      const L = D.s * U, K = D.kat;
+      const fot = K === 'gulv' || K === 'tak' ? [-L / 2, L / 2, -L / 2, L / 2] : K === 'søyle' ? [-.15, .15, -.15, .15] : K === 'trapp' ? [-1.5 * U, 1.5 * U, -U / 2, U / 2]
+        : [-L / 2, L / 2, D.grunn === 'bs_voll' ? -.8 : -.15, D.grunn === 'bs_voll' ? .8 : .15];
       LB.BYGG[id] = { navn: D.navn, pris: D.pris, tid: D.tid, kw: 0, del: true, fot, mat: D.mat, tekst: D.tekst || 'Del i byggesettet' };
     }
   }
   registrer(Leir);
 
   // ---------- rutenettet ----------
-  const celle = (o, x, y) => [Math.floor((x - o.ox) / G), Math.floor((y - o.oy) / G)];
-  // Midten (kartet) for en del i rutenettet, og retningen (ret) som Leir bruker for omrisset
+  // s: rutenettets steg i ruter (1 fint, 4 hall). celle gir hjørneruta (i, j) i 1,2 m-ruter.
+  const celle = (o, x, y, s = 1) => [Math.floor((x - o.ox) / (U * s)) * s, Math.floor((y - o.oy) / (U * s)) * s];
+  const DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  // rutene en del dekker (gulv/tak: s × s; trapp: 3 ruter fra foten i retningen r)
+  function ruter(d) {
+    d = nrm(d); const K = kat(d), s = d.s || størrelse(d.type), ut = [];
+    if (K === 'trapp') { const [di, dj] = DIR[(d.r || 0) & 3]; for (let k = 0; k < 3; k++) ut.push([d.i + di * k, d.j + dj * k]); return ut; }
+    for (let a = 0; a < s; a++) for (let b = 0; b < s; b++) ut.push([d.i + a, d.j + b]);
+    return ut;
+  }
+  // kantene (1,2 m) en kant-del dekker
+  function kanter(d) { d = nrm(d); const s = d.s || størrelse(d.type), ut = []; for (let k = 0; k < s; k++) ut.push(d.a === 'x' ? { a: 'x', i: d.i + k, j: d.j } : { a: 'y', i: d.i, j: d.j + k }); return ut; }
+  // Midten (kartet) for en del, og retningen (ret) som Leir bruker for omrisset
   function midt(o, d) {
-    if (!KANT(d)) return { x: o.ox + (d.i + .5) * G, y: o.oy + (d.j + .5) * G, ret: 0 };
-    return d.a === 'x' ? { x: o.ox + (d.i + .5) * G, y: o.oy + d.j * G, ret: 0 } : { x: o.ox + d.i * G, y: o.oy + (d.j + .5) * G, ret: Math.PI / 2 };
+    d = nrm(d); const K = kat(d), s = d.s || størrelse(d.type);
+    if (K === 'søyle') return { x: o.ox + d.i * U, y: o.oy + d.j * U, ret: 0 };
+    if (K === 'trapp') { const R = ruter(d), x = R.reduce((t, c) => t + c[0] + .5, 0) / 3, y = R.reduce((t, c) => t + c[1] + .5, 0) / 3; return { x: o.ox + x * U, y: o.oy + y * U, ret: (d.r || 0) % 2 ? Math.PI / 2 : 0 }; }
+    if (!KANT(d)) return { x: o.ox + (d.i + s / 2) * U, y: o.oy + (d.j + s / 2) * U, ret: 0 };
+    return d.a === 'x' ? { x: o.ox + (d.i + s / 2) * U, y: o.oy + d.j * U, ret: 0 } : { x: o.ox + d.i * U, y: o.oy + (d.j + s / 2) * U, ret: Math.PI / 2 };
   }
   // Endepunktene til en kant (kartet)
-  function kantEnder(o, d) { const x = o.ox + d.i * G, y = o.oy + d.j * G; return d.a === 'x' ? [[x, y], [x + G, y]] : [[x, y], [x, y + G]]; }
-  // Nærmeste kant til et punkt (akse: lås til 'x' eller 'y')
-  function kantVed(o, x, y, akse) {
-    const fx = (x - o.ox) / G, fy = (y - o.oy) / G, i = Math.floor(fx), j = Math.floor(fy), u = fx - i, v = fy - j;
+  function kantEnder(o, d) { d = nrm(d); const s = d.s || størrelse(d.type), x = o.ox + d.i * U, y = o.oy + d.j * U; return d.a === 'x' ? [[x, y], [x + s * U, y]] : [[x, y], [x, y + s * U]]; }
+  // Nærmeste kant til et punkt i et rutenett med steg s (akse: lås til 'x' eller 'y')
+  function kantVed(o, x, y, akse, s = 1) {
+    const fx = (x - o.ox) / (U * s), fy = (y - o.oy) / (U * s), i = Math.floor(fx), j = Math.floor(fy), u = fx - i, v = fy - j;
     const k = [[v, { a: 'x', i, j }], [1 - v, { a: 'x', i, j: j + 1 }], [u, { a: 'y', i, j }], [1 - u, { a: 'y', i: i + 1, j }]].filter(([, q]) => !akse || q.a === akse);
-    k.sort((p, q) => p[0] - q[0]); return k[0][1];
+    k.sort((p, q) => p[0] - q[0]); const q = k[0][1]; return { a: q.a, i: q.i * s, j: q.j * s };
   }
-  const hjørneVed = (o, x, y) => [Math.round((x - o.ox) / G), Math.round((y - o.oy) / G)];
-  // Plassene mellom to trykk: ruter i rektangelet (gulv, tak), eller kanter på en linje / rundt rektangelet (vegger, forsvar)
-  const MAKS = 80;
+  const hjørneVed = (o, x, y, s = 1) => [Math.round((x - o.ox) / (U * s)) * s, Math.round((y - o.oy) / (U * s)) * s];
+  // Plassene mellom to trykk: ruter i rektangelet (gulv, tak), kanter på en linje / rundt rektangelet (vegger, forsvar, bjelker),
+  // hjørner på en linje (søyler: en søylerad, o2.avstand ruter mellom, standard 4 = 4,8 m) eller én trapp (o2.r)
+  const MAKS = 400;
   function rad(o, type, A, B, o2 = {}) {
     const D = DELER[type]; if (!D) return [];
-    if (D.kat === 'gulv' || D.kat === 'tak') {
-      const [i0, j0] = celle(o, A[0], A[1]), [i1, j1] = B ? celle(o, B[0], B[1]) : [i0, j0], ut = [];
-      for (let i = Math.min(i0, i1); i <= Math.max(i0, i1); i++) for (let j = Math.min(j0, j1); j <= Math.max(j0, j1); j++) if (ut.length < MAKS) ut.push({ i, j, a: null });
+    // gamle typer: som før, i 2,4 m-ruter
+    if (D.gammel) return radU(o, type, A, B, o2).map(q => ({ ...q, i: q.i / 2, j: q.j / 2 }));
+    return radU(o, type, A, B, o2);
+  }
+  function radU(o, type, A, B, o2) {
+    const D = DELER[type], s = D.s, K = D.kat;
+    if (K === 'trapp') { const [i, j] = celle(o, A[0], A[1]); return [{ i, j, a: null, r: o2.r || 0 }]; }
+    if (K === 'søyle') {
+      const [a0, b0] = hjørneVed(o, A[0], A[1]); if (!B) return [{ i: a0, j: b0, a: null }];
+      const [a1, b1] = hjørneVed(o, B[0], B[1]), st = Math.max(1, o2.avstand || GROV), ut = [], lx = Math.abs(a1 - a0) >= Math.abs(b1 - b0);
+      const n = Math.max(1, Math.round((lx ? Math.abs(a1 - a0) : Math.abs(b1 - b0)) / st));
+      for (let k = 0; k <= n && ut.length < MAKS; k++) ut.push(lx ? { i: Math.round(a0 + (a1 - a0) * k / n), j: b0, a: null } : { i: a0, j: Math.round(b0 + (b1 - b0) * k / n), a: null });
       return ut;
     }
-    if (!B) return [kantVed(o, A[0], A[1], o2.akse)];
-    const [a0, b0] = hjørneVed(o, A[0], A[1]), [a1, b1] = hjørneVed(o, B[0], B[1]), ut = [];
-    if (a0 === a1 && b0 === b1) return [kantVed(o, A[0], A[1], o2.akse)];
+    if (K === 'gulv' || K === 'tak') {
+      const [i0, j0] = celle(o, A[0], A[1], s), [i1, j1] = B ? celle(o, B[0], B[1], s) : [i0, j0], ut = [];
+      for (let i = Math.min(i0, i1); i <= Math.max(i0, i1); i += s) for (let j = Math.min(j0, j1); j <= Math.max(j0, j1); j += s) if (ut.length < MAKS) ut.push({ i, j, a: null });
+      return ut;
+    }
+    if (!B) return [kantVed(o, A[0], A[1], o2.akse, s)];
+    const [a0, b0] = hjørneVed(o, A[0], A[1], s), [a1, b1] = hjørneVed(o, B[0], B[1], s), ut = [];
+    if (a0 === a1 && b0 === b1) return [kantVed(o, A[0], A[1], o2.akse, s)];
     const x0 = Math.min(a0, a1), x1 = Math.max(a0, a1), y0 = Math.min(b0, b1), y1 = Math.max(b0, b1);
     if (y0 === y1 || x0 === x1 || o2.linje) {
       // en rett linje langs den lengste retningen
-      if (x1 - x0 >= y1 - y0) { const j = b0; for (let i = x0; i < x1; i++) ut.push({ a: 'x', i, j }); }
-      else { const i = a0; for (let j = y0; j < y1; j++) ut.push({ a: 'y', i, j }); }
+      if (x1 - x0 >= y1 - y0) { const j = b0; for (let i = x0; i < x1; i += s) ut.push({ a: 'x', i, j }); }
+      else { const i = a0; for (let j = y0; j < y1; j += s) ut.push({ a: 'y', i, j }); }
     } else {
-      for (let i = x0; i < x1; i++) { ut.push({ a: 'x', i, j: y0 }); ut.push({ a: 'x', i, j: y1 }); }
-      for (let j = y0; j < y1; j++) { ut.push({ a: 'y', i: x0, j }); ut.push({ a: 'y', i: x1, j }); }
+      for (let i = x0; i < x1; i += s) { ut.push({ a: 'x', i, j: y0 }); ut.push({ a: 'x', i, j: y1 }); }
+      for (let j = y0; j < y1; j += s) { ut.push({ a: 'y', i: x0, j }); ut.push({ a: 'y', i: x1, j }); }
     }
     return ut.slice(0, MAKS);
   }
-  const nøkkel = d => (KANT(d) ? `k:${d.a}:${d.i}:${d.j}:${d.n}` : `c:${d.i}:${d.j}:${d.n}`);
-  const indeks = deler => { const m = new Map(); for (const d of deler) m.set(nøkkel(d), d); return m; };
+  // Nøklene for hver bit (1,2 m) en del dekker: c rute (gulv/tak), k kant (vegg/forsvar), b bjelke, p hjørne (søyle), t trapperute
+  function biter(d) {
+    d = nrm(d); const K = kat(d); if (!K) return [];
+    if (K === 'gulv' || K === 'tak') return ruter(d).map(([i, j]) => `c:${i}:${j}:${d.n}`);
+    if (K === 'trapp') return ruter(d).map(([i, j]) => `t:${i}:${j}:${d.n}`);
+    if (K === 'søyle') return [`p:${d.i}:${d.j}:${d.n}`];
+    return kanter(d).map(k => `${K === 'bjelke' ? 'b' : 'k'}:${k.a}:${k.i}:${k.j}:${d.n}`);
+  }
+  const nøkkel = d => biter(d)[0];
+  const indeks = deler => { const m = new Map(); for (const d0 of deler) { const d = nrm(d0); for (const k of biter(d)) m.set(k, d); } return m; };
   const kanterRundt = (i, j) => [{ a: 'x', i, j }, { a: 'x', i, j: j + 1 }, { a: 'y', i, j }, { a: 'y', i: i + 1, j }];
   const ruterVed = d => (d.a === 'x' ? [[d.i, d.j - 1], [d.i, d.j]] : [[d.i - 1, d.j], [d.i, d.j]]);
-  const vegg = (M, k, n) => { const d = M.get(`k:${k.a}:${k.i}:${k.j}:${n}`); return d && DELER[d.type].kat === 'vegg' ? d : null; };
+  const vegg = (M, k, n) => { const d = M.get(`k:${k.a}:${k.i}:${k.j}:${n}`); return d && kat(d) === 'vegg' ? d : null; };
+  const bjelke = (M, k, n) => M.get(`b:${k.a}:${k.i}:${k.j}:${n}`) || null;
+  const søyle = (M, i, j, n) => M.get(`p:${i}:${j}:${n}`) || null;
   const dekke = (M, i, j, n) => M.get(`c:${i}:${j}:${n}`) || null;
+  const gulv = (M, i, j, n) => { const q = dekke(M, i, j, n); return q && kat(q) === 'gulv' ? q : null; };
+  const trappHer = (M, i, j, n) => M.get(`t:${i}:${j}:${n}`) || null;
+  // kantene som møtes i et hjørne
+  const kanterVed = (i, j) => [{ a: 'x', i, j }, { a: 'x', i: i - 1, j }, { a: 'y', i, j }, { a: 'y', i, j: j - 1 }];
+  // Bærer noe dekket i ruta (i, j) på høyde n? (en vegg, bjelke under en kant, eller en søyle i et hjørne – i etasjen under)
+  function bæresUnder(M, i, j, n) {
+    if (kanterRundt(i, j).some(k => vegg(M, k, n - 1) || bjelke(M, k, n - 1))) return true;
+    return [[i, j], [i + 1, j], [i, j + 1], [i + 1, j + 1]].some(([a, b]) => søyle(M, a, b, n - 1));
+  }
   // Står delen trygt? (se øverst)
   function støttet(M, d) {
-    const D = DELER[d.type];
-    if (KANT(d)) { if (d.n === 0) return true; if (D.kat === 'forsvar') return false;
-      return !!vegg(M, d, d.n - 1) || ruterVed(d).some(([i, j]) => dekke(M, i, j, d.n)); }
-    if (d.n === 0) return D.kat === 'gulv';
-    // dekket: en vegg under på en av kantene, eller et sammenhengende nabodekke i samme høyde som har det
-    const sett = new Set(), kø = [[d.i, d.j]];
-    while (kø.length && sett.size < 400) { const [i, j] = kø.pop(), s = i + ',' + j; if (sett.has(s)) continue; sett.add(s);
-      if (kanterRundt(i, j).some(k => vegg(M, k, d.n - 1))) return true;
-      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (dekke(M, i + di, j + dj, d.n)) kø.push([i + di, j + dj]); }
+    const K = kat(d);
+    if (K === 'forsvar') return d.n === 0;
+    if (K === 'vegg') { if (d.n === 0) return true; return kanter(d).every(k => !!vegg(M, k, d.n - 1) || ruterVed(k).some(([i, j]) => dekke(M, i, j, d.n))); }
+    if (K === 'søyle') { if (d.n === 0) return true; if (søyle(M, d.i, d.j, d.n - 1)) return true; return [[d.i, d.j], [d.i - 1, d.j], [d.i, d.j - 1], [d.i - 1, d.j - 1]].some(([i, j]) => gulv(M, i, j, d.n)); }
+    if (K === 'trapp') return ruter(d).every(([i, j]) => gulv(M, i, j, d.n));
+    if (K === 'bjelke') {
+      // bjelkestykkene på samme linje regnes som én bjelke: begge endene av den må hvile på en vegg eller søyle
+      const hviler = (i, j) => !!søyle(M, i, j, d.n) || kanterVed(i, j).some(k => vegg(M, k, d.n));
+      const [di, dj] = d.a === 'x' ? [1, 0] : [0, 1]; let a = d.i, b = d.j, steg = 0;
+      while (steg++ < 400 && bjelke(M, { a: d.a, i: a - di, j: b - dj }, d.n)) { a -= di; b -= dj; }
+      let c = d.i, e = d.j; while (steg++ < 800 && bjelke(M, { a: d.a, i: c, j: e }, d.n)) { c += di; e += dj; }
+      if (!bjelke(M, { a: d.a, i: d.i, j: d.j }, d.n)) { const s = d.s || størrelse(d.type); c = d.i + di * s; e = d.j + dj * s; }
+      return hviler(a, b) && hviler(c, e); }
+    if (d.n === 0) return K === 'gulv';
+    // dekket: noe som bærer under en av rutene, eller et sammenhengende nabodekke i samme høyde som har det
+    const sett = new Set(), kø = ruter(d).slice();
+    while (kø.length && sett.size < 3000) { const [i, j] = kø.pop(), s = i + ',' + j; if (sett.has(s)) continue; sett.add(s);
+      if (bæresUnder(M, i, j, d.n)) return true;
+      for (const [di, dj] of DIR) if (dekke(M, i + di, j + dj, d.n)) kø.push([i + di, j + dj]); }
     return false;
   }
+  // Hvilke deler står på plassene til d (alle bitene)? En del med samme plass og størrelse kan byttes ut; en større (gammel) del ikke.
+  function påPlassen(M, d) { const S = new Set(); for (const k of biter(d)) { const q = M.get(k); if (q) S.add(q); } return [...S]; }
+  const sammePlass = (a, b) => a.i === b.i && a.j === b.j && (a.a || null) === (b.a || null) && (a.s || størrelse(a.type)) === (b.s || størrelse(b.type));
   // Hvor en ny del havner (etasjen velges selv når nivå er 'auto'): { d, bytt (id som byttes ut), feil }
   function plassering(deler, type, slot, o = {}) {
-    const D = DELER[type]; if (!D) return { feil: 'Ukjent del.' };
-    // ferdige hus: hver del på sin egen plass (ingen etasje over, ingen bytting)
-    if (o.fast) { const d = { type, i: slot.i, j: slot.j, a: KANT({ type }) ? slot.a : null, n: D.kat === 'tak' ? 1 : 0, ...(o.r !== undefined ? { r: o.r } : {}) }, M0 = o.M || indeks(deler);
-      if (M0.get(nøkkel(d))) return { feil: 'Plassen er opptatt.' }; return støttet(M0, d) ? { d, bytt: null } : { feil: 'Står ikke støtt.' }; }
-    const M = o.M || indeks(deler), auto = o.nivå === undefined || o.nivå === 'auto', ny = n => ({ type, i: slot.i, j: slot.j, a: KANT({ type }) ? slot.a : null, n, ...(D.kat === 'tak' && o.r !== undefined && o.r !== null ? { r: o.r } : {}) });
-    const ok = (d, bytt) => (støttet(M, d) ? { d, bytt: bytt || null } : { feil: D.kat === 'tak' ? 'Taket må ligge på vegger (eller inntil et annet tak).' : D.kat === 'gulv' ? 'Gulvet i 2. etasje må ligge på vegger.' : 'Veggen i 2. etasje må stå på en vegg eller et gulv.' });
-    if (D.kat === 'forsvar') { const d = ny(0), a = M.get(nøkkel(d));
-      if (!a) return ok(d); if (a.type === type) return { feil: 'Her står det allerede ' + D.navn.toLowerCase() + '.' };
-      return DELER[a.type].kat === 'forsvar' ? ok(d, a.id) : { feil: 'Her står det en vegg.' }; }
-    if (D.kat === 'gulv') {
-      const nivåer = type === 'bs_fundament' ? [0] : auto ? [0, 1] : [o.nivå];
-      for (const n of nivåer) { const d = ny(n), a = M.get(nøkkel(d)); if (!a) { const r = ok(d); if (!r.feil || !auto) return r; continue; }
-        if (!auto && a.type !== type && DELER[a.type].kat === 'gulv') return ok(d, a.id); }
-      return { feil: type === 'bs_fundament' ? 'Her er det allerede gulv.' : 'Her er det allerede gulv (også i 2. etasje).' };
+    const D = DELER[type]; if (!D) return { feil: 'Ukjent del.' }; if (!o.M) deler = norm(deler); slot = D.gammel && !slot.u ? { ...slot, i: slot.i * 2, j: slot.j * 2 } : slot;
+    const M = o.M || indeks(deler), auto = o.nivå === undefined || o.nivå === 'auto' || o.nivå === null, K = D.kat;
+    const ny = n => ({ type, i: slot.i, j: slot.j, a: ['vegg', 'forsvar', 'bjelke'].includes(K) ? slot.a : null, n, s: D.s, u: true,
+      ...(K === 'tak' && (o.r ?? slot.r) !== undefined && (o.r ?? slot.r) !== null ? { r: o.r ?? slot.r } : {}), ...(K === 'trapp' ? { r: (slot.r ?? o.r ?? 0) & 3 } : {}) });
+    const stFeil = K === 'tak' ? 'Taket må ligge på vegger, søyler eller bjelker (eller inntil et annet tak).' : K === 'gulv' ? 'Gulvet i etasjene over må ligge på vegger, søyler eller bjelker.'
+      : K === 'søyle' ? 'Søylen må stå på bakken, et gulv eller en søyle under.' : K === 'bjelke' ? 'Bjelken må hvile på en vegg eller søyle i begge ender.' : K === 'trapp' ? 'Trappa må stå på gulv.'
+      : 'Veggen må stå på en vegg eller et gulv.';
+    const sjekkTrapp = d => { if (K === 'gulv' || K === 'tak') { if (ruter(d).some(([i, j]) => trappHer(M, i, j, d.n - 1))) return 'Her går trappa opp – det må være åpent over den.'; }
+      if (K === 'trapp') { if (ruter(d).some(([i, j]) => dekke(M, i, j, d.n + 1))) return 'Over trappa må det være åpent (ta bort gulvet eller taket over).'; if (d.n + 1 >= ETASJER) return `Høyst ${ETASJER} etasjer.`; }
+      return null; };
+    const ok = (d, bytt) => { const t = sjekkTrapp(d); if (t) return { feil: t }; return o.utsatt || støttet(M, d) ? { d, bytt: bytt || null } : { feil: stFeil }; };
+    // på plassen: ledig (ok), samme slags med samme plass (bytt), eller noe annet (feil)
+    const ledig = (d, kanBytte) => { const a = påPlassen(M, d); if (!a.length) return ok(d);
+      if (a.length === 1 && sammePlass(a[0], d) && kanBytte(a[0])) return a[0].type === type ? { feil: 'Her står det allerede ' + D.navn.toLowerCase() + '.' } : ok(d, a[0].id);
+      if (a.some(q => (q.s || størrelse(q.type)) > D.s)) return { feil: `Her står det en større del (${String((a[0].s || størrelse(a[0].type)) * U).replace('.', ',')} m) – riv den først.` };
+      return { feil: 'Plassen er opptatt.' }; };
+    // ferdige hus (maler): hver del på sin egen plass og etasje
+    if (o.fast) { const d = ny(slot.n || 0); return ledig(d, () => false); }
+    if (K === 'forsvar') return ledig(ny(0), q => kat(q) === 'forsvar');
+    if (K === 'gulv') {
+      const nivåer = D.grunn === 'bs_fundament' ? [0] : auto ? [...Array(ETASJER).keys()] : [o.nivå];
+      let første = null;
+      for (const n of nivåer) { const d = ny(n), r = ledig(d, q => !auto && kat(q) === 'gulv'); if (!r.feil || !auto) return r; if (!første && !/allerede|opptatt/.test(r.feil)) første = r; }
+      return første || { feil: D.grunn === 'bs_fundament' ? 'Her er det allerede gulv.' : 'Her er det allerede gulv i alle etasjene.' };
     }
-    if (D.kat === 'tak') {
-      let n = null;
+    if (K === 'tak') {
+      let n = null; const R = ruter({ ...ny(0) });
       if (!auto) n = o.nivå + 1;
-      else { const v = kanterRundt(slot.i, slot.j).flatMap(k => [0, 1].filter(e => vegg(M, k, e))); if (v.length) n = Math.max(...v) + 1;
-        else for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) for (let e = ETASJER; e >= 1 && n === null; e--) { const q = dekke(M, slot.i + di, slot.j + dj, e); if (q && DELER[q.type].kat === 'tak') n = e; } }
-      if (n === null) return { feil: 'Taket må ligge på vegger (eller inntil et annet tak).' };
-      if (n > ETASJER) return { feil: 'Høyst to etasjer.' };
-      const d = ny(n), a = M.get(nøkkel(d)); if (!a) return ok(d);
-      if (a.type === type) return { feil: 'Her er det allerede tak.' };
-      return ok(d, a.id);
+      else { const kant = new Set(), inne = new Set(R.map(c => c.join(',')));
+        for (const [i, j] of R) for (const [k, [di, dj]] of kanterRundt(i, j).map((k, q) => [k, [[0, -1], [0, 1], [-1, 0], [1, 0]][q]])) if (!inne.has((i + di) + ',' + (j + dj))) kant.add(k);
+        const v = [...kant].flatMap(k => [...Array(ETASJER).keys()].filter(e => vegg(M, k, e) || bjelke(M, k, e)));
+        for (const [i, j] of R) for (const [a, b] of [[i, j], [i + 1, j], [i, j + 1], [i + 1, j + 1]]) for (let e = 0; e < ETASJER; e++) if (søyle(M, a, b, e)) v.push(e);
+        if (v.length) n = Math.max(...v) + 1;
+        else for (const [i, j] of R) for (const [di, dj] of DIR) for (let e = ETASJER; e >= 1 && n === null; e--) { const q = dekke(M, i + di, j + dj, e); if (q && kat(q) === 'tak') n = e; } }
+      if (n === null) return { feil: 'Taket må ligge på vegger, søyler eller bjelker (eller inntil et annet tak).' };
+      if (n > ETASJER) return { feil: `Høyst ${ETASJER} etasjer.` };
+      return ledig(ny(n), q => kat(q) === 'tak');
+    }
+    if (K === 'søyle' || K === 'bjelke' || K === 'trapp') {
+      if (!auto) return ledig(ny(o.nivå), q => kat(q) === K);
+      let første = null;
+      for (let n = 0; n < ETASJER; n++) { const r = ledig(ny(n), () => false); if (!r.feil) return r; if (!første && !/allerede|opptatt/.test(r.feil)) første = r; }
+      return første || { feil: `Høyst ${ETASJER} etasjer.` };
     }
     // vegger: dør/port erstatter veggen i 1. etasje, vindu den øverste hele veggen; ellers neste ledige etasje
-    const her = [0, 1].map(e => M.get(nøkkel(ny(e))) || null);
-    if (her[0] && DELER[her[0].type].kat === 'forsvar') return { feil: 'Her står det ' + DELER[her[0].type].navn.toLowerCase() + '.' };
-    if (!auto) { const d = ny(o.nivå), a = her[o.nivå]; if (!a) return ok(d); if (a.type === type) return { feil: 'Her står det allerede en slik vegg.' }; return ok(d, a.id); }
-    if ((D.v === 'dør' || D.v === 'port') && her[0] && DELER[her[0].type].v !== D.v) return ok(ny(0), her[0].id);
-    if (D.v === 'vindu') for (const e of [1, 0]) if (her[e] && DELER[her[e].type].v === 'hel') return ok(ny(e), her[e].id);
-    for (let e = 0; e < ETASJER; e++) if (!her[e]) return ok(ny(e));
-    return { feil: 'Høyst to etasjer.' };
+    const her = [...Array(ETASJER).keys()].map(e => påPlassen(M, ny(e)));
+    if (her[0].some(q => kat(q) === 'forsvar')) return { feil: 'Her står det ' + DELER[her[0].find(q => kat(q) === 'forsvar').type].navn.toLowerCase() + '.' };
+    const veggBytt = q => kat(q) === 'vegg';
+    if (!auto) return ledig(ny(o.nivå), veggBytt);
+    const en = e => (her[e].length === 1 ? her[e][0] : null);
+    if ((D.v === 'dør' || D.v === 'port') && her[0].some(q => (q.s || størrelse(q.type)) > D.s)) return { feil: `Her står det en større vegg (${String((her[0][0].s || størrelse(her[0][0].type)) * U).replace('.', ',')} m) – riv den først, eller sett døra i en ny vegg.` };
+    if ((D.v === 'dør' || D.v === 'port') && en(0) && sammePlass(en(0), ny(0)) && DELER[en(0).type].v !== D.v) return ok(ny(0), en(0).id);
+    if (D.v === 'vindu') for (let e = ETASJER - 1; e >= 0; e--) if (en(e) && sammePlass(en(e), ny(e)) && DELER[en(e).type].v === 'hel') return ok(ny(e), en(e).id);
+    for (let e = 0; e < ETASJER; e++) if (!her[e].length) return ok(ny(e));
+    if (her.some(h => h.some(q => (q.s || størrelse(q.type)) > D.s))) return { feil: 'Her står det en større del (2,4 m) – riv den først.' };
+    return { feil: `Høyst ${ETASJER} etasjer.` };
   }
-  // Mange plasser på én gang: hver ny del regnes med for de neste (en ring med vegger og så tak). Gir [{ slot, d, bytt, feil }]
+  // Mange plasser på én gang: hver ny del regnes med for de neste (en ring med vegger og så tak). Gir [{ slot, d, bytt, feil }].
+  // Til slutt: spennet (Bygning.ras) – raser et nytt dekke eller tak, får hele raden feilen («Spennet er 8,4 m …»).
   function forslag(deler, type, slots, o = {}) {
-    const alle = deler.slice(), M = indeks(alle), ut = [];
-    for (const s of slots) { const r = plassering(alle, type, s, { ...o, M });
-      if (!r.feil) { const d = { ...r.d, id: 'ny' + ut.length }; if (r.bytt) { const gml = alle.find(q => q.id === r.bytt); if (gml) M.delete(nøkkel(gml)); } alle.push(d); M.set(nøkkel(d), d); }
+    const alle = norm(deler), M = indeks(alle), ut = [], utsatt = kat({ type }) === 'bjelke', lagt = [];
+    for (const s of slots) { const r = plassering(alle, type, s, { ...o, M, utsatt });
+      if (!r.feil) { const d = { ...r.d, id: 'ny' + ut.length }; if (r.bytt) { const gml = alle.find(q => q.id === r.bytt); if (gml) { for (const k of biter(gml)) M.delete(k); alle.splice(alle.indexOf(gml), 1); } } alle.push(d); for (const k of biter(d)) M.set(k, d); lagt.push([ut.length, d]); }
       ut.push({ slot: s, ...r }); }
-    return ut;
-  }
-  // Ferdige hus (maler): gulv, vegger med dør og vinduer og tak, w × h ruter med døra midt på forsiden (rot: kvart omdreininger)
-  const HUS = {
-    hytte: { navn: 'Hytte 2 × 2', w: 2, h: 2, gulv: 'bs_tregulv', stoff: 'tre', tak: 'bs_tak_sal' },
-    brakke: { navn: 'Brakke 3 × 4', w: 4, h: 3, gulv: 'bs_fundament', stoff: 'tre', tak: 'bs_tak_sal' },
-    bunker: { navn: 'Betongbu 3 × 3', w: 3, h: 3, gulv: 'bs_fundament', stoff: 'betong', tak: 'bs_tak_flatt' },
-  };
-  function husDeler(mal, i0, j0, rotK = 0) {
-    const M = HUS[mal]; if (!M) return []; const sv = rotK % 2 === 1, w = sv ? M.h : M.w, h = sv ? M.w : M.h, ut = [], vt = v => `bs_vegg_${M.stoff}${v === 'hel' ? '' : '_' + v}`;
-    for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) ut.push({ type: M.gulv, i: i0 + i, j: j0 + j, a: null });
-    // døra på siden rot peker mot (0 = sør/nede, 1 = øst, 2 = nord, 3 = vest), vinduer midt på de andre sidene
-    const sider = [[...Array(w)].map((_, i) => ({ a: 'x', i: i0 + i, j: j0 })), [...Array(h)].map((_, j) => ({ a: 'y', i: i0 + w, j: j0 + j })),
-      [...Array(w)].map((_, i) => ({ a: 'x', i: i0 + i, j: j0 + h })), [...Array(h)].map((_, j) => ({ a: 'y', i: i0, j: j0 + j }))];
-    sider.forEach((s, k) => s.forEach((q, m) => { const midtpå = m === Math.floor((s.length - 1) / 2), v = k === rotK % 4 ? (midtpå ? 'dør' : 'hel') : (midtpå || (s.length > 3 && m === s.length - 1)) ? 'vindu' : 'hel'; ut.push({ type: vt(v), ...q }); }));
-    for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) ut.push({ type: M.tak, i: i0 + i, j: j0 + j, a: null, ...(M.tak === 'bs_tak_sal' ? { r: w >= h ? 0 : 1 } : {}) });
-    return ut;
-  }
-  function husForslag(deler, mal, i0, j0, rotK = 0) {
-    const alle = deler.slice(), M = indeks(alle), ut = [];
-    for (const q of husDeler(mal, i0, j0, rotK)) { const r = plassering(alle, q.type, q, { M, r: q.r, fast: true });
-      if (!r.feil) { const d = { ...r.d, id: 'ny' + ut.length }; alle.push(d); M.set(nøkkel(d), d); }
-      ut.push({ slot: q, type: q.type, ...r }); }
+    // bjelkene sjekkes når hele raden ligger (endene av raden må hvile på noe)
+    if (utsatt) for (const [k, d] of lagt) if (!støttet(M, d)) ut[k] = { slot: ut[k].slot, feil: 'Bjelken må hvile på en vegg eller søyle i begge ender.' };
+    if (o.spenn !== false && (kat({ type }) === 'gulv' || kat({ type }) === 'tak')) { const sp = spenn(alle, new Set(ut.filter(q => !q.feil).map((q, k) => 'ny' + ut.indexOf(q))));
+      if (sp) for (const q of ut) if (!q.feil) q.feil = sp.feil; }
     return ut;
   }
 
+  // ---------- spennet (samme regel som husene i kartet: Bygning.ras) ----------
+  let BYG = null;
+  const bygning = () => BYG || (BYG = rot.Bygning || (typeof require === 'function' ? (() => { try { return require('./bygning.js'); } catch (e) { return null; } })() : null));
+  // alle = delene slik de blir (de nye med id i nye). Gir null (holder) eller { feil, spenn, stoff, maks, id }.
+  function spenn(alle, nye) {
+    const B = bygning(); if (!B || !B.fraByggesett || !B.ras || !nye || !nye.size) return null;
+    const m = B.fraByggesett(alle.map(d => ({ ...d, ferdig: true })), { ox: 0, oy: 0 }); if (!m) return null;
+    const R = B.ras(m); let verst = null;
+    for (const r of R) { if (r.del !== 'dekke' && r.del !== 'tak') continue; const et = r.del === 'dekke' ? m.etasjer.find(e => e.n === r.e) : null, f = r.del === 'dekke' ? et && et.dekke.felt[r.id] : m.tak.felt[r.id];
+      if (!f || !nye.has(f.del)) continue; if (!verst || (f.bredde || 0) > (verst.bredde || 0)) verst = f; }
+    if (!verst) return null;
+    const st = STOFF[verst.stoff] || STOFF.tre, b = Math.round((verst.bredde || 0) * 10) / 10, mål = String(b).replace('.', ',');
+    return { feil: `Spennet er ${mål} m – for langt for ${st.navn.toLowerCase()} (høyst ${st.spenn} m). Sett inn en søylerad eller en bjelke.`, spenn: b, stoff: verst.stoff, maks: st.spenn, id: verst.del };
+  }
+
+  // ---------- ferdige hus (maler) ----------
+  // En mal er deler i ruter fra (0, 0): { navn, w, h, deler: [{ type, i, j, a, n, r }] } – de innebygde lages av lagHus, egne av tilMal.
+  function lagHus(o) {
+    const s = o.s || 1, w = o.w, h = o.h, ut = [], T = (g, ss = s) => (DELER[typeFor(g, ss)] ? typeFor(g, ss) : typeFor(g, 1)), vt = v => T(`bs_vegg_${o.stoff}${v === 'hel' ? '' : '_' + v}`, v === 'port' ? (s === 1 ? 2 : s) : s);
+    for (let i = 0; i < w; i += s) for (let j = 0; j < h; j += s) ut.push({ type: T(o.gulv), i, j, a: null, n: 0 });
+    // sidene: 0 = sør (døra), 1 = øst, 2 = nord, 3 = vest; døra/porten midt på sør, vinduer midt på de andre sidene
+    for (let k = 0; k < 4; k++) { const L = k % 2 === 0 ? w : h, inn = o.inngang || 'dør', bred = k === 0 && inn === 'port' ? (s === 1 ? 2 : s) : s;
+      const midtpå = Math.floor((L - bred) / 2 / s) * s; let p = 0;
+      while (p < L) { const er = k === 0 && p === midtpå, v = er ? inn : (k > 0 && (p === midtpå || (L / s > 4 && p === L - s))) ? 'vindu' : 'hel', l = er ? bred : s;
+        const q = k === 0 ? { a: 'x', i: p, j: 0 } : k === 1 ? { a: 'y', i: w, j: p } : k === 2 ? { a: 'x', i: p, j: h } : { a: 'y', i: 0, j: p };
+        ut.push({ type: vt(v), ...q, n: 0 }); p += l; } }
+    for (const [i, j] of o.søyler || []) ut.push({ type: T(o.søyle || 'bs_søyle_stål', 1), i, j, a: null, n: 0 });
+    for (let i = 0; i < w; i += s) for (let j = 0; j < h; j += s) ut.push({ type: T(o.tak), i, j, a: null, n: 1, ...(o.tak === 'bs_tak_sal' ? { r: w >= h ? 0 : 1 } : {}) });
+    return { navn: o.navn, w, h, deler: ut, s };
+  }
+  // Hallen: 19,2 × 28,8 m i stål/blikk på hallrutenettet (4,8 m), port midt på forsiden og en søylerad midt i (uten den raser taket)
+  const HUS = {
+    hytte: lagHus({ navn: 'Hytte 4,8 × 4,8', w: 4, h: 4, gulv: 'bs_tregulv', stoff: 'tre', tak: 'bs_tak_sal' }),
+    brakke: lagHus({ navn: 'Brakke 6 × 9,6', w: 8, h: 5, gulv: 'bs_fundament', stoff: 'tre', tak: 'bs_tak_sal' }),
+    bunker: lagHus({ navn: 'Betongbu 7,2 × 7,2', w: 6, h: 6, gulv: 'bs_fundament', stoff: 'betong', tak: 'bs_tak_betong' }),
+    hall: lagHus({ navn: 'Hall 19,2 × 28,8', w: 16, h: 24, s: 4, gulv: 'bs_fundament', stoff: 'blikk', tak: 'bs_tak_blikk', inngang: 'port', søyler: [[8, 4], [8, 8], [8, 12], [8, 16], [8, 20]] }),
+  };
+  // dreier et punkt (x, y) i en w × h-mal k kvart omdreininger mot klokka (malen blir h × w)
+  function drei(x, y, w, h, k) { for (let q = 0; q < (k & 3); q++) { [x, y] = [h - y, x]; [w, h] = [h, w]; } return [x, y]; }
+  // en del i malen dreid: rutene og kantene dreies som rektangler/linjer, trappa og mønet får ny retning
+  function dreiDel(d, w, h, k) {
+    k &= 3; if (!k) return { ...d }; const K = kat(d), s = størrelse(d.type);
+    if (K === 'søyle') { const [x, y] = drei(d.i, d.j, w, h, k); return { ...d, i: x, j: y }; }
+    if (K === 'trapp') { const [x, y] = drei(d.i + .5, d.j + .5, w, h, k); return { ...d, i: Math.round(x - .5), j: Math.round(y - .5), r: ((d.r || 0) + k) & 3 }; }
+    if (KANT(d)) { const [x0, y0] = drei(d.i, d.j, w, h, k), [x1, y1] = d.a === 'x' ? drei(d.i + s, d.j, w, h, k) : drei(d.i, d.j + s, w, h, k);
+      return { ...d, a: y0 === y1 ? 'x' : 'y', i: Math.min(x0, x1), j: Math.min(y0, y1) }; }
+    const [x0, y0] = drei(d.i, d.j, w, h, k), [x1, y1] = drei(d.i + s, d.j + s, w, h, k);
+    return { ...d, i: Math.min(x0, x1), j: Math.min(y0, y1), ...(d.r === 0 || d.r === 1 ? { r: k % 2 ? 1 - d.r : d.r } : {}) };
+  }
+  // malen (navnet i HUS, eller et malobjekt) lagt ut med hjørnet i (i0, j0) og dreid rotK kvart omdreininger
+  function husDeler(mal, i0, j0, rotK = 0) {
+    const M = typeof mal === 'string' ? HUS[mal] : mal; if (!M || !M.deler) return [];
+    return M.deler.filter(d => DELER[d.type]).map(d => { const q = dreiDel(nrm(DELER[d.type].gammel ? { ...d, u: true } : d), M.w, M.h, rotK); return { ...q, i: q.i + i0, j: q.j + j0, u: true }; });
+  }
+  function husForslag(deler, mal, i0, j0, rotK = 0) {
+    const alle = norm(deler), M = indeks(alle), ut = [];
+    for (const q of husDeler(mal, i0, j0, rotK)) { const r = plassering(alle, q.type, { ...q, u: true }, { M, r: q.r, fast: true });
+      if (!r.feil) { const d = { ...r.d, id: 'ny' + ut.length }; alle.push(d); for (const k of biter(d)) M.set(k, d); }
+      ut.push({ slot: q, type: q.type, ...r }); }
+    const sp = spenn(alle, new Set(ut.filter(q => !q.feil).map(q => 'ny' + ut.indexOf(q)))); if (sp) for (const q of ut) if (!q.feil && (kat(q.d) === 'tak' || kat(q.d) === 'gulv')) q.feil = sp.feil;
+    return ut;
+  }
+  // Eget bygg som mal: delene (fra fraLeir) med hjørnet flyttet til (0, 0). Gamle deler (2,4 m) blir med som de er.
+  function tilMal(deler, navn = 'Eget bygg') {
+    const L = norm(deler).filter(d => DELER[d.type] && kat(d) !== 'forsvar'); if (!L.length) return null;
+    const pk = L.flatMap(d => (KANT(d) ? kanter(d).flatMap(k => [[k.i, k.j]]) : kat(d) === 'søyle' ? [[d.i, d.j]] : ruter(d)));
+    const i0 = Math.min(...pk.map(p => p[0])), j0 = Math.min(...pk.map(p => p[1]));
+    const ut = L.map(d => ({ type: d.type, i: d.i - i0, j: d.j - j0, a: d.a || null, n: d.n || 0, ...(DELER[d.type].gammel ? { u: true } : {}), ...(d.r !== undefined && d.r !== null ? { r: d.r } : {}) }));
+    const w = Math.max(...ut.flatMap(d => (KANT(d) ? [d.i + (d.a === 'x' ? størrelse(d.type) : 0)] : kat(d) === 'søyle' ? [d.i] : ruter(d).map(c => c[0] + 1)))), h = Math.max(...ut.flatMap(d => (KANT(d) ? [d.j + (d.a === 'y' ? størrelse(d.type) : 0)] : kat(d) === 'søyle' ? [d.j] : ruter(d).map(c => c[1] + 1))));
+    return { navn, w, h, deler: ut, egen: true };
+  }
+  // en lagret mal er gyldig når alle typene finnes og tallene er hele
+  const malGyldig = m => !!m && Array.isArray(m.deler) && m.deler.length > 0 && m.deler.length <= 3000 && m.deler.every(d => DELER[d.type] && Number.isInteger(d.i) && Number.isInteger(d.j) && Number.isInteger(d.n || 0));
+
   // ---------- lukkede rom ----------
   // Et rom: sammenhengende gulv i en etasje, vegger på alle kantene ut, og tak (eller gulvet over) over hver rute. Vegger inne deler rommet.
-  // Bare ferdige deler teller (d.ferdig !== false). brukbart: dør i 1. etasje (2. etasje: trapp antas inne). senger: 1 per 8 m².
-  // ROMTYPER (18. nov, Claudes forslag): et lukket rom med dør kan brukes til noe annet enn å sove i. typer = { nøkkel: bruk } (L.romBruk).
-  //  soverom: 1 seng per 8 m² (som før) · kjøkken: teller som et kjøkken for folket (minst 16 m²) · lager: + 0,6 m³ lagerplass per m²
-  //  verksted: teller som et verksted for folk på «verksted» (minst 16 m²)
+  // Hullet over en trapp hører til rommet over (trappa går opp dit). Bare ferdige deler teller (d.ferdig !== false).
+  // brukbart: dør i 1. etasje; i etasjene over en trapp opp (rom av bare gamle deler: trapp antas inne, som før). senger: 1 per 8 m².
+  // ROMBRUK (18. nov, Claudes forslag): bruken spilleren velger. typer = { nøkkel: bruk } (L.romBruk).
   const ROMBRUK = { soverom: { navn: 'Soverom', tekst: 'senger' }, kjøkken: { navn: 'Kjøkken', tekst: 'varm mat når noen står på «kjøkken»', min: 16 }, lager: { navn: 'Lager', tekst: 'mer lagerplass', m3: .6 },
     verksted: { navn: 'Verksted', tekst: 'for folk på «verksted»', min: 16 } };
-  // det rommene gir til sammen: { senger, kjøkken, verksted, lager (m³) }
+  // ROMTYPER (B4-rammeverket): hva rommet ER ut fra det som står i det. ting = { seng, maskin, … } (antall). Første som passer vinner;
+  // B5 legger maskinene inn (fabrikk) med ROMTYPER.unshift(...). Uten noe som passer: bruken (soverom, lager …).
+  const ROMTYPER = [
+    { id: 'sovesal', navn: 'Sovesal', passer: (r, t) => (t.seng || 0) >= 4 },
+    { id: 'soverom', navn: 'Soverom', passer: (r, t) => (t.seng || 0) >= 1 },
+  ];
+  function romType(r, ting) { const t = ting || { seng: r.senger || 0 }; for (const T of ROMTYPER) if (T.passer(r, t)) return { id: T.id, navn: T.navn };
+    const B = ROMBRUK[r.bruk]; return B ? { id: r.bruk, navn: B.navn } : { id: 'rom', navn: 'Rom' }; }
   function romSum(R) { const u = { senger: 0, kjøkken: 0, verksted: 0, lager: 0 }; for (const r of R) { u.senger += r.senger; if (r.bruk === 'kjøkken' && r.virker) u.kjøkken++; if (r.bruk === 'verksted' && r.virker) u.verksted++; if (r.bruk === 'lager') u.lager += r.lager; } return u; }
   function rom(deler, typer) {
-    const D0 = deler.filter(d => d.ferdig !== false), M = indeks(D0), ut = [], sett = new Set();
-    for (const g of D0) {
-      if (DELER[g.type].kat !== 'gulv') continue; const e = g.n, s0 = `${g.i},${g.j},${e}`; if (sett.has(s0)) continue;
-      const celler = [], kø = [[g.i, g.j]]; let lukket = true, dører = 0, vinduer = 0, porter = 0;
+    const D0 = norm(deler).filter(d => d.ferdig !== false && DELER[d.type]), M = indeks(D0), ut = [], sett = new Set();
+    // gulvruter per etasje (og hullene over trappene)
+    const start = [];
+    for (const g of D0) { if (kat(g) === 'gulv') for (const [i, j] of ruter(g)) start.push([i, j, g.n]); }
+    const golvAktig = (i, j, e) => !!gulv(M, i, j, e) || (e > 0 && !!trappHer(M, i, j, e - 1));
+    for (const [gi, gj, e] of start) {
+      const s0 = `${gi},${gj},${e}`; if (sett.has(s0)) continue;
+      const celler = [], kø = [[gi, gj]], dørId = new Set(), vinduId = new Set(), portId = new Set(); let lukket = true, trapp = false, nye = false;
       while (kø.length) { const [i, j] = kø.pop(), s = `${i},${j},${e}`; if (sett.has(s)) continue; sett.add(s); celler.push([i, j]);
-        const over = dekke(M, i, j, e + 1); if (!over) lukket = false;
+        const g = gulv(M, i, j, e); if (g && !DELER[g.type].gammel) nye = true; if (!g) trapp = true;
+        const over = dekke(M, i, j, e + 1) || trappHer(M, i, j, e); if (!over) lukket = false;
         for (const [k, [di, dj]] of kanterRundt(i, j).map((k, q) => [k, [[0, -1], [0, 1], [-1, 0], [1, 0]][q]])) {
-          const w = vegg(M, k, e), nabo = dekke(M, i + di, j + dj, e), naboGulv = nabo && DELER[nabo.type].kat === 'gulv';
-          if (w) { const v = DELER[w.type].v; if (v === 'dør') dører++; else if (v === 'vindu') vinduer++; else if (v === 'port') porter++; continue; }
-          if (naboGulv) kø.push([i + di, j + dj]); else lukket = false; } }
-      if (!lukket || celler.length > 200) continue;
-      const areal = celler.length * G * G, brukbart = dører + porter > 0 || e > 0;
+          const w = vegg(M, k, e);
+          if (w) { const v = DELER[w.type].v; if (v === 'dør') dørId.add(w.id); else if (v === 'vindu') vinduId.add(w.id); else if (v === 'port') portId.add(w.id); continue; }
+          if (golvAktig(i + di, j + dj, e)) kø.push([i + di, j + dj]); else lukket = false; }
+        if (celler.length > 3000) { lukket = false; break; } }
+      if (!lukket) continue;
+      const dører = dørId.size, vinduer = vinduId.size, porter = portId.size, areal = celler.length * U * U, brukbart = dører + porter > 0 || (e > 0 && (trapp || !nye));
       const cx = celler.reduce((s, c) => s + c[0] + .5, 0) / celler.length, cy = celler.reduce((s, c) => s + c[1] + .5, 0) / celler.length;
-      // nøkkelen er rommets minste rute (fast så lenge rommet står), bruken velges av spilleren (soverom når ikke annet er valgt)
-      const c0 = celler.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1])[0], nøkkel = `${e}:${c0[0]},${c0[1]}`, valgt = typer && ROMBRUK[typer[nøkkel]] ? typer[nøkkel] : 'soverom';
+      // nøkkelen er rommets minste rute i 2,4 m-mål (samme som før for gamle rom: L.romBruk virker), fast så lenge rommet står
+      // (en ny hall med bare port er et lager til du velger noe annet)
+      const c0 = celler.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1])[0], nøkkel = `${e}:${c0[0] / 2},${c0[1] / 2}`, valgt = typer && ROMBRUK[typer[nøkkel]] ? typer[nøkkel] : (nye && porter && !dører ? 'lager' : 'soverom');
       const bruk = brukbart ? valgt : 'soverom', B = ROMBRUK[bruk], virker = brukbart && (!B.min || areal >= B.min), sov = bruk === 'soverom';
-      ut.push({ etasje: e, celler, ruter: celler.length, areal: Math.round(areal * 10) / 10, ci: cx, cj: cy, dører, vinduer, porter, brukbart, nøkkel, bruk, virker,
+      const r = { etasje: e, celler, ruter: celler.length, areal: Math.round(areal * 10) / 10, ci: cx, cj: cy, dører, vinduer, porter, brukbart, nøkkel, bruk, virker, trapp,
         lager: bruk === 'lager' ? Math.round(areal * B.m3 * 10) / 10 : 0,
-        senger: brukbart && sov ? Math.floor(areal / SENG_M2) : 0, navn: !brukbart ? 'Rom uten dør' : !sov ? `Egenbygd ${B.navn.toLowerCase()}` + (virker ? '' : ' (for lite)') : areal >= 2 * SENG_M2 ? 'Egenbygd brakke' : 'Bod' });
+        senger: brukbart && sov ? Math.floor(areal / SENG_M2) : 0,
+        navn: !brukbart ? (e > 0 ? 'Rom uten trapp' : 'Rom uten dør') : !sov ? `Egenbygd ${B.navn.toLowerCase()}` + (virker ? '' : ' (for lite)') : areal >= 2 * SENG_M2 ? 'Egenbygd brakke' : 'Bod' };
+      r.type = romType(r); ut.push(r);
     }
     return ut;
   }
@@ -215,36 +434,41 @@
   // terreng under 1. etasje + 0,25 m. Delene på bakken får en sokkel ned til laveste terreng − 0,3 m. Gir Map id -> { z0, ned }.
   const SOKKEL = .25;
   function høyder(o, deler, h) {
-    const hus = deler.filter(d => DELER[d.type].kat !== 'forsvar'), M = indeks(hus), forelder = new Map();
+    deler = norm(deler); const hus = deler.filter(d => kat(d) !== 'forsvar'), harRute = new Set(), forelder = new Map();
     const finn = k => { while (forelder.get(k) !== k) { forelder.set(k, forelder.get(forelder.get(k))); k = forelder.get(k); } return k; };
     const node = k => { if (!forelder.has(k)) forelder.set(k, k); return k; }, slå = (a, b) => { const x = finn(node(a)), y = finn(node(b)); if (x !== y) forelder.set(x, y); };
-    const harRute = new Set(hus.filter(d => !KANT(d)).map(d => `${d.i},${d.j}`));
+    for (const d of hus) if (RUTE(d) || kat(d) === 'trapp') for (const [i, j] of ruter(d)) harRute.add(`${i},${j}`);
     for (const d of hus) {
-      // ruter med gulv/tak i samme høyde som ligger inntil hverandre hører til samme hus
-      if (!KANT(d)) { slå('d' + d.id, `R${d.i},${d.j}`); for (const [di, dj] of [[1, 0], [0, 1]]) if (M.has(`c:${d.i + di}:${d.j + dj}:${d.n}`)) slå(`R${d.i},${d.j}`, `R${d.i + di},${d.j + dj}`); continue; }
-      const [[ax, ay], [bx, by]] = d.a === 'x' ? [[d.i, d.j], [d.i + 1, d.j]] : [[d.i, d.j], [d.i, d.j + 1]];
-      slå('d' + d.id, `V${ax},${ay}`); slå('d' + d.id, `V${bx},${by}`);
-      for (const [i, j] of ruterVed(d)) if (harRute.has(`${i},${j}`)) slå('d' + d.id, `R${i},${j}`);
+      const id = 'd' + d.id;
+      if (RUTE(d) || kat(d) === 'trapp') { for (const [i, j] of ruter(d)) { slå(id, `R${i},${j}`); for (const [di, dj] of [[1, 0], [0, 1]]) if (harRute.has(`${i + di},${j + dj}`)) slå(`R${i},${j}`, `R${i + di},${j + dj}`); } continue; }
+      if (kat(d) === 'søyle') { slå(id, `V${d.i},${d.j}`); for (const [i, j] of [[d.i, d.j], [d.i - 1, d.j], [d.i, d.j - 1], [d.i - 1, d.j - 1]]) if (harRute.has(`${i},${j}`)) slå(id, `R${i},${j}`); continue; }
+      for (const k of kanter(d)) { const [[ax, ay], [bx, by]] = k.a === 'x' ? [[k.i, k.j], [k.i + 1, k.j]] : [[k.i, k.j], [k.i, k.j + 1]];
+        slå(id, `V${ax},${ay}`); slå(id, `V${bx},${by}`); for (const [i, j] of ruterVed(k)) if (harRute.has(`${i},${j}`)) slå(id, `R${i},${j}`); }
     }
-    const pkt = d => (KANT(d) ? kantEnder(o, d) : [[0, 0], [1, 0], [1, 1], [0, 1]].map(([a, b]) => [o.ox + (d.i + a) * G, o.oy + (d.j + b) * G]));
-    // grunnhøyden etter delene på bakken (bare når komponenten har noen)
+    const pkt = d => (KANT(d) ? kantEnder(o, d) : kat(d) === 'søyle' ? [[o.ox + d.i * U, o.oy + d.j * U]] : ruter(d).flatMap(([i, j]) => [[0, 0], [1, 0], [1, 1], [0, 1]].map(([a, b]) => [o.ox + (i + a) * U, o.oy + (j + b) * U])));
     const topp = new Map(), toppAlle = new Map(), ut = new Map(), maks = (m, k, z) => m.set(k, Math.max(m.has(k) ? m.get(k) : -1e9, z));
-    for (const d of hus) { const k = finn('d' + d.id); for (const [x, y] of pkt(d)) { const z = h(x, y); if (z === null || z !== z) continue; maks(toppAlle, k, z); if (d.n === 0) maks(topp, k, z); } }
+    for (const d of hus) { const k = finn(node('d' + d.id)); for (const [x, y] of pkt(d)) { const z = h(x, y); if (z === null || z !== z) continue; maks(toppAlle, k, z); if (d.n === 0) maks(topp, k, z); } }
     for (const d of hus) { const k = finn('d' + d.id), z0 = (topp.has(k) ? topp.get(k) : toppAlle.has(k) ? toppAlle.get(k) : 0) + SOKKEL;
       ut.set(d.id, { z0, ned: d.n === 0 ? Math.min(...pkt(d).map(([x, y]) => h(x, y))) - .3 : null }); }
-    for (const d of deler) if (DELER[d.type].kat === 'forsvar') { const z = kantEnder(o, d).map(([x, y]) => h(x, y)); ut.set(d.id, { z0: Math.min(...z), ned: Math.min(...z) - .3, ender: z }); }
+    for (const d of deler) if (kat(d) === 'forsvar') { const z = kantEnder(o, d).map(([x, y]) => h(x, y)); ut.set(d.id, { z0: Math.min(...z), ned: Math.min(...z) - .3, ender: z }); }
     return ut;
   }
-  // Delen i et Leir-bygg (med plassen i rutenettet), eller null
-  const fraBygg = (b, LB) => (b && DELER[b.type] && b.bs ? { id: b.id, type: b.type, i: b.bs.i, j: b.bs.j, a: b.bs.a || null, n: b.bs.n || 0, r: b.bs.r, ferdig: LB ? LB.virker(b) : true, igjen: b.igjen } : null);
+  // Delen i et Leir-bygg (med plassen i rutenettet i 1,2 m-ruter), eller null. Gamle typer (versjon 2) står i 2,4 m-ruter: ganges med 2.
+  function fraBygg(b, LB) {
+    if (!b || !DELER[b.type] || !b.bs) return null; const f = DELER[b.type].gammel && !b.bs.g ? 2 : 1;
+    return { id: b.id, type: b.type, i: b.bs.i * f, j: b.bs.j * f, a: b.bs.a || null, n: b.bs.n || 0, r: b.bs.r, s: størrelse(b.type), u: true, ferdig: LB ? LB.virker(b) : true, igjen: b.igjen };
+  }
   const fraLeir = (L, LB) => (L ? L.bygg.map(b => fraBygg(b, LB)).filter(Boolean) : []);
+  // plassen som lagres på et nytt bygg (b.bs): alltid i 1,2 m-ruter (g: 1 – også for en gammel type lagt ut på nytt, f.eks. fra en egen mal)
+  const plassFor = d => ({ g: 1, i: d.i, j: d.j, a: d.a || null, n: d.n || 0, ...(d.r !== undefined && d.r !== null ? { r: d.r } : {}) });
   // Sengeplassene i leiren får med de egenbygde brakkene (Leir.plasser leser byggene; rommene legges til)
   if (Leir && !Leir.plasser.byggesett) { const før = Leir.plasser; Leir.plasser = L => før(L) + rom(fraLeir(L, Leir), L.romBruk).reduce((s, r) => s + r.senger, 0); Leir.plasser.byggesett = true; }
   // rom brukt som lager gir lagerplass
   if (Leir && Leir.lagerplass && !Leir.lagerplass.ekstra) Leir.lagerplass.ekstra = L => (L && L.romBruk && Object.keys(L.romBruk).length ? romSum(rom(fraLeir(L, Leir), L.romBruk)).lager : 0);
 
-  const api = { G, H, ETASJER, SOKKEL, DELER, HUS, erDel, registrer, celle, midt, kantEnder, kantVed, hjørneVed, rad, nøkkel, indeks, støttet, plassering, forslag,
-    husDeler, husForslag, rom, ROMBRUK, romSum, høyder, fraBygg, fraLeir, KANT };
+  const api = { U, G, H, ETASJER, GROV, SOKKEL, DELER, GAMLE, NYE, STOFF, HUS, erDel, registrer, størrelse, typeFor, celle, ruter, kanter, biter, midt, kantEnder, kantVed, hjørneVed, rad,
+    nøkkel, indeks, norm, støttet, plassering, forslag, spenn, lagHus, husDeler, husForslag, dreiDel, tilMal, malGyldig, rom, ROMBRUK, ROMTYPER, romType, romSum, høyder, fraBygg, fraLeir, plassFor,
+    KANT, RUTE, kat };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.ByggesettRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
