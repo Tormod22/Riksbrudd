@@ -69,7 +69,11 @@
       const rb = e === 'blå' && RG && RG.byer ? RG.byer[b.id] : null;
       return { id: b.id, navn: b.navn, folk: b.folk, eier: e, strøm, ødelagt: SE.ødelagtNær(b.x, b.y, ød), loj: e === 'blå' ? (rb && Number.isFinite(rb.loj) ? rb.loj : window.Region && Region.REGLER ? Region.REGLER.lojStart : null) : null, holdtFra: S.holdt[String(b.id)] ? S.holdt[String(b.id)].fra : null }; });
     const mv = minVerdi(), rød = rivalVerdi('rød'), grønn = rivalVerdi('grønn');
-    const A = SE.alle({ tid: t, st, SR: ST.REGLER, verdier: { blå: mv.sum, rød: rød.sum, grønn: grønn.sum }, byer, sult: { blå: sulter() } });
+    // (Ø7, ut5-bors) penger-veien bruker børsverdien (din del, rivalenes del) og oppkjøpet fra Gråbørsen i stedet for anslaget
+    let bø = null; try { bø = window.BorsSpill && BorsSpill.seierInn ? BorsSpill.seierInn() : null; } catch (e) { bø = null; }
+    const verdier = bø ? bø.verdier : { blå: mv.sum, rød: rød.sum, grønn: grønn.sum };
+    if (bø) { mv.sum = verdier.blå; rød.sum = verdier.rød; grønn.sum = verdier.grønn; }
+    const A = SE.alle({ tid: t, st, SR: ST.REGLER, verdier, byer, sult: { blå: sulter() }, børs: bø });
     sist = { A, st, byer, verdi: { blå: mv, rød, grønn }, tid: t }; sistNår = performance.now(); return sist;
   }
 
@@ -145,7 +149,7 @@ body.kort #krigkort.avslutning ul{ grid-template-columns:1fr; }`;
   function vis(veiId, side = 'blå') {
     const V = SE.vei(veiId); if (!V) return null; const kort = $('krigkort'); if (!kort) return null; les();
     const B = bilde(true), d = B && B.A[side] ? B.A[side][veiId] : null, du = side === 'blå', T = tallForSpillet();
-    const a = SE.avis(veiId, side, alleNavn(), { andel: d && d.andel !== undefined ? d.andel : B && B.st && B.st.sider[side] ? B.st.sider[side].andel : 0, verdi: d && d.verdi !== undefined ? d.verdi : B ? B.verdi[side].sum : 0, byer: d && d.holdt, dag: T.dager });
+    const a = SE.avis(veiId, side, alleNavn(), { andel: d && d.andel !== undefined ? d.andel : B && B.st && B.st.sider[side] ? B.st.sider[side].andel : 0, verdi: d && d.verdi !== undefined ? d.verdi : B ? B.verdi[side].sum : 0, byer: d && d.holdt, dag: T.dager, oppkjøp: !!(d && d.oppkjøp), børs: !!(d && d.børs) });
     const kl = typeof klokkeslett === 'function' ? ' · kl. ' + klokkeslett(nå()) : '';
     const linje = (n, v) => `<li><span>${esc(n)}</span><b>${esc(v)}</b></li>`;
     let dagbok = ''; try { const D = window.DagbokSpill && DagbokSpill.tilstand ? DagbokSpill.tilstand() : null, l = D && D.liste ? D.liste.find(x => /^(.*! )?Dag \d+:/.test(x)) : null; if (l) dagbok = l; } catch (e) { dagbok = ''; }

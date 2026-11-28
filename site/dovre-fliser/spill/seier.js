@@ -34,6 +34,8 @@
       kjøretøy: { lastebil: 1.5e6, speiderbil: .8e6, stridsvogn: 7e6, rakettartilleri: 8e6, radar: 4e6, annet: 2e6 },
       // rivalenes anslåtte verdi: grunnverdi (hovedkvarteret) + kr per innbygger i tettstedene de holder + kr per lag + kassa
       rival: { grunn: 15e6, perInnbygger: 800, perLag: 2.5e6 },
+      // (ut5-bors) med Gråbørsen: ingen rival kan eie så mange % av deg når du vinner på penger
+      trygg: 30,
     },
     gjenoppbygging: {
       minByer: 3,            // du må holde minst så mange tettsteder i området
@@ -85,7 +87,13 @@
   function rivalVerdi(d, R = REGLER.penger) { const r = R.rival, deler = { kassa: Math.max(0, tall(d && d.kasse)), grunn: r.grunn, tettsteder: tall(d && d.folk) * r.perInnbygger, lag: tall(d && d.lag) * r.perLag, kjøretøy: tall(d && d.kjøretøy) };
     return { sum: deler.kassa + deler.grunn + deler.tettsteder + deler.lag + deler.kjøretøy, deler, anslag: true }; }
   // verdier: { blå: tall, rød: tall, grønn: tall }. Gir { fremdrift, nådd, verdi, foran, størst, mangler }
-  function penger(verdier, side, tid, R = REGLER.penger) {
+  // (ut5-bors, Ø7) o = Gråbørsen (spill/bors.js Bors.seierInn): { oppkjøpt: { side: rival som eier over 50 % }, rivalAndel: { side: største
+  //   rivals andel i % } }. Kjøpt opp = du kan ikke vinne, og rivalen som kjøpte, har vunnet. En rival med minst R.trygg % må ut før du vinner.
+  function penger(verdier, side, tid, R = REGLER.penger, o = {}) {
+    R = R || REGLER.penger; o = o || {};
+    const opp = o.oppkjøpt || {}, kjøpte = Object.entries(opp).find(([, r]) => r === side);
+    if (opp[side]) return { fremdrift: 0, nådd: false, verdi: tall(verdier && verdier[side]), foran: false, størst: opp[side], mangler: [`Selskapet er kjøpt opp av ${({ rød: 'Ravnsund', grønn: 'Mosevakt' })[opp[side]] || opp[side]}`], oppkjøpt: opp[side] };
+    if (kjøpte && !(Number.isFinite(tid) && tid < tall(R.tidligst))) return { fremdrift: 1, nådd: true, verdi: tall(verdier && verdier[side]), foran: true, størst: side, mangler: [], oppkjøp: kjøpte[0] };
     const v = tall(verdier && verdier[side]), andre = Object.entries(verdier || {}).filter(([s]) => s !== side).map(([s, x]) => [s, tall(x)]);
     const størst = andre.reduce((m, q) => (q[1] > m[1] ? q : m), [null, -Infinity]), foran = v > størst[1];
     const forTidlig = Number.isFinite(tid) && tid < tall(R.tidligst), nådd = v >= R.mål && foran && !forTidlig;
@@ -93,7 +101,10 @@
     if (v < R.mål) mangler.push(`Verdt ${mill(v)} – målet er ${mill(R.mål)}`);
     if (!foran && størst[0]) mangler.push(`${størst[0]} er verdt mer (${mill(størst[1])})`);
     if (forTidlig) mangler.push(`Avgjøres tidligst dag ${Math.floor(R.tidligst / 1440) + 1}`);
-    return { fremdrift: nådd ? 1 : Math.min(.99, klem(v / R.mål)), nådd, verdi: v, foran, størst: størst[0], mangler };
+    const ra = tall(o.rivalAndel && o.rivalAndel[side]), utrygg = ra >= tall(R.trygg, 30);
+    if (utrygg) mangler.push(`En rival eier ${Math.round(ra)} % av selskapet – kjøp tilbake så ingen eier ${tall(R.trygg, 30)} % eller mer`);
+    const ok = nådd && !utrygg;
+    return { fremdrift: ok ? 1 : Math.min(.99, klem(v / R.mål)), nådd: ok, verdi: v, foran, størst: størst[0], mangler, børs: !!o.børs };
   }
   const mill = v => { const m = tall(v) / 1e6; return (m >= 100 ? String(Math.round(m)) : String(Math.round(m * 10) / 10).replace('.', ',')) + ' mill. kr'; };
 
@@ -146,7 +157,7 @@
   function alle(inn) {
     const ut = {}; for (const s of REGLER.SIDER) ut[s] = {
       makt: makt(inn.st, s, inn.tid, inn.SR),
-      penger: penger(inn.verdier || {}, s, inn.tid),
+      penger: penger(inn.verdier || {}, s, inn.tid, REGLER.penger, inn.børs),
       gjenoppbygging: gjenoppbygging(inn.byer || [], s, { tid: inn.tid, sult: !!(inn.sult && inn.sult[s]) }),
     };
     return ut;
@@ -188,7 +199,8 @@
       makt: du ? [`${hvem} styrer regionen`, `Med ${prosent(t.andel)} % av folket bak seg har ${hvem} samlet regionen. ${andre} har trukket seg tilbake, og vegsperringene står ubemannet for første gang på lenge.`]
         : [`${hvem} har tatt makten`, `${hvem} holder nå ${prosent(t.andel)} % av folket i regionen. Folk har sett flaggene gå opp i by etter by. Men det finnes fortsatt dem som husker hvem som holdt ord.`],
       penger: du ? [`${hvem} eier regionen`, `Selskapet er verdt ${mill(t.verdi)} – mer enn noen rival. Det er kontraktene og byggene til ${hvem} som holder hjulene i gang nå.`]
-        : [`${hvem} kjøper opp regionen`, `${hvem} er anslått til ${mill(t.verdi)}, og pengene deres styrer hvem som får mat og diesel. Konkurrentene må finne nye kunder.`],
+        : t.oppkjøp ? [`${hvem} har kjøpt opp ${N('blå')}`, `På Gråbørsen eier ${hvem} nå over halvparten av ${N('blå')}. De nye eierne bestemmer hvem som leder, hvilke kontrakter som tas – og hvem som får gå.`]
+        : [`${hvem} kjøper opp regionen`, `${hvem} er ${t.børs ? 'verdt' : 'anslått til'} ${mill(t.verdi)}, og pengene deres styrer hvem som får mat og diesel. Konkurrentene må finne nye kunder.`],
       gjenoppbygging: du ? ['Lyset er tilbake', `Strømmen går, bruene står, og ingen sulter i de ${t.byer || 'tre'} tettstedene ${hvem} holder. Etter kollapsen er dette det første stedet i landet som er bygget opp igjen.`]
         : [`${hvem} gjenreiser regionen`, `I tettstedene ${hvem} holder, går strømmen igjen og bruene er reparert. Folk flytter dit, og det er deres orden de forteller om.`],
     }[veiId] || ['Krigen er avgjort', ''];

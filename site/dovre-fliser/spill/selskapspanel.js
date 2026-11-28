@@ -100,7 +100,7 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
   P.innerHTML = '<button class="lukk" data-sp="lukk" aria-label="Lukk">×</button><div class="shode"></div><div class="sfaner" role="tablist"></div><div class="skropp"></div><div class="sinnleid"></div>';
   document.body.appendChild(P);
   const hode = P.querySelector('.shode'), faner = P.querySelector('.sfaner'), kropp = P.querySelector('.skropp'), innleid = P.querySelector('.sinnleid');
-  faner.innerHTML = B.REGLER.FANER.map(f => `<button type="button" role="tab" data-fane="${f.id}" class="${f.klar || (f.id === 'produksjon' && window.ProduksjonSpill) || (f.id === 'partnere' && window.FirmaSpill) ? '' : 'kommer'}">${esc(f.navn)}</button>`).join('');
+  faner.innerHTML = B.REGLER.FANER.map(f => `<button type="button" role="tab" data-fane="${f.id}" class="${f.klar || (f.id === 'produksjon' && window.ProduksjonSpill) || (f.id === 'partnere' && window.FirmaSpill) || (f.id === 'eiere' && window.BorsSpill) ? '' : 'kommer'}">${esc(f.navn)}</button>`).join('');
   let åpen = false, fane = 'oversikt', sistKropp = '', sistHode = '';
 
   // ---------- fanene ----------
@@ -115,6 +115,8 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     if (sd && sd.sum) h += linje('Kontrakter', `${sd.sum.levert} levert`, '', `${sd.aktive ? sd.aktive.length : 0} aktive, ${S && S.tilbud ? S.tilbud.length : 0} ledige tilbud`);
     h += linje('Folk', F ? String(F.personer.length) : '–'); h += linje('Lag', String(egneLag().length));
     h += linje('Tettsteder', String(trinnBilde().tettsteder));
+    // (Ø7, ut5-bors) verdien og kursen på Gråbørsen
+    try { if (window.BorsSpill && BorsSpill.flisLinjer) for (const q of BorsSpill.flisLinjer()) h += linje(q[0], q[1], q[3] || '', q[2]); } catch (e) { /* uten børs */ }
     h += '</ul>';
     h += `<h3>Veien videre</h3><ol class="trinn">` + TR.REGLER.TRINN.map(t => `<li class="${t.nr < R.nr ? 'gjort' : t.nr === R.nr ? 'nå' : ''}" data-trinn="${t.nr}"><i>${t.nr < R.nr ? '✓' : t.nr}</i><div><b>${esc(t.navn)}</b><small>${esc(t.nr === R.nr ? 'Dere er ' + t.du + '. ' + t.hva : t.hva)}</small></div></li>`).join('') + '</ol>';
     if (R.neste) h += `<div class="krav" data-neste="${R.neste.nr}"><div>For trinn ${R.neste.nr}, ${esc(R.neste.navn)}:</div>` + R.krav.map(k => `<div class="${k.ok ? 'ok' : 'mangler'}">${k.ok ? '✓' : '○'} ${esc(k.tekst)}</div>`).join('') + (R.steg ? `<small>${esc(R.steg.hjelp)}</small>` : '') + '</div>';
@@ -160,10 +162,13 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     const PR = fane === 'produksjon' && window.ProduksjonSpill ? window.ProduksjonSpill : null;
     // (Ø5, ut4-firmaer) fanen Partnere: firmaene og rivalene fra spill/firma-visning.js (FirmaSpill.fane / trykk)
     const FS = fane === 'partnere' && window.FirmaSpill && FirmaSpill.fane ? window.FirmaSpill : null;
-    const h = fane === 'oversikt' ? oversikt() : fane === 'byer' ? byer() : PR ? PR.html() : FS ? FS.fane() : kommer(f);
+    // (Ø7, ut5-bors) fanen Eiere: kursen, eierne, investorene, andelene og Gråbørsen fra spill/bors-visning.js (BorsSpill.fane / etter / trykk)
+    const BO = fane === 'eiere' && window.BorsSpill && BorsSpill.fane ? window.BorsSpill : null;
+    const h = fane === 'oversikt' ? oversikt() : fane === 'byer' ? byer() : PR ? PR.html() : FS ? FS.fane() : BO ? BO.fane() : kommer(f);
     const ny = h !== sistKropp || tving;
     if (ny) { const topp = kropp.scrollTop; kropp.innerHTML = h; sistKropp = h; if (!tving) kropp.scrollTop = topp; }
     if (PR) PR.etter(kropp, ny);
+    if (BO && BO.etter) BO.etter(kropp, ny);
   }
   // husk = spilleren valgte fanen selv (den åpnes neste gang); fanen et kort eller Neste-lappen åpner, huskes ikke
   function velgFane(id, husk) { if (!B.REGLER.FANER.some(f => f.id === id)) id = 'oversikt'; const ny = id !== fane; fane = id; les(); if (husk && H.fane !== id) { H.fane = id; lagre(); } if (ny) kropp.scrollTop = 0; sistKropp = ''; tegn(true); }
@@ -187,6 +192,7 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     if (s.startsWith('ba-') && window.ByavtaleSpill) { if (ByavtaleSpill.trykk(b)) { sistKropp = ''; tegn(); } return; }
     if (s.startsWith('ek-') && window.EksportSpill) { if (EksportSpill.trykk(b)) { sistKropp = ''; tegn(); } return; }
     if (s.startsWith('fi-') && window.FirmaSpill) { if (FirmaSpill.trykk(b)) { sistKropp = ''; tegn(); } return; }
+    if (s.startsWith('bo-') && window.BorsSpill) { if (BorsSpill.trykk(b)) { sistKropp = ''; tegn(); } return; }
     if (s === 'lukk') vis(false);
     else if (s === 'gå') { const k = viktigste()[+b.dataset.i]; if (!k) return; if (k.l0) { if (k.l0.pek === 'selskap') { velgFane('kontrakter'); return; } vis(false); if (window.SelskapSpill && SelskapSpill.følgLapp) SelskapSpill.følgLapp(); } else if (k.trykk) { vis(false); k.trykk(); } }
     else if (s === 'by') { const by = byListe().find(q => String(q.id) === b.dataset.id); if (by && Number.isFinite(by.x)) { if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false); kam.x = by.x; kam.y = by.y; if (kam.m > 20) kam.m = 12; skitten = true; if (smal()) vis(false); } }
