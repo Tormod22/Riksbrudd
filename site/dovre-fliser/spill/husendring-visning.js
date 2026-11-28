@@ -257,7 +257,7 @@
   });
 
   // ---------- tiden: ferdig husarbeid, og «Riv hele huset» etasje for etasje ----------
-  let akk = 0;
+  let akk = 0; const sistSteg = new Map();
   if (typeof KROKER !== 'undefined' && KROKER.sim) KROKER.sim.push(dt => {
     const r = R(), p = P2(); if (!r || !p || !BG()) return; akk += dt; if (akk < .25 && !(r.husFerdig && r.husFerdig.length)) return; akk = 0;
     let endret = false;
@@ -276,7 +276,8 @@
     // hele huset: etasjene forsvinner ovenfra etter framdriften
     for (const j of r.jobber) {
       if (j.type !== 'riving' || j.endringer || !Array.isArray(j.etasjer) || j.etasjer.length < 2) continue;
-      const k = HR.rivSteg(j.etasjer, RS().fram(j)); if (!k) continue; const h = husFor(j.hus.i); if (!h) continue;
+      // modellen hentes bare når en ny etasje er nådd (et stort hus kan ta et øyeblikk å lage når det ikke er i hurtiglageret)
+      const k = HR.rivSteg(j.etasjer, RS().fram(j)); if (!k || sistSteg.get(j.id) === k) continue; sistSteg.set(j.id, k); const h = husFor(j.hus.i); if (!h) continue;
       const nye = []; for (const n of j.etasjer.slice(0, k)) { const e = finnEt(h.m, n); if (e && e.tilstand !== 'revet') nye.push({ e: n, del: 'etasje', gjør: 'riv' }); }
       if (nye.length) { const navn = nye.map(d => (finnEt(h.m, d.e).loft ? 'loftet' : finnEt(h.m, d.e).navn.toLowerCase())).join(' og '); føre(h, nye); endret = true;
         if (typeof logg === 'function') logg(`Rivingen: ${navn} er revet (${Math.round(RS().fram(j) * 100)} %).`); }
