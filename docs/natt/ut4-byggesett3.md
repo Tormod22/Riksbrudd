@@ -53,12 +53,15 @@ avvises: «Her står det en større vegg (2,4 m) – riv den først». Nye deler
 - `site/dovre-fliser/index.html`: bare versjonsmerkene (versjon.py).
 
 ## MÅ RETTES I sjekk.js (jeg har ikke lov å endre den)
-Byggesett-vaktene i sjekk.js har tallene for de gamle malene og vil feile:
-- linje ~509–516 («VAKT byggesett»): `hytte` gir nå 48 deler (4 × 4 ruter: 16 gulv, 16 vegger, 16 tak), ikke 16; rommet har 23 m².
-  Koordinatene (LX − 12 …, rad med to trykk 7,4 m fra hverandre) virker fortsatt, men raden blir 6 vegger på 1,2 m (ikke 3).
-- linje ~721–729 («byggesett i 3D»): `bs3.n === 4 * 3 * 2 + 14` må bli **106** (brakke 8 × 5 ruter: 40 + 26 + 40), og `q.celler.length === 12`
-  må bli **40** (rommets ruter er nå 1,2 m). Forslag: bruk `ByggesettRegler.HUS.brakke.deler.length` og `ByggesettRegler.rom(…)[0].ruter`.
+Byggesett-vaktene i sjekk.js har tallene for de gamle malene. Jeg kjørte begge blokkene ordrett i testsiden (PC og telefon / 3D på PC):
+- linje 628 («byggesett»): alt er som før unntatt tallene – `bs.hytte === 16 && bs.bygget === 16 && bs.jobber === 16` må bli **48** (hytta er
+  4 × 4 ruter: 16 gulv, 16 vegger, 16 tak), og `bs.rad === 3` må bli **6** (7,4 m rad = seks vegger på 1,2 m). Målt: `{"åpen":true,"hytte":48,
+  "bygget":48,"jobber":48,"lufttak":"Taket må ligge på vegger, …","rad":6,"rom":1,"senger":2,"dør":1,"revet":1,"tilbake":4800,"passer":true,"lukket":true}`.
+- linje 724–729 («byggesett i 3D»): `q.celler.length === 12` må bli **40**, og `bs3.n === 4 * 3 * 2 + 14` må bli **106** (brakke 8 × 5 ruter:
+  40 + 26 + 40). Målt med de to endringene: `{"n":106,"deler":106,"iScene":4,"trekanter":1860,"svever":0,"ustøttet":0,"rom":1,"glFeil":0,
+  "vegg":true,"dør":true,"etter":0}` – godkjent. (Forslag: bruk `ByggesettRegler.HUS.brakke.deler.length` og `HUS.hytte.deler.length`.)
 - Den gamle brakka (7,2 m bred med tretak) ville raset etter den nye spennregelen – derfor er malene nye.
+- `spill/hjelp.js`: emnet «Byggesett» beskriver versjon 2 – se `ut4-byggesett3-hjelp.json`.
 
 ## 3D
 Delene er fortsatt fem samlede nett. Nytt: gulv og tak lages rute for rute (også 4,8 m-delene), vegger i hele lengden, hjørnestolper bare i ekte
