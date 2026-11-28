@@ -355,7 +355,9 @@
     const r = rand || lagRand(Math.floor(nå) + 17), ut = [];
     S.tilbud = S.tilbud.filter(k => { if (k.utløper > nå) return true; ut.push({ type: 'utløpt', k }); return false; });
     for (const k of S.tilbud.slice()) {
-      if (r() >= REGLER.rival.tarPerDag) continue;
+      // (ut1-okotest 28. nov, økonomitesten) aldri den første kontrakten – før tok et annet selskap den i 35 % av morgenene den lå
+      // åpen, og den røde tråden mistet sitt første steg. r() trekkes likevel, så de andre tilbudene får samme tilfeldighet som før.
+      if (r() >= REGLER.rival.tarPerDag || k.første) continue;
       const tar = k.konkurrent || SIDER.filter(q => q !== k.for)[Math.floor(r() * 2)];
       S.tilbud = S.tilbud.filter(q => q !== k); k.status = 'tatt'; k.side = tar; endreRykte(S, tar, { pålitelig: 2 });
       const sd = side(S, tar); sd.sum.levert++; sd.sum.tjent += k.betaling; ut.push({ type: 'rivalTok', k, rival: tar });
