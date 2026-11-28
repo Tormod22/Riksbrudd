@@ -123,7 +123,7 @@ window.HJELP_TILLEGG = [
 ],
 [
 "Røverne og byttet",
-"Røverbølgene vokser sakte og blir aldri større enn det du har folk til å møte: omtrent ett røverlag per åtte soldater, ett ekstra hvis du har stridsvogn eller rakettartilleri, og ett lag mer for hvert tredje døgn. Til sammen har røverne i en bølge på det meste omtrent like mange mann som soldatene dine + 2 (på «Vanlig»; flere på «Hard», færre på «Lett»). Byttet etter en slått bølge dekker omtrent skadene (450 000 kr for den første, høyst 1,5 mill.) – pengene skal komme fra tettsteder, oppdrag og handel, ikke fra å bli angrepet. Laster du siden på nytt midt i et angrep, fortsetter angrepet der det var: røverne står der de sto, med de sårede og det de alt har tatt.",
+"Røverbølgene vokser sakte og blir aldri større enn det du har folk til å møte: omtrent ett røverlag per åtte soldater, ett ekstra hvis du har stridsvogn eller rakettartilleri, og ett lag mer for hvert tredje døgn. Til sammen har røverne i en bølge på det meste omtrent like mange mann som soldatene dine + 2 (på «Vanlig»; flere på «Hard», færre på «Lett»). Byttet etter en slått bølge dekker omtrent skadene (150 000 kr for den første, høyst 400 000 kr) – pengene skal komme fra tettsteder, oppdrag og handel, ikke fra å bli angrepet. Laster du siden på nytt midt i et angrep, fortsetter angrepet der det var: røverne står der de sto, med de sårede og det de alt har tatt.",
 "Lag og strid"
 ],
 [
@@ -1659,6 +1659,51 @@ window.HJELP_TILLEGG = [
 [
 "Til leiren og hele kartet",
 "Nede til høyre: ⌂ tar kartet hjem til leiren, med flagget midt på skjermen. Knappen med fire piler ut viser hele kartet. Før du har lagt leiren, går ◎ til Dombås.",
+"Kom i gang"
+],
+[
+"Jobbtavla",
+"Folk-panelet har en jobbtavle: leiren lager jobber (bygg, hogst, frakt, vakt, kjøkken, stell, verksted …) og viser hvem som tar dem. Du kan fordele folkene selv med − / + som før, eller trykke «La tavla fordele». Da fordeles folkene etter prioriteten du setter per jobb (flere prikker = viktigere, 1 = først) og hvem som er best. To av ti får hvile. En jobb ingen kan ta, står fast med grunnen («ingen ledige», «uten strøm» …). Under «Vis folkene» kan du låse en person til en jobb (velg i lista) eller trykke «Jobber …» og velge jobber personen aldri skal ha.",
+"Leiren"
+],
+[
+"Døgnet og skift",
+"Folkene arbeider, spiser, sover og har fri til faste tider: dagskift 07–11 og 12–17, middag 17, fri til 22, søvn 22–06. Utenfor arbeidstida står byggingen, hogsten og frakten stille, men i arbeidstida arbeider de tettere – et helt døgn gir like mye som før. Bygg går i to skift (06–23) som standard. Velg skift per jobb i jobbtavla: dag, to skift eller døgnet rundt (nattskift gir litt lavere moral). Vakta går i turnus, så leiren aldri står uten vakt. «Døgnplan: av» lar alle arbeide jevnt hele døgnet.",
+"Leiren"
+],
+[
+"Selskapet",
+"Knappen «Selskap» (tast S, på telefon under «Mer») åpner panelet Selskapet. Oversikt viser kassa, ukas resultat, nivå og rykte, folk og lag, hvilket trinn selskapet er på og de tre viktigste tingene nå. Kontrakter er kontraktene som før, Byer viser tettstedene og hvem som holder dem. Produksjon, Partnere og Eiere kommer senere.",
+"Kom i gang"
+],
+[
+"De fire trinnene",
+"Selskapet går fra en gjeng med en leir til et konsern: 1 Overleve, 2 Leverandør, 3 Makt i regionen og 4 Konsern. Selskap → Oversikt viser hvilket trinn dere er på og hva som mangler til neste. Neste-lappen nederst foreslår det neste steget når ingenting haster mer.",
+"Kom i gang"
+],
+[
+"Spol til …",
+"Hold inne ⏭ (eller trykk ▾ ved siden av på PC, eller Leir → Mål → «Tid») og velg hva du vil spole til: morgenen kl. 06, en kontrakt som kan leveres (eller en time før fristen), at byggingen er ferdig, eller at røverne drar ut. Farten går til 600× og stopper av seg selv. Alarm, fiender nær leiren og kort som venter på svar stopper alltid. Trykker du på en annen fart, avbrytes spolingen.",
+"Kom i gang"
+],
+[
+"Pause av seg selv",
+"I «Spol til»-panelet (eller Leir → Mål → «Tid») kan du velge at spillet settes på pause når leiren angripes, når en kontrakt kan leveres eller fristen er under en time unna, eller når byggejobbene står stille fordi ingen er på «bygg». Alt er av til du slår det på.",
+"Kom i gang"
+],
+[
+"Tidslinja",
+"På PC kan du slå på en rolig linje øverst med det som kommer: morgenmøtet, byggejobbene som blir ferdige, kontraktfrister og når røverne drar ut. Trykk på en hendelse for å spole dit. På telefon står den samme lista i «Spol til»-panelet.",
+"Kom i gang"
+],
+[
+"Statistikk",
+"Leir → Mål → «Vis statistikken» viser grafer over de siste 30 døgnene: penger inn og ut, inn og ut per post, kassa, moral og helse, folk i arbeid, hvor lenge arbeidet sto stille, tettsteder per side og bygg som ble ferdige. Ett diagram om gangen – velg med knappene. Døgnet går fra kl. 06 til kl. 06; «i dag» er døgnet så langt.",
+"Leiren"
+],
+[
+"Slik vinner du",
+"Det finnes tre veier til seier, og du kan gå flere samtidig. MAKT: 60 % av folket i området rundt leiren holder med deg (tettstedene du holder – se Krig). PENGER: selskapet er verdt minst 250 mill. kr (kassa, byggene, lageret og kjøretøyene) og mer enn både Ravnsund og Mosevakt. GJENOPPBYGGING: du holder minst tre tettsteder, og i alle har de strøm, ingen sprengte bruer eller ødelagte kraftverk i nærheten, lojalitet minst 55 og har vært dine i to døgn – og leiren har mat. Selskap → Oversikt viser hvor langt du har kommet på hver vei, og hvor langt rivalene er (de små merkene). Ingen kan vinne de første døgnene. Når noen vinner, kommer en side fra avisa med tall for hele spillet: «Spill videre» fortsetter i samme verden, og seieren huskes. Vinner en rival, kan du spille videre og prøve å ta det tilbake.",
 "Kom i gang"
 ],
 [
