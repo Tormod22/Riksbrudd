@@ -88,3 +88,27 @@ Fyllingsstreken under (fra ut8) står som før.
   spill kan derfor finne et skap som var tømt, fullt igjen (og omvendt) i noen hus.
 - Leirens egne bygg (brakke, kjøkken …) har ikke fått de nye møblene i interiøret (bare husene i kartet og byggesettets deler).
 - Prøvehuset ligger nær vaktens grense (8 138 av 9 000 trekanter) – nye møbler i boliger bør måles.
+
+## Runde 3 (ut9-mobler3, 28. nov) – leirens bygg, hverdagsting og åpne skap
+1. **Leirens egne bygg** (LEIRBYGG i interior3d.js) har fått de nye møblene: kjøkkenet overskap over benken, vifte over komfyren, stålreol,
+   krydderhylle og oppvaskmaskin; brakka garderobe, hylle, kommode og skoskap; kontrollrommet permreol og vannkjøler; sykestua (vaktrommet,
+   også i hus) en hylle. Hyllene viser TINGENE SOM LIGGER I LEIRENS TINGLAGER: `Interior3d.leirVarer(P)` – kjøkkenet det leiren har av mat,
+   drikke og kjøkkenting (alle plassene), brakka klær/hygiene/fritid, sykestua medisin/hygiene, kontrollrommet kontor/elektro, verkstedet
+   verktøy/elektro; lagerteltet og containeren det som ligger på deres egen plass (ellers alt). 120 l = full hylle (Claudes forslag). Møblene
+   får `m.fyll`/`m.kat`, og hyller-visning.js bygger interiøret på nytt (`Interior3d.bygOm`) når fyllingen endres et trinn (sjekkes hvert 0,6 s).
+2. **Hverdagsting i rommene** (småting i `deler`, faste via hash, ingen runde deler): kaffetrakter og brødboks på kjøkkenbenken, potteplante
+   på TV-benken, avis på salongbordet, tannkrus med to tannbørster og håndkle ved vasken på badet, bilderamme på kommode/skjenk, bamse og
+   leker ved barnesenga, vaskemiddel på vaskemaskinen. (Knaggrekka hadde alt jakker.) For at badet skal vite at det er et bad, følger
+   rommets rolle nå møblene gjennom bygningsmodellen: `rolle` i bygning.js (møblene i etasjen) og etasjer3d.js (møblene i 1. etasje).
+   PRØVEHUSET I VAKTA «interiør» (10 × 8 m, i 4242), målt i samme skript på grenen før (f4a02d5) og etter: 8 138 → 8 114 trekanter (grensen 9 000).
+   (Det huset har ingen vask – bygningsmodellen tar bort det siste store møbelet som stenger veien, så speilskapet henger alene.)
+3. **Åpne skap**: åpner du kjøleskapet, skapet, garderoben, tønna eller fryseboksen i et hus (lutpanelet), står døra/lokket åpent i 3D med
+   tingene synlige (`window.MØBEL_ÅPEN = { i, type, k, fyll }` fra `Hyller3d.åpentNå()`, interiøret bygges på nytt; lukkes panelet, lukkes døra).
+   Innholdet står som før i panelet. I leiren: kjøleskap, frysboks, kiste og tønne fra byggesettet står åpne mens lagerpanelet viser bare
+   den plassen («Viser: …», `TinglagerSpill.plass()`).
+Fellesfiler i runde 3: interior.js (brakke, kontrollrom, storkjøkken, vaktrom), interior3d.js (leirVarer, åpne modeller, småting), hyller-visning.js,
+tinglager-visning.js (`plass()`), bygning.js og etasjer3d.js (én `rolle` hver).
+Vakta ut9-mobler sjekker nå også leirens kjøkken/brakke, tingene fra lageret på hyllene, tannbørstene på badet, det åpne kjøleskapet og den åpne
+kista (feil med vilje: kjøkkenet uten mat og kjøleskapet uten åpen modell → vakta feilet på alle tre). Bilder: leir-kjøkken.png,
+leir-lagertelt.png, åpent-kjøleskap.png (+ mob-). IKKE GJORT: innholdet i lukkede skap i leirens egne bygg (kjøleskapet i kjøkkenet) – de står
+lukket; vegetasjonen i 3D ryddes ikke for bygg som settes inn med skript (bare i bildene).
