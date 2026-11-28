@@ -1,8 +1,8 @@
 // ØKONOMITESTEN (G1, docs/plan-selskap-okonomi.md 13.4): spiller 30 spilldøgn av seg selv med faste strategier og mange frø
 // (pipeline/fliser/okosim.js, de ekte regelmodulene), skriver et bånd per strategi og sjekker kravene i REGLER.
 //   node pipeline/fliser/test_okonomitest.js              vanlig kjøring (ca. 10–20 s)
-//   OKO_FRØ=100 node …                                     flere frø per strategi
-//   OKO_VIS=kontrakter OKO_FRØ_EN=3 node …                 skriver hendelsene i én kjøring (strategi og frø)
+//   OKO_FRO=100 node …                                     flere frø per strategi
+//   OKO_VIS=kontrakter OKO_FRO_EN=3 node …                 skriver hendelsene i én kjøring (strategi og frø)
 //   OKO_NYTT_BAND=1 node …                                 lagrer båndet på nytt i okonomitest-band.json (etter en ønsket endring)
 //   OKO_STRENG=1 node …                                    de kjente bruddene (KJENT) feiler også
 // Notatet docs/natt/ut1-okotest.md forklarer modellen, funnene og hvordan nye økonomideler legger til sin del.
@@ -12,7 +12,7 @@ const O = require('./okosim.js');
 
 // ---------- kravene (Claudes forslag) ----------
 const REGLER = {
-  frø: +process.env.OKO_FRØ || 60,          // kjøringer per strategi (5 strategier × 60 = 300)
+  frø: +process.env.OKO_FRO || 60,          // kjøringer per strategi (5 strategier × 60 = 300)
   grense: 200e6,                            // ingen strategi skal ha over 200 mill. i kassa på 30 døgn (planen 13.4)
   ingentingFørst: 5,                         // «gjør ingenting» skal ikke være blakk før dag 5 i noen kjøring …
   ingentingDager: [1, 10, 20, 30],          // … og medianen skal gå nedover fra måling til måling (røverbelønningen gir små hopp innimellom)
@@ -44,7 +44,7 @@ const kvant = (L, q) => { const a = L.slice().sort((x, y) => x - y); if (!a.leng
 
 // ---------- én kjøring med hendelser (feilsøking) ----------
 if (process.env.OKO_VIS) {
-  const r = O.kjør(process.env.OKO_VIS, +process.env.OKO_FRØ_EN || 1, { logg: true });
+  const r = O.kjør(process.env.OKO_VIS, +process.env.OKO_FRO_EN || 1, { logg: true });
   console.log(r.hendelser.join('\n'));
   console.log(`slutt ${mill(r.slutt)}, maks ${mill(r.maks)} (dag ${r.maksDag}), blakk fra dag ${r.blakkDag}, inn`, r.sum.inn, 'ut', r.sum.ut);
   process.exit(0);
@@ -131,7 +131,12 @@ else if (fs.existsSync(BAND_FIL)) { const ref = JSON.parse(fs.readFileSync(BAND_
     const q = motBand('byer', lagBand(L), ref.band.byer).filter(x => !x.ok);
     ok(q.length > 0, `selvtest: med den gamle døgnlengdefeilen (skatt × 2,4) sier båndkontrollen fra (${q.length} avvik, f.eks. ${q.length ? q[q.length - 1].tekst : '–'})`); } }
 else console.log('ny    ingen lagret bånd (kjør OKO_NYTT_BAND=1 for å lage okonomitest-band.json)');
-// 8) tiden
+// 8) funnet under arbeidet (28. nov): et annet selskap tok den første kontrakten i 35 % av morgenene (Selskap.dagSteg) – nå aldri
+{ const Selskap = require('../../site/dovre-fliser/spill/selskap.js'); let tatt = 0;
+  for (let i = 1; i <= 300; i++) { const S = Selskap.ny({ x: 0, y: 0 }); Selskap.førsteKontrakt(S, 'blå', 0, [{ navn: 'A', x: 2000, y: 0, slag: 'tettsted', id: 1 }], { x: 600, y: 700 });
+    for (let d = 1; d <= 5; d++) if (Selskap.dagSteg(S, d * 1440, Selskap.lagRand(i * 31 + d)).some(h => h.type === 'rivalTok' && h.k.første)) tatt++; }
+  ok(!tatt, `den første kontrakten blir liggende til spilleren tar den (et annet selskap tok den ${tatt} ganger på 300 × 5 morgener)`); }
+// 9) tiden
 ok(sek < REGLER.maksSek, `${antall} kjøringer tok ${sek.toFixed(1).replace('.', ',')} s (høyst ${REGLER.maksSek} s, så inn2.sh rekker det)`);
 
 console.log(feil ? `\n${feil} FEIL i økonomitesten` + (kjente ? ` (og ${kjente} kjente brudd)` : '') : `\nøkonomitesten ok` + (kjente ? ` – men ${kjente} kjente brudd (se KJENT øverst og docs/natt/ut1-okotest.md)` : ''));

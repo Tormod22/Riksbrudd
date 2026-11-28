@@ -428,6 +428,9 @@ function byggTime(sim, reserveDøgn) {
 }
 leggTilStrategi({ id: 'bygger', navn: 'bygger og venter', fornuftig: false, tekst: 'bygger ut leiren (drivhus, solceller, vakttårn …) og venter; ingen inntekt',
   time(sim) { byggTime(sim, 5); } });
+leggTilStrategi({ id: 'forsvar', navn: 'forsvarer leiren', fornuftig: false, tekst: 'en tropp på åtte blir hjemme og slår tilbake røverne (belønningen er eneste inntekt)',
+  start(sim) { lagTropp(sim, 8).rolle = 'vakt'; },
+  time(sim) { const tr = sim.tropper.find(t => t.rolle === 'vakt'); if (tr) fyllTropp(sim, tr, 8, reserve(sim, 4)); } });
 leggTilStrategi({ id: 'blandet', navn: 'kontrakter, bygg og byer', fornuftig: true, tekst: 'som en vanlig spiller: kontrakter med én tropp, bygger når kassa tåler det, og fra dag 5 tar en tropp nummer to tettsteder',
   start(sim) { Selskap.førsteKontrakt(sim.SK, ID, 0, steder(sim), { x: 600, y: 700, navn: 'nødlageret' }); lagTropp(sim, 6).rolle = 'kontrakt'; },
   time(sim) { const tr = sim.tropper.find(t => t.rolle === 'kontrakt');
