@@ -19,5 +19,9 @@
   'use strict';
   const LS = rot.LagringSide; if (!LS || !rot.Lagring || typeof LS.omgjørNå !== 'function') return;
   // (ingen omgjøringer ennå)
+
+  // PRØVE (bare når et prøveskript har satt window.LAGRING_PRØVEOMGJØRING = true før skriptene lastes): et spill fra før versjonsmerket
+  // (versjon 0) får 1 kr ekstra i kassa – viser at omgjøringen kjøres før modulene leser localStorage
+  if (rot.LAGRING_PRØVEOMGJØRING === true) rot.Lagring.omgjør(0, l => { const k1 = l.json('riksbrudd-k1'); if (!k1) return; k1.penger = (k1.penger || 0) + 1; l.skriv('riksbrudd-k1', k1); }, 'prøve: 1 kr ekstra');
   LS.omgjørNå();
 })(typeof globalThis !== 'undefined' ? globalThis : this);
