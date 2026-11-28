@@ -178,7 +178,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     else { const n = ok.length, navn = V.fane === 'hus' ? malNå().navn : D[ok[0].d.type].navn, erTak = D[ok[0].d.type].kat === 'tak' || D[ok[0].d.type].kat === 'gulv' && ok[0].d.n > 0;
       // etasjen: vegger og gulv står i etasje n + 1, taket ligger oppå etasje n
       const etg = [...new Set(ok.map(q => (erTak ? q.d.n : q.d.n + 1)))].sort().join('/') + '. etasje';
-      tekst = `${navn}${n > 1 ? ` × ${n}` : ''}: ${LB.kroner(s.pris)}, ${tidTekst(s.timer * 60)} arbeid` + (V.fane !== 'hus' && V.fane !== 'forsvar' ? ` (${erTak ? 'oppå ' : ''}${etg})` : '')
+      tekst = `${navn}${V.fane === 'hus' ? ` (${n} deler)` : n > 1 ? ` × ${n}` : ''}: ${LB.kroner(s.pris)}, ${tidTekst(s.timer * 60)} arbeid` + (V.fane !== 'hus' && V.fane !== 'forsvar' ? ` (${erTak ? 'oppå ' : ''}${etg})` : '')
         + (ok.some(q => q.bytt) ? ` – bytter ut ${ok.filter(q => q.bytt).length}` : '') + '.';
       // utpost: byggelaget må reise dit først (Leir.reise, brukeren 12. nov) – si det før du bekrefter
       const sted = BS.midt(o, ok[0].d), rs = LB.reise ? LB.reise(l, sted.x, sted.y) : null;
@@ -488,8 +488,8 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
       if (K === 'bjelke') { const zb = z3(z0 + d.n * H), st = Dd.stoff; boks(st === 'stål' ? 'farge' : 'tre', st === 'stål' ? F.stål : F.tregulv, cx, cy, ux, uy, L + .1, .2, zb + H - .42, zb + H - .02); continue; }
       const st = Dd.stoff, t = TYKK[st] || .16, zb = z3(z0 + d.n * H), zt = zb + H * f, gr = gruppe(st), col = farge(st);
       // hjørnestolpene (to ender)
-      for (const [vi, vj] of d.a === 'x' ? [[d.i, d.j], [d.i + ds, d.j]] : [[d.i, d.j], [d.i, d.j + ds]]) { const k = `${vi},${vj},${d.n}`, h0 = hjørner.get(k) || { t: 0, zb, zt: zb, tre: false, st };
-        h0.t = Math.max(h0.t, t); h0.zt = Math.max(h0.zt, zt); h0.tre = h0.tre || st === 'tre'; hjørner.set(k, h0); }
+      for (const [vi, vj] of d.a === 'x' ? [[d.i, d.j], [d.i + ds, d.j]] : [[d.i, d.j], [d.i, d.j + ds]]) { const k = `${vi},${vj},${d.n}`, h0 = hjørner.get(k) || { t: 0, zb, zt: zb, tre: false, st, ak: new Set(), n: 0 };
+        h0.t = Math.max(h0.t, t); h0.zt = Math.max(h0.zt, zt); h0.tre = h0.tre || st === 'tre'; h0.ak.add(d.a); h0.n++; hjørner.set(k, h0); }
       // sokkel under veggen når den ikke står på et gulv
       if (d.n === 0 && hv.ned < z0 - .05) { const k0 = BS.kanter(d)[0], [[r1i, r1j], [r2i, r2j]] = k0.a === 'x' ? [[k0.i, k0.j - 1], [k0.i, k0.j]] : [[k0.i - 1, k0.j], [k0.i, k0.j]];
         if (!gulvHer(r1i, r1j, 0) && !gulvHer(r2i, r2j, 0)) boks('betong', F.betongM, cx, cy, ux, uy, L + t, t + .06, z3(hv.ned), zb, z3(hv.ned), zb, 'b'); }
@@ -510,7 +510,8 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
         else { bit(o0 + .02, o1 - .02, .02, hh - .01, 'farge', F.stålport, .05); for (let k = 1; k < 6; k++) bit(o0 + .02, o1 - .02, hh * k / 6 - .02, hh * k / 6 + .02, 'farge', tone(F.stålport, .8), .08); } }
     }
     // hjørnestolpene: hvite hjørnekasser på trehus, ellers i veggens stoff
-    for (const [k, h0] of hjørner) { const [vi, vj] = k.split(',').map(Number), s = h0.t + .06;
+    // (B4) bare i ekte hjørner og i enden av en vegg – ikke der to vegger på 1,2 m står i forlengelse av hverandre
+    for (const [k, h0] of hjørner) { if (h0.ak.size < 2 && h0.n > 1) continue; const [vi, vj] = k.split(',').map(Number), s = h0.t + .06;
       boks(h0.tre ? 'farge' : gruppe(h0.st), h0.tre ? F.hvit : farge(h0.st), gx + vi * G, gy + vj * G, 1, 0, s, s, h0.zb, h0.zt); }
     saltak3d(Bg, saltak, M, hz, gx, gy, vegg);
   }
@@ -634,13 +635,13 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     const R = r3(); if (!R || !R.ut) return null; const u = R.ut, l = L(), o = l && l.byggesett, liste = delerI3d(u); if (!o) return { deler: 0 };
     const hz = BS.høyder(o, liste, (x, y) => hoyde3d(x, y, u)); let svever = 0, ustøttet = 0; const M = BS.indeks(liste);
     for (const d of liste) { const v = hz.get(d.id); if (!v) continue;
-      if (d.n === 0 && D[d.type].kat !== 'forsvar') { const pkt = BS.KANT(d) ? BS.kantEnder(o, d) : [[0, 0], [1, 0], [1, 1], [0, 1]].map(([a, b]) => [o.ox + (d.i + a) * G, o.oy + (d.j + b) * G]); if (pkt.some(([x, y]) => v.ned > hoyde3d(x, y, u) + .01)) svever++; }
+      if (d.n === 0 && D[d.type].kat !== 'forsvar') { const pkt = BS.punkter(o, d); if (pkt.some(([x, y]) => v.ned > hoyde3d(x, y, u) + .01)) svever++; }
       if (!BS.støttet(M, d)) ustøttet++; }
     const tri = mesh.reduce((s, m) => s + m.geometry.attributes.position.count / 3, 0);
     return { deler: liste.length, nett: mesh.length, iScene: mesh.filter(m => m.parent === R.scene).length, trekanter: tri, svever, ustøttet, rom: BS.rom(liste).length };
   }
   window.Byggesett = {
     rom: () => romNå(), senger: () => romNå().reduce((s, r) => s + r.senger, 0), romBruk: () => BS.romSum(romNå()), byttBruk, deler, åpne, lukk, trykk, oppdater, bekreft, riv, lag3d, sjekk,
-    velg: (o2) => { Object.assign(V, o2); A = null; B = null; forslag = []; visLinje(); }, forslag: () => forslag, tilstand: () => V, opphav, planModell, egneMaler, lagreMal, typeNå,
+    velg: (o2) => { Object.assign(V, o2); A = null; B = null; forslag = []; tekst = ''; ekstra = ''; advarsel = ''; visLinje(); }, forslag: () => forslag, tilstand: () => V, opphav, planModell, egneMaler, lagreMal, typeNå,
   };
 })();

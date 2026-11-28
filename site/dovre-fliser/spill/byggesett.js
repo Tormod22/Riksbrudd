@@ -433,6 +433,8 @@
   // h(x, y) -> moh. Delene som henger sammen (ruter og kanter som berører hverandre, ikke forsvar) får samme grunnhøyde: høyeste
   // terreng under 1. etasje + 0,25 m. Delene på bakken får en sokkel ned til laveste terreng − 0,3 m. Gir Map id -> { z0, ned }.
   const SOKKEL = .25;
+  // punktene en del står på (kartet): endene av en kant, hjørnet for en søyle, hjørnene i alle rutene ellers
+  const punkter = (o, d) => { d = nrm(d); return KANT(d) ? kantEnder(o, d) : kat(d) === 'søyle' ? [[o.ox + d.i * U, o.oy + d.j * U]] : ruter(d).flatMap(([i, j]) => [[0, 0], [1, 0], [1, 1], [0, 1]].map(([a, b]) => [o.ox + (i + a) * U, o.oy + (j + b) * U])); };
   function høyder(o, deler, h) {
     deler = norm(deler); const hus = deler.filter(d => kat(d) !== 'forsvar'), harRute = new Set(), forelder = new Map();
     const finn = k => { while (forelder.get(k) !== k) { forelder.set(k, forelder.get(forelder.get(k))); k = forelder.get(k); } return k; };
@@ -445,7 +447,7 @@
       for (const k of kanter(d)) { const [[ax, ay], [bx, by]] = k.a === 'x' ? [[k.i, k.j], [k.i + 1, k.j]] : [[k.i, k.j], [k.i, k.j + 1]];
         slå(id, `V${ax},${ay}`); slå(id, `V${bx},${by}`); for (const [i, j] of ruterVed(k)) if (harRute.has(`${i},${j}`)) slå(id, `R${i},${j}`); }
     }
-    const pkt = d => (KANT(d) ? kantEnder(o, d) : kat(d) === 'søyle' ? [[o.ox + d.i * U, o.oy + d.j * U]] : ruter(d).flatMap(([i, j]) => [[0, 0], [1, 0], [1, 1], [0, 1]].map(([a, b]) => [o.ox + (i + a) * U, o.oy + (j + b) * U])));
+    const pkt = d => punkter(o, d);
     const topp = new Map(), toppAlle = new Map(), ut = new Map(), maks = (m, k, z) => m.set(k, Math.max(m.has(k) ? m.get(k) : -1e9, z));
     for (const d of hus) { const k = finn(node('d' + d.id)); for (const [x, y] of pkt(d)) { const z = h(x, y); if (z === null || z !== z) continue; maks(toppAlle, k, z); if (d.n === 0) maks(topp, k, z); } }
     for (const d of hus) { const k = finn('d' + d.id), z0 = (topp.has(k) ? topp.get(k) : toppAlle.has(k) ? toppAlle.get(k) : 0) + SOKKEL;
@@ -467,7 +469,7 @@
   if (Leir && Leir.lagerplass && !Leir.lagerplass.ekstra) Leir.lagerplass.ekstra = L => (L && L.romBruk && Object.keys(L.romBruk).length ? romSum(rom(fraLeir(L, Leir), L.romBruk)).lager : 0);
 
   const api = { U, G, H, ETASJER, GROV, SOKKEL, DELER, GAMLE, NYE, STOFF, HUS, erDel, registrer, størrelse, typeFor, celle, ruter, kanter, biter, midt, kantEnder, kantVed, hjørneVed, rad,
-    nøkkel, indeks, norm, støttet, plassering, forslag, spenn, lagHus, husDeler, husForslag, dreiDel, tilMal, malGyldig, rom, ROMBRUK, ROMTYPER, romType, romSum, høyder, fraBygg, fraLeir, plassFor,
+    nøkkel, indeks, norm, punkter, støttet, plassering, forslag, spenn, lagHus, husDeler, husForslag, dreiDel, tilMal, malGyldig, rom, ROMBRUK, ROMTYPER, romType, romSum, høyder, fraBygg, fraLeir, plassFor,
     KANT, RUTE, kat };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.ByggesettRegler = api;
