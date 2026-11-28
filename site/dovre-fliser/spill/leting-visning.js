@@ -178,6 +178,8 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
     if (hintFor !== null && (performance.now() > hintTil || !(her && her.bygg && her.bygg.i === hintFor))) lukkHint();
     if (klar && her && her.bygg && her.inne && !her.leir && hintFor === null && (!navigator.webdriver || window.LeteSpill.test) && !hintVist()) visHint(her);
     const P = klar ? her : null;
+    // (B2) i en annen etasje enn 1. leter du i den etasjen (knappen i spill/etasjer3d.js), ikke i hele huset
+    if (P && window.Etasjer3d && Etasjer3d.etasje(P) !== 1) { jobb = null; knapp.classList.remove('på'); return; }
     if (P && P.bygg && !P.leir && lett.has(P.bygg.i) && plassTil(restAv(P))) { jobb = null; knapp.classList.add('på'); tekst('Hent det som ligger igjen'); fyll(0); return; }
     if (!P || !P.bygg || P.leir || lett.has(P.bygg.i)) { if (jobb) jobb = null; knapp.classList.remove('på'); return; }
     knapp.classList.add('på');

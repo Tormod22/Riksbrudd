@@ -365,6 +365,8 @@
     const B = P.bygg, info = { i: B.i, kl: B.kl, h: B.h, dør: best, senger: B.senger, år: B.år, am: B.am, navn: B.navn, industri: B.industri, tett: B.tett, k: B.k,
       moh: P.leir ? undefined : hoyde3d(u.cx + P[0][0], u.cy + P[0][1], u) }, pl = Interior.planG ? yield* Interior.planG(P, info) : Interior.plan(P, info);
     yield 'plan';
+    // (28. nov, B2) hus med flere etasjer: byggemodellen (spill/etasjer3d.js) – samme 1. etasje som i 2D, hull der trappene går
+    if (window.Etasjer3d && !P.leir) { const sv = yield* Etasjer3d.modellG(R, u, P); if (sv) Etasjer3d.tilpass(pl, P, u, sv); }
     // (18. nov kveld) krokene får planen før den bygges: møbler som er flyttet (spill/mobler-visning.js) tas ut eller settes inn her
     for (const f of window.INTERIOR_PLAN || []) { try { f(pl, P, u); } catch (e) { console.warn('interiør-krok:', e); } }
     yield 'kroker';
@@ -439,14 +441,19 @@
     const klipp = (S, akse, grense, større) => { const ut = [], inne = p => større ? p[akse] >= grense : p[akse] <= grense;
       for (let i = 0; i < S.length; i++) { const a = S[i], b = S[(i + 1) % S.length], ia = inne(a), ib = inne(b);
         if (ia) ut.push(a); if (ia !== ib) { const t = (grense - a[akse]) / (b[akse] - a[akse]); ut.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); } } return ut; };
-    for (const r of pl.rom) { yield 'gulv'; let S = klipp(klipp(klipp(klipp(Puv, 0, r.u0, true), 0, r.u1, false), 1, r.v0, true), 1, r.v1, false); if (S.length < 3) continue;
+    // (B2) trapphull i gulvet (trappa ned til kjelleren): rommets gulv deles rundt hullet (Etasjer.hull)
+    const gulvHull = pl.hullUV && pl.hullUV.gulv.length && window.Etasjer ? pl.hullUV.gulv : null;
+    for (const r of pl.rom) { yield 'gulv'; const S0 = klipp(klipp(klipp(klipp(Puv, 0, r.u0, true), 0, r.u1, false), 1, r.v0, true), 1, r.v1, false); if (S0.length < 3) continue;
+     for (const S of gulvHull ? Etasjer.hull(S0, gulvHull) : [S0]) { if (S.length < 3) continue;
       const [st, f] = stiler.get(r).gulv, g = G[NR[st]], m = METER[st] * (st === 'flis' && (r.rolle === 'butikk' || r.rolle === 'terminal') ? 1.6 : 1); let T;
       try { T = THREE.ShapeUtils.triangulateShape(S.map(p => new THREE.Vector2(p[0], p[1])), []); } catch (e) { continue; }
       const xy = p => [p[0] * A.ux + p[1] * A.vx, p[0] * A.uy + p[1] * A.vy, g0];
-      for (const [a, b, c] of T) tri(g, xy(S[a]), xy(S[b]), xy(S[c]), f, f, f, [S[a][0] / m, S[a][1] / m], [S[b][0] / m, S[b][1] / m], [S[c][0] / m, S[c][1] / m]); }
-    // himlingen
-    { const T = THREE.ShapeUtils.triangulateShape(P.map(p => new THREE.Vector2(p[0], p[1])), []), g = G[kl === 'låve' || kl === 'uthus' ? NR.planke : NR.malt], f = kl === 'låve' || kl === 'uthus' ? [.5, .4, .3] : [.96, .96, .94];
-      for (const [a, b, c] of T) tri(g, [P[a][0], P[a][1], g0 + tak], [P[c][0], P[c][1], g0 + tak], [P[b][0], P[b][1], g0 + tak], f, f, f, [P[a][0] / 2, P[a][1] / 2], [P[c][0] / 2, P[c][1] / 2], [P[b][0] / 2, P[b][1] / 2]); }
+      for (const [a, b, c] of T) tri(g, xy(S[a]), xy(S[b]), xy(S[c]), f, f, f, [S[a][0] / m, S[a][1] / m], [S[b][0] / m, S[b][1] / m], [S[c][0] / m, S[c][1] / m]); } }
+    // himlingen (B2: med hull der trappa går opp – omrisset deles rundt hullet i byggets akser)
+    { const g = G[kl === 'låve' || kl === 'uthus' ? NR.planke : NR.malt], f = kl === 'låve' || kl === 'uthus' ? [.5, .4, .3] : [.96, .96, .94];
+      const deler = pl.hullUV && pl.hullUV.tak.length && window.Etasjer ? Etasjer.hull(Puv, pl.hullUV.tak).map(S => S.map(q => [q[0] * A.ux + q[1] * A.vx, q[0] * A.uy + q[1] * A.vy])) : [P];
+      for (const Q of deler) { let T; try { T = THREE.ShapeUtils.triangulateShape(Q.map(p => new THREE.Vector2(p[0], p[1])), []); } catch (e) { continue; }
+        for (const [a, b, c] of T) tri(g, [Q[a][0], Q[a][1], g0 + tak], [Q[c][0], Q[c][1], g0 + tak], [Q[b][0], Q[b][1], g0 + tak], f, f, f, [Q[a][0] / 2, Q[a][1] / 2], [Q[c][0] / 2, Q[c][1] / 2], [Q[b][0] / 2, Q[b][1] / 2]); } }
 
     // ytterveggenes innside (3 cm innenfor veggen), delt der skilleveggene møter dem, med åpning ved inngangen og vinduer
     const dørH = Math.min(tak - .1, Math.max(2, D.hh || 2.1)), ender = pl.vegger.flatMap(v => [[v.ax, v.ay], [v.bx, v.by]]), dagslys = kl !== 'låve';
@@ -710,8 +717,9 @@
       g.fillStyle = '#f0e2b0'; g.fillText(t, p[0], py + .5); }
     g.restore(); });
   // Høyden du står på inne og på trappa foran døra (ellers null)
-  function høyde(x, y, terreng) { for (const [, o] of aktive) { const h = Interior.høyde(o.plan, x, y, terreng); if (h !== null) return h; } return null; }
-  const påTrapp = (x, y) => { for (const [, o] of aktive) if (Interior.påTrapp(o.plan, x, y)) return true; return false; };
+  // (B2) i et hus med flere etasjer spør spill/etasjer3d.js først (etasjen du står i, trappene)
+  function høyde(x, y, terreng) { if (window.Etasjer3d) { const h = Etasjer3d.høyde(x, y); if (h !== null) return h; } for (const [, o] of aktive) { const h = Interior.høyde(o.plan, x, y, terreng); if (h !== null) return h; } return null; }
+  const påTrapp = (x, y) => { if (window.Etasjer3d && Etasjer3d.påTrapp(x, y)) return true; for (const [, o] of aktive) if (Interior.påTrapp(o.plan, x, y)) return true; return false; };
   function inne(x, y) { for (const [P] of aktive) if (Interior.inni(P, x, y)) return P; return null; }
   // (18. nov kveld) bygg interiøret i bygget med nummer i på nytt nå (et møbel er flyttet): gir sant når bygget hadde interiør
   function bygOm(i) { const R = r3(); if (!R || !R.ut) return false;

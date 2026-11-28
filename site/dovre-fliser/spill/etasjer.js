@@ -14,7 +14,8 @@
  */
 (function (rot) {
   'use strict';
-  const Leting = rot.Leting || (typeof require === 'function' ? (() => { try { return require('./leting.js'); } catch (e) { return null; } })() : null);
+  // (leting.js lastes etter denne fila i siden – hentes når den trengs)
+  let Lt = null; const Leting_ = () => Lt || (Lt = rot.Leting || (typeof require === 'function' ? (() => { try { return require('./leting.js'); } catch (e) { return null; } })() : null));
   const hash = (a, b) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
   // Alle tallene her er Claudes forslag.
   const REGLER = {
@@ -54,7 +55,7 @@
   const rund = (s, v) => (s === 'mat' || s === 'diesel' ? Math.round(v) : s === 'penger' ? Math.round(v / 1000) * 1000 : Math.round(v * 10) / 10);
   // funn i etasje et (et = etasjen fra modellen, eller n); 1. etasje = som før
   function funn(kl, A, i, et) {
-    const n = typeof et === 'number' ? et : et ? et.n : 1;
+    const n = typeof et === 'number' ? et : et ? et.n : 1, Leting = Leting_();
     if (n === 1 || !Leting) return Leting ? Leting.funn(kl, A, i) : { mat: 0, tre: 0, betong: 0, stål: 0, diesel: 0, penger: 0, tomt: true, person: false };
     const s = typeof et === 'object' ? slag(et) : n < 0 ? 'kjeller' : 'over', frø = Math.imul(i | 0, 31) + (n + 7) * 101;
     if (s === 'over') { const f = Leting.funn(kl, A, frø); f.person = false; if (!f.tomt) for (const k of ['mat', 'tre', 'betong', 'stål', 'diesel', 'penger']) f[k] = rund(k, f[k] * REGLER.funn.over); return f; }

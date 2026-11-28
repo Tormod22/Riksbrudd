@@ -89,6 +89,8 @@
   }
   function let2d(h) {
     if (jobb) return false; const L = rot.LeteSpill; if (!L) return false;
+    // (B2, ut3-etasjer) står karakteren i en annen etasje i huset, letes det der (spill/etasjer-visning.js)
+    { const E2 = rot.Etasjer2D, hh = E2 && E2.husAv(h.i), n = hh ? E2.etasjeI(hh) : 1; if (n !== 1) return E2.let2d(hh, n); }
     const sek = (rot.Leting ? Leting.tid(h.A) : 8) * (rot.OverlevSpill ? OverlevSpill.letetid() : 1);
     jobb = { h, start: performance.now(), sek }; vis(); return true;
   }
