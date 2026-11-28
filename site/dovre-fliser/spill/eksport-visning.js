@@ -132,7 +132,10 @@
     const kap = (window.Vare ? Vare.kapasitet(o) : 12) / ((R.VARER[k.vare] || {}).plass || 1), m = Math.round(Math.min(kap, rest, har) * 10) / 10; if (!(m > 0)) return { feil: 'Ingenting å laste.' };
     if (grense && !smugling && !(window.OppstartSpill && OppstartSpill.betal(pris))) return { feil: `Ikke nok penger til turen med ${R.grense.firma} (${kr(pris)}).` };
     V.ta(k.vare, m); o.vare = k.id; k.turer.push({ bil: o.navn, mengde: m, smugling: !!(grense && smugling) });
-    try { if (window.kjørTil) { const p = kjørTil(o, k.ut.x, k.ut.y); if (p && p.catch) p.catch(() => {}); } } catch (e) { /* spilleren kan kjøre selv */ }
+    // finner ikke bilen vegen dit (vegkartet mangler, for langt på telefon, utenfor spillkartet): lasten settes tilbake – Gråfjell kan ta den
+    const angre = f => { const t = k.turer.find(q => q.bil === o.navn && !q.frakt); if (!t || o.sti) return; k.turer = k.turer.filter(q => q !== t); o.vare = null; V.legg(k.vare, t.mengde);
+      logg(`${o.navn} finner ikke vegen til ${k.ut.navn}${f ? ' (' + f + ')' : ''}. Lasten er satt tilbake på lageret – prøv «La ${R.frakt.firma} ta det».`); lagre(); skitten = true; };
+    try { if (window.kjørTil) { const p = kjørTil(o, k.ut.x, k.ut.y); if (p && p.then) p.then(r => { if (r && r.feil) angre(r.feil); }, () => angre('')); } } catch (e) { /* spilleren kan kjøre selv */ }
     lagre(); skitten = true;
     return { ok: true, tekst: `${o.navn} har lastet ${E.mengdeTekst(k.vare, m)} ${VN(k.vare)} og kjører ${grense ? (smugling ? 'mot grensa (smugling)' : `mot grensa – ${R.grense.firma} tar ${kr(pris)}`) : 'til kaia i ' + k.ut.navn} (${km(dist)} i luftlinje).` };
   }
