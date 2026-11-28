@@ -70,7 +70,9 @@
     const ind = h.info.kl === 'lager' ? (dInd > 0 && dInd !== 11 && I.IND[dInd] ? dInd : 11) : I.forInfo(Object.assign({}, h.info, { ind: dInd }));
     const navn = h.info.kl === 'lager' && ind === 11 ? 'Lager og logistikk' : I.tekst(ind, h.info.kl === 'lager' ? 'Lager' : 'Industri');
     const ting = [...new Set(I.innredning(ind).filter(x => x.rom === 'hall').map(x => x.navn.toLowerCase()))].slice(0, 4).join(', ');
-    return `<div class="rad"><small id="plan2dind">${esc(navn)}${ting ? ' · ' + esc(ting) : ''}${dInd > 0 || I.kjent(h.info) || h.info.kl === 'lager' ? '' : ' (anslått)'}</small></div>`;
+    // navnet står alltid (også på telefon, der plantegningen skjuler <small>); maskinene bare på større skjermer
+    const anslått = dInd > 0 || I.kjent(h.info) || h.info.kl === 'lager' ? '' : ' (anslått)';
+    return `<div class="rad"><span id="plan2dind" style="font-size:.92em;color:var(--ink-dim,#b9ab8a)">${esc(navn)}${anslått}</span>${ting ? '<small> · ' + esc(ting) + '</small>' : ''}</div>`;
   });
 
   window.IndustriSpill = { cache: CACHE, tøm: () => CACHE.clear(), omgivelser, forHus, panelNavn };
