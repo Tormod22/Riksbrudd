@@ -50,8 +50,16 @@
     nattmenneske: { navn: 'nattmenneske', tekst: 'liker kveld og natt: +15 % fra 18 til 06', natt: 1.15 },
     modig: { navn: 'modig', tekst: '+15 % på vakt', vakt: 1.15 },
     lærenem: { navn: 'lærenem', tekst: 'lærer 50 % raskere på øvingsfeltet' },
+    // (ut5-oppforsel, 28. nov, Claudes forslag) egenskaper som kan skape litt trøbbel – de hever ikke lønnskravet (trøbbel: true).
+    // lat og redd virker her (personF); ryddig og pratsom virker i spill/oppforsel.js (rydding, venner, fritid), redd også ved alarm.
+    lat: { navn: 'lat', tekst: '−10 % arbeidstempo', tempo: .9, trøbbel: true },
+    redd: { navn: 'redd', tekst: '−10 % på vakt, går tidlig i tilflukt ved angrep', vakt: .9, trøbbel: true },
+    ryddig: { navn: 'ryddig', tekst: 'rydder lageret dobbelt så fort' },
+    pratsom: { navn: 'pratsom', tekst: 'blir fort kjent (venner og uvenner), mer liv i fritida', trøbbel: true },
   };
   const EGEN_LISTE = Object.keys(EGENSKAPER);
+  // egenskaper som ikke passer hos samme person
+  const MOTSATT = [['flittig', 'lat'], ['modig', 'redd']];
 
   // ---------- tilstand ----------
   function ny(frø = 4242) { return { versjon: 1, dag: null, søkere: [], neste: 1, frø: frø >>> 0 || 1, lokk: null, ansatt: 0, tapt: 0 }; }
@@ -66,7 +74,7 @@
   const beste = p => Math.max(0, ...Object.entries(p.ferd || {}).filter(([o]) => o !== 'fri').map(([, v]) => v || 0));
   // lønnskravet for en person (eller søker): etter den beste ferdigheten og egenskapene
   function krav(p) {
-    const R = REGLER.lønn, b = beste(p), n = Array.isArray(p.egen) ? p.egen.length : 0;
+    const R = REGLER.lønn, b = beste(p), n = Array.isArray(p.egen) ? p.egen.filter(e => !(EGENSKAPER[e] && EGENSKAPER[e].trøbbel)).length : 0;
     return klem(rund(R.min + klem((b - .9) / .55, 0, 1) * R.spenn + n * R.perEgenskap, R.steg), R.min, R.maks);
   }
   const lønn = p => (p && p.lønn > 0 ? p.lønn : REGLER.lønn.standard);
@@ -75,13 +83,15 @@
   // forventet antall søkere: ctx = { rykte (0–100, pålitelig), byer, avtaler }
   function forventet(ctx = {}) {
     const A = REGLER.antall, rk = Number.isFinite(ctx.rykte) ? ctx.rykte : 50;
-    return klem(A.grunn + (rk - 50) * A.rykte + Math.min(A.byMaks, (ctx.byer || 0) * A.perBy) + Math.min(A.avtaleMaks, (ctx.avtaler || 0) * A.perAvtale), 0, A.maks);
+    // (ut5-oppforsel) ulykker de siste døgnene gir færre søkere: ctx.ulykker, ellers kroken api.ulykkeMinus() (uten kroken 0 – som før)
+    const ul = Number.isFinite(ctx.ulykker) ? ctx.ulykker : api.ulykkeMinus ? +api.ulykkeMinus() || 0 : 0;
+    return klem(A.grunn + (rk - 50) * A.rykte + Math.min(A.byMaks, (ctx.byer || 0) * A.perBy) + Math.min(A.avtaleMaks, (ctx.avtaler || 0) * A.perAvtale) - ul, 0, A.maks);
   }
   function antall(ctx, r) { const A = REGLER.antall; return klem(Math.round(forventet(ctx) + (r() - .5) * A.spredning), 0, A.maks); }
   function egenskaper(r) {
     const [a, b] = REGLER.egenskapSjanse, ut = []; if (r() >= a) return ut;
     ut.push(EGEN_LISTE[Math.floor(r() * EGEN_LISTE.length)]);
-    if (r() < b / a) { const e = EGEN_LISTE[Math.floor(r() * EGEN_LISTE.length)]; if (!ut.includes(e)) ut.push(e); }
+    if (r() < b / a) { const e = EGEN_LISTE[Math.floor(r() * EGEN_LISTE.length)]; if (!ut.includes(e) && !MOTSATT.some(([x, y]) => (ut.includes(x) && e === y) || (ut.includes(y) && e === x))) ut.push(e); }
     return ut;
   }
   // én søker: personen lages med FolkRegler.nyPerson (navnet reserveres i F.navnBrukt, så det aldri brukes to ganger) og tas ut igjen
@@ -138,7 +148,10 @@
   function lokkSjekk(S, F, tid, r) {
     if (S.lokk) return null; const K = REGLER.lokk, M = F.personer.filter(p => misfornøyd(F, p) && !p.karakter);
     if (!M.length || r() >= K.sjanse) return null;
-    const p = M.slice().sort((a, b) => (a.lojal ?? .6) - (b.lojal ?? .6))[0], rv = REGLER.rivaler[Math.floor(r() * REGLER.rivaler.length)];
+    const p = M.slice().sort((a, b) => (a.lojal ?? .6) - (b.lojal ?? .6))[0];
+    // (ut5-oppforsel) venner i leiren holder på folk: api.lokkF(p) -> 0–1 (spill/oppforsel-visning.js; uten kroken 1 – som før)
+    const holdt = api.lokkF ? api.lokkF(p) : 1; if (holdt < 1 && r() >= holdt) return null;
+    const rv = REGLER.rivaler[Math.floor(r() * REGLER.rivaler.length)];
     const bud = Math.max(krav(p), rund(lønn(p) + K.påslag, REGLER.lønn.steg));
     S.lokk = { id: p.id, navn: rv.navn, rival: rv.id, lønn: bud, frist: tid + K.frist, person: p.navn };
     return { ...S.lokk, tekst: `${rv.navn} har tilbudt ${p.navn} ${LB.kroner(bud)} i døgnet. Svar i Folk-panelet innen ${Math.round(K.frist / 60)} timer, ellers går hen.` };
@@ -157,6 +170,8 @@
     if (p.egen.includes('flittig')) f *= EGENSKAPER.flittig.tempo;
     if (p.egen.includes('nattmenneske') && Number.isFinite(time) && (time >= 18 || time < 6)) f *= EGENSKAPER.nattmenneske.natt;
     if (p.egen.includes('modig') && o === 'vakt') f *= EGENSKAPER.modig.vakt;
+    if (p.egen.includes('lat')) f *= EGENSKAPER.lat.tempo;
+    if (p.egen.includes('redd') && o === 'vakt') f *= EGENSKAPER.redd.vakt;
     return f;
   }
   // ---------- opplæring ----------
@@ -220,7 +235,7 @@
       utfør: (k, c) => ferdig(c, 'opplæring', k.ferdighet ? startOpplæring(F(c), L(c), k.person, k.ferdighet, M.mangler ? M.mangler(side(c)) : null) : stoppOpplæring(F(c), k.person)),
       beskriv: k => (k.ferdighet ? 'sender en på opplæring' : 'tar en ut av opplæringen') });
   }
-  const api = { REGLER, EGENSKAPER, ny, fraJSON, rng, beste, krav, lønn, forventet, antall, egenskaper, lagSøker, morgen, steg, kanAnsette, ansettLønn, ansett,
+  const api = { lokkF: null, ulykkeMinus: null, REGLER, EGENSKAPER, ny, fraJSON, rng, beste, krav, lønn, forventet, antall, egenskaper, lagSøker, morgen, steg, kanAnsette, ansettLønn, ansett,
     misfornøyd, lokkSjekk, svarLokk, personF, plasser, elever, startOpplæring, stoppOpplæring, skoleSteg, mesterSteg, registrerKommandoer };
   if (NODE) module.exports = api; else rot.Rekruttering = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
