@@ -174,7 +174,8 @@
     E.tjen(Ø, folk, min, gr);
     const dEtter = (tid - fredSlutt()) / 1440; if (dEtter < 0) return null;
     const lag = ENHETER.filter(e => e.ai && e.side === side && levende(e)).length;
-    const tak = E.tak(F.lagTak(holder.length, Math.floor(døgn())), dEtter, gr, holder.length);
+    // (ut5-rivaler, Ø8) taket etter hva rivalen har råd til (AI.rådTak – spill/rival-visning.js)
+    const tak0 = E.tak(F.lagTak(holder.length, Math.floor(døgn())), dEtter, gr, holder.length), tak = AI.rådTak ? AI.rådTak(side, tak0) : tak0;
     const biler = AI.ekstraBiler[side].filter(k => KJORETOY.includes(k)).length + (AI.biler && AI.biler[side] && KJORETOY.includes(AI.biler[side]) ? 1 : 0);
     const vogner = KJORETOY.filter(k => k.side === side && k.type === 'stridsvogn').length;
     const hva = E.kjøp(Ø, { lag, tak, lastebiler: biler, stridsvogner: vogner, døgn: døgn(), g: gr }); if (!hva) return null;

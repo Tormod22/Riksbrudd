@@ -120,6 +120,9 @@
   // en våpenhvile gjelder innen radius rundt leiren – AI.hvileVed(a, b, x, y). Lagene til en side med våpenhvile ser ikke dine lag i
   // området som fiender, tar ikke dine tettsteder der og går ikke mot leiren (Fraksjoner.respekterPakt)
   AI.pakter = [];
+  // (ut5-rivaler, Ø8) AI.styrere: [(lag, valg) => nytt valg | null], spørres etter AI.styr; AI.rådTak(side, tak): taket etter hva rivalen
+  // har råd til (spill/rival-visning.js – uten den, eller i testene, er taket som før)
+  AI.styrere = []; AI.rådTak = null;
   const iPakt = (a, b, x, y) => !!(window.Firma && AI.pakter.length && Firma.iPakt(AI.pakter, a, b, x, y, tid));
   const hvile = (a, b) => (a === 'blå' && (AI.fred[b] || 0) > tid) || (b === 'blå' && (AI.fred[a] || 0) > tid) || iPakt(a, b);
   AI.hvile = hvile;
@@ -172,7 +175,9 @@
       const v = F.velg(s, { vern: pVern, felles: pFelles, overtakF: vmF, fred: regionFred(), småFørst: småFørst(), storbyStengt: AI.storbyStengt ? AI.storbyStengt() : 0, blåMedVarsel: !!AI.leirMedVarsel, mot, iByFiende, side: s.side, byer, fiender: fredTid() && L && s.side !== 'blå' ? fiender.filter(f => Math.hypot(f.x - L.x, f.y - L.y) > 1500) : fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
         minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L && AI.angripLeir !== false && !AI.leirMedVarsel && !hvile(s.side, 'blå') && !fredTid() ? { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
       // (runde 7) lag i en angrepsgruppe følger gruppa (spill/eskalering-visning.js) – unntatt når laget er slått ut eller angriper en fiende det ser
-      if (AI.styr) { const o = AI.styr(s, v); if (o) { delete v.mål; Object.assign(v, o); } }
+      if (AI.styr) { const o = AI.styr(s, v); if (o) { delete v.mål; Object.assign(v, o); } else if (AI.styrere.length) {
+        // (ut5-rivaler, Ø8) andre styrere (spill/rival-visning.js: vokte avtalebyene, holde garnison etter rivalens vei) når eskaleringen ikke styrer laget
+        for (const f of AI.styrere) { const o2 = f(s, v); if (o2) { delete v.mål; Object.assign(v, o2); break; } } } }
       // (ut4-firmaer, Ø5) våpenhvilen: ingen angrep på det som er ditt i området, heller ikke fra eskaleringens grupper
       if (AI.pakter.length) { const vern = (x, y) => iPakt(s.side, 'blå', x, y), L2 = leir(), blåVed = (x, y) => (L2 && Math.hypot(L2.x - x, L2.y - y) < 400) || byer.some(b => b.eier === 'blå' && b.inni(x, y)) || ENHETER.some(e => e.side === 'blå' && levende(e) && Math.hypot(e.x - x, e.y - y) < R.pakt.nær);
         const ny2 = F.respekterPakt(v, s, vern, blåVed); if (ny2 !== v) { for (const k of Object.keys(v)) delete v[k]; Object.assign(v, ny2); } }
@@ -203,7 +208,7 @@
       // (18. nov) tettstedene fraksjonen holder, gir forsterkninger fortere (RegionSpill.fordel, docs/natt/okonomi.md)
       const forsterk = window.RegionSpill && RegionSpill.fordel ? Math.max(.25, +RegionSpill.fordel(side).forsterk || 1) : 1;
       sist[side] += sek; if (sist[side] < R.forsterkning.hver / forsterk) continue;
-      const lag = ENHETER.filter(e => e.side === side && e.ai && levende(e) && !F.slåttUt(e)); const holder = ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > HJEM[side][0] - 60000 && b.bb[0] < HJEM[side][0] + 60000 && b.bb[3] > HJEM[side][1] - 60000 && b.bb[1] < HJEM[side][1] + 60000 && eier(b) === side).length; const tak = F.lagTak(holder, navigator.webdriver && !AI.test ? 0 : Math.floor(tid / 1440)); if (lag.length >= tak) continue;
+      const lag = ENHETER.filter(e => e.side === side && e.ai && levende(e) && !F.slåttUt(e)); const holder = ((INFRA && INFRA.tettsted) || []).filter(b => b.bb[2] > HJEM[side][0] - 60000 && b.bb[0] < HJEM[side][0] + 60000 && b.bb[3] > HJEM[side][1] - 60000 && b.bb[1] < HJEM[side][1] + 60000 && eier(b) === side).length; const tak0 = F.lagTak(holder, navigator.webdriver && !AI.test ? 0 : Math.floor(tid / 1440)), tak = AI.rådTak ? AI.rådTak(side, tak0) : tak0; if (lag.length >= tak) continue;
       // (19. nov, gjennomspillingen: slåtte lag teller ikke, så Ravnsund hadde 26 lag på dag 8) er det alt så mange lag som taket,
       // samles et slått lag som står i et eget tettsted, til det nye laget; ellers kommer ikke noe nytt (ikke i testene)
       if (!navigator.webdriver || AI.test) { const alle = ENHETER.filter(e => e.side === side && e.ai && levende(e)); if (alle.length >= tak) {

@@ -55,6 +55,11 @@
     motbud: 1.35,
     // rivalene: hvor langt fra egne tettsteder de frir, og hvor lenge de forhandler (spillminutter)
     rival: { radius: 20000, tid: 1440, sjanse: .35, overby: .85 },
+    // (ut5-rivaler, Ø8) RIVALENES LØFTER – Claudes forslag: en rival med beskyttelse/handel lover «mann» friske mann innen REGLER.radius;
+    // døgnet er holdt når løftet holdt i holdtAndel av timene. Rivalens tillit hos byen starter på «tillit», + «holdt» / «brutt» per døgn;
+    // byen sier opp under «siOpp» eller etter «brudd» brudd, og vil ikke snakke med den rivalen på «stengt» døgn. Handel etter «handelEtter»
+    // holdte døgn (uten disse tallene – gamle lagringer – gjelder sju døgn som før). Kunde: rivalen har levert en kontrakt for byen.
+    rivalLøfte: { mann: 4, tillit: 45, holdt: 3, brutt: -10, siOpp: 25, brudd: 3, stengt: 3, handelEtter: 5, kundeVekt: 1.5 },
   };
   const TRINN = ['nøytral', 'kunde', 'beskyttelse', 'handel', 'medlem'];
   const TRINNORD = { nøytral: 'Nøytral', kunde: 'Kunde', beskyttelse: 'Beskyttelse', handel: 'Handel', medlem: 'Medlem' };
@@ -200,11 +205,15 @@
 
   // RIVALENE frir: kandidater = tettsteder uten blå avtale over kunde og uten rivalavtale, innen rival.radius fra rivalens egne.
   // byer: [{ id, x, y, folk, eier }], side: 'rød'|'grønn'. Gir id-en til den beste kandidaten eller null.
-  function rivalMål(S, byer, side) {
+  // (ut5-rivaler) en by der rivalen alt er kunde, teller rivalLøfte.kundeVekt mer; en by som har sagt opp rivalen (b.rivalStengt), hopper
+  // den over til stengt-tida er ute (nå = spillminuttet; uten nå gjelder ikke stengingen)
+  function rivalMål(S, byer, side, nå) {
     const egne = byer.filter(o => o.eier === side); if (!egne.length) return null; let best = null, bp = -Infinity;
-    for (const o of byer) { if (o.eier) continue; const b = S.byer[o.id]; if (b && (b.rival || b.forhandler || rang(trinn(b)) >= rang('beskyttelse'))) continue;
+    for (const o of byer) { if (o.eier) continue; const b = S.byer[o.id], kunde = !!(b && b.rival && b.rival.trinn === 'kunde' && b.rival.side === side);
+      if (b && ((b.rival && !kunde) || b.forhandler || rang(trinn(b)) >= rang('beskyttelse'))) continue;
+      if (b && b.rivalStengt && b.rivalStengt.side === side && Number.isFinite(nå) && nå < b.rivalStengt.til) continue;
       let d = Infinity; for (const e of egne) d = Math.min(d, Math.hypot(o.x - e.x, o.y - e.y)); if (d > REGLER.rival.radius) continue;
-      const p = Math.sqrt(1 + o.folk) / (1 + d / 1000); if (p > bp) { bp = p; best = o.id; } }
+      const p = Math.sqrt(1 + o.folk) / (1 + d / 1000) * (kunde ? REGLER.rivalLøfte.kundeVekt : 1); if (p > bp) { bp = p; best = o.id; } }
     return best;
   }
   // En rival begynner å forhandle; pris = det rivalen tar per døgn (litt under det byen er villig til)
@@ -216,7 +225,32 @@
     b.rival = { side: f.side, trinn: 'beskyttelse', pris: f.pris, start: nå }; b.tillit = klem(b.tillit + REGLER.tillit.rival, 0, 100); return 'rival';
   }
   // Rivalen går videre fra beskyttelse til handel etter 7 døgn (enkel AI)
-  function rivalVokser(b, nå) { if (b.rival && b.rival.trinn === 'beskyttelse' && nå - b.rival.start >= 7 * 1440) { b.rival.trinn = 'handel'; return true; } return false; }
+  // (ut5-rivaler) når løftene telles (b.rival.holdt finnes), etter rivalLøfte.handelEtter holdte døgn
+  function rivalVokser(b, nå) { if (!b.rival || b.rival.trinn !== 'beskyttelse') return false;
+    const klar = Number.isFinite(b.rival.holdt) ? b.rival.holdt >= REGLER.rivalLøfte.handelEtter : nå - b.rival.start >= 7 * 1440;
+    if (klar) { b.rival.trinn = 'handel'; return true; } return false; }
+  // ---------- (ut5-rivaler, Ø8) RIVALENE SOM KUNDE OG MED LØFTER ----------
+  // En rival har levert en kontrakt for byen: den blir kunde (bare når byen ikke har en annen rival eller forhandler). Gir true når det er nytt.
+  function rivalKunde(b, side, nå) {
+    if (!b || b.rival || b.forhandler || (b.avtale && rang(b.avtale.trinn) >= rang('beskyttelse'))) return false;
+    b.rival = { side, trinn: 'kunde', pris: 0, start: Math.round(+nå || 0), kontrakter: 1 }; return true;
+  }
+  // én spilltime: mann = rivalens friske mann innen REGLER.radius (bare for beskyttelse og handel)
+  function rivalTime(b, mann) {
+    const r = b && b.rival; if (!r || (r.trinn !== 'beskyttelse' && r.trinn !== 'handel')) return null;
+    r.timer = (r.timer || 0) + 1; const ok = (+mann || 0) >= REGLER.rivalLøfte.mann; if (ok) r.ok = (r.ok || 0) + 1; return ok;
+  }
+  // ett spilldøgn: løftet holdt eller brutt; byen kan si opp rivalen. Gir { holdt, sierOpp, grunn, side } eller null
+  function rivalDøgn(b, nå) {
+    const r = b && b.rival, RL = REGLER.rivalLøfte; if (!r || (r.trinn !== 'beskyttelse' && r.trinn !== 'handel')) return null;
+    if (!Number.isFinite(r.tillit)) r.tillit = RL.tillit; if (!Number.isFinite(r.holdt)) r.holdt = 0; if (!Number.isFinite(r.brudd)) r.brudd = 0;
+    const timer = r.timer || 0, holdt = timer > 0 && (r.ok || 0) >= timer * REGLER.holdtAndel; r.timer = 0; r.ok = 0;
+    if (holdt) { r.holdt++; r.tillit = klem(r.tillit + RL.holdt, 0, 100); } else { r.brudd++; r.tillit = klem(r.tillit + RL.brutt, 0, 100); }
+    const sierOpp = r.tillit < RL.siOpp || r.brudd >= RL.brudd, side = r.side;
+    const grunn = !sierOpp ? null : r.brudd >= RL.brudd ? `${r.brudd} brutte løfter` : 'byen stoler ikke på dem lenger';
+    if (sierOpp) { b.rival = null; b.rivalStengt = { side, til: Math.round(+nå || 0) + RL.stengt * 1440 }; }
+    return { holdt, sierOpp, grunn, side };
+  }
 
   // KRIGSSTILLINGEN (strategi.js, kapittel 3.3): medlemmer teller fullt (de er eid, eier blå), partnere (handel) halvt.
   // Gir { side, vekt } for et tettsted som ikke er eid, ellers null.
@@ -232,12 +266,14 @@
     for (const [id, b] of Object.entries(d.byer)) { if (!b || typeof b !== 'object') continue;
       S.byer[id] = { tillit: klem(+b.tillit || 0, 0, 100), frykt: klem(+b.frykt || 0, 0, 100), kontrakter: Math.max(0, +b.kontrakter || 0), brudd: +b.brudd || 0,
         avtale: b.avtale && TRINN.includes(b.avtale.trinn) ? b.avtale : null, rival: b.rival && (b.rival.side === 'rød' || b.rival.side === 'grønn') ? b.rival : null,
-        forhandler: b.forhandler || null, hjelp: b.hjelp || null, sistHjelp: b.sistHjelp, makt: !!b.makt, stengtTil: +b.stengtTil || 0 }; }
+        forhandler: b.forhandler || null, hjelp: b.hjelp || null, sistHjelp: b.sistHjelp, makt: !!b.makt, stengtTil: +b.stengtTil || 0 };
+      // (ut5-rivaler) byen som har sagt opp en rival
+      if (b.rivalStengt && (b.rivalStengt.side === 'rød' || b.rivalStengt.side === 'grønn') && Number.isFinite(+b.rivalStengt.til)) S.byer[id].rivalStengt = { side: b.rivalStengt.side, til: +b.rivalStengt.til }; }
     return S;
   }
 
   const api = { REGLER, TRINN, TRINNORD, HOLDNING, HOLDNINGER, BEHOVORD, hash, leder, behov, ny, by, trinn, rang, grunnpris, verdi, kanTrinn, forhandle, inngå, time, døgn,
-    siOpp, slutt, avslutt, naboer, betaling, berOmHjelp, hjelpSteg, rivalMål, rivalFrir, rivalSteg, rivalVokser, stillingVekt, fraJSON };
+    siOpp, slutt, avslutt, naboer, betaling, berOmHjelp, hjelpSteg, rivalMål, rivalFrir, rivalSteg, rivalVokser, rivalKunde, rivalTime, rivalDøgn, stillingVekt, fraJSON };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Byavtale = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
