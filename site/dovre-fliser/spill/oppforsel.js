@@ -211,13 +211,16 @@
       .map(c => ({ k: Math.round(c.x) + ',' + Math.round(c.y), x: c.x, y: c.y, r: c.r || 32, navn: (bygg && bygg(c.x, c.y, c.r || 32)) || null, plasser: R.perRute }));
   }
   // velg slukkerne: de nærmeste som kan arbeide (ikke vakt, ikke skadet, ikke opptatt), høyst perRute per rute og maks i alt.
-  // Gir Map(id -> jobb)
-  function velgSlukkere(F, jobber, plass, opptatt = new Set(), arbeidsfør = p => p.helse >= .4) {
+  // før: forrige fordeling (Map id -> jobb) – de som alt slukker, beholder jobben (ellers bytter folk hele tida mens de går). Gir Map(id -> jobb)
+  function velgSlukkere(F, jobber, plass, opptatt = new Set(), arbeidsfør = p => p.helse >= .4, før = null) {
     const R = REGLER.slukk, ut = new Map(); let n = 0;
+    if (før) for (const [id, j0] of før) { const j = jobber.find(q => q.k === j0.k), p = F.personer.find(q => q.id === id);
+      if (!j || !p || opptatt.has(id) || p.borte || p.skole || !arbeidsfør(p) || n >= R.maks || [...ut.values()].filter(q => q.k === j.k).length >= j.plasser) continue; ut.set(id, j); n++; }
     for (const j of jobber) { if (n >= R.maks) break;
       const kand = F.personer.filter(p => !opptatt.has(p.id) && !ut.has(p.id) && !p.borte && !p.skole && p.oppgave !== 'vakt' && arbeidsfør(p) && plass(p))
         .map(p => ({ p, d: Math.hypot(plass(p).x - j.x, plass(p).y - j.y) })).sort((a, b) => a.d - b.d);
-      for (const { p } of kand.slice(0, Math.min(j.plasser, R.maks - n))) { ut.set(p.id, j); n++; } }
+      const har = [...ut.values()].filter(q => q.k === j.k).length;
+      for (const { p } of kand.slice(0, Math.max(0, Math.min(j.plasser - har, R.maks - n)))) { ut.set(p.id, j); n++; } }
     return ut;
   }
   // hvor slukkeren står: på kanten av ruta, fast vinkel per person

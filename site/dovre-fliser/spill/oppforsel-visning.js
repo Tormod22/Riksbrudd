@@ -147,7 +147,7 @@
     const byggI = (x, y, r) => { const b = L.bygg.find(q => LB.BYGG[q.type] && !LB.BYGG[q.type].del && Math.abs(q.x - x) <= r + 3 && Math.abs(q.y - y) <= r + 3); return b ? navnB(b) : null; };
     P.jobber = nivå === 'nær' ? [] : OP.slukkJobber(window.BRANNER || [], m, byggI);
     if (P.jobber.length) { const opptatt = new Set([...P.bær.keys(), ...P.bæres.keys(), ...Object.keys(S.skadet).map(Number), ...(P.tilflukt ? P.tilflukt.mål.keys() : [])]);
-      P.slukk = OP.velgSlukkere(F, P.jobber, plass, opptatt, arbeidsfør);
+      P.slukk = OP.velgSlukkere(F, P.jobber, plass, opptatt, arbeidsfør, P.slukk);
       const nøk = P.jobber.map(j => j.k).join('|'); if (nøk && !sistBrannLogg) meld(`Brann${P.jobber[0].navn ? ' ved ' + P.jobber[0].navn : ' i leiren'}! ${liste([...P.slukk.keys()].slice(0, 4).map(i => fornavn(F.personer.find(q => q.id === i))))} slukker (høy prioritet).`); sistBrannLogg = nøk;
       if (dtMin > 0) slukkSteg(Gs, dtMin); }
     else { P.slukk = new Map(); sistBrannLogg = ''; }

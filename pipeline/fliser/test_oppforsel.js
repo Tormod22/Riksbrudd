@@ -56,6 +56,7 @@ const person = (id, o = {}) => ({ id, navn: 'Person ' + id, alder: 35, oppgave: 
   ok(J.length === 1 && J[0].navn === 'brakka', 'bare brann i leiren gir slukkejobb');
   const sl = OP.velgSlukkere(F, J, plass, new Set(), p => p.helse >= .4);
   ok([...sl.keys()].sort().join() === '2,3,4', 'de nærmeste ledige slukker (ikke vakta, ikke den skadde)');
+  pos[4] = [400, 0]; const sl2 = OP.velgSlukkere(F, J, plass, new Set(), p => p.helse >= .4, sl); ok([...sl2.keys()].sort().join() === '2,3,4', 'slukkerne beholder jobben mens de går'); pos[4] = [30, 0];
   ok(OP.slukkSjanse(3, 10) > OP.slukkSjanse(1, 10) && OP.slukkSjanse(0, 10) === 0, 'flere slukkere = raskere');
   ok(OP.trengerBærer(F.personer[4]) && !OP.trengerBærer(F.personer[1]), 'den hardt skadde må bæres');
   const b = OP.velgBærer(F, F.personer[4], plass, new Set([2])); ok(b && b.id === 4, 'nærmeste ledige bærer (' + (b && b.id) + ')'); }
