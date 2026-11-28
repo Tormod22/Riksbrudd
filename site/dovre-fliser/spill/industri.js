@@ -178,6 +178,10 @@
       ['vegg', 'sprøytestøper', A => A > 150 ? 1 : 0, { fri: 1.4 }], ['rad', 'rørgate', A => Math.min(4, Math.floor(A / 150)), { fri: 1.4 }], ['vegg', 'kjemikalieskap', 2, { fri: .8 }]],
   };
   // rommenes gulv og vegger i 3D (spill/interior3d.js romStil spør her for rollene den ikke kjenner)
+  // (ut9-maskiner) de nye maskinene, målene og produksjonslinjene fra spill/maskiner.js (lastes før denne fila)
+  const MK = rot.Maskiner || (typeof module !== 'undefined' && module.exports ? (() => { try { return require('./maskiner.js'); } catch (e) { return null; } })() : null);
+  if (MK) { for (const [k, v] of Object.entries(MK.MASKINER)) MASKINER[k] = v; Object.assign(OPPSKRIFT, MK.OPPSKRIFT); }
+  Object.assign(ANDRE_NAVN, { melketank: 'Melketank' });
   const ROMSTIL = {
     sagbrukshall: { gulv: ['betong', [.56, .54, .5]], vegg: ['planke', [.7, .56, .4]], lampe: 2 }, lakkrom: { gulv: ['betong', [.6, .6, .58]], vegg: ['malt', [.9, .9, .88]], lampe: 2 },
     snekkerverksted: { gulv: ['planke', [.62, .5, .36]], vegg: ['planke', [.74, .6, .44]], lampe: 2 },
@@ -199,7 +203,10 @@
   function innredning(t) {
     const I = IND[t] || IND[0], ut = [];
     const fra = (rolle, rom) => { const S = OPPSKRIFT[rolle] || (rolle === 'tørkeloft' ? [['rad', 'tørkestativ', 6]] : rolle === 'lager' ? [['rutenett', 'pall', 10], ['vegg', 'hylle', 3]] : rolle === 'kontor' ? [['vegg', 'pult', 2], ['vegg', 'arkivskap', 1]] : rolle === 'lagerhall' ? [['rutenett', 'pallereol', 20], ['midt', 'truck', 1]] : null);
-      for (const [hva, type, ant] of S || []) { const M = MASKINER[type], n = typeof ant === 'function' ? ant(A_EKS) : ant === undefined ? 1 : ant; if (!n) continue;
+      const steg = []; for (const [hva, type, ant] of S || []) { if (hva !== 'linje') { steg.push([hva, type, ant]); continue; }
+        // (ut9-maskiner) produksjonslinja: hver maskin én gang ('?type' = bare i noen bygg, ['a', 'b'] = den første her)
+        if (!(typeof ant === 'function' ? ant(A_EKS) : ant)) continue; for (const t of type) steg.push(['linje', String(Array.isArray(t) ? t[0] : t).replace(/^\?/, ''), 1]); }
+      for (const [hva, type, ant] of steg) { const M = MASKINER[type], n = typeof ant === 'function' ? ant(A_EKS) : ant === undefined ? 1 : ant; if (!n) continue;
         const mål = M || (rot.Interior && rot.Interior.MØBLER[type]) || [1, 1, 1];
         ut.push({ type, navn: M ? M[4] : ANDRE_NAVN[type] || type, b: mål[0], d: mål[1], h: mål[2], plass: hva === 'kran' ? 'tak' : hva === 'par' ? 'vegg' : hva, antall: n, rom }); } };
     if (!I.hall) return [{ type: 'arbeidsbenk', navn: 'Arbeidsbenk', b: 2, d: .7, h: .9, plass: 'vegg', antall: 4, rom: 'hall' }, { type: 'maskin', navn: 'Maskin', b: 1.8, d: 1.2, h: 1.6, plass: 'rutenett', antall: 6, rom: 'hall' }];
@@ -226,6 +233,8 @@
     const M = Interior.MØBLER, MS = Interior.MØBELSETT, RS = Interior.ROMSETT, T = Interior.TYPER;
     for (const [k, v] of Object.entries(MASKINER)) if (!M[k]) M[k] = v.slice(0, 4);
     for (const [k, v] of Object.entries(OPPSKRIFT)) if (v && !MS[k]) MS[k] = v;
+    // (ut9-maskiner) lagerhallen har egen kode i interior.js; rullebane og truck kommer i tillegg
+    if (MK && !MS.lagerhall_ekstra) MS.lagerhall_ekstra = MK.LAGERHALL;
     for (const t of ALLE) { const I = IND[t]; if (t !== 11 && I.hall) RS['ind_' + t] = { hall: I.hall, bak: I.bak }; }
     // klassen «industri»: varianten er industritypen (ind1 … ind14); den gamle regelen (tre/metall/olje) står igjen som reserve
     const Ti = T.industri; if (Ti && !Ti.gammelVariant) {
@@ -296,6 +305,8 @@
     kjemikalieskap: (m, k, b, d, h) => { k(-b, b, -d, d, 0, h, F.gul); k(-b * .2, b * .2, d, d + .01, h * .6, h * .6 + .3, F.rød); },
     truck: (m, k, b, d, h) => { k(-b, b, -d * .4, d, .2, 1.1, F.gul); k(-b * .9, b * .9, -d * .1, d * .5, 1.1, h, F.mørk); for (const s of [-1, 1]) k(s * b * .35 - .06, s * b * .35 + .06, -d, -d * .4, .05, .1, F.stål); k(-b * .6, b * .6, -d * .45, -d * .4, 0, h, F.mørk); },
   };
+  // (ut9-maskiner) de gjenkjennelige modellene i spill/maskiner.js erstatter kassene over
+  if (MK) Object.assign(MODELLER, MK.MODELLER);
   // interior3d.js: møbeltyper den ikke kjenner (svar true når modellen er tegnet)
   function deler(m, k) { const f = MODELLER[m.type]; if (!f) return false; f(m, k, m.b / 2, m.d / 2, m.h, F); return true; }
 

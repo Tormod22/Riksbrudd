@@ -135,7 +135,9 @@
       g.save(); g.lineCap = 'butt'; g.lineJoin = 'miter';
       sti(md.P); g.fillStyle = F.gulv; g.fill(); g.strokeStyle = F.kant; g.lineWidth = 1; g.stroke();
       for (const r of Fg.rom) { sti(r.P); g.fillStyle = /bad|vask|dusj|toalett/.test(r.rolle || '') ? F.våt : /kjøkken/.test(r.rolle || '') ? F.kjøkken : F.rom; g.fill(); }
-      if (detalj) for (const q of Fg.møbler) { sti(q.P); g.fillStyle = F.møbel; g.fill(); g.strokeStyle = q.ødelagt ? F.ødelagt : F.møbelKant; g.lineWidth = 1; g.stroke(); }
+      if (detalj) for (const q of Fg.møbler) { sti(q.P); g.fillStyle = F.møbel; g.fill(); g.strokeStyle = q.ødelagt ? F.ødelagt : F.møbelKant; g.lineWidth = 1; g.stroke();
+        // (ut9-maskiner) symbolet for maskintypen (spill/maskiner-visning.js)
+        if (window.PLAN2D_MØBEL && !q.ødelagt) for (const f of PLAN2D_MØBEL) f(g, q, X, Y); }
       for (const t of Fg.trapper) {
         sti(t.P); g.fillStyle = 'rgba(231,220,195,.07)'; g.fill(); g.strokeStyle = F.trapp; g.lineWidth = 1; g.stroke();
         const vx = -t.uy, vy = t.ux, hl = t.l / 2, hb = t.b / 2; g.beginPath();
