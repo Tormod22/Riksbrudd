@@ -1702,9 +1702,344 @@ window.HJELP_TILLEGG = [
 "Leiren"
 ],
 [
+"Byene på laget",
+"Tettstedene kan vinnes med avtaler i stedet for med våpen. Åpne Selskap → Byer og trykk «Åpne» ved en by: der står byrådets leder og holdning, og tre målere – TILLIT (har dere holdt det dere lovet?), FRYKT (hvor hardhendte dere er) og BEHOV (hva byen mangler: trygghet, strøm, mat, ved). Trinnene er kunde (dere har levert en kontrakt for byen) → beskyttelse (tillit 40) → handel (tillit 55, etter fem døgn med beskyttelse) → medlem (tillit 70, frykt under 50, etter sju døgn med handel). Tilliten stiger når dere leverer kontrakter for byen, når dere vokter den med et lag (opp til 50), og hvert døgn dere holder avtalen.",
+"Lag og strid"
+],
+[
+"Forhandle med en by",
+"Trykk «Forhandle» på byens kort. Velg avtalen, prisen byen skal betale per døgn, hva dere lover (2, 4 eller 6 mann i byen eller innen 3 km, og hjelp innen 4, 2 eller 1 time) og varigheten (7, 14 eller 30 døgn). Byrådet svarer ja, nei eller med et motbud – jo mer byen trenger dere, og jo mer dere lover, jo mer betaler den. En grådig leder presser prisen, en redd betaler godt for trygghet, en patriot lar seg ikke true. Beskyttelse og handel betaler hvert døgn (handel sender også byens varer langs handelsruta). Et medlem blir deres: det betaler skatt uten opprør og teller fullt i krigen; en handelspartner teller halvt.",
+"Lag og strid"
+],
+[
+"Hold det dere lover",
+"Hver time telles egne mann i byen eller innen 3 km. Står det nok der det meste av døgnet, stiger tilliten; ellers synker den, og etter tre brutte døgn – eller under tillit 25 – sier byen opp avtalen med et døgns varsel og forteller nabobyene det. Fiender nær en by med avtale gir et varsel øverst til venstre: «Lesja ber om hjelp». Kommer et lag (to mann innen 1,5 km) før fristen, stiger tilliten; kommer dere for sent, synker den. Ravnsund og Mosevakt frir også til byene nær seg («Ravnsund forhandler med Lesja» i Krig) – by under dem innen et døgn. Tar dere en by med makt, starter den med frykt 80 og tillit 10: den betaler mens garnisonen står der, men gjør opprør så snart dere trekker ut.",
+"Lag og strid"
+],
+[
+"Se inn i husene",
+"Zoom helt inn på et hus i kartet, eller trykk på huset og velg «Se inn (plantegning)». Da ser du plantegningen: tykke lyse streker er bærende vegger, tynnere er lette skillevegger, buene er dører og de tre strekene i veggen er vinduer. Øverst velger du etasje (Kjeller, 1, 2, Loft). «Lukk» tar deg tilbake til kartet.",
+"Kom i gang"
+],
+[
+"Barrikader vinduer og dører",
+"Trykk på et vindu eller en dør i plantegningen og velg «Barrikader». Karakteren din går til huset og spikrer planker over (litt tre fra leirens lager). Plankene vises i kartet og i 3D, og de blir husket. «Fjern plankene» gir halvparten av treet tilbake.",
+"Leiren"
+],
+[
+"Hvor spillet lagres",
+"Spillet lagres i nettleseren. Lagringsplassene og store ting ligger i nettleserens database, som har plass til mye mer enn det vanlige lageret. Nederst i «Lagre og last» (☰) står hvor mye plass spillet bruker. Blir det vanlige lageret fullt, flyttes resten til databasen av seg selv og spillet sier fra – ingenting blir borte. Last gjerne ned spillet som fil innimellom.",
+"Kom i gang"
+],
+[
+"Etter en oppdatering",
+"Hvert lagret spill har et versjonsmerke. Når spillet oppdateres, gjøres gamle lagrede spill, lagringsplasser og filer om til den nye formen før noe leses, så et spill fra før kan spilles videre. En fil fra en nyere utgave enn den du har, blir ikke lest – last siden på nytt først.",
+"Kom i gang"
+],
+[
+"Tømmer og planker",
+"Hogst gir nå tømmer, ikke planker. Tømmeret kan selges billig som det er, eller sages til planker på et sagbruk. Plankene (det som før het «tre») brukes til å bygge og fyre med. Tømmer, flis og ved har egen lagerplass, og kan kjøpes og selges i Leir → Lager.",
+"Leiren"
+],
+[
+"Sagbruk, vedkløyver og fyrkjele",
+"Bygg maskinene i Leir → Bygg (gruppen Produksjon). Sagbruket gjør 2 m³ tømmer om til 1,1 m³ planker og 0,7 m³ flis i timen. Vedkløyveren gjør flis til ved. Fyrkjelen brenner flis eller ved og gir 30 kW og varme, så leiren trenger mindre diesel. Maskinene går bare med folk på «Maskiner» (Folk), strøm og noe å arbeide med. Står en maskin, sier fanen Produksjon i Selskapet hvorfor: tom for tømmer, ingen folk, uten strøm, lageret fullt eller slitt.",
+"Leiren"
+],
+[
+"Tømmerbil",
+"En tømmerbil (kjøpes i Selskapet → Produksjon) tar 20 m³ tømmer fra et hogstfelt om gangen. Velg «Frakt» når du merker hogstfeltet i Leir → Ressurser.",
+"Leiren"
+],
+[
 "Slik vinner du",
 "Det finnes tre veier til seier, og du kan gå flere samtidig. MAKT: 60 % av folket i området rundt leiren holder med deg (tettstedene du holder – se Krig). PENGER: selskapet er verdt minst 250 mill. kr (kassa, byggene, lageret og kjøretøyene) og mer enn både Ravnsund og Mosevakt. GJENOPPBYGGING: du holder minst tre tettsteder, og i alle har de strøm, ingen sprengte bruer eller ødelagte kraftverk i nærheten, lojalitet minst 55 og har vært dine i to døgn – og leiren har mat. Selskap → Oversikt viser hvor langt du har kommet på hver vei, og hvor langt rivalene er (de små merkene). Ingen kan vinne de første døgnene. Når noen vinner, kommer en side fra avisa med tall for hele spillet: «Spill videre» fortsetter i samme verden, og seieren huskes. Vinner en rival, kan du spille videre og prøve å ta det tilbake.",
 "Kom i gang"
+],
+[
+"Rom uten dør",
+"Når du bygger med byggesettet og en ring av vegger lukker et rom uten dør, står det med oransje skrift i verktøylinja: «Rommet har ingen dør – ingen kommer inn». Sett inn en dør (Vegg → Dør bytter ut en hel vegg), ellers kan ingen bruke rommet.",
+"Leiren"
+],
+[
+"Etasjer, loft og kjeller",
+"Mange hus har flere etasjer, loft og kjeller. Zoom helt inn på et hus (eller trykk på huset og «Se inn»), velg etasje øverst og trykk «Gå til 2. etasje»: karakteren din går til huset og opp trappa. Huspanelet har også knappene «Etasjer: Kjeller · 2 · Loft». Høyhus har stengte etasjer – der er trapperommet sperret.",
+"Kom i gang"
+],
+[
+"Leting i hver etasje",
+"Står karakteren i en annen etasje enn første, leter du der: «Let gjennom 2. etasje». Hver etasje har sitt eget funn. Loftet har ofte mye skrot – materialer og gamle ting, mer jo flere kasser og kister som står der. Kjelleren har ofte mat og diesel, og et tilfluktsrom har et nødlager.",
+"Kom i gang"
+],
+[
+"Kjelleren som tilflukt",
+"Store bygg med kjeller, og alle bygg med tilfluktsrom, kan brukes som tilfluktssted uten planker: gå ned i kjelleren og trykk «Bruk kjelleren som tilflukt». Der kan du hvile og sove.",
+"Kom i gang"
+],
+[
+"Trapper i 3D",
+"Når du går inn i et hus med flere etasjer i 3D, kan du gå opp og ned trappene. Du ser bare etasjen du står i (og den under); etasjene over vises når du går i trappa. På loftet er taket skrått – der det er lavt, kommer du ikke fram.",
+"I 3D"
+],
+[
+"Folk går til arbeidet",
+"Folkene i leiren går ekte mellom byggene: til arbeidsplassen (byggeplassen, maskinen, vakttårnet, kjøkkenet, verkstedet, hogstfeltet …), til kjøkkenet når det er mat, til sin egen seng i brakka om natta og til bålet når de har fri. En person arbeider først når hen er framme – lang vei betyr mindre arbeid, så det lønner seg å legge byggene nær hverandre. Langt ute (hogstfelt, utposter) har de matpakke og går ikke hjem til lunsj. Zoom inn på leiren for å se dem (prikkene har jobbens farge) og trykk på en person for å se hva hen gjør og hvorfor. Kommer noen ikke fram – et bygg bak en palisade uten åpning, en låst dør – står det i jobbtavla («Verksted står fast: Ola kommer ikke til verkstedet – ingen vei dit»). Med «Døgnplan: av» teller ikke gangen: alle arbeider som før.",
+"Leiren"
+],
+[
+"Lyd i kartet",
+"Spillet har lyd også i 2D, laget i koden og dempet: radioen spraker når et lag melder seg (to pip når du gir en ordre, bare sus når laget er utenfor radiokontakt), en rolig alarm når leiren angripes, kassaapparat når penger kommer inn og et dumpt klunk ved store kjøp, og telefonen ringer når noen vil snakke med dere. Nettleseren slipper lyden fram først etter at du har trykket eller brukt en tast.",
+"Vær, lyd og bilde"
+],
+[
+"Kartlyd og Meldingslyd",
+"I ☰ under «Bilde og lyd»: «Lyd» slår all lyd av og på. «Kartlyd» er vind og regn i kartet og maskinene i leiren (saga, aggregatet, fyrkjelen) – de høres når du zoomer inn på leiren og bare når de går. «Meldingslyd» er radio, alarm, kasse og telefon. Trykk for å bla: Av, Lav, Middels, Høy.",
+"Vær, lyd og bilde"
+],
+[
+"Søkere og lønn",
+"Folk søker jobb hos dere: hver morgen kommer 0–3 søkere (flere når ryktet er godt og dere holder byer eller har avtaler). De står nederst i Folk-panelet med alder, yrke, ferdigheter, egenskaper og lønnskravet – dyktige folk krever mer (12 000–25 000 kr i døgnet). «Ansett» koster 150 000 kr for utstyret, og så lønnskravet hver dag. Søkerne venter bare noen døgn. Hver person har sin egen lønn (står ved personen); de som var med fra start, får 15 000 kr. Er dere færre enn tre, kan du fortsatt ringe etter folk som før.",
+"Leiren"
+],
+[
+"Ravnsund og Mosevakt vil også ha folk",
+"De dyktigste søkerne har ofte bud fra Ravnsund eller Mosevakt. «By over» ansetter dem for budet + 1 000 kr i døgnet – venter du, kan de gå til rivalen. Rivalene lokker også dine egne folk: en som er lite lojal og misfornøyd (lav moral, eller lav lønn mot hvor flink hen er) kan få et tilbud. Da kommer et varsel i Folk med «Gi lønnstillegg» eller «La gå». Svarer du ikke innen ti timer, går hen.",
+"Leiren"
+],
+[
+"Øvingsfelt og opplæring",
+"Bygg et øvingsfelt (4, 6 og 8 elevplasser per nivå). Under «Opplæring» nederst i Folk velger du person og ferdighet og trykker Start. Den som går på opplæring, arbeider ikke, men blir 0,05 bedre hvert døgn opp til 1,45 (lærenem: 50 % raskere). Mester og lærling: arbeider to på samme oppgave og den ene er dyktig (1,30 eller mer), lærer den andre litt av seg selv – sakte og gratis.",
+"Leiren"
+],
+[
+"Egenskaper",
+"Noen søkere har egenskaper: flittig (+10 % arbeidstempo), nattmenneske (+15 % fra kl. 18 til 06), modig (+15 % på vakt) og lærenem (lærer raskere på øvingsfeltet).",
+"Leiren"
+],
+[
+"Rive og åpne hus",
+"Se inn i et hus (plantegningen) og trykk på en vegg eller et rom. Da ser du hva du kan gjøre, og hva det gir og tar: rive veggen (planker, betong eller stål etter hva veggen er laget av), lage en dør eller et vindu der du trykket, sette inn en bjelke, rive gulvet eller taket, eller sette inn en søyle. Folk på «riving» gjør arbeidet, og materialene havner i en haug ved huset som fraktes hjem. Bjelker og søyler tar stål fra lageret.",
+"Leiren"
+],
+[
+"Bærende vegger og ras",
+"Tykke, lyse vegger er bærende. River du en av dem uten bjelke, sier byggelaget fra først: «Dette er en bærende vegg. Uten bjelke raser dekket over (ca. 24 m²).» Velg «Sett inn bjelke», så holder det. Gjør du det likevel, raser gulvet over og det som står på det – det gir litt skrot, og den som står under kan bli skadet. Det som har rast, er skravert i plantegningen.",
+"Leiren"
+],
+[
+"Riv hele huset",
+"Uten noe valgt i plantegningen står «Riv hele huset» (og «Riv loftet» eller den øverste etasjen). Huset rives etasje for etasje ovenfra, og du kan stoppe når du har nok – da blir resten stående. «Tett» på et vindu eller en dør spikrer bord over på begge sider (du gjør det selv, litt tre fra lageret).",
+"Leiren"
+],
+[
+"Varekontrakter",
+"Fra trinn 2 «Leverandør» kommer det kontrakter på varer i Selskap → Kontrakter. Levering: et firma kjøper for eksempel 40 m³ planker levert i et tettsted før fristen – trykk «Send lastebil» (en ledig lastebil eller tømmerbil ved leiren laster og kjører), «La et lag bære» (lite) eller «La Gråfjell Frakt ta det» (de tar 15 % og risikoen). Leveranseavtale: kjøperen henter like mye ved leiren hvert døgn – mangler lageret varene, blir det bot, og alt levert gir bonus. Kjøpsavtale: dere kjøper tømmer, diesel eller mat hvert døgn til fast pris. Kortet sier hva dere har på lager og om maskinene rekker.",
+"Leiren"
+],
+[
+"Storlia Tømmer og sagbruket",
+"Når selskapet er blitt leverandør (trinn 2), har Storlia Tømmer et tilbud: billig tømmer i fem døgn. Et sagbruk gjør 48 m³ tømmer om til 26 m³ planker i døgnet, og Storlia kjøper plankene – leveringene står i Selskap → Kontrakter.",
+"Leiren"
+],
+[
+"Varene har en plass",
+"Lageret er ikke bare et tall lenger. Plankene ligger på paller, tømmeret i hauger, flisa i storsekker og dieselen i fat. Zoom inn på leiren for å se dem. Tallene i statuslinja er de samme som før: summen av alt du har.",
+"Leiren"
+],
+[
+"Under tak eller ute",
+"Det som får plass i et lagertelt eller en container, ligger under tak. Resten legges ute på lagerplassen. Ute slites planker, flis og ved i regn, og røvere kan stjele det. Det som ligger inne, får de ikke tak i. Folkene bærer varene inn når det blir plass.",
+"Leiren"
+],
+[
+"Lagersoner",
+"I Leir → Lager under «Lagerplasser» kan du merke et lagertelt eller en container for én vare, for eksempel bare planker. Da legges bare den varen der, og de andre bæres ut. «Alle varer» tar bort merket.",
+"Leiren"
+],
+[
+"Brann i lageret",
+"Brenner det der varene ligger, går det som kan brenne tapt: planker, tømmer, flis, ved og diesel. Stål og betong tåler brannen.",
+"Leiren"
+],
+[
+"Før du kjøper sagbruket",
+"Saga med fyrkjele koster ca. 12 mill. kr og betaler seg først etter flere uker. Har kassa for lite igjen etter kjøpet, står det «Rekker bare … døgn» på kortet i byggelista, og hele forklaringen kommer i loggen når du trykker Bygg. Ta kontrakter først – saga alene bærer ikke leiren.",
+"Leiren"
+],
+[
+"Byggesettet: rutenett og etasjer",
+"Byggesettet bruker ruter på 1,2 m. Vil du bygge en stor hall, trykk «Rutenett: hall 4,8 m» – da legger hvert trykk 4,8 m store deler. Du kan bygge opptil fire etasjer: «Etasje» velger hvilken (auto = neste ledige).",
+"Leiren"
+],
+[
+"Stoff, pris og byggetid",
+"Hver del har sitt stoff. Tre er billig og raskt, men brenner. Mur er sterk og tung, betong sterkest og tregest, og blikk (stål) er raskt og godt for haller. Linja over knappene sier pris og tid per del og hvor langt taket kan spenne.",
+"Leiren"
+],
+[
+"Spenn: søyler og bjelker",
+"Et tak eller gulv kan ikke være for langt fra en vegg: tre høyst 6 m, betong og mur 9 m, stål 12 m. Er rommet for bredt, sier byggesettet «Spennet er 8,4 m – sett inn en søylerad». Under «Bærende» setter du søyler (to trykk = en søylerad) eller bjelker som hviler på veggene.",
+"Leiren"
+],
+[
+"Trapper",
+"Under «Trapp» setter du en trapp (1,2 × 3,6 m) på gulvet. Over trappa må det være åpent – gulvet i etasjen over får et hull der. Folkene går opp trappa, og rommene over regnes først som brukbare når en trapp går dit.",
+"Leiren"
+],
+[
+"Ferdige hus og egne maler",
+"Under «Hus» ligger hytte, brakke, betongbu og en hall i stål med port og søylerad. «Lagre et bygg som mal» og to trykk rundt et bygg du har laget, gjør det til en egen mal du kan legge ut igjen (også snudd).",
+"Leiren"
+],
+[
+"Plantegningen av egne bygg",
+"Fanen «Plan» i byggesettet viser byggene dine som plantegning, én etasje om gangen: rom, dører, vinduer, trapper, søyler og bjelker.",
+"Leiren"
+],
+[
+"Eksport",
+"Utenlandske kjøpere sender eksportordre – for eksempel «Elbe Holzhandel i Hamburg vil ha 120 m³ planker innen 9 døgn». De kommer når selskapet når trinn 3, eller tidligere når dere har en havn som tar skip eller en grensestasjon innen 80 km. Se Selskap → Oversikt → Eksport. Prisen er høyere og mer stabil enn hjemme, og den betales i eurokreditt. Først planker og tømmer; når to ordre er levert, kommer også ved, stål og diesel.",
+"Lag og strid"
+],
+[
+"Ut sjøveien",
+"Velg en havn når du tar ordren: leirens egen kai (middels eller stor), et tettsted dere holder, eller en havneby dere har avtale med. Kjør varene til kaia med «Send lastebil» (flere turer går fint) eller la Gråfjell Frakt ta det. Når alt ligger på kaia, kommer et utenlandsk fraktskip, laster og går – da er ordren betalt. Pirater kan ta lasten på sjøen (3 % fra en by dere holder eller har avtale med, 8 % uten). En middels havn tar bare små laster; store laster trenger en stor havn.",
+"Lag og strid"
+],
+[
+"Ut over grensa",
+"Grenseordre kjøres til en grensestasjon (Svinesund, Magnor, Vauldalen, Storlien …). Med avtale med Grensevakta (et svensk selskap) koster hver tur 150 000 kr (mer når kronen faller), og lasten kommer trygt over. Uten avtale er det smugling: gratis, men tollen tar lasten én gang av fire, og ryktet ute faller.",
+"Lag og strid"
+],
+[
+"Eurokreditt",
+"Eksport betales i eurokreditt – utenlandske penger som ikke taper seg med inflasjonen. Du ser dem ved siden av kronene i statuslinja (EK). Veksle dem til kroner i Selskap → Oversikt → Eksport: kursen stiger når kronen faller (3 % gebyr). Eller kjøp det som bare finnes ute: helikopterdeler, utenlandske feltradioer til alle lag, og ammunisjon av høy kvalitet.",
+"Lag og strid"
+],
+[
+"Firmaene og samarbeid",
+"Under Selskapet → Partnere står firmaene dere handler med: hva de driver med, hvor de holder til, hvordan det går med dem, og hva de mener om dere (holdning 0–100). Lever kontraktene deres, så stiger holdningen; bryter dere dem, synker den. Når de liker dere nok, ringer de og tilbyr samarbeid: fast kunde (de gir dere sine tilbud først hver morgen – men si ja ofte nok), et felles anlegg (dere betaler halvparten og får halve overskuddet) eller vern (dere holder folk ved hjemstedet deres og får fast betaling). Krig rundt et firma kan gjøre det konkurs, og nye firmaer starter i byer dere har avtale med.",
+"Leiren"
+],
+[
+"Teknologi fra firmaene",
+"Gode partnere deler det de kan. Storlia Tømmer gir dere et høvleri på sagbruket (flere planker av det samme tømmeret), Dalsnes Kraftlag bygger om aggregatene så de bruker mindre diesel, og Ytterø Sjømat viser dere et fryselager. Under Partnere står det hva som mangler, og «Ta i bruk» når det er låst opp.",
+"Leiren"
+],
+[
+"Våpenhvile og allianse",
+"Under Selskapet → Partnere kan dere kjøpe våpenhvile med Ravnsund eller Mosevakt: de angriper ikke det som er deres innenfor et område rundt leiren i noen døgn, og ringen vises i kartet. Dere kan også inngå allianse med den ene mot den andre: da ser dere lagene deres og det de ser, og de går mot de samme tettstedene. Men de kan bryte avtalen – Ravnsund oftere enn Mosevakt, og oftere når de er mye sterkere enn dere. Bryter dere selv, får dere overraskelsen på deres side noen timer, men alle hører om det.",
+"Lag og strid"
+],
+[
+"Maskinene trenger folk og bærere",
+"Med døgnplanen på går sagbruket, vedkløyveren og fyrkjelen bare når operatørene står på plassene foran maskinen (ringene i kartet), det ligger råvare i innmatingen (feltet «inn») og det er plass i utmatingen (feltet «ut», høyst 4 m³). Bærerne – folk på «Maskiner» som ikke kjører en maskin, og folk på «Frakt» uten noe å hente fra hogstfeltene – bærer 0,5 m³ om gangen fra lageret til innmatingen, og planker og flis fra utmatingen til lageret. Står maskinen og ingen bærer kommer, bærer en operatør selv. Bygg lageret nær maskinen: kort vei gir mer produksjon. Selskapet → Produksjon viser hvorfor maskinen står («venter på folk», «venter på tømmer», «utmatingen full», «uten strøm», «i stykker») og hvor mye tid som går med til bæring. En operatør som kjører samme maskin lenge, blir litt bedre.",
+"Leiren"
+],
+[
+"Andeler i firmaene",
+"Fra nivå 3 «Etablert» kan dere kjøpe andeler i firmaene under Selskapet → Eiere. 10 % gir 5 % rabatt på det dere kjøper av dem (felles anlegg, teknologi) og innsyn i kontraktene deres, 25 % gir førsterett på tilbudene deres, og over 50 % eier dere firmaet: resultatet og varene fra hjemstedet kommer til leiren hvert døgn. Utbyttet kommer hver uke. Verdien følger krigen – beskytter dere hjemstedet, stiger den. Ravnsund og Mosevakt kjøper også: får de over halvparten, er samarbeidet med dere slutt.",
+"Lag og strid"
+],
+[
+"Investorer",
+"Fra nivå 3 ringer investorer: en rederi-eier, et svensk sikkerhetsfirma og et anonymt fond. De tilbyr penger for en andel eller et lån med rente, og har et ønske som står i Neste-lappen. Holder dere ønsket, blir de fornøyde og kursen stiger. Blir de misfornøyde, kan de selge andelen sin til en rival. Eiere utenfra venter utbytte hver uke.",
+"Lag og strid"
+],
+[
+"Gråbørsen",
+"Fra nivå 4 «Ettertraktet» kan selskapet noteres på Gråbørsen: dere selger 10–40 % og får pengene med en gang, men eierne venter utbytte hver uke – betaler dere ikke, faller kursen. Kursen stiger med leverte kontrakter, byer, seire og eksport, og faller med brudd, tapte byer og angrep på leiren. Emisjon gir mer penger, men dere eier en mindre del. Eier en rival over halvparten av dere, er dere kjøpt opp – og har tapt på penger. Grafen over kursen står øverst i fanen Eiere.",
+"Lag og strid"
+],
+[
+"Maskiner i egne bygg",
+"I byggesettet (Leir → Byggesett) har fanen «Maskiner» sagbenk (3,6 × 9,6 m), høvel, vedkløyver og fyrkjele. De settes på gulvet i et rom eller en hall du har bygget – sagbenken og fyrkjelen er tunge og trenger betonggulv. Maskinen må ha vei til bruksplassen (en dør eller port inn), ellers sier byggesettet nei. «Flyt mot» (R) snur den: tømmeret går inn i den ene enden og plankene ut i den andre. Uten tak er det lov, men maskinen slites dobbelt så fort.",
+"Leiren"
+],
+[
+"Flyt, lys og varme i fabrikken",
+"En hall med to porter og maskinene i riktig rekkefølge – port inn, sagbenk, høvel, port ut – går 15 % raskere (grønn pil i kartet). Står de hulter til bulter, går det 10 % saktere. Om natta arbeider folk 40 % saktere uten lys: sett inn lysrør eller lyskastere (de bruker litt strøm). Vinduer og porter gir dagslys gratis. Om vinteren går det 20 % saktere uten en fyrkjele i samme rom. Høvelen i samme rom som sagbenken gir 40 % flere planker. Hyller og pallplasser i et rom gir lagerplass.",
+"Leiren"
+],
+[
+"Kamp i hus",
+"Et lag som står stille inne i et hus, får vern av veggene mellom seg og fienden – ikke en fast verdi. Tre tar lite (ca. 30 % per vegg), mur og betong mye (70–80 %), et vindu nesten ingenting, planker over vinduet litt mer. Lagpanelet sier hvor mye: «i huset: veggene tar 60 %». Med flere etasjer kan du velge etasje i lagpanelet (1. etg., 2. etg., Loft, Kjeller): fra 2. etasje og høyere ser laget lenger, og høyden teller i skuddvekslingen som i terrenget. Kjelleren verner best, men laget ser nesten ingenting.",
+"Lag og strid"
+],
+[
+"Hull og skader i hus",
+"Skudd over tid knuser vinduer og skader trevegger, og til slutt er veggen borte. Granater river lette vegger og slår hull i trevegger. Ingeniørlag som står inntil et hus, kan «Spreng hull i huset» – en lett vegg rives, en bærende får et stort hull, og med for mange hull rives den (da kan det over rase). Alt står i plantegningen: knuste vinduer og hull med rødt kryss, skadde vegger stiplet. «Vis vern» farger veggene: grønn = sterk (mur, betong), oransje = middels (tre), rød = svak.",
+"Lag og strid"
+],
+[
+"Barrikader i kampen",
+"Fiender som stormer et hus der laget ditt står, går inn der det er åpent: dører, porter, hull, knuste vinduer og revne vegger. Er alt barrikadert, må de bryte seg inn – jo flere åpninger med planker, jo lenger tar det (inntil 30 min). Plantegningen sier hvor lenge huset holder dem ute. Når de er inne, verner ikke veggene lenger mot dem.",
+"Lag og strid"
+],
+[
+"Ta over et hus",
+"Et hus innen 3 km fra leiren kan bli en del av leiren: trykk på huset, «Ta over huset», og velg Utpost, Lager, Verksted eller Kaserne i plantegningen. Sengene i huset teller som plasser, og lagerrom (bod, garasje, kjeller) gir lagerplass. Som lager teller alle rommene, som kaserne får alle rom madrasser. Huset står i leirens farge med «Vårt» i kartet. Du kan rive vegger, lage dører og barrikadere som før, og «Gi opp huset» når du ikke trenger det.",
+"Leiren"
+],
+[
+"Ledere",
+"Folk → «Vis lederne». Gi en av folkene en lederrolle: leirsjef (mat, diesel, bygging fra planen), formann for en maskin (holder den i gang med folk og skift), forhandler (byavtaler og firmaer), troppsjef for en tropp (stridsreglene og hjem når ammunisjonen er lav) eller kasserer (holder minimum i kassa). Lederen gjør det du ellers måtte gjort, etter reglene du setter – trykk på en regel for neste valg. Dyktige ledere (høy ledelse) gjør gode valg; lite dyktige gjør av og til et dårlig valg. Det viktige står i loggen.",
+"Leiren"
+],
+[
+"Lederlønn og «styr selv»",
+"Ledere koster 1,5–2 ganger vanlig lønn, etter hvor dyktige de er, og Ravnsund og Mosevakt kan prøve å lokke dem bort (svar i Folk-panelet). Gode ledere gjør selskapet mer verdt. «Ta over selv» ved en leder – eller «Jeg styrer selv i dag» for alle – gjør at lederne ikke gjør noe før i morgen kl. 06. Kassereren stopper kjøp som tar kassa under grensen, men aldri mat og diesel.",
+"Leiren"
+],
+[
+"Folk har egne personligheter",
+"Hver person har én eller to egenskaper (står ved personen i Folk): flittig og nattmenneske arbeider bedre, lat arbeider litt saktere, modig er god på vakt, redd er dårligere på vakt og går tidlig i tilflukt, ryddig rydder lageret fortere, pratsom blir fort kjent – på godt og vondt. Folk som arbeider sammen, blir venner over tid (bedre moral, og de lar seg ikke så lett lokke bort). Noen kommer ikke overens – da står det «uvenn med …», og det trekker moralen når de er på samme jobb.",
+"Leiren"
+],
+[
+"Fritid og samlingssted",
+"Bygg en bålplass eller en messe/kantine. I fritida samles folk der, vennene sitter sammen, og moralen stiger litt mer.",
+"Leiren"
+],
+[
+"Alarm og tilfluktsrom",
+"Når et angrep er nær leiren, går vaktene til stillingene (vakttårnet) og alle andre i tilflukt: en betongbunker først, så solide bygg som kontrollrom, sykestue, verksted og brakker, eller egenbygde hus med tak. Barn og gamle får plass først, og de redde går alt når angrepet er meldt. Etter angrepet går alle tilbake til arbeidet. Jobbtavla i Folk viser hvor mange som er i tilflukt.",
+"Lag og strid"
+],
+[
+"Brann, skader og rydding",
+"Brenner det i leiren, blir det en slukkejobb med høy prioritet: de nærmeste ledige løper til og får brannen ned. Skadde går til sykestua – den som ikke kan gå selv, bæres av en annen. Varer som ligger ute når det er plass inne, bæres inn av dem som har fri i arbeidstida. Alt står i jobbtavla i Folk.",
+"Leiren"
+],
+[
+"Ulykker og verneutstyr",
+"Slitne folk skader seg lettere ved maskinene, på byggeplassen, i hogsten og i verkstedet: nattskift, ingen seng og mørke uten strøm øker sjansen. Kjøp verneutstyr i Leir → Lager (det gir under halvparten så mange ulykker), og hold strømmen på om natta. Mange ulykker senker moralen og gir færre søkere.",
+"Leiren"
+],
+[
+"Rivalene driver også forretning",
+"Ravnsund og Mosevakt bruker de samme systemene som dere. De betaler lønn til lagene sine, får skatt fra tettstedene de holder, tar kontrakter, inngår byavtaler, bygger et sagbruk og kjøper seg inn i firmaer. Kassa bestemmer hvor mange lag de har råd til: en rik rival blir farligere, en fattig rival mister lag når den ikke får betalt lønn. Ta tettstedet der saga deres står, og de mister den.",
+"Lag og strid"
+],
+[
+"Rivalens vei til seier",
+"Hver rival velger en vei til seier – makt, penger eller gjenoppbygging – etter hva den er god på, og satser på den: makt tar tettsteder, penger tar kontrakter, bygger sagbruk og frir til byene, gjenoppbygging holder tettstedene sine og reparerer sprengte bruer og kraftverk. Krigskartet viser hva de satser på («Ravnsund satser på penger»), og det samme står under rivalen i Selskap → Partnere.",
+"Lag og strid"
+],
+[
+"Rivalene og byene",
+"En rival som har levert en kontrakt for en by, er kunde der og frir helst dit. Med en beskyttelsesavtale må rivalen holde løftet: lag ved byen hver time. Holder de det ikke, sier byen dem opp og sier fra til dere – da kan dere forhandle selv. Et rivallag som vokter en by, står like utenfor den; jag dem bort, så bryter de løftet.",
+"Lag og strid"
+],
+[
+"Kappløpet om firmaene",
+"Rivalene kan bli fast kunde hos et firma – da tar de tilbudene derfra, og dere kan ikke være fast kunde der samtidig. De kan også kjøpe halve anlegget (for eksempel sagbruket til Storlia Tømmer) før dere gjør det. Under hvert firma i Selskap → Partnere står det hva rivalene har der. Lever mer for firmaet enn dem, og vær først.",
+"Lag og strid"
+],
+[
+"Sabotasje",
+"Av og til sender en rival en sabotør: en maskin i leiren blir skadet, eller noe forsvinner fra lageret. Det skjer sjelden, og oftere når rivalen ligger bak dere. Folk på vakt (minst to) jager mange av dem bort. Har dere en pakt med rivalen, er den brutt – av dem – og dere kan svare uten å miste rykte: send lag mot dem.",
+"Leiren"
 ],
 [
 "Kartet mens det lastes",
