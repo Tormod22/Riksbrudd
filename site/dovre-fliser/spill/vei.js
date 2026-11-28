@@ -202,7 +202,7 @@
     let sB = s; while (((c - a) / sB) * ((d - b) / sB) > REGLER.maksRuter) sB *= 2;
     const x0 = opphav.ox + Math.floor((a - opphav.ox) / sB) * sB, y0 = opphav.oy + Math.floor((b - opphav.oy) / sB) * sB, W = Math.ceil((c - x0) / sB) + 1, H = Math.ceil((d - y0) / sB) + 1;
     // byggesettets 1. etasje ligger på bakken: gulvrutene er «inne», veggene sperrer kantene
-    const golvSett = n => { const S = new Set(); for (const q of deler) if (BS && BS.DELER[q.type] && BS.DELER[q.type].kat === 'gulv' && q.n === n && q.ferdig !== false) S.add(q.i + ',' + q.j); return S; };
+    const golvSett = n => { const S = new Set(); for (const q of deler) if (BS && BS.DELER[q.type] && BS.DELER[q.type].kat === 'gulv' && q.n === n && q.ferdig !== false) for (const [i, j] of (BS.ruter ? BS.ruter(q) : [[q.i, q.j]])) S.add(i + ',' + j); return S; };
     const iGolv = (S, x, y) => S.has(Math.floor((x - opphav.ox) / G) + ',' + Math.floor((y - opphav.oy) / G));
     const g0 = golvSett(0), e1 = bs ? bs.etasjer.find(e => e.n === 1) : null;
     const hindreB = [...LBYGG.map(q => ({ P: Leir.hjørner(q), luft: REGLER.hindreLuft })), ...hus.map(h => ({ P: h.m.P, luft: REGLER.hindreLuft }))];

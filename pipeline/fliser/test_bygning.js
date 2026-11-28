@@ -172,9 +172,9 @@ ok(snitt < 120, 'fraKart er raskt nok til ~10 hus mens du går (snitt ' + snitt.
   const deler = BS.husDeler('brakke', 0, 0).map((d, k) => Object.assign({ id: 'd' + k, n: d.n !== undefined ? d.n : BS.DELER[d.type].kat === 'tak' ? 1 : 0 }, d));
   const m = B.fraByggesett(deler, { ox: 1000, oy: 2000 }), e = m && m.etasjer[0];
   ok(m && m.kilde === 'byggesett' && m.etasjer.length === 1, 'brakka fra byggesettet blir én etasje');
-  ok(e && e.vegger.length === 14 && e.vegger.every(w => w.type === 'ytter' && w.bærende), 'brakka (4 × 3 ruter): 14 yttervegger (' + (e && e.vegger.length) + ')');
+  ok(e && e.vegger.length === 26 && e.vegger.every(w => w.type === 'ytter' && w.bærende), 'brakka (byggesett 3: 8 × 5 ruter på 1,2 m): 26 yttervegger (' + (e && e.vegger.length) + ')');
   ok(e && e.åpninger.filter(o => o.type === 'dør').length === 1 && e.åpninger.filter(o => o.type === 'vindu').length >= 2, 'dør og vinduer fra delene (' + (e && e.åpninger.map(o => o.type).join(',')) + ')');
-  ok(e && e.rom.length === 1 && e.rom[0].areal > 60 && m.tak.form === 'saltak' && m.tak.felt.length === 12, 'ett rom fra byggesett.js (' + (e && e.rom[0] && e.rom[0].areal) + ' m²) og saltak');
+  ok(e && e.rom.length === 1 && e.rom[0].areal > 50 && m.tak.form === 'saltak' && m.tak.felt.length === 40, 'ett rom fra byggesett.js (' + (e && e.rom[0] && e.rom[0].areal) + ' m²) og saltak');
   ok(B.nås(m)[0].uten.length === 0, 'rommet i brakka nås fra døra');
   ok(JSON.stringify(JSON.parse(JSON.stringify(m))) === JSON.stringify(m), 'byggesett-modellen er ren JSON');
   // to etasjer: gulv i 2. etasje og vegger over

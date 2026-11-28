@@ -22,7 +22,7 @@ module.exports = {
       ut.dør = v.ok ? { lengde: v.lengde, rom: v.rom.length, kryss: kryss === null ? null : Math.round(kryss * 100) / 100 } : v.grunn;
       ok(v.ok && v.rom.length === 2 && kryss !== null && kryss > 2.5 && kryss < 4.7, 'veien inn i brakka går ikke gjennom døra: ' + JSON.stringify(ut.dør));
       // selvtest: vindu i stedet for dør -> rommet nås ikke
-      const uten = brakke.map(d => (/_dør$/.test(d.type) ? { ...d, type: d.type.replace('_dør', '_vindu') } : d)), Ks = V.lag({ deler: uten, opphav: o, start, prøve: true });
+      const uten = brakke.map(d => (/_dør(_[124])?$/.test(d.type) ? { ...d, type: d.type.replace('_dør', '_vindu') } : d)), Ks = V.lag({ deler: uten, opphav: o, start, prøve: true });
       ut.selvtest = V.kanNå(inne, { kart: Ks }); ok(!ut.selvtest.ok && ut.selvtest.grunn === 'rommet har ingen dør', 'selvtesten: brakka uten dør skulle gitt «rommet har ingen dør»: ' + JSON.stringify(ut.selvtest));
       // 2. lukket rom uten dør (2 × 2 ruter, vegger rundt, tak)
       const g = []; for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) g.push({ type: 'bs_fundament', i: 10 + i, j, a: null, n: 0 });

@@ -652,9 +652,10 @@
           const u = under.vegger.find(q => q.type === 'ytter' && q.kant === w.kant), bj = under.bjelker.some(b => står(b) && avstSeg((w.a[0] + w.b[0]) / 2, (w.a[1] + w.b[1]) / 2, b.a[0], b.a[1], b.b[0], b.b[1]) < .4);
           if (u && !står(u) && !bj) { w.tilstand = 'rast'; ut.push({ e: e.n, del: 'vegg', id: w.id }); falt++; } }
         if (!under || !e.dekke.felt.length) continue;
-        const S = støtter(under), halv = e.dekke.spenn || 3;
-        for (const f of e.dekke.felt) { if (f.tilstand !== 'hel' && f.tilstand !== 'skadet') continue; const r = e.rom[f.rom]; if (!r) continue;
-          let n = 0, løs = 0; for (const [x, y] of pk) if (inni(r.P, x, y)) { n++; if (nærmest(S, x, y) > halv) løs++; }
+        const S = støtter(under);
+        // (B4) byggesettets felt har eget omriss (f.P) og eget spenn (f.spenn); kartets hus har ett felt per rom
+        for (const f of e.dekke.felt) { if (f.tilstand !== 'hel' && f.tilstand !== 'skadet') continue; const r = f.P ? f : e.rom[f.rom]; if (!r) continue; const halv = f.spenn || e.dekke.spenn || 3;
+          let n = 0, løs = 0; for (const [x, y] of f.P ? feltPunkter(f.P) : pk) if (f.P || inni(r.P, x, y)) { n++; if (nærmest(S, x, y) > halv) løs++; }
           if (n && løs / n >= REGLER.rasAndel) { f.tilstand = 'rast'; ut.push({ e: e.n, del: 'dekke', id: f.id }); falt++;
             // det som stod på feltet, faller med
             for (const q of e.møbler) if (q.tilstand === 'hel' && inni(r.P, q.x, q.y)) { q.tilstand = 'ødelagt'; ut.push({ e: e.n, del: 'møbel', id: q.id }); }
@@ -664,7 +665,9 @@
       const øv = m.etasjer.filter(e => !e.loft && e.tilstand !== 'revet').slice(-1)[0];
       if (øv) { const S = støtter(øv).concat(m.etasjer.filter(e => e.loft).flatMap(e => e.vegger.filter(w => står(w)).map(w => [w.a[0], w.a[1], w.b[0], w.b[1]]))), A = m.akse;
         for (const f of m.tak.felt) { if (f.tilstand !== 'hel' && f.tilstand !== 'skadet') continue; let n = 0, løs = 0;
-          for (const [x, y, u] of pk) if (u >= f.u0 && u < f.u1) { n++; if (nærmest(S, x, y) > m.tak.spenn) løs++; }
+          // (B4) byggesettets takfelt: ligger på etasjen f.n og har eget omriss og spenn
+          if (f.P) { const et = m.etasjer.find(q => q.n === f.n && !q.loft), S2 = et ? støtter(et) : S; for (const [x, y] of feltPunkter(f.P)) { n++; if (nærmest(S2, x, y) > f.spenn) løs++; } }
+          else for (const [x, y, u] of pk) if (u >= f.u0 && u < f.u1) { n++; if (nærmest(S, x, y) > m.tak.spenn) løs++; }
           if (n && løs / n >= REGLER.rasAndel) { f.tilstand = 'rast'; ut.push({ e: null, del: 'tak', id: f.id }); falt++; } } }
       if (!falt) break;
     }
@@ -761,43 +764,80 @@
   }
 
   // ---------- byggesettet (spill/byggesett.js) som samme modell ----------
-  // deler = [{ id, type, i, j, a, n, r, ferdig }] (Byggesett: fraLeir). o = { ox, oy } (rutenettets hjørne). Bare lesing – byggesett.js er uendret.
+  // deler = [{ id, type, i, j, a, n, r, s, ferdig }] (Byggesett: fraLeir, plassene i 1,2 m-ruter). o = { ox, oy } (rutenettets hjørne).
+  // B4 (byggesett 3): delene har størrelse (s ruter), søyler, bjelker, trapper og stoff per del; hvert dekke- og takfelt er én rute med
+  // eget omriss (P), spennet for stoffet (spenn = halve) og «bredde» (2 × lengste avstand til en støtte) – ras() bruker dem.
   function fraByggesett(deler, o = {}) {
     const BS = rot.ByggesettRegler || (typeof require === 'function' ? (() => { try { return require('./byggesett.js'); } catch (e) { return null; } })() : null);
-    const D = BS ? BS.DELER : {}, G = BS ? BS.G : 2.4, H = BS ? BS.H : 3, ox = o.ox || 0, oy = o.oy || 0, liste = (deler || []).filter(d => D[d.type] && d.ferdig !== false);
-    const stoff = s => s === 'stein' ? 'mur' : s, kat = d => D[d.type].kat;
-    const celler = new Map(); for (const d of liste) if (kat(d) === 'gulv' || kat(d) === 'tak') celler.set(`${d.i},${d.j},${d.n}`, d);
-    // omrisset: rammen rundt alle gulvrutene i 1. etasje (bygg av flere hus deles ikke opp i B0)
-    const g0 = liste.filter(d => kat(d) === 'gulv' && d.n === 0); let i0 = Infinity, j0 = Infinity, i1 = -Infinity, j1 = -Infinity;
-    for (const d of g0) { i0 = Math.min(i0, d.i); j0 = Math.min(j0, d.j); i1 = Math.max(i1, d.i + 1); j1 = Math.max(j1, d.j + 1); }
-    if (!g0.length) return null;
+    if (!BS) return null;
+    const D = BS.DELER, G = BS.U || BS.G, H = BS.H, ox = o.ox || 0, oy = o.oy || 0, liste = (BS.norm ? BS.norm(deler) : deler || []).filter(d => D[d.type] && d.ferdig !== false).map(d => ({ ...d, s: d.s || BS.størrelse(d.type) }));
+    const stoff = s => s === 'stein' ? 'mur' : s === 'blikk' ? 'stål' : s, kat = d => D[d.type].kat, halv = st => (BS.STOFF[st] ? BS.STOFF[st].spenn : 6) / 2;
+    const celler = new Map(); for (const d of liste) if (kat(d) === 'gulv' || kat(d) === 'tak') for (const [i, j] of BS.ruter(d)) celler.set(`${i},${j},${d.n}`, d);
+    const trappRute = new Set(); for (const d of liste) if (kat(d) === 'trapp') for (const [i, j] of BS.ruter(d)) trappRute.add(`${i},${j},${d.n}`);
+    // omrisset: rammen rundt alle gulvrutene i 1. etasje (bygg av flere hus deles ikke opp)
+    let i0 = Infinity, j0 = Infinity, i1 = -Infinity, j1 = -Infinity, n0 = 0;
+    for (const d of liste) if (kat(d) === 'gulv' && d.n === 0) for (const [i, j] of BS.ruter(d)) { n0++; i0 = Math.min(i0, i); j0 = Math.min(j0, j); i1 = Math.max(i1, i + 1); j1 = Math.max(j1, j + 1); }
+    // (o.utenGulv: byggesettets spennsjekk – tak på vegger uten gulv regnes også; rammen er da alle rutene)
+    if (!n0 && o.utenGulv) for (const d of liste) if (kat(d) === 'gulv' || kat(d) === 'tak') for (const [i, j] of BS.ruter(d)) { n0++; i0 = Math.min(i0, i); j0 = Math.min(j0, j); i1 = Math.max(i1, i + 1); j1 = Math.max(j1, j + 1); }
+    if (!n0) return null;
     const X = i => r2(ox + i * G), Y = j => r2(oy + j * G), P = [[X(i0), Y(j0)], [X(i1), Y(j0)], [X(i1), Y(j1)], [X(i0), Y(j1)]];
+    const ruteP = (i, j) => [[X(i), Y(j)], [X(i + 1), Y(j)], [X(i + 1), Y(j + 1)], [X(i), Y(j + 1)]];
     const m = { v: 1, kilde: 'byggesett', hus: null, kl: 'leirbygg', t: null, h: 0, stil: null, P, akse: { ux: 1, uy: 0, vx: 0, vy: 1, u0: X(i0), u1: X(i1), v0: Y(j0), v1: Y(j1) },
       høyde: { vegg: 0, møne: 0 }, tak: { form: 'flatt', stoff: 'tre', møne: 0, felt: [], vinduer: [], spenn: 99 }, etasjer: [], trapper: [], endringer: [] };
-    const nivåer = [...new Set(liste.filter(d => kat(d) === 'gulv' || kat(d) === 'vegg').map(d => d.n))].filter(n => n >= 0).sort((a, b) => a - b);
-    for (const n of nivåer) {
+    const nmaks = Math.max(0, ...liste.filter(d => kat(d) !== 'tak' && kat(d) !== 'forsvar').map(d => d.n));
+    const R = BS.rom(liste);
+    for (let n = 0; n <= nmaks; n++) {
       const gulv = liste.filter(d => kat(d) === 'gulv' && d.n === n), e = nyEtasje(n + 1, (n + 1) + '. etasje', n * H, H, H - .25, gulv[0] ? stoff(D[gulv[0].type].stoff) : 'tre');
-      e.dekke.felt = gulv.map((d, k) => ({ id: k, rom: null, del: d.id, i: d.i, j: d.j, tilstand: 'hel' }));
-      for (const d of liste) { if (kat(d) !== 'vegg' || d.n !== n) continue; const DD = D[d.type], a = [X(d.i), Y(d.j)], b = d.a === 'x' ? [X(d.i + 1), Y(d.j)] : [X(d.i), Y(d.j + 1)];
-        const sider = d.a === 'x' ? [[d.i, d.j - 1], [d.i, d.j]] : [[d.i - 1, d.j], [d.i, d.j]], inne = sider.filter(([i, j]) => celler.has(`${i},${j},${n}`) && kat(celler.get(`${i},${j},${n}`)) === 'gulv').length;
-        const id = e.vegger.length, s = stoff(DD.stoff); e.vegger.push({ id, a, b, type: inne >= 2 ? 'skille' : 'ytter', stoff: s, tykk: REGLER.tykk[s] || .2, bærende: true, tilstand: 'hel', del: d.id });
-        if (DD.v && DD.v !== 'hel') e.åpninger.push({ id: e.åpninger.length, vegg: id, t: r2(G / 2), b: DD.v === 'port' ? 2.2 : DD.v === 'vindu' ? 1.2 : .9, h: DD.v === 'vindu' ? 1.2 : DD.v === 'port' ? 2.6 : REGLER.dørHøyde, ned: DD.v === 'vindu' ? .9 : 0, type: DD.v, sperre: null, tilstand: 'hel' }); }
+      for (const d of gulv) for (const [i, j] of BS.ruter(d)) { const st = stoff(D[d.type].stoff); e.dekke.felt.push({ id: e.dekke.felt.length, rom: null, del: d.id, i, j, P: ruteP(i, j), stoff: D[d.type].stoff, spenn: halv(D[d.type].stoff), tilstand: 'hel', st }); }
+      for (const d of liste) {
+        if (d.n !== n) continue; const K = kat(d), DD = D[d.type];
+        if (K === 'vegg') { const [a, b] = BS.kantEnder({ ox, oy }, d).map(p => [r2(p[0]), r2(p[1])]), L = d.s * G;
+          const mk = BS.kanter(d)[Math.floor(d.s / 2)] || d, sider = mk.a === 'x' ? [[mk.i, mk.j - 1], [mk.i, mk.j]] : [[mk.i - 1, mk.j], [mk.i, mk.j]];
+          const inne = sider.filter(([i, j]) => celler.has(`${i},${j},${n}`) && kat(celler.get(`${i},${j},${n}`)) === 'gulv').length;
+          const id = e.vegger.length, s = stoff(DD.stoff); e.vegger.push({ id, a, b, type: inne >= 2 ? 'skille' : 'ytter', stoff: s, tykk: REGLER.tykk[s] || .2, bærende: true, tilstand: 'hel', del: d.id });
+          if (DD.v && DD.v !== 'hel') e.åpninger.push({ id: e.åpninger.length, vegg: id, t: r2(L / 2), b: r2(DD.v === 'port' ? Math.max(1.2, L - .5) : DD.v === 'vindu' ? Math.min(1.2, L - .4) : Math.min(.9, L - .3)),
+            h: DD.v === 'vindu' ? 1.2 : DD.v === 'port' ? 2.4 : REGLER.dørHøyde, ned: DD.v === 'vindu' ? .9 : 0, type: DD.v, sperre: null, tilstand: 'hel', del: d.id }); }
+        else if (K === 'søyle') e.søyler.push({ id: e.søyler.length, x: X(d.i), y: Y(d.j), stoff: stoff(DD.stoff), tilstand: 'hel', del: d.id });
+      }
+      // bjelkene: stykkene på samme linje som henger sammen blir én bjelke (endene må hvile på noe – Bygning.støtter)
+      const bj = liste.filter(d => kat(d) === 'bjelke' && d.n === n).flatMap(d => BS.kanter(d).map(k => ({ ...k, d })));
+      for (const ak of ['x', 'y']) { const L = bj.filter(k => k.a === ak).sort((p, q) => (ak === 'x' ? p.j - q.j || p.i - q.i : p.i - q.i || p.j - q.j)); let cur = null;
+        for (const k of L) { const lin = ak === 'x' ? k.j : k.i, pos = ak === 'x' ? k.i : k.j;
+          if (cur && cur.lin === lin && cur.slutt === pos) { cur.slutt = pos + 1; continue; }
+          if (cur) e.bjelker.push(cur.b(cur)); cur = { lin, start: pos, slutt: pos + 1, d: k.d, b: c => ({ id: e.bjelker.length, a: ak === 'x' ? [X(c.start), Y(c.lin)] : [X(c.lin), Y(c.start)], b: ak === 'x' ? [X(c.slutt), Y(c.lin)] : [X(c.lin), Y(c.slutt)], stoff: stoff(D[c.d.type].stoff), tilstand: 'hel', del: c.d.id }) }; }
+        if (cur) e.bjelker.push(cur.b(cur)); }
       // rommene fra byggesett.js (lukkede rom)
-      const R = BS ? BS.rom(deler).filter(r => r.etasje === n) : [];
-      for (const r of R) { const c = r.celler; let a = Infinity, b = Infinity, c1 = -Infinity, d1 = -Infinity; for (const [i, j] of c) { a = Math.min(a, i); b = Math.min(b, j); c1 = Math.max(c1, i + 1); d1 = Math.max(d1, j + 1); }
-        e.rom.push({ id: e.rom.length, rolle: r.bruk || 'rom', P: [[X(a), Y(b)], [X(c1), Y(b)], [X(c1), Y(d1)], [X(a), Y(d1)]], areal: r.areal, andel: r.ruter / ((c1 - a) * (d1 - b)), navn: r.navn, nøkkel: r.nøkkel }); }
+      for (const r of R.filter(q => q.etasje === n)) { const c = r.celler; let a = Infinity, b = Infinity, c1 = -Infinity, d1 = -Infinity; for (const [i, j] of c) { a = Math.min(a, i); b = Math.min(b, j); c1 = Math.max(c1, i + 1); d1 = Math.max(d1, j + 1); }
+        e.rom.push({ id: e.rom.length, rolle: (r.type && r.type.id) || r.bruk || 'rom', P: [[X(a), Y(b)], [X(c1), Y(b)], [X(c1), Y(d1)], [X(a), Y(d1)]], areal: r.areal, andel: r.ruter / ((c1 - a) * (d1 - b)), navn: r.navn, nøkkel: r.nøkkel }); }
       for (const f of e.dekke.felt) { const r = e.rom.find(q => inni(q.P, X(f.i + .5), Y(f.j + .5))); f.rom = r ? r.id : null; }
       m.etasjer.push(e);
     }
-    // takene: en rute per tak (saltak når noen er saltak)
-    const tak = liste.filter(d => kat(d) === 'tak'); m.tak.form = tak.some(d => d.type === 'bs_tak_sal') ? 'saltak' : 'flatt';
-    m.tak.felt = tak.map((d, k) => ({ id: k, del: d.id, i: d.i, j: d.j, n: d.n, u0: X(d.i), u1: X(d.i + 1), tilstand: 'hel' }));
+    // takene: én rute per felt, med sin egen høyde (n = dekket) og sitt stoff; saltak når noen er saltak
+    const tak = liste.filter(d => kat(d) === 'tak'); m.tak.form = tak.some(d => D[d.type].grunn === 'bs_tak_sal') ? 'saltak' : 'flatt';
+    for (const d of tak) for (const [i, j] of BS.ruter(d)) { const st = D[d.type].stoff; m.tak.felt.push({ id: m.tak.felt.length, del: d.id, i, j, n: d.n, u0: X(i), u1: X(i + 1), P: ruteP(i, j), stoff: st === 'tak' ? 'tre' : st, spenn: halv(st === 'tak' ? 'tre' : st), tilstand: 'hel' }); }
     m.høyde.vegg = m.etasjer.length * H; m.h = m.høyde.vegg; merkStoff(m);
-    // trapp i 2. etasje antas inne (som i byggesett.js): ved den første ruta med gulv i begge etasjene
-    for (let k = 1; k < m.etasjer.length; k++) { const hi = m.etasjer[k], f = liste.find(d => kat(d) === 'gulv' && d.n === hi.n - 1 && celler.has(`${d.i},${d.j},${hi.n - 2}`));
-      if (f) { const x = X(f.i + .5), y = Y(f.j + .5); m.trapper.push({ id: m.trapper.length, fra: hi.n - 1, til: hi.n, x, y, a: 0, b: .8, l: 1.2, nede: [r2(x - 1), y], oppe: [r2(x + 1), y], form: 'stige', stoff: 'tre', tilstand: 'hel', antatt: true }); } }
+    // trappene i byggesettet: fra etasjen trappa står i til den over; nede = ruta foran foten, oppe = ruta etter toppen
+    for (const d of liste.filter(q => kat(q) === 'trapp')) { const Rr = BS.ruter(d), [di, dj] = [[1, 0], [0, 1], [-1, 0], [0, -1]][(d.r || 0) & 3];
+      const c = [(Rr[0][0] + Rr[2][0]) / 2 + .5, (Rr[0][1] + Rr[2][1]) / 2 + .5], x = X(c[0]), y = Y(c[1]);
+      m.trapper.push({ id: m.trapper.length, fra: d.n + 1, til: d.n + 2, x, y, a: r2(Math.atan2(dj, di)), b: r2(G * .9), l: r2(3 * G), nede: [X(Rr[0][0] - di + .5), Y(Rr[0][1] - dj + .5)], oppe: [X(Rr[2][0] + di + .5), Y(Rr[2][1] + dj + .5)],
+        form: 'rett', stoff: stoff(D[d.type].stoff), tilstand: 'hel', del: d.id }); }
+    // gamle bygg (versjon 2) uten trapp: trapp antas inne (som før) ved den første ruta med gammelt gulv i begge etasjene
+    for (let k = 1; k < m.etasjer.length; k++) { const hi = m.etasjer[k]; if (m.trapper.some(t => t.til === hi.n)) continue;
+      const f = liste.find(d => kat(d) === 'gulv' && D[d.type].gammel && d.n === hi.n - 1 && celler.has(`${d.i},${d.j},${hi.n - 2}`));
+      if (f) { const x = X(f.i + 1), y = Y(f.j + 1); m.trapper.push({ id: m.trapper.length, fra: hi.n - 1, til: hi.n, x, y, a: 0, b: .8, l: 1.2, nede: [r2(x - 1), y], oppe: [r2(x + 1), y], form: 'stige', stoff: 'tre', tilstand: 'hel', antatt: true }); } }
+    // loft under saltak: når mønet ligger minst 2,2 m over loftsgulvet (byggesettets takvinkel ca. 30°, tan 0,58)
+    const sal = tak.filter(d => D[d.type].grunn === 'bs_tak_sal');
+    if (sal.length) { const nT = Math.max(...sal.map(d => d.n)), C = sal.filter(d => d.n === nT).flatMap(d => BS.ruter(d)), a = Math.min(...C.map(c => c[0])), b = Math.min(...C.map(c => c[1])), c1 = Math.max(...C.map(c => c[0])) + 1, d1 = Math.max(...C.map(c => c[1])) + 1;
+      const møne = r2(Math.min(c1 - a, d1 - b) * G / 2 * .58); m.høyde.møne = møne; m.tak.møne = møne;
+      if (møne >= 2.2 && nT === m.etasjer.length) { const e = nyEtasje(nT + 1, 'Loft', nT * H, møne, møne, 'tre'); e.loft = true; e.rom.push({ id: 0, rolle: 'loft', P: [[X(a), Y(b)], [X(c1), Y(b)], [X(c1), Y(d1)], [X(a), Y(d1)]], areal: r2((c1 - a) * (d1 - b) * G * G * .5), andel: .5, navn: 'Loft' }); m.etasjer.push(e); } }
+    // bredden (spennet) over hvert felt: 2 × lengste avstand fra feltets punkter til en støtte under (for teksten «spennet er 8,4 m»)
+    for (let k = 1; k < m.etasjer.length; k++) { const e = m.etasjer[k]; if (!e.dekke.felt.length) continue; const S = støtter(m.etasjer[k - 1]);
+      for (const f of e.dekke.felt) f.bredde = r2(2 * Math.max(...feltPunkter(f.P).map(([x, y]) => nærmest(S, x, y)))); }
+    const SE = new Map(); for (const f of m.tak.felt) { const et = m.etasjer.find(q => q.n === f.n); if (!et) continue; if (!SE.has(f.n)) SE.set(f.n, støtter(et)); f.bredde = r2(2 * Math.max(...feltPunkter(f.P).map(([x, y]) => nærmest(SE.get(f.n), x, y)))); }
     return m;
   }
+  // punktene ras() prøver i et felt med eget omriss: midten og fire punkter halvveis ut mot hjørnene
+  function feltPunkter(P) { let x = 0, y = 0; for (const p of P) { x += p[0]; y += p[1]; } x /= P.length; y /= P.length; return [[x, y], ...P.map(p => [(x + p[0]) / 2, (y + p[1]) / 2])]; }
 
   // ---------- små hjelpere ----------
   const telle = m => { const t = { etasjer: 0, vegger: 0, bærende: 0, åpninger: 0, vinduer: 0, dører: 0, rom: 0, møbler: 0, trapper: m.trapper.length };
