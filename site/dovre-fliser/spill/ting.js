@@ -346,7 +346,7 @@ paraply | Paraply/paraplyer | - | .4 | 1 | 0 | 300 | - | M=.1/1
   function antall(id, n) { const g = TING[id]; if (!g) return `${n} × ${id}`; n = Math.round(n);
     return g.enhet && !(g.enhet === 'stk.' && n === 1) ? `${n} ${n === 1 ? g.enhet : g.enheter} ${lite(g.navn)}` : `${n} ${lite(n === 1 ? g.navn : g.flertall)}`; }
   // tittelen i lister: «Peanøttsmør (glass)», «Hammer»
-  const tittel = id => { const g = TING[id]; return g ? g.navn + (g.enhet && g.enhet !== 'stk.' ? ` (${g.enhet})` : '') : id; };
+  const tittel = id => { const g = TING[id]; return g ? g.navn + (g.enhet && g.enhet !== 'stk.' && !/\(/.test(g.navn) ? ` (${g.enhet})` : '') : id; };
   // «Fant: 2 glass peanøttsmør, 1 rull tape og 3 andre ting.» – høyst maks slag nevnt
   function fantTekst(liste, maks = 4) { const L = (liste || []).filter(q => q && q.n > 0); if (!L.length) return '';
     const sort = L.slice().sort((a, b) => (TING[b.id] ? TING[b.id].pris * b.n : 0) - (TING[a.id] ? TING[a.id].pris * a.n : 0));

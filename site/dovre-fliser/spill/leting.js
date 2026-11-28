@@ -2,12 +2,15 @@
  * Brukeren 16. nov: «legg til flere funksjoner». Når du har gått inn i et bygg (spill/interior3d.js), kan du lete gjennom det én
  * gang. Hva du finner, kommer an på hva slags bygg det er og hvor stort det er – butikker har mat, verksteder og lager har
  * materialer, garasjer litt diesel, boliger litt av hvert, og en del hus er alt tømt av andre. Samme bygg gir alltid det samme.
- * funn(kl, areal, i) gir { mat (rasjoner), tre (m³), betong (m³), stål (t), diesel (l), penger (kr), tomt, person }.
+ * funn(kl, areal, i) gir { mat (rasjoner), tre (m³), betong (m³), stål (t), diesel (l), penger (kr), tomt, person, ting }.
+ * ting = hverdagsting etter rommene (spill/ting.js: kjøkken mat, bad hygiene og medisin, bod og garasje verktøy …) til leirens lager.
  * person = det er en overlevende i bygget (i noen boliger, hytter, skoler, sykehus og kirker) som kan bli med til leiren.
  * Mengdene er små mot det leiren bruker (en rasjon koster 3000 kr å kjøpe) – de er Claudes forslag.
  */
 (function (rot) {
   'use strict';
+  // (ut8-hverdag) spill/ting.js – lastes før denne fila i siden; i Node hentes den med require
+  let Tg0 = null; const Ting_ = () => Tg0 || (Tg0 = rot.Ting || (typeof require === 'function' ? (() => { try { return require('./ting.js'); } catch (e) { return null; } })() : null));
   const hash = (a, b) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
   // per klasse: sjansen for at bygget er tomt, og hva som kan ligge der [slag, sjanse, minst, mest] for et bygg på 100 m²
   const KLASSER = {
@@ -31,13 +34,16 @@
   const OVERLEVENDE = { hus: .06, hytte: .08, leil: .06, skole: .1, sykehus: .12, kirke: .15, låve: .04 };
   const ENHET = { mat: ['rasjon', 'rasjoner'], tre: ['m³ tre', 'm³ tre'], betong: ['m³ betong', 'm³ betong'], stål: ['t stål', 't stål'], diesel: ['l diesel', 'l diesel'], penger: ['kr', 'kr'] };
   const rund = (slag, v) => slag === 'mat' || slag === 'diesel' ? Math.round(v) : slag === 'penger' ? Math.round(v / 1000) * 1000 : Math.round(v * 10) / 10;
-  function funn(kl, areal, i) {
+  // o (ut8-hverdag): { rom: rollene fra interiøret, etasje } – bare for tingene
+  function funn(kl, areal, i, o = {}) {
     const K = KLASSER[kl] || KLASSER.hus, f = { mat: 0, tre: 0, betong: 0, stål: 0, diesel: 0, penger: 0, tomt: false, person: hash(i, 3) < (OVERLEVENDE[KLASSER[kl] ? kl : 'hus'] || 0) };
     if (hash(i, 1) < K.tomt) { f.tomt = true; return f; }
     // større bygg har mer, men ikke i takt med arealet (roten), og høyst seks ganger et bygg på 100 m²
     const skala = Math.max(.4, Math.min(6, Math.sqrt(Math.max(10, areal) / 100)));
     K.ting.forEach(([slag, sjanse, a, b], n) => { if (hash(i, 10 + n) < sjanse) f[slag] = rund(slag, (a + (b - a) * hash(i, 40 + n)) * skala); });
     if (!(f.mat || f.tre || f.betong || f.stål || f.diesel || f.penger)) f.tomt = true;
+    // (ut8-hverdag) hverdagsting etter rommene i bygget (spill/ting.js): f.ting = [{ id, n }] – fast per bygg som resten
+    const Tg = Ting_(); if (Tg && !f.tomt) f.ting = Tg.funnIBygg(kl, areal, i, o);
     return f;
   }
   // Sekunder det tar å lete gjennom bygget (du må bli inne)
