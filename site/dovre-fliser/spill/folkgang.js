@@ -36,6 +36,13 @@
     planPerSteg: 40,
     // … og høyst så mange ms med veisøk per steg (et nytt veikart tar 3–15 ms; de neste venter til neste steg)
     planMs: 8,
+    // (F5) LANGT UNNA: mål over så mange meter unna (utpost, sagbruk i en by, hogstfelt) går de ikke ekte – reisen regnes med reisetid
+    // (rett linje i reiseFart m/s; samme gangfart nå, en bil kan gi mer senere). Utpostens område: hogst/riving innen utpostR m.
+    langt: 3000, reiseFart: 1.3, utpostR: 2000,
+    // (F5) ORDRE TIL ÉN PERSON: «Gjør dette nå» varer så mange spillminutter, så tar jobbtavla over igjen
+    ordreMin: 60,
+    // (F5) trafikkartet får et punkt per så mange meter personen går
+    sporSteg: 2,
   };
   // stedene folk kan gå til (Vei.MÅL har de samme byggtypene) og hva de heter i teksten
   const STED = {
@@ -51,7 +58,7 @@
   const hash = (a, b) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
   const r1 = v => Math.round(v * 10) / 10;
 
-  function ny() { return { pers: {}, kartV: -1, senger: null, sengSig: '', ms: 0 }; }
+  function ny() { return { pers: {}, kartV: -1, senger: null, sengSig: '', ms: 0, ordre: {}, hendelser: [], ute: {} }; }
 
   // ---------- leirens bygg ----------
   const ferdigB = b => Leir && Leir.BYGG[b.type] && !Leir.BYGG[b.type].del && Leir.virker(b);
@@ -84,6 +91,8 @@
     const sted = (D, nr) => { const B = ctx.L.bygg.filter(b => D.bygg.includes(b.type) && ferdigB(b)); if (B.length) return tilBygg(B[nr % B.length], D.gjør, D.navn);
       const R = (D.rom || []).length ? sm.rom.filter(r => D.rom.includes(r.bruk)) : []; return R.length ? tilRom(R[nr % R.length], D.gjør, D.navn) : null; };
     if (hva === 'borte') return null;
+    // (F5) UTPOST: personen hører til en utpost langt unna (ctx.utpost(p) -> { id, x, y, navn, seng(p) }): arbeid, mat, søvn og fri der
+    const U = ctx.utpost ? ctx.utpost(p) : null; if (U) return utpostMål(p, hva, U, ctx);
     // (F3) bæring og bruksplassene ved maskinene (spill/baering.js): ctx.mål(p, hva) gir et mål – eller ingenting, så gjelder reglene under
     if (ctx.mål) { const q = ctx.mål(p, hva); if (q) return q; }
     if (hva === 'søvn' || hva === 'syk') {
@@ -121,12 +130,32 @@
     return bål('venter – ' + (D ? 'trenger ' + D.navn : 'ingen arbeidsplass'));
   }
 
+  // ---------- utposten (F5) ----------
+  // Målet for en person som hører til utposten U. jobbDer = arbeidet teller i leirens oppgave (hogst/riving ved utposten);
+  // ellers er arbeidet utpostens eget (Utpost.steg regner det), og personen teller ikke som framme i leirens oppgave (stedF).
+  function utpostMål(p, hva, U, ctx) {
+    const a = hash(p.id, 31) * 6.283, r = 3 + hash(p.id, 37) * 6, her = { x: U.x + Math.cos(a) * r, y: U.y + Math.sin(a) * r };
+    const m = (k, gjør, o = {}) => ({ k: 'utpost:' + U.id + ':' + k + ':' + p.id, ...her, navn: U.navn, gjør, utpost: U.id, ...o });
+    if (hva === 'søvn' || hva === 'syk') return m('seng', U.seng && U.seng(p) ? (hva === 'syk' ? 'hviler i utposten' : 'sover i utposten') : 'sover ute ved utposten (ingen seng)');
+    if (hva === 'mat') return m('mat', 'spiser i utposten');
+    if (hva !== 'arbeid' || p.oppgave === 'fri') return m('fri', 'har fri i utposten');
+    if (p.oppgave === 'hogst' || p.oppgave === 'riving') {
+      const A = (ctx.RJ || []).filter(q => q.type === p.oppgave && !q.stoppet && q.gjort < q.arbeid && Math.hypot(q.x - U.x, q.y - U.y) <= REGLER.utpostR);
+      if (A.length) { const q = A[p.id % A.length], b = hash(p.id, 21) * 6.283, rr = p.oppgave === 'hogst' ? Math.min(12, (q.r || 10) * .6) : 4;
+        return { k: p.oppgave + ':' + q.id, x: q.x + Math.cos(b) * rr, y: q.y + Math.sin(b) * rr, navn: p.oppgave === 'hogst' ? 'hogstfeltet ved ' + U.navn : 'huset som rives ved ' + U.navn,
+          gjør: p.oppgave === 'hogst' ? 'feller trær' : 'river huset', utpost: U.id, jobbDer: true }; }
+    }
+    return m('arbeid', p.oppgave === 'vakt' ? 'holder vakt ved utposten' : 'arbeider ved utposten', { utpostArbeid: true });
+  }
+
   // ---------- veien ----------
   const iNett = (K, x, y) => { const L = K && K.lagene[0]; return !!L && x >= L.x0 && y >= L.y0 && x <= L.x0 + L.W * L.s && y <= L.y0 + L.H * L.s; };
   // planlegg veien til målet: s.vei = punktene, s.fast = grunnen når hen ikke kommer fram
   function planlegg(s, M, K) {
-    s.vei = []; s.vi = 0; s.fast = null; s.inn = false;
+    s.vei = []; s.vi = 0; s.fast = null; s.inn = false; s.reise = null;
     if (!M) return;
+    // (F5) langt unna: ingen veisøk – reisen regnes (rett linje, reisetid = avstand / reiseFart)
+    const d = Math.hypot(M.x - s.x, M.y - s.y); if (d > REGLER.langt) { s.vei = [{ x: M.x, y: M.y, e: M.e || 1, hus: M.hus }]; s.reise = { m: d, T: d / REGLER.reiseFart }; return; }
     const målInne = iNett(K, M.x, M.y), herInne = iNett(K, s.x, s.y);
     if (!K || !Vei || !målInne) { s.vei = [{ x: M.x, y: M.y, e: 1 }]; return; }
     // utenfor leirens rutenett: rett mot målet til hen er inne, så etter veikartet
@@ -141,12 +170,16 @@
     s.fast = g || Vei.GRUNN.vei;
   }
   // gå langs veien så langt dt sekunder rekker; gir meter gått
-  function gå(s, dt, fart) {
+  // spor(x, y, meter) (F5, trafikkartet): et punkt for hver REGLER.sporSteg meter langs veien
+  function gå(s, dt, fart, spor) {
     let rest = fart * dt, gått = 0;
     while (rest > 1e-6 && s.vi < s.vei.length) { const q = s.vei[s.vi], dx = q.x - s.x, dy = q.y - s.y, d = Math.hypot(dx, dy);
       if (d > 1e-6) s.a = Math.atan2(dy, dx);
+      const l = Math.min(d, rest), x0 = s.x, y0 = s.y;
       if (d <= rest) { s.x = q.x; s.y = q.y; if (q.e) s.e = q.e; s.hus = q.hus; s.vi++; rest -= d; gått += d; }
-      else { s.x += dx / d * rest; s.y += dy / d * rest; gått += rest; rest = 0; } }
+      else { s.x += dx / d * rest; s.y += dy / d * rest; gått += rest; rest = 0; }
+      if (spor && l > 0 && d > 1e-6) { s.sporRest = (s.sporRest || 0) + l; let k = 0; const ux = dx / d, uy = dy / d;
+        while (s.sporRest >= REGLER.sporSteg && k < 400) { s.sporRest -= REGLER.sporSteg; const t = l - s.sporRest; spor(x0 + ux * t, y0 + uy * t, REGLER.sporSteg); k++; } } }
     return gått;
   }
 
@@ -165,26 +198,43 @@
     if (!G.senger) G.senger = senger(ctx, sm);
     F.personer.forEach((p, i) => { if (i < G.senger.length) sm.seng.set(p.id, G.senger[i]); });
     const tell = {}; for (const p of F.personer.slice().sort((a, b) => a.id - b.id)) { tell[p.oppgave] = (tell[p.oppgave] || 0) + 1; sm.nr.set(p.id, tell[p.oppgave] - 1); }
-    const finnes = new Set(); let planer = 0;
+    const finnes = new Set(), ute = {}; let planer = 0;
     F.personer.forEach((p, i) => {
       finnes.add(p.id); let s = G.pers[p.id];
-      const hva = p.borte ? 'borte' : ctx.hva ? ctx.hva(p) : p.oppgave === 'fri' ? 'fri' : 'arbeid';
+      const O = G.ordre[p.id];
+      // (F5) ORDRE «Gjør dette nå»: arbeid nå (også utenom arbeidstida) til tida er ute – så tar jobbtavla over igjen
+      if (O && O.type === 'gjør' && ctx.tid !== undefined && ctx.tid >= O.til) { delete G.ordre[p.id]; G.hendelser.push({ type: 'ferdig', id: p.id, ordre: O }); }
+      const Oo = G.ordre[p.id];
+      const ekteHva = p.borte ? 'borte' : ctx.hva ? ctx.hva(p) : p.oppgave === 'fri' ? 'fri' : 'arbeid';
+      const hva = Oo && Oo.type === 'gjør' && !p.borte ? 'arbeid' : ekteHva;
       // ny person: starter ved bålet (et nytt spill, en rekrutt)
       if (!s) { const a = hash(p.id, 3) * 6.283, r = 2 + hash(p.id, 4) * 6; s = G.pers[p.id] = { id: p.id, x: ctx.leir.x + Math.cos(a) * r, y: ctx.leir.y + Math.sin(a) * r, e: 1, hus: 'leir', a, vei: [], vi: 0, mk: null, fast: null, framme: false, går: false, gått: 0 }; }
       s.hva = hva; s.oppgave = p.oppgave;
-      const M = målFor(p, i, hva, ctx, sm); s.mål = M;
+      // (F5) ORDRE «Gå hit»: til punktet – det overstyrer jobbtavla til hen er framme
+      const M = Oo && Oo.type === 'gå' && !p.borte ? { k: 'ordre:' + Oo.n, x: Oo.x, y: Oo.y, e: Oo.e || 1, hus: Oo.hus, navn: 'stedet du pekte på', gjør: 'ordre fra deg', ordre: true } : målFor(p, i, hva, ctx, sm); s.mål = M;
+      s.ordre = !!Oo; s.utpost = M && M.utpost !== undefined ? M.utpost : null;
       const mk = M ? M.k + '|' + r1(M.x) + ',' + r1(M.y) : null;
       if ((mk !== s.mk || kartNytt || s.nyKart || (s.inn && K && iNett(K, s.x, s.y))) && planer < REGLER.planPerSteg && (Date.now() - t0 < REGLER.planMs || !planer)) { s.mk = mk; s.nyKart = false; planlegg(s, M, K); planer++; }
       else if (kartNytt) s.nyKart = true;
       // planlagt: veien er regnet for dette målet (ellers venter hen på sin tur – planPerSteg/planMs)
       const fart = (p.helse < .4 ? REGLER.sykFart : REGLER.fart), planlagt = s.mk === mk;
-      const g = M && planlagt && !s.fast ? gå(s, dt, fart) : 0; s.går = g > 1e-3; s.gått += g;
+      const g = M && planlagt && !s.fast ? gå(s, dt, s.reise ? REGLER.reiseFart : fart, s.reise ? null : ctx.spor) : 0; s.går = g > 1e-3; s.gått += g;
       const ved = M && planlagt && s.vi >= s.vei.length && (M.kart ? true : Math.hypot(M.x - s.x, M.y - s.y) <= REGLER.framme);
       s.framme = !!M && !s.fast && (ved || (!!M.regnet && planlagt));
       s.ved = !!M && !s.fast && ved;
       s.inne = s.ved && M.inne ? M.inne : null;
+      if (s.ved) s.reise = null;
+      // ordren er utført: framme der spilleren pekte – eller hen står fast (grunnen går til visningen)
+      if (Oo && Oo.type === 'gå' && planlagt) { if (s.ved) { delete G.ordre[p.id]; G.hendelser.push({ type: 'framme', id: p.id, ordre: Oo }); }
+        else if (s.fast) { delete G.ordre[p.id]; G.hendelser.push({ type: 'fast', id: p.id, ordre: Oo, grunn: s.fast }); } }
+      // utposten: hvem er der, hvem reiser, og arbeidstida som går med der (Utpost.steg bruker den)
+      if (s.utpost !== null) { const u = ute[s.utpost] || (ute[s.utpost] = { her: 0, reiser: 0, arbeider: 0, arbeidSek: 0, reiseSek: 0, ider: [] }); u.ider.push(p.id);
+        if (s.framme) u.her++; else u.reiser++;
+        if (hva === 'arbeid' && p.oppgave !== 'fri') { if (s.framme && !s.går) { u.arbeider++; u.arbeidSek += dt; } else u.reiseSek += dt; } }
     });
+    G.ute = ute;
     for (const id of Object.keys(G.pers)) if (!finnes.has(+id)) delete G.pers[id];
+    for (const id of Object.keys(G.ordre)) if (!finnes.has(+id)) delete G.ordre[id];
     G.ms = Date.now() - t0;
     return G;
   }
@@ -194,7 +244,9 @@
   function stedF(G, F, o) {
     if (!G || !F) return 1; let n = 0, f = 0;
     // (en person som nettopp har fått ny oppgave, er ikke regnet ennå – telles ikke før neste steg)
-    for (const p of F.personer) { if (p.oppgave !== o) continue; const s = G.pers[p.id]; if (!s || s.hva !== 'arbeid' || s.oppgave !== o) continue; n++; if (s.framme) f++; }
+    for (const p of F.personer) { if (p.oppgave !== o) continue; const s = G.pers[p.id]; if (!s || s.hva !== 'arbeid' || s.oppgave !== o) continue; n++;
+      // (F5) ute på ordre, eller i en utpost med utpostens eget arbeid: bidrar ikke i leiren (hogst/riving ved utposten gjør det)
+      if (s.framme && !s.ordre && !(s.utpost !== null && s.utpost !== undefined && !(s.mål && s.mål.jobbDer))) f++; }
     return n ? f / n : 1;
   }
   // Hva personen gjør nå og hvorfor: «går til byggeplassen – bygger brakke», «spiser», «sover», «står fast: rommet har ingen dør»
@@ -202,6 +254,7 @@
     const s = G && G.pers[p.id]; if (!s) return ''; const M = s.mål; if (!M) return p.borte ? 'borte fra leiren' : '';
     if (s.fast) return `står fast – kommer ikke til ${M.navn}: ${s.fast}`;
     if (s.ved || (M.regnet && s.framme && !s.går)) return M.gjør;
+    if (s.reise) { const igjen = Math.max(0, Math.hypot(M.x - s.x, M.y - s.y) / REGLER.reiseFart / 60); return `reiser til ${M.navn} – ${M.gjør} (ca. ${igjen < 60 ? Math.max(1, Math.round(igjen)) + ' min' : (Math.round(igjen / 6) / 10).toString().replace('.', ',') + ' t'} igjen)`; }
     return `går til ${M.navn} – ${M.gjør}` + (M.regnet ? ' (regnes som framme: utpost)' : '');
   }
   // Jobbene der noen står fast: [{ type, navn (personene), grunn, sted }]
@@ -214,7 +267,15 @@
   // Oversikt for testene: hvor mange som er framme, går, står fast
   function oversikt(G) { const v = Object.values(G.pers); return { n: v.length, framme: v.filter(s => s.framme).length, går: v.filter(s => s.går).length, fast: v.filter(s => s.fast).length, ms: G.ms }; }
 
-  const api = { REGLER, STED, INNE, ny, steg, målFor, planlegg, gå, stedF, tekst, fast, oversikt, inngang, senger };
+  // ---------- ordre til én person (F5) ----------
+  // gi(G, id, { type: 'gå', x, y, e, hus }) eller { type: 'gjør', oppgave, fra (oppgaven før), til (spilltid) }; stopp(G, id)
+  let ordreNr = 1;
+  function gi(G, id, o) { if (!G || !o || (o.type !== 'gå' && o.type !== 'gjør')) return null; const O = { ...o, n: ordreNr++ }; G.ordre[id] = O; const s = G.pers[id]; if (s) s.mk = null; return O; }
+  function stopp(G, id) { const O = G && G.ordre[id]; if (!O) return null; delete G.ordre[id]; const s = G.pers[id]; if (s) s.mk = null; return O; }
+  // hendelsene siden sist (framme, fast, ferdig) – tømmes når de leses
+  function hendelser(G) { const h = G.hendelser || []; G.hendelser = []; return h; }
+
+  const api = { REGLER, STED, INNE, ny, steg, målFor, utpostMål, planlegg, gå, stedF, tekst, fast, oversikt, inngang, senger, gi, stopp, hendelser };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Folkgang = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
