@@ -96,6 +96,14 @@ Kommandoene: `etasjeLet` { hus, n, hent? } og `etasjeTilflukt` { hus } (Kommando
   husKnapper, spol(), nullstill().
 - `Etasjer3d`: modellG, tilpass, høyde, påTrapp, sperrer, aktiv(), etasje(P), ferdig(), nett(), kast(), steg(), sett(n), STAT, BIT.
 
+## Prøvd med ekte husdata (/rogaland via dev.py, leiren i Ryfylke 15607 6622779)
+- Ti hus (bolig 7–8 m, kontor 20 m) gikk du inn til i 3D: alle fikk interiør og modell (K 1 L, 1 L, 1 2 L, 1–6). Bare 2 av 10 hadde samme
+  1. etasje i Interior.plan og modellen (møblene på samme sted; trappene tok bort 2 og 4 møbler) – de 8 andre fikk 1. etasje fra modellen
+  (`planFra`). Årsaken til forskjellen er trolig små forskjeller i det interiøret og modellen får vite (døras plass/bredde etter flyttingen
+  til nærmeste kant, høyden over havet) – Interior.plan er følsom for døra. Med `planFra` er 1. etasje uansett lik i 2D og 3D.
+- Bilder (bolig 8 m, «1 2 L»): 1. etasje fra modellen med dører, karmer, bilder og parkett (interior3d sitt utseende), trappa opp med
+  gelender gjennom hullet i himlingen, 2. etasje med vinduer ut. De første bildene av 2. etasje var nesten hvite i sola – fargene er dempet.
+
 ## Prøvd
 - Node: test_etasjer.js (0 feil), test_interior.js, test_spill2d.js.
 - Nettleser (Dovre-testsiden, prøvehus leilighetsbygg 14 × 9 m, 13 m: kjeller, 1–3, loft): 2D på PC – karakteren gikk til huset og opp
@@ -106,14 +114,16 @@ Kommandoene: `etasjeLet` { hus, n, hent? } og `etasjeTilflukt` { hus } (Kommando
   etasjenettene 20–33 ms i biter, ca. 12 000 trekanter for kjeller + 2 + 3 + loft.
 
 ## Ikke gjort / kjent
-- **Kostnad for hus du ikke går inn i:** modellen lages for alle hus som får interiør (innen 30 m mens du går, unntatt haller) – det kommer
-  i tillegg til interiøret (som tar 160–370 ms i biter). Nettene for de andre etasjene lages bare når du går inn. En snarvei senere:
-  la Bygning gi «bare antall etasjer og kjeller» uten planene (B2 hadde ikke tid).
+- **Kostnad:** hus du bare går forbi (interiøret bygges innen 30 m) betaler ikke for modellen: den lages først når du er innen 12 m
+  (BIT.nær), og da bygges interiøret på nytt i biter med modellen (P.etasjerVent -> Interior3d.glem). Målt (prøvebygg, programvare-grafikk):
+  interiøret uten modell 4–49 ms, modellen 4–320 ms ekstra i biter (lengste bit 8–84 ms), etasjenettene 20–33 ms. Nettene for de andre
+  etasjene lages bare når du går inn.
 - Lengste bit i Bygning.fraKartG kan være over 100 ms på en treg maskin (trappesøket) – det gir et hakk når et hus får interiør.
 - Plantegningen tegner ikke åpningene der trappa møter en vegg (se over), og veien i 2D kan i sjeldne hus gå rett gjennom en vegg
   (1 av 190 i testen: rutenettet fant ingen vei).
 - I 3D er etasjene enklere enn 1. etasje: hjørnefarger uten mønstre, ingen lamper, gardiner, dørblader eller bilder.
-- Skap/beholdere (LutSpill) og «Plukk opp» i de andre etasjene finnes ikke (bare i 1. etasje); står du i 2. etasje, kan E fortsatt nå
-  skap i 1. etasje rett under deg.
+- Skap/beholdere (LutSpill) og «Plukk opp» i de andre etasjene finnes ikke (bare i 1. etasje). Mens du står i en annen etasje, er
+  `P.inne.møbler` byttet ut med en tom liste (settes tilbake i 1. etasje og når du går ut), så du kan ikke åpne skap i etasjen under.
+  «Sikre huset» (OverlevSpill) står fortsatt der – det gjelder hele huset.
 - Leirens egne bygg og byggesettets hus har ingen etasjer her.
 - Kamp, siktlinjer og vinduer i høyere etasjer har ingen virkning ennå (B3/5.7).
