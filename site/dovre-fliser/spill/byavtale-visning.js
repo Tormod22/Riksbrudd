@@ -73,7 +73,7 @@
     const by = finn(k.by); if (!by) return { svar: 'nei', grunn: 'Fant ikke byen.' };
     const b = synk(by.id), l = BA.leder(by.id, by.folk), bh = behovFor(by), rp = b.forhandler ? b.forhandler.pris : b.rival ? b.rival.pris : 0;
     if (k.trinn === 'medlem' && eier(by.id) && eier(by.id) !== 'blå') return { svar: 'nei', grunn: `${by.navn} holdes av ${sidenavn(eier(by.id))}.` };
-    const r = BA.forhandle(b, { trinn: k.trinn, pris: +k.pris, løfte: k.løfte, varighet: +k.varighet }, { folk: by.folk, behov: bh.verdi, holdning: l.holdning, rivalPris: rp, eid: eier(by.id) === 'blå' });
+    const r = BA.forhandle(b, { trinn: k.trinn, pris: +k.pris, løfte: k.løfte, varighet: +k.varighet }, { folk: by.folk, behov: bh.verdi, holdning: l.holdning, rivalPris: rp, eid: eier(by.id) === 'blå', nå: nåMin() });
     if (r.svar === 'ja') { const hadde = b.forhandler || b.rival; BA.inngå(b, { trinn: k.trinn, pris: +k.pris, løfte: k.løfte, varighet: +k.varighet }, nåMin());
       if (k.trinn === 'medlem' && RS() && RS().nyttMedlem) RS().nyttMedlem(by.id, b.tillit);
       const L = b.avtale, tekst = k.trinn === 'medlem' ? `${by.navn} er medlem: byen betaler skatt til dere og teller fullt i krigen.` : `Avtale med ${by.navn}: ${BA.TRINNORD[k.trinn].toLowerCase()} i ${L.varighet} døgn for ${kr(L.pris)} per døgn. Dere lover ${L.mann} mann i byen eller innen 3 km og hjelp innen ${L.svartid} t.`;
@@ -98,7 +98,10 @@
   // én spilltime: løftene, handelsvarene, bønner om hjelp, rivalenes forhandlinger
   function timeSteg() {
     const nå = nåMin(); let endret = false;
-    for (const by of område()) { const b = S.byer[by.id]; if (!b) continue;
+    for (const by of område()) { let b = S.byer[by.id];
+      // egne lag som vokter en by uten avtale, telles (tillit opp til Byavtale.REGLER.vakt.tak)
+      if ((!b || !b.avtale) && eier(by.id) !== 'blå' && mannNær(by, R.radius) >= R.vakt.mann) { b = tilstand(by.id); b.vakt = (b.vakt || 0) + 1; }
+      if (!b) continue;
       if (b.avtale) { BA.time(b, mannNær(by, R.radius));
         if (b.avtale.trinn === 'handel' && RS() && RS().leggIPott && window.Region) { const g = Region.grunn(by.folk, RS().typeFor(by.id)); delete g.penger; delete g.folk; RS().leggIPott(g, 1 / 24); }
         const fi = fienderNær(by, R.hjelp.radius);
@@ -116,13 +119,14 @@
   function døgnSteg() {
     const nå = nåMin(); let betalt = 0; const linjer = [];
     for (const by of område()) { const b = S.byer[by.id]; if (!b) continue; const l = BA.leder(by.id, by.folk);
-      synk(by.id); const før = b.tillit, d = BA.døgn(b, { holdning: l.holdning });
+      synk(by.id); const før = b.tillit, d = BA.døgn(b, { holdning: l.holdning, vokter: (b.vakt || 0) >= R.vakt.timer }); b.vakt = 0;
+      if (!b.avtale && d.endring > 0) linjer.push(`${by.navn}: dere vokter byen (tillit ${Math.round(b.tillit)})`);
       if (eier(by.id) === 'blå' && b.tillit !== før && RS() && RS().settLoj) RS().settLoj(by.id, b.tillit);
       const p = BA.betaling(b); if (p > 0 && !(b.avtale && b.avtale.oppsagt && nå >= b.avtale.oppsagt.slutt)) { betalt += p; }
       if (d.holdt === true) linjer.push(`${by.navn}: løftet holdt`); else if (d.holdt === false) linjer.push(`${by.navn}: løftet brutt (tilliten synker)`);
       if (d.sierOpp && BA.siOpp(b, nå, d.grunn)) { logg(`${by.navn} sier opp avtalen (${d.grunn}). Den gjelder ett døgn til – og byrådet forteller nabobyene det.`);
         for (const o of BA.naboer(by, område())) endreTillit(o.id, R.tillit.nabo); }
-      const sl = BA.slutt(b, nå); if (sl) { const t = b.avtale.trinn; if (t === 'medlem' && RS() && RS().ikkeMedlem) RS().ikkeMedlem(by.id); BA.avslutt(b, sl);
+      const sl = BA.slutt(b, nå); if (sl) { const t = b.avtale.trinn; if (t === 'medlem' && RS() && RS().ikkeMedlem) RS().ikkeMedlem(by.id); BA.avslutt(b, sl, nå);
         logg(sl === 'ute' ? `Avtalen med ${by.navn} er ute. Forhandle på nytt i Selskapet → Byer.` : `${by.navn} har gått ut av avtalen med dere.`); } }
     if (betalt > 0 && RS() && RS().leggIPott) { RS().leggIPott({ penger: betalt }); if (RS().lever) RS().lever(); }
     if (betalt > 0 || linjer.length) logg(`Byavtalene: ${betalt > 0 ? kr(betalt) + ' inn' : 'ingen betaling'}${linjer.length ? ' · ' + linjer.slice(0, 3).join(' · ') : ''}.`);
@@ -216,7 +220,7 @@
     if (b.hjelp) h += `<div class="basvar nei">Byen ber om hjelp: ${b.hjelp.fiender} fiendtlige lag ${String(b.hjelp.km).replace('.', ',')} km ${esc(b.hjelp.retning)}. Frist om ${Math.max(0, Math.round((b.hjelp.frist - nå) / 6) / 10).toString().replace('.', ',')} t.</div>`;
     if (b.forhandler) h += `<div class="basvar">${esc(sidenavn(b.forhandler.side))} forhandler med ${esc(by.navn)} og tilbyr beskyttelse for ${kr(b.forhandler.pris)} per døgn. By under for å vinne byen (innen ${Math.max(0, Math.round((b.forhandler.ferdig - nå) / 60))} t).</div>`;
     if (b.rival) h += `<div class="basvar">${esc(by.navn)} har ${b.rival.trinn === 'handel' ? 'handelsavtale' : 'beskyttelsesavtale'} med ${esc(sidenavn(b.rival.side))}. Et billigere tilbud kan vinne byen tilbake.</div>`;
-    const annen = i.eier && i.eier !== 'blå', nt = annen ? null : nesteTrinn(b, by.id), feil = nt ? BA.kanTrinn(b, nt, 'blå', i.eier === 'blå') : null;
+    const annen = i.eier && i.eier !== 'blå', nt = annen ? null : nesteTrinn(b, by.id), feil = nt ? BA.kanTrinn(b, nt, 'blå', i.eier === 'blå', nåMin()) : null;
     h += '<div class="knapperad">';
     if (nt) h += `<button type="button" data-sp="ba-forhandle" data-id="${esc(by.id)}">Forhandle${feil ? '' : ' om ' + BA.TRINNORD[nt].toLowerCase()}</button>`;
     h += `<button type="button" data-sp="ba-send" data-id="${esc(by.id)}">Send lag</button><button type="button" data-sp="by" data-id="${esc(by.id)}">Vis i kartet</button>`;
@@ -230,7 +234,7 @@
     let h = `<div class="bakort"><button type="button" data-sp="ba-kort" data-id="${esc(by.id)}">← ${esc(by.navn)}</button><h3>Forhandle med ${esc(by.navn)}</h3>`;
     const muligeTrinn = eier(by.id) === 'blå' ? ['medlem'] : ['beskyttelse', 'handel', 'medlem'].filter(t => BA.rang(t) > BA.rang(BA.trinn(b)));
     h += '<div class="bavalg">' + muligeTrinn.map(t => `<button type="button" data-sp="ba-trinn" data-v="${t}" class="${f.trinn === t ? 'på' : ''}">${BA.TRINNORD[t]}</button>`).join('') + '</div>';
-    const feil = BA.kanTrinn(b, f.trinn, 'blå', eier(by.id) === 'blå'); if (feil) h += `<p class="rolig">${esc(feil)}</p>`;
+    const feil = BA.kanTrinn(b, f.trinn, 'blå', eier(by.id) === 'blå', nåMin()); if (feil) h += `<p class="rolig">${esc(feil)}</p>`;
     if (f.trinn !== 'medlem') h += `<h3>Pris byen betaler per døgn</h3><div class="bapris"><button type="button" data-sp="ba-pris" data-v="-1">−</button><b>${kr(f.pris)}</b><button type="button" data-sp="ba-pris" data-v="1">+</button></div>`;
     else h += '<p class="rolig">Som medlem betaler byen skatt til dere (som et tettsted dere holder), uten opprør, og teller fullt i krigen.</p>';
     h += '<h3>Det dere lover</h3><div class="bavalg">' + R.løfter.map(l => `<button type="button" data-sp="ba-løfte" data-v="${l.id}" class="${f.løfte === l.id ? 'på' : ''}">${l.mann} mann, hjelp innen ${l.svartid} t</button>`).join('') + '</div>';

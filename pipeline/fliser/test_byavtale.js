@@ -13,7 +13,7 @@ const R = B.REGLER;
   ok(mørk.hoved === 'strøm' && mørk.verdi > trygg.verdi, 'uten strøm er strøm det byen trenger mest');
   ok(B.behov({ fiendeKm: 1, garnison: true }).trygghet < fare.trygghet, 'en garnison gjør byen tryggere'); }
 // grunnpris: ca. 15 kr per innbygger, med gulv og tak
-ok(B.grunnpris('beskyttelse', 1300) === Math.max(R.pris.minst.beskyttelse, 20000) && B.grunnpris('beskyttelse', 28000) === 420000, 'Dombås ca. 20 000 (eller gulvet), Lillehammer 420 000 per døgn');
+ok(B.grunnpris('beskyttelse', 1300) === Math.max(R.pris.minst.beskyttelse, 1300 * R.pris.beskyttelse) && B.grunnpris('beskyttelse', 28000) === 28000 * R.pris.beskyttelse, `Dombås ${B.grunnpris('beskyttelse', 1300)} kr (gulvet), Lillehammer ${B.grunnpris('beskyttelse', 28000)} kr per døgn`);
 ok(B.grunnpris('beskyttelse', 200) === R.pris.minst.beskyttelse && B.grunnpris('beskyttelse', 1e6) === R.pris.tak.beskyttelse, 'gulv og tak');
 // trinnene
 { const b = B.by(B.ny(), 'x');
@@ -68,6 +68,15 @@ ok(B.grunnpris('beskyttelse', 200) === R.pris.minst.beskyttelse && B.grunnpris('
   ok(B.rivalVokser(b, 7 * 1440 + R.rival.tid) && B.stillingVekt(b).side === 'rød' && B.stillingVekt(b).vekt === .5, 'rivalens handelspartner teller halvt for rivalen');
   const c = B.by(S, 'n9'); c.tillit = 60; B.rivalFrir(c, 'grønn', 3000, 0, 'forsiktig'); B.inngå(c, { trinn: 'beskyttelse', pris: 30000, løfte: 'vanlig', varighet: 14 }, 10);
   ok(!c.forhandler && B.rivalSteg(c, R.rival.tid) === null && !c.rival, 'by over: dere fikk avtalen, rivalen gikk tomhendt'); }
+// hvert trinn må holdes en stund før det neste, og etter en oppsigelse vil byen ikke forhandle med en gang
+{ const b = B.by(B.ny(), 'e'); b.tillit = 60; B.inngå(b, { trinn: 'beskyttelse', pris: 30000, løfte: 'vanlig', varighet: 30 }, 0);
+  ok(/døgn først/.test(B.kanTrinn(b, 'handel', 'blå', false, 1440)) && B.kanTrinn(b, 'handel', 'blå', false, R.trinn.handel.etter * 1440) === null, `handel tidligst etter ${R.trinn.handel.etter} døgn med beskyttelse`);
+  ok(B.forhandle(b, { trinn: 'handel', pris: 1000, løfte: 'vanlig', varighet: 14 }, { folk: 2000, nå: 60 }).svar === 'nei', 'forhandlingen sier nei for tidlig');
+  B.siOpp(b, 100, 'prøve'); B.avslutt(b, 'oppsagt', 100 + R.oppsigelse.varsel);
+  ok(/nylig/.test(B.kanTrinn(b, 'beskyttelse', 'blå', false, 3000)) && B.kanTrinn(b, 'beskyttelse', 'blå', false, 100 + R.oppsigelse.varsel + R.oppsigelse.stengt * 1440) === null, `etter en oppsigelse: ${R.oppsigelse.stengt} døgn uten forhandling`); }
+// å vokte en by uten avtale bygger tillit, men bare opp til taket
+{ const b = B.by(B.ny(), 'v'); B.døgn(b, { vokter: true }); ok(b.tillit === R.start.tillit + R.tillit.holdt, 'vakt uten avtale: tilliten stiger');
+  B.døgn(b, {}); ok(b.tillit === R.start.tillit + R.tillit.holdt, 'uten vakt: ingenting'); b.tillit = R.vakt.tak - 1; B.døgn(b, { vokter: true }); B.døgn(b, { vokter: true }); ok(b.tillit === R.vakt.tak, 'taket holder'); }
 // medlem og stillingen
 { const b = B.by(B.ny(), 'm'); b.tillit = 75; b.frykt = 20; B.inngå(b, { trinn: 'beskyttelse', pris: 30000, løfte: 'vanlig', varighet: 30 }, 0);
   B.inngå(b, { trinn: 'handel', pris: 25000, løfte: 'vanlig', varighet: 30 }, 0);

@@ -30,21 +30,27 @@
     trinn: {
       kunde: { tillit: 0 },
       beskyttelse: { tillit: 40 },
-      handel: { tillit: 55, krever: 'beskyttelse' },
-      medlem: { tillit: 70, fryktUnder: 50, krever: 'handel' },
+      // etter = døgn byen vil se at dere holder avtalen på trinnet under før neste (justert med økonomitesten: uten dette ble en by medlem
+      // på seks døgn, og «byer med avtaler» gikk over 200 mill. i heldige kjøringer)
+      handel: { tillit: 55, krever: 'beskyttelse', etter: 5 },
+      medlem: { tillit: 70, fryktUnder: 50, krever: 'handel', etter: 7 },
     },
-    // kr per innbygger per døgn (planen: ca. 15 for beskyttelse). Justert med økonomitesten (okosim-byer.js): små bygder betaler minst
-    // minstePerDøgn, så en beskyttelsesavtale med en bygd på 800 dekker lønna til to mann (15 000 kr per person per døgn).
-    pris: { beskyttelse: 15, handel: 12, minst: { beskyttelse: 30000, handel: 25000 }, tak: { beskyttelse: 600000, handel: 450000 } },
+    // kr per innbygger per døgn (planen: ca. 15 for beskyttelse). Justert med økonomitesten (okosim-byer.js): med 15 kr og løftet om fire
+    // mann (60 000 kr i lønn per døgn) tapte dere penger på alle byer under 4000 innbyggere, og avtalene ga bare 1–2 mill. på 30 døgn.
+    // Nå 25 kr per innbygger og minst 45 000 kr (en bygd på 800 dekker lønna til tre mann), handel 15 kr og minst 30 000 kr.
+    pris: { beskyttelse: 25, handel: 15, minst: { beskyttelse: 45000, handel: 30000 }, tak: { beskyttelse: 900000, handel: 550000 } },
     // løftene: [mann, svartid i timer]; et større løfte er verdt mer for byen
     løfter: [{ id: 'lite', mann: 2, svartid: 4, verdi: .85 }, { id: 'vanlig', mann: 4, svartid: 2, verdi: 1 }, { id: 'stort', mann: 6, svartid: 1, verdi: 1.2 }],
     varigheter: [7, 14, 30],
     radius: 3000,                                    // lag innen 3 km fra midten av byen holder løftet
     holdtAndel: .7,                                  // så stor del av døgnets timer må løftet være holdt
-    tillit: { kontrakt: 6, holdt: 2, brutt: -8, hjelp: 5, ikkeHjelp: -10, oppsagt: -15, nabo: -5, ferdig: 3, rival: -4 },
-    oppsigelse: { tillit: 25, brudd: 3, varsel: 1440 },   // byen sier opp under tillit 25 eller etter tre brudd; varsel i spillminutter
+    tillit: { kontrakt: 4, holdt: 2, brutt: -8, hjelp: 5, ikkeHjelp: -10, oppsagt: -15, nabo: -5, ferdig: 3, rival: -4 },
+    // byen sier opp under tillit 25 eller etter tre brudd; varsel i spillminutter; etterpå vil den ikke forhandle på «stengt» døgn
+    oppsigelse: { tillit: 25, brudd: 3, varsel: 1440, stengt: 3 },
     nabo: 15000,                                     // nabobyene som får høre om det (meter)
-    hjelp: { radius: 4000, framme: 1500, pause: 240 },  // fiender innen 4 km ber om hjelp; egne innen 1,5 km = hjelpen er framme
+    hjelp: { radius: 4000, framme: 1500, pause: 240 },
+    // å vokte en by uten avtale (minst «mann» mann i byen eller innen 3 km i minst «timer» timer av døgnet) bygger tillit opp til «tak»
+    vakt: { mann: 2, timer: 12, tak: 50 },  // fiender innen 4 km ber om hjelp; egne innen 1,5 km = hjelpen er framme
     // forhandlingen: tilbud under verdien = ja, opptil «motbud» × verdien = motbud, over = nei
     motbud: 1.35,
     // rivalene: hvor langt fra egne tettsteder de frir, og hvor lenge de forhandler (spillminutter)
@@ -108,9 +114,13 @@
   }
   // Kan byen gå til dette trinnet nå? Gir null eller en grunn (norsk tekst)
   // eid = byen er alt din (tatt med makt): da kan den bli medlem uten beskyttelse og handel først
-  function kanTrinn(b, t, side = 'blå', eid = false) {
+  // tid = spillminutter nå (valgfri): da gjelder også «etter» (døgn på trinnet under) og stengt etter en oppsigelse
+  function kanTrinn(b, t, side = 'blå', eid = false, tid) {
     const K = REGLER.trinn[t]; if (!K || t === 'kunde') return 'Ukjent avtale.';
     const nå = trinn(b);
+    if (Number.isFinite(tid) && b.stengtTil && tid < b.stengtTil) return `Byen sa opp avtalen nylig og vil ikke forhandle på ${Math.ceil((b.stengtTil - tid) / 1440)} døgn.`;
+    if (Number.isFinite(tid) && K.etter && b.avtale && b.avtale.trinn === K.krever && tid - b.avtale.start < K.etter * 1440 && !(eid && t === 'medlem'))
+      return `Byen vil se at dere holder avtalen i ${K.etter} døgn først (${Math.ceil((K.etter * 1440 - (tid - b.avtale.start)) / 1440)} igjen).`;
     if (b.avtale && b.avtale.oppsagt) return 'Byen har sagt opp avtalen og vil ikke forhandle nå.';
     if (rang(nå) >= rang(t)) return { beskyttelse: 'Dere har alt en beskyttelsesavtale.', handel: 'Dere har alt en handelsavtale.', medlem: 'Byen er alt medlem.' }[nå] || 'Dere har alt en avtale.';
     if (K.krever && rang(nå) < rang(K.krever) && !(eid && t === 'medlem')) return `Krever en ${K.krever === 'beskyttelse' ? 'beskyttelsesavtale' : 'handelsavtale'} først.`;
@@ -121,7 +131,7 @@
   // FORHANDLINGEN. tilbud: { trinn, pris (kr per døgn byen betaler; ikke for medlem), løfte, varighet }, om: { folk, behov, holdning, rivalPris }
   // Gir { svar: 'ja'|'nei'|'motbud', grunn, motbud: { pris } | null, verdi }
   function forhandle(b, tilbud, om = {}) {
-    const t = tilbud.trinn, feil = kanTrinn(b, t, 'blå', !!om.eid); if (feil) return { svar: 'nei', grunn: feil, motbud: null, verdi: 0 };
+    const t = tilbud.trinn, feil = kanTrinn(b, t, 'blå', !!om.eid, om.nå); if (feil) return { svar: 'nei', grunn: feil, motbud: null, verdi: 0 };
     const H = HOLDNING[om.holdning] || HOLDNING.forsiktig, frykt = b.frykt || 0;
     if (H.fryktNei !== undefined && frykt > H.fryktNei) return { svar: 'nei', grunn: 'Byrådet lar seg ikke true. Frykten må ned først.', motbud: null, verdi: 0 };
     if (!REGLER.varigheter.includes(+tilbud.varighet)) return { svar: 'nei', grunn: 'Varigheten må være 7, 14 eller 30 døgn.', motbud: null, verdi: 0 };
@@ -157,6 +167,8 @@
       if (b.tillit + endring < REGLER.oppsigelse.tillit) { sierOpp = true; grunn = 'tilliten er borte'; }
       else if (A.brudd >= REGLER.oppsigelse.brudd) { sierOpp = true; grunn = `løftet er brutt ${A.brudd} døgn`; }
     }
+    // uten avtale: egne lag som vokter byen (om.vokter = minst vakt.timer timer med vakt.mann mann i døgnet) gir tillit opp til vakt.tak
+    else if (!A && om.vokter && b.tillit < REGLER.vakt.tak) endring = Math.min(REGLER.vakt.tak - b.tillit, T.holdt * (H.tillit || 1));
     b.tillit = klem(b.tillit + endring, 0, 100);
     return { holdt, endring, sierOpp, grunn };
   }
@@ -164,7 +176,8 @@
   function siOpp(b, nå, grunn) { if (!b.avtale || b.avtale.oppsagt) return false; b.avtale.oppsagt = { tid: nå, slutt: nå + REGLER.oppsigelse.varsel, grunn: grunn || '' }; b.tillit = klem(b.tillit + REGLER.tillit.oppsagt, 0, 100); return true; }
   // Er avtalen slutt nå (oppsagt og varselet er ute, eller varigheten er ute)? Gir 'oppsagt' | 'ute' | null
   function slutt(b, nå) { const A = b.avtale; if (!A) return null; if (A.oppsagt && nå >= A.oppsagt.slutt) return 'oppsagt'; if (nå >= A.slutt) return 'ute'; return null; }
-  function avslutt(b, hvorfor) { const A = b.avtale; if (!A) return; b.avtale = null; if (hvorfor === 'ute' && A.brudd === 0) b.tillit = klem(b.tillit + REGLER.tillit.ferdig, 0, 100); }
+  function avslutt(b, hvorfor, nå) { const A = b.avtale; if (!A) return; b.avtale = null; if (hvorfor === 'ute' && A.brudd === 0) b.tillit = klem(b.tillit + REGLER.tillit.ferdig, 0, 100);
+    if (hvorfor === 'oppsagt' && Number.isFinite(nå)) b.stengtTil = nå + REGLER.oppsigelse.stengt * 1440; }
   // Nabobyene hører at en by sa opp: [{ id, x, y }] innen REGLER.nabo
   function naboer(by, alle) { return alle.filter(o => o.id !== by.id && Math.hypot(o.x - by.x, o.y - by.y) <= REGLER.nabo); }
   // Penger per døgn fra avtalen (kr; medlem betaler skatt via region.js, ikke her)
@@ -219,7 +232,7 @@
     for (const [id, b] of Object.entries(d.byer)) { if (!b || typeof b !== 'object') continue;
       S.byer[id] = { tillit: klem(+b.tillit || 0, 0, 100), frykt: klem(+b.frykt || 0, 0, 100), kontrakter: Math.max(0, +b.kontrakter || 0), brudd: +b.brudd || 0,
         avtale: b.avtale && TRINN.includes(b.avtale.trinn) ? b.avtale : null, rival: b.rival && (b.rival.side === 'rød' || b.rival.side === 'grønn') ? b.rival : null,
-        forhandler: b.forhandler || null, hjelp: b.hjelp || null, sistHjelp: b.sistHjelp, makt: !!b.makt }; }
+        forhandler: b.forhandler || null, hjelp: b.hjelp || null, sistHjelp: b.sistHjelp, makt: !!b.makt, stengtTil: +b.stengtTil || 0 }; }
     return S;
   }
 
