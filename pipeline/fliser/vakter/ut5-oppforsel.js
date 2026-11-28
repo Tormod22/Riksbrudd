@@ -14,7 +14,7 @@ module.exports = {
     const listerPåNytt = () => { if (!V || !window.Verden) return; const Lb = Verden.brannListe(V.brann); BRANNER.length = 0; for (const c of Lb.brenner) BRANNER.push(c); BRENT.length = 0; for (const c of Lb.brent) BRENT.push(c); };
     try {
       // prøveleiren: brakke, sykestue, vakttårn og (hvis den finnes) en betongbunker
-      let id = 910000; const legg = (type, x, y) => { const b = { id: id++, type, x: m.x + x, y: m.y + y, ret: 0, nivå: 1, hp: 1, igjen: 0, totalt: 60, nr: id, arbeid: null }; L.bygg.push(b); return b; };
+      let id = 910000; const legg = (type, x, y, ferdig = true) => { const b = { id: id++, type, x: m.x + x, y: m.y + y, ret: 0, nivå: 1, hp: 1, igjen: ferdig ? 0 : 600, totalt: 60, nr: id, arbeid: null }; L.bygg.push(b); return b; };
       const brakke = legg('brakke', -30, 22), syk = legg('sykestue', 24, -20), tårn = legg('vakttårn', 40, 8), bunker = Leir.BYGG.betongbunker ? legg('betongbunker', -40, -30) : null;
       const P = F.personer; P.forEach((p, i) => { p.oppgave = i === 0 ? 'vakt' : i < 4 ? 'bygg' : 'fri'; p.helse = 1; p.egen = []; });
       JobberSpill.test = true; OS.test = true; OS.nullstill(); OS.alarm = null; tid = kl(9.5); FolkgangSpill.nullstill(); steg(2, .25);
@@ -70,6 +70,12 @@ module.exports = {
           steg(30, 10); ut.rydd.ute = VL.e.filter(u => u.p === 'ute').length; ut.rydd.inne = VL.e.filter(u => u.p === 'b' + telt.id).length;
           krev(ut.rydd.ute === 0 && ut.rydd.inne >= 1, 'rydding: varen ble ikke båret inn ' + JSON.stringify(ut.rydd)); }
         finally { VL.e.splice(0, VL.e.length, ...JSON.parse(e0)); VL.neste = n0; } }
+      // 7. en ulykke i spillet (sjansen satt kunstig høyt): personen blir skadet og teller i ulykkene
+      { const U = OP.REGLER.ulykke, u0 = [U.uthvilt, U.sliten]; U.uthvilt = U.sliten = .999;
+        try { const plass0 = legg('brakke', 60, -30, false); plass0.igjen = 600; P.forEach((p, i) => { p.oppgave = i === 0 ? 'vakt' : 'bygg'; p.helse = 1; }); tid = kl(12); steg(2, .25); steg(12, 15);
+          const n0 = OS.tilstand().ulykker.length; steg(1, 6000); ut.ulykke.live = OS.tilstand().ulykker.length - n0;
+          krev(ut.ulykke.live >= 1 && P.some(p => OS.tilstand().skadet[p.id] && OS.tilstand().skadet[p.id].grunn === 'ulykke'), 'ulykke i spillet: ingen ble skadet ' + ut.ulykke.live); }
+        finally { U.uthvilt = u0[0]; U.sliten = u0[1]; } }
       const r = OS.kjøpVern(1); ut.ulykke.kjøpt = OS.tilstand().vern; krev(r.ok && OS.tilstand().vern === OP.REGLER.vern.pakke, 'kjøp av verneutstyr: ' + JSON.stringify(r));
     } catch (e) { ut.feil.push('unntak: ' + e.message); }
     finally {
@@ -79,6 +85,6 @@ module.exports = {
       S0.penger = penger0; if (window.OppstartSpill && OppstartSpill.lagre) try { OppstartSpill.lagre(); } catch (e) { /* uten lagring */ }
       OS.alarm = null; OS.nullstill(); OS.sett(JSON.parse(tilst0)); tid = tid0; JobberSpill.test = jt0; OS.test = ot0; FolkgangSpill.nullstill(); if (typeof skitten !== 'undefined') skitten = true;
     }
-    return { ok: !ut.feil.length, tekst: ut.feil.length ? ut.feil.join('; ') : `alarm ${ut.alarm.iTilflukt} i tilflukt (${ut.alarm.sted}), brann slukket av ${ut.brann ? ut.brann.slukkere : '–'}, skadet til sykestua, venner +${(ut.venner.etter - ut.venner.før).toFixed(1)} moral, rydding ${ut.rydd ? ut.rydd.inne + " inn" : "–"}, ulykke ${ut.ulykke.uthvilt}→${ut.ulykke.sliten} (vern ${ut.ulykke.vern})`, data: ut };
+    return { ok: !ut.feil.length, tekst: ut.feil.length ? ut.feil.join('; ') : `alarm ${ut.alarm.iTilflukt} i tilflukt (${ut.alarm.sted}), brann slukket av ${ut.brann ? ut.brann.slukkere : '–'}, skadet til sykestua, venner +${(ut.venner.etter - ut.venner.før).toFixed(1)} moral, rydding ${ut.rydd ? ut.rydd.inne + " inn" : "–"}, ulykke ${ut.ulykke.uthvilt}→${ut.ulykke.sliten} (vern ${ut.ulykke.vern}), ${ut.ulykke.live} ulykke(r) med høy sjanse`, data: ut };
   }),
 };

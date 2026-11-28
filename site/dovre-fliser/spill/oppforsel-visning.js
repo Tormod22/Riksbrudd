@@ -197,7 +197,7 @@
     let natt = h >= 22 || h < 6; try { if (JR && J && J.døgn !== false) natt = natt || JR.planFor(J, F, p).slot === 'natt'; } catch (e) { /* uten tavle */ }
     return OP.tretthet({ natt, seng: !!p.seng, mørke: mørktNå() && !lysNå(), helse: p.helse }); }
   function ulykker(Gs, F, L, dtMin) {
-    const H = OP.ulykkeSteg(S, { F, tid: nåTid(), dt: dtMin, arbeider: p => { const s = Gs.pers[p.id]; return !!(s && s.hva === 'arbeid' && s.framme && !harPlan(p.id)); }, tretthet: trøtt, r: Math.random });
+    const H = OP.ulykkeSteg(S, { F, tid: nåTid(), dt: dtMin, arbeider: p => { const s = Gs.pers[p.id]; return !!(s && s.hva === 'arbeid' && s.framme && s.mål && !/^bål:/.test(s.mål.k) && !harPlan(p.id)); }, tretthet: trøtt, r: Math.random });
     for (const u of H) { const jobb = u.jobb === 'maskin' ? 'ved maskinene' : u.jobb === 'bygg' ? 'på byggeplassen' : u.jobb === 'hogst' ? 'i hogsten' : u.jobb === 'riving' ? 'under rivingen' : 'i verkstedet';
       const hvorfor = u.t > .6 ? ' – sliten' + (mørktNå() && !lysNå() ? ', og det var mørkt uten lys' : '') : '';
       S.skadet[u.p.id] = { fra: Math.round(nåTid()), grunn: 'ulykke', x: (Gs.pers[u.p.id] || {}).x || 0, y: (Gs.pers[u.p.id] || {}).y || 0 };
