@@ -219,7 +219,10 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   // Delene som rives: den øverste nær trykket, eller alt i rektangelet mellom to trykk
   function rivValg(alle, o) {
     if (!B) { let best = null, bd = 1.6;
-      for (const d of alle) { const m = BS.midt(o, d), h = (d.s || 1) * G / 2, inne = BS.RUTE(d) && Math.abs(m.x - A[0]) < h && Math.abs(m.y - A[1]) < h;
+      for (const d of alle) { const m = BS.midt(o, d), h = (d.s || 1) * G / 2, ting = BS.TING && BS.TING(d), [fw, fh] = ting ? BS.fotRuter(d) : [0, 0];
+        // (B5) en maskin eller hylle: trykket et sted på fotavtrykket velger den (foran gulvet og taket)
+        if (ting && Math.abs(m.x - A[0]) < fw * G / 2 && Math.abs(m.y - A[1]) < fh * G / 2) { if (.2 < bd) { bd = .2; best = d; } continue; }
+        const inne = BS.RUTE(d) && Math.abs(m.x - A[0]) < h && Math.abs(m.y - A[1]) < h;
         const dd = (inne ? .5 : Math.hypot(m.x - A[0], m.y - A[1]) - (BS.KANT(d) ? .3 + (d.s - 1) * G / 2 : 0)) - d.n * .01 - (BS.kat(d) === 'søyle' || BS.kat(d) === 'bjelke' ? .2 : 0); if (dd < bd) { bd = dd; best = d; } }
       return best ? [best] : []; }
     const x0 = Math.min(A[0], B[0]) - .3, x1 = Math.max(A[0], B[0]) + .3, y0 = Math.min(A[1], B[1]) - .3, y1 = Math.max(A[1], B[1]) + .3;

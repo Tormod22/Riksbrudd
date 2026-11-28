@@ -106,11 +106,15 @@ function døgn(L, ctxF, timer = 24) { const P = PR.ny(); L.lager.tømmer = 200; 
   ok(r3.status[h3.id].går && r3.status[s3.id].høvlet && Math.abs(L3.lager.tre - 1.1 * 1.4 * 1.15) < 1e-6, `høvelen går og saga gir ${nf(L3.lager.tre)} m³ høvlede planker i timen`);
   const L4 = leir(hall()), h4 = leggTil(L4, 'bs_høvel_1', 4, 12, 1).b, r4 = PR.steg(PR.ny(), L4, 60, { kraft: 6, ...FB.faktorer(L4, FB.hall(L4), { time: 12 }) });
   ok(!r4.status[h4.id].går && r4.status[h4.id].tekst === 'venter på saga', 'høvelen uten sag: «venter på saga»');
-  // ØKONOMIEN (planen 4.2 og oppdraget): verdien over tømmeret (salg 80 %) mot lønna til ti (150 000 kr). Frittstående ca. 1,04;
-  // i en god hall litt mer (flyt og tak) – ikke mye mer. Kravet: 0,7–1,4 og hallen høyst 25 % over frittstående.
-  const MAT = Leir.MATERIALER, verdi = P => (P.laget.tre || 0) * MAT.tre.pris * .8 + (P.laget.flis || 0) * MAT.flis.pris * .8 - (P.brukt.tømmer || 0) * MAT.tømmer.pris;
+  // ØKONOMIEN (planen 4.2 og oppdraget): verdien over tømmeret (alt til salgspris 80 %, som okosim-sagbruk.js) mot lønna til ti (150 000 kr).
+  // Brutto gir hallen +15 % (flyt). Netto trekkes hallens vedlikehold (Leir.REGLER.vedlikehold av delene, ikke maskinen – den slites som
+  // sagbruket) og dieselen til lyset om natta (12 t). Kravet: hallen gir brutto litt mer enn frittstående (høyst 25 % mer), og netto
+  // ligger i båndet 0,7–1,4 × lønna til ti (okosim-sagbruk.js).
+  const MAT = Leir.MATERIALER, verdi = P => ((P.laget.tre || 0) * MAT.tre.pris + (P.laget.flis || 0) * MAT.flis.pris - (P.brukt.tømmer || 0) * MAT.tømmer.pris) * .8;
   const vf = verdi(Pf), vh = verdi(Ph), lønn = 150000;
-  ok(vf / lønn > .7 && vh / lønn < 1.4 && vh / vf > 1 && vh / vf < 1.25, `økonomien: frittstående ${Math.round(vf)} kr/døgn (${nf(vf / lønn)} × lønna til ti), i hall ${Math.round(vh)} kr (${nf(vh / lønn)} ×, ${nf(vh / vf)} × frittstående)`);
+  const vedl = L.bygg.filter(b => b.bs && !Leir.BYGG[b.type].maskin && !Leir.BYGG[b.type].lampe).reduce((a, b) => a + Leir.BYGG[b.type].pris, 0) * Leir.REGLER.vedlikehold;
+  const lys = L.bygg.filter(b => Leir.BYGG[b.type].lampe).reduce((a, b) => a - Leir.BYGG[b.type].kw, 0) * 12 * Leir.DRIVSTOFF.literPerKWt * Leir.DRIVSTOFF.prisPerLiter, netto = vh - vedl - lys;
+  ok(vh / vf > 1 && vh / vf <= 1.25 && netto / lønn >= .7 && netto / lønn <= 1.4, `økonomien: frittstående ${Math.round(vf)} kr/døgn (${nf(vf / lønn)} × lønna til ti); sagbenk i hall brutto ${Math.round(vh)} kr (${nf(vh / vf)} × frittstående, ${nf(vh / lønn)} × lønna), netto etter hallens vedlikehold ${Math.round(vedl)} kr og lys ${Math.round(lys)} kr: ${Math.round(netto)} kr (${nf(netto / lønn)} × lønna)`);
   console.log(`     (hallen 9,6 × 19,2 m koster ${nf(Math.round(BS.husDeler(BS.lagHus({ navn: 'h', w: 8, h: 16, s: 4, gulv: 'bs_fundament', stoff: 'blikk', tak: 'bs_tak_blikk', inngang: 'port' }), 0, 0).reduce((a, d) => a + Leir.BYGG[d.type].pris, 0) / 1e5) / 10)} mill. kr i deler + materialer; lysrøret 0,3 kW)`); }
 
 // 7. gamle sagbruk-bygg: uendret (ingen faktorer gjelder dem)
