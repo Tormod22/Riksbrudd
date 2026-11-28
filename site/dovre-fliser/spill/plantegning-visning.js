@@ -145,7 +145,8 @@
         const a = [t.x - t.ux * hl * .8, t.y - t.uy * hl * .8], b = [t.x + t.ux * hl * .8, t.y + t.uy * hl * .8]; g.beginPath(); g.moveTo(X(a), Y(a)); g.lineTo(X(b), Y(b));
         const pa = [b[0] - t.ux * .35 - vx * .2, b[1] - t.uy * .35 - vy * .2], pb = [b[0] - t.ux * .35 + vx * .2, b[1] - t.uy * .35 + vy * .2]; g.moveTo(X(pa), Y(pa)); g.lineTo(X(b), Y(b)); g.lineTo(X(pb), Y(pb));
         g.strokeStyle = F.valgt; g.lineWidth = 1.2; g.stroke();
-        if (detalj) { g.fillStyle = F.navn; g.font = '11px "Cormorant Garamond", Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t.opp ? 'opp' : 'ned', X([t.x, t.y]), Y([t.x, t.y]) - 9); }
+        // «opp»/«ned» ved foten av pila (der du går på)
+        if (detalj) { const f = [a[0] - t.ux * .45, a[1] - t.uy * .45]; g.fillStyle = F.navn; g.font = '11px "Cormorant Garamond", Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t.opp ? 'opp' : 'ned', X(f), Y(f)); }
       }
       for (const q of Fg.søyler) { const s = Math.max(3, .3 / m); g.fillStyle = F.bærende; g.fillRect(X([q.x, q.y]) - s / 2, Y([q.x, q.y]) - s / 2, s, s); }
       if (Fg.bjelker.length) { g.setLineDash([6, 4]); g.strokeStyle = F.dør; g.lineWidth = 1; g.beginPath(); for (const q of Fg.bjelker) { g.moveTo(X(q.a), Y(q.a)); g.lineTo(X(q.b), Y(q.b)); } g.stroke(); g.setLineDash([]); }
@@ -157,8 +158,12 @@
       }
       for (const o of Fg.åpninger) tegnÅpning(g, o, X, Y, m, S.valgt && S.valgt.i === h.i && S.valgt.e === n && S.valgt.id === o.id);
       if (detalj) { g.textAlign = 'center'; g.textBaseline = 'middle';
-        for (const r of Fg.rom) { const bx = Math.sqrt(Math.max(1, r.areal)) / m; if (bx < 46) continue; const fs = Math.max(11, Math.min(15, bx / 6));
-          g.font = `${fs}px "Cormorant Garamond", Georgia, serif`; g.fillStyle = F.navn; g.fillText(r.navn, X([r.x, r.y]), Y([r.x, r.y]));
+        for (const r of Fg.rom) { const bx = Math.sqrt(Math.max(1, r.areal)) / m; if (bx < 46) continue; let fs = Math.max(11, Math.min(15, bx / 6));
+          // navnet må få plass i rommet (bredden på skjermen), ellers mindre skrift eller ikke noe navn
+          const xs = r.P.map(X), plass = (Math.max(...xs) - Math.min(...xs)) * .9; g.font = `${fs}px "Cormorant Garamond", Georgia, serif`;
+          while (fs > 10 && g.measureText(r.navn).width > plass) { fs--; g.font = `${fs}px "Cormorant Garamond", Georgia, serif`; }
+          if (g.measureText(r.navn).width > plass) continue;
+          g.fillStyle = F.navn; g.fillText(r.navn, X([r.x, r.y]), Y([r.x, r.y]));
           if (bx > 80) { g.font = `${Math.max(10, fs - 3)}px "Cormorant Garamond", Georgia, serif`; g.fillStyle = 'rgba(196,182,148,.7)'; g.fillText(String(Math.round(r.areal)).replace('.', ',') + ' m²', X([r.x, r.y]), Y([r.x, r.y]) + fs); } } }
       g.restore();
     }
