@@ -11,7 +11,7 @@ ok(JSON.stringify(A.lag(saker, 4, '1,2')) === JSON.stringify(a), 'samme dag gir 
 ok(!/Markedet: Markedet/.test(a.tekst), 'ikke «Markedet:» to ganger');
 const r = A.lag([], 2, 'x'); ok(r.tittel && r.linjer.length === 0 && A.REGLER.rolig.includes(r.tittel), `rolig dag: «${r.tittel}»`);
 ok(A.lag([{ slag: 'by', tekst: 'A' }, { slag: 'by', tekst: 'A' }], 3).linjer.length === 0, 'samme sak bare én gang');
-const L = A.fraLogg(['Kjøpte 10 m³ planker.', 'Brann i lagerteltet!', 'Røverne angriper fra nord.']); ok(L.length === 2 && L[0].slag === 'ulykke' && L[1].slag === 'angrep', 'saker fra loggen: ulykke og angrep');
+const L = A.fraLogg(['Kjøpte 10 m³ planker.', 'Brann i lagerteltet!', 'Fikk ikke hentet infrastrukturen (angrep) – kartlageret svarer ikke.', 'Røverne angriper fra nord.']); ok(L.length === 2 && L[0].slag === 'ulykke' && L[1].slag === 'angrep', 'saker fra loggen: ulykke og angrep');
 // SELVTEST (årsak H): uten vekter faller tittelen på en annen sak
 { const v = A.REGLER.vekt.angrep; A.REGLER.vekt.angrep = 0.1; const b = A.lag(saker, 4, '1,2'); A.REGLER.vekt.angrep = v; ok(b.tittel !== a.tittel, 'selvtest: vektene bestemmer tittelen'); }
 console.log(feil ? `${feil} FEIL i test_avis` : 'Alle testene for avis.js er ok'); process.exit(feil ? 1 : 0);

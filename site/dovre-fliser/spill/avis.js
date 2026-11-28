@@ -37,10 +37,12 @@
   const linje = a => (a ? `${a.navn}: ${a.tittel}` : '');
 
   // Saker fra loggen: linjer fra siste døgn som handler om angrep og ulykker (visningen gir dem)
+  const TEKNISK = /fikk ikke hentet|kartlager|kartdata|nettet|grafikk|lastet/i;
   const ULYKKE = /ulykke|brann|brant|skadet|kollaps|uhell|ras\b/i, ANGREP = /røver|angrep|angrip|beskut|falt\b|overfall/i;
   function fraLogg(linjer) {
     const ut = [];
-    for (const t of linjer || []) { if (ULYKKE.test(t)) ut.push({ slag: 'ulykke', tekst: t }); else if (ANGREP.test(t)) ut.push({ slag: 'angrep', tekst: t }); }
+    // tekniske meldinger (kartdata, nett) er ikke nyheter
+    for (const t of linjer || []) { if (TEKNISK.test(t)) continue; if (ULYKKE.test(t)) ut.push({ slag: 'ulykke', tekst: t }); else if (ANGREP.test(t)) ut.push({ slag: 'angrep', tekst: t }); }
     return ut.slice(-4);
   }
 
