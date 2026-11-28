@@ -219,7 +219,10 @@
     if (!K.finnes('husOvertak')) K.registrer('husOvertak', { leir: true,
       sjekk: k => { if (k.slipp) return OL.hus[k.hus] ? null : 'Huset er ikke vårt.'; if (!OT.BRUK[k.bruk]) return 'Ukjent bruk.'; const H = husFor(k.hus); if (!H) return 'Huset er ikke lastet.';
         if (OL.hus[k.hus] && OL.hus[k.hus].bruk === k.bruk) return 'Huset brukes alt slik.'; const l = leirXY(); if (!l) return 'Ingen leir ennå.';
-        const c = PT.ramme(H.Pv), v = OT.kanTaOver(Math.hypot(c[0] - l.x, c[1] - l.y), { revet: !!(window.HUS_BORT && HUS_BORT.has(k.hus)) }); return v.ok ? null : v.feil; },
+        const c = PT.ramme(H.Pv), v = OT.kanTaOver(Math.hypot(c[0] - l.x, c[1] - l.y), { revet: !!(window.HUS_BORT && HUS_BORT.has(k.hus)) }); if (!v.ok) return v.feil;
+        // (ut8-kr-penger) istandsettingen koster
+        const I = istandFor(k.hus, k.bruk), sp = window.OppstartSpill && OppstartSpill.tilstand ? OppstartSpill.tilstand() : null;
+        return I && I.kr > 0 && sp && sp.penger < I.kr ? `Ikke nok penger til å sette huset i stand (${kroner(I.kr)}).` : null; },
       utfør: k => taOver(k), beskriv: k => (k.slipp ? 'gir opp et hus' : 'tar over et hus') });
     return true;
   }
@@ -232,14 +235,28 @@
 
   // ---------- ta over et hus (B7) ----------
   function kap(H, bruk) { return { senger: OT.senger(H.m, bruk), lager: OT.lager(H.m, bruk) }; }
+  // (ut8-kr-penger) istandsettingen for en bruk (Overtak.istandsetting): det som alt er satt i stand, betales ikke igjen. Hus tatt over før
+  // istandsettingen fantes, regnes som betalt.
+  const betaltFor = o => (o ? o.betalt || { senger: o.senger || 0, lager: o.lager || 0 } : null);
+  function istandFor(i, bruk) { if (!OT.istandsetting) return null; const H = husFor(i); if (!H) return null; return OT.istandsetting(kap(H, bruk), betaltFor(OL.hus[i])); }
+  const kroner = v => (window.Oppstart && Oppstart.kroner ? Oppstart.kroner(v) : Math.round(v).toLocaleString('nb-NO') + ' kr');
+  // tiden går bare av seg selv i spillet (i testene står huset klart straks, som før)
+  const istandTid = () => !navigator.webdriver || api.test === true;
   function taOver(k) {
     if (k.slipp) { const o = OL.hus[k.hus]; delete OL.hus[k.hus]; lagre(); oppdaterKap(); tegnPå(); visRad(); return `Huset er ikke lenger en del av leiren${o ? ' (' + OT.BRUK[o.bruk].navn.toLowerCase() + ')' : ''}.`; }
     const H = husFor(k.hus), c = PT.ramme(H.Pv), K = kap(H, k.bruk), før = OL.hus[k.hus];
-    OL.hus[k.hus] = { bruk: k.bruk, tid: nå(), navn: H.navn, c: [Math.round(c[0]), Math.round(c[1])], senger: K.senger, lager: K.lager, n: H.m.endringer ? H.m.endringer.length : 0 };
+    // (ut8-kr-penger) istandsettingen: betales nå, og huset teller først når den er ferdig (o.klar i spillminutter)
+    const I = OT.istandsetting ? OT.istandsetting(K, betaltFor(før)) : { kr: 0, timer: 0 };
+    if (I.kr > 0 && !(window.OppstartSpill && OppstartSpill.betal(I.kr))) return { feil: `Ikke nok penger til å sette huset i stand (${kroner(I.kr)}).` };
+    const bt = betaltFor(før), betalt = { senger: Math.max(K.senger, bt ? bt.senger : 0), lager: Math.max(K.lager, bt ? bt.lager : 0) };
+    const klar = istandTid() && I.timer > 0 ? Math.max(nå(), før && før.klar > nå() ? før.klar : 0) + I.timer * 60 : null;
+    OL.hus[k.hus] = { bruk: k.bruk, tid: nå(), navn: H.navn, c: [Math.round(c[0]), Math.round(c[1])], senger: K.senger, lager: K.lager, n: H.m.endringer ? H.m.endringer.length : 0, betalt };
+    if (klar) OL.hus[k.hus].klar = Math.round(klar);
     // det kartet vet om huset lagres i endringsloggen (som for riving), så huset finnes etter ny lasting uten kartflisene
     const p = P2(); if (p && PT && H.h) { PT.husKart(p.logg(), H.i, H.h.e, H.h.tett, H.h.Pv); p.lagre(); }
     lagre(); oppdaterKap(); tegnPå(); visRad(); S.velgBruk = null;
-    return `${før ? 'Huset brukes nå som' : 'Huset er tatt over som'} ${OT.BRUK[k.bruk].navn.toLowerCase()}: ${K.senger} ${K.senger === 1 ? 'seng' : 'senger'}, ${String(K.lager).replace('.', ',')} m³ lagerplass.`;
+    const istand = I.kr > 0 ? ` Istandsetting ${kroner(I.kr)}${klar ? `, klart om ca. ${String(I.timer).replace('.', ',')} t` : ''}.` : '';
+    return `${før ? 'Huset brukes nå som' : 'Huset er tatt over som'} ${OT.BRUK[k.bruk].navn.toLowerCase()}: ${K.senger} ${K.senger === 1 ? 'seng' : 'senger'}, ${String(K.lager).replace('.', ',')} m³ lagerplass.${istand}`;
   }
   // sengene og lageret følger endringene i husene (riving, ras) – og revne hus faller bort
   function oppdaterKap() {
@@ -251,7 +268,7 @@
       const K = kap(H, o.bruk); o.senger = K.senger; o.lager = K.lager; o.n = n; endret = true; }
     if (endret) lagre();
   }
-  const sum = () => OT.sum(OL.hus);
+  const sum = () => OT.sum(OL.hus, nå());
   // Leir.plasser og lagerplassen får med de overtatte husene (byggesettets flagg beholdes, så Folk ikke teller to ganger)
   if (window.Leir && Leir.plasser && !Leir.plasser.overtak) { const før = Leir.plasser; Leir.plasser = L => før(L) + sum().senger; Object.assign(Leir.plasser, før, { overtak: true }); if (før.byggesett) Leir.plasser.byggesett = true; }
   if (window.Leir && Leir.lagerplass) { const ek = Leir.lagerplass.ekstra; Leir.lagerplass.ekstra = L => (ek ? ek(L) || 0 : 0) + sum().lager; }
@@ -299,9 +316,12 @@
     let html = `<div class="rad valg"><small>${vis ? `Vern: <span style="color:${FV.sterk}">■</span> sterk <span style="color:${FV.middels}">■</span> middels <span style="color:${FV.svak}">■</span> svak · ` : ''}`
       + `inngang: ${I.åpne ? I.åpne + ' åpen' + (I.åpne > 1 ? 'e' : '') : I.svake ? 'vinduer uten planker' : `alt sperret – holder fienden ute ca. ${Math.round(I.forsinkelse)} min`}</small>`
       + `<button type="button" data-et="hv:vis" id="hvvis">${S.visVern ? 'Skjul vern' : 'Vis vern'}</button></div>`;
-    if (o) html += `<div class="rad"><b>Vårt: ${esc(OT.BRUK[o.bruk].navn)}</b><small>${o.senger || 0} senger · ${String(o.lager || 0).replace('.', ',')} m³ lager</small>`
-      + Object.keys(OT.BRUK).filter(b => b !== o.bruk).map(b => `<button type="button" data-et="ot:${b}">${esc(OT.BRUK[b].navn)}</button>`).join('') + '<button type="button" data-et="ot:slipp">Gi opp huset</button></div>';
-    else if (avst <= OT.REGLER.maksAvstand) html += `<div class="rad"><span>Ta over huset som:</span>` + Object.keys(OT.BRUK).map(b => `<button type="button" data-et="ot:${b}" id="ot${b}" title="${esc(OT.BRUK[b].tekst)}">${esc(OT.BRUK[b].navn)}</button>`).join('') + '</div>';
+    // (ut8-kr-penger) prisen for istandsettingen står på knappen
+    const pris = b => { const I = istandFor(h.i, b); return I && I.kr > 0 ? ` · ${(I.kr / 1e6).toFixed(1).replace('.', ',')} mill.` : ''; };
+    const iArb = o && o.klar > nå() ? ` · settes i stand, klart om ${Math.max(1, Math.round((o.klar - nå()) / 60))} t` : '';
+    if (o) html += `<div class="rad"><b>Vårt: ${esc(OT.BRUK[o.bruk].navn)}</b><small>${o.senger || 0} senger · ${String(o.lager || 0).replace('.', ',')} m³ lager${iArb}</small>`
+      + Object.keys(OT.BRUK).filter(b => b !== o.bruk).map(b => `<button type="button" data-et="ot:${b}">${esc(OT.BRUK[b].navn)}${pris(b)}</button>`).join('') + '<button type="button" data-et="ot:slipp">Gi opp huset</button></div>';
+    else if (avst <= OT.REGLER.maksAvstand) html += `<div class="rad"><span>Ta over huset som (istandsetting koster):</span>` + Object.keys(OT.BRUK).map(b => { const I = istandFor(h.i, b); return `<button type="button" data-et="ot:${b}" id="ot${b}" title="${esc(OT.BRUK[b].tekst)}${I ? ` – ${I.senger} senger, ${String(I.lager).replace('.', ',')} m³ lager, ca. ${String(I.timer).replace('.', ',')} t å sette i stand` : ''}">${esc(OT.BRUK[b].navn)}${pris(b)}</button>`; }).join('') + '</div>';
     return html;
   }
   function klikk(hva) {
