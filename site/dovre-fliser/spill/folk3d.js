@@ -31,7 +31,9 @@
   const DT_MAKS = .25;
   const dtFra = (ms, sist) => (sist ? Math.max(0, Math.min(DT_MAKS, (ms - sist) / 1000)) : .016);
   if (typeof window === 'undefined') { if (typeof module !== 'undefined') module.exports = { UNNA, STARTREGEL, unna, DT_MAKS, dtFra }; return; }
-  const r3 = () => (typeof R3 !== 'undefined' ? R3 : null), MAKS = 14, MAKS_AVH = 8, ALLE = MAKS + MAKS_AVH;
+  // (F2, 28. nov) når folkene går etter døgnplanen (spill/folkgang-visning.js, FolkgangSpill.aktiv()), vises de MAKS_GANG nærmeste kameraet
+  // (Claudes tall: ca. 30, kapittel 6.9); ellers de første MAKS som før
+  const r3 = () => (typeof R3 !== 'undefined' ? R3 : null), MAKS = 14, MAKS_GANG = 30, MAKS_AVH = 8, ALLE = MAKS_GANG + MAKS_AVH;
   const JAKKER = [[.35, .42, .3], [.5, .32, .22], [.25, .33, .45], [.55, .5, .35], [.42, .25, .25], [.3, .3, .32], [.62, .46, .2], [.2, .36, .3], [.48, .44, .5]];
   const BUKSER = [[.2, .21, .25], [.26, .22, .17], [.16, .2, .16], [.3, .3, .32], [.18, .18, .2]];
   // barna går i friskere farger, de gamle i grått og brunt
@@ -96,9 +98,11 @@
   KROKER.ramme3d.push(R => { if (!R.ut || typeof THREE === 'undefined' || !window.Figur3d || !window.FolkSpill || !window.OppstartSpill) return; const F = FolkSpill.tilstand(), S = OppstartSpill.tilstand(), leir = S && S.leir, u = R.ut; if (!F || !leir) return;
     if (!flokk || flokk.scene !== R.scene || !flokk.nær.parent) lag(R);
     const SS = window.SamfunnSpill && SamfunnSpill.tilstand && SamfunnSpill.tilstand(), AVH = SS && SS.avhengige ? SS.avhengige.slice(0, MAKS_AVH) : [];
-    const nV = Math.min(MAKS, F.personer.length), n = nV + AVH.length, nær = Math.abs(leir.x - u.cx) < u.S - 60 && Math.abs(leir.y - u.cy) < u.S - 60, vis = nær && n > 0; flokk.synlig(vis); if (!vis) return;
-    const pers = i => (i < nV ? F.personer[i] : AVH[i - nV]), D = Figur3d.DEL;
-    const ny = F.personer.slice(0, nV).map(p => p.id).join(',') + '|' + AVH.map(a => a.id).join(',');
+    // (F2) plassene fra gangen: de nærmeste kameraet når den teller (velges på nytt hvert sekund), ellers de første
+    const gang = window.FolkgangSpill && FolkgangSpill.plass && FolkgangSpill.tilstand && Object.keys(FolkgangSpill.tilstand().pers).length ? FolkgangSpill : null;
+    const VO = velgVoksne(F, gang, R, u), nV = VO.length, n = nV + AVH.length, nær = Math.abs(leir.x - u.cx) < u.S - 60 && Math.abs(leir.y - u.cy) < u.S - 60, vis = nær && n > 0; flokk.synlig(vis); if (!vis) return;
+    const pers = i => (i < nV ? VO[i] : AVH[i - nV]), D = Figur3d.DEL;
+    const ny = VO.map(p => p.id).join(',') + '|' + AVH.map(a => a.id).join(',');
     if (!figurer || ny !== nøkkel) { const gamle = new Map((figurer || []).map(p => [p.nøkkel, p])); figurer = []; nøkkel = ny;
       for (let i = 0; i < n; i++) { const p = pers(i), slag = i < nV ? 'voksen' : p.type === 'barn' ? 'barn' : 'gammel', id = (i < nV ? 'p' : 'a') + (p.id || i), h = (((p.id || i) + (i < nV ? 0 : 977)) * 2654435761) >>> 0;
         const liste = slag === 'barn' ? BARNJAKKER : slag === 'gammel' ? GAMLEJAKKER : JAKKER, j = liste[h % liste.length], bk = BUKSER[(h >>> 8) % BUKSER.length], før = gamle.get(id);
@@ -116,6 +120,8 @@
     const brakker = bygg.filter(b => b.type === 'brakke' && !(b.igjen > 0));
     flokk.start();
     figurer.forEach((p, i) => { let går = 0; const q = pers(i), G = SLAG[p.slag] || SLAG.voksen, syk = !!(q && q.syk);
+      const gq = gang && i < nV && q ? gang.plass(q) : null;
+      if (gq) går = følg(p, i, gq, bygg, meg, regel, R, u, dt, G.fart * (syk ? .7 : 1)); else {
       // et nytt utsnitt: plassen inne gjelder ikke lenger (høyden er regnet fra det gamle) – gå ut døra
       if (p.inne && p.inne.u !== u) { p.x = p.inne.uteX; p.y = p.inne.uteY; p.inne = null; p.tx = 0; }
       if (p.mål && p.mål.u !== u) p.mål = null;
@@ -131,16 +137,46 @@
             // på vei til døra: gå en omveg til siden (høyst fire ganger), ellers finn et nytt mål
             if (p.mål && (p.omveg || 0) < 4) { p.omveg = (p.omveg || 0) + 1; if (!p.etter) p.etter = [p.tx, p.ty]; const sd = p.omveg % 2 ? 1 : -1; p.tx = p.x - dy / d * 3 * sd; p.ty = p.y + dx / d * 3 * sd; }
             else { p.tx = 0; p.mål = null; p.etter = null; p.omveg = 0; } } else { p.x = nx; p.y = ny; let da = Math.atan2(dy, dx) - p.a; da = Math.atan2(Math.sin(da), Math.cos(da)); p.a += da * Math.min(1, dt * 6); p.fase += v * dt * 4.2; går = 1; } } }
+      }
       p.går += (går - p.går) * Math.min(1, dt * 8 + (dt ? 0 : 1));
       if (q && q.borte) return;
       // vakta i tårnet speider sakte fram og tilbake; de som står inne, snur seg litt innimellom
-      const a = p.inne ? p.inne.a + Math.sin(performance.now() / (p.inne.tårn ? 4000 : 7000) + i) * (p.inne.tårn ? .7 : .4) : p.a, z = p.inne ? p.inne.z : (hoyde3d(p.x, p.y) - u.h0) * R.EX;
+      const a = p.inne ? p.inne.a + Math.sin(performance.now() / (p.inne.tårn ? 4000 : 7000) + i) * (p.inne.tårn ? .7 : .4) : p.a, z = p.inne ? p.inne.z : (hoyde3d(p.x, p.y) - u.h0) * R.EX + (p.etasje > 1 ? (p.etasje - 1) * 3 : 0);
       // de som frakter eller bygger, bærer en kasse når de går; vakta har gevær (lavt når hun går, klart når hun står)
       const oppg = q && !q.karantene && p.slag === 'voksen' ? q.oppgave : '', bær = (oppg === 'frakt' || oppg === 'bygg') && !p.inne ? p.går : 0, vakt = oppg === 'vakt';
       obj.position.set(p.x - u.cx, p.y - u.cy, z); obj.rotation.set(0, 0, a); obj.scale.setScalar(p.s); obj.updateMatrix();
       flokk.legg(obj.matrix, { fase: p.fase, sving: p.går, bære: vakt ? 0 : bær, sikte: vakt ? .45 * (1 - p.går) : 0, krum: G.krum + (syk ? .12 : 0), barn: p.slag === 'barn' ? 1 : 0,
         maske: p.maske | (bær > .5 && !vakt ? D.kasse : 0) | (vakt ? D.gevær : 0), farger: p.farger }); });
     flokk.slutt(); });
+  // (F2) hvilke voksne som er figurer: med gangen de MAKS_GANG nærmeste kameraet (hvert sekund), ellers de MAKS første (som før)
+  let valgtSist = 0, valgte = [];
+  function velgVoksne(F, gang, R, u) {
+    if (!gang || !gang.aktiv()) return F.personer.slice(0, MAKS);
+    const nu = performance.now(); if (nu - valgtSist < 1000 && valgte.length === Math.min(MAKS_GANG, F.personer.length) && valgte.every(p => F.personer.includes(p))) return valgte;
+    valgtSist = nu; const cx = u.cx + (R.bane ? R.bane.x || 0 : 0), cy = u.cy + (R.bane ? R.bane.y || 0 : 0);
+    valgte = F.personer.map(p => { const q = gang.plass(p); return [p, q ? Math.hypot(q.x - cx, q.y - cy) : 1e9]; }).sort((a, b) => a[1] - b[1]).slice(0, MAKS_GANG).map(a => a[0]).sort((a, b) => a.id - b.id);
+    return valgte;
+  }
+  // (F2) figuren følger plassen fra gangen (FolkgangSpill.plass): framme i et bygg med interiør står den inne (plassVed), ellers der personen er.
+  // Plassen oppdateres 4 ganger i sekundet; figuren går mykt etter den. Står du for nær, går den unna som før (UNNA). Gir 1 når den går.
+  function følg(p, i, gq, bygg, meg, regel, R, u, dt, fart) {
+    if (p.inne && p.inne.u !== u) { p.x = p.inne.uteX; p.y = p.inne.uteY; p.inne = null; }
+    p.mål = null; p.etter = null; p.etasje = gq.e || 1;
+    if (gq.inne && gq.bygg !== null && gq.bygg !== undefined) {
+      if (p.inne && p.inne.b === gq.bygg) return 0;
+      const b = bygg.find(q => q.id === gq.bygg), pl = b ? plassVed(b, i, R, u) : null;
+      if (pl) { p.inne = pl; p.x = pl.x; p.y = pl.y; p.a = pl.a; return 0; }
+    } else if (p.inne) { p.x = p.inne.uteX; p.y = p.inne.uteY; p.inne = null; }
+    let tx = gq.x, ty = gq.y;
+    if (meg) { const un = unna(meg[0], meg[1], tx, ty, i % 2 ? 1 : -1, regel); if (un) { tx = un.tx; ty = un.ty; if (un.flytt && Math.hypot(p.x - meg[0], p.y - meg[1]) < regel.inntil) { p.x = un.flytt[0]; p.y = un.flytt[1]; } } }
+    const dx = tx - p.x, dy = ty - p.y, d = Math.hypot(dx, dy);
+    if (d > 15) { p.x = tx; p.y = ty; if (gq.går) p.a = gq.a; return gq.går ? 1 : 0; }
+    if (d < .05) { if (!gq.går) { let da = gq.a - p.a; da = Math.atan2(Math.sin(da), Math.cos(da)); p.a += da * Math.min(1, dt * 2); } return gq.går ? 1 : 0; }
+    // litt raskere enn gangfarten når den har kommet etter (spoling), så den ikke henger
+    const v = Math.max(fart, d * 2.5), st = Math.min(d, v * dt); p.x += dx / d * st; p.y += dy / d * st;
+    let da = Math.atan2(dy, dx) - p.a; da = Math.atan2(Math.sin(da), Math.cos(da)); p.a += da * Math.min(1, dt * 6); p.fase += st * 4.2;
+    return st > 1e-3 ? 1 : 0;
+  }
   // hvor en figur går nå: til arbeidsplassen (inn i bygget eller opp i tårnet), et tilfeldig bygg, eller (barn og gamle) rundt brakka
   function velgMål(p, i, q, bygg, brakker, leir, R, u) {
     const rnd = Math.random; let b = null, r = 0, hos = false;

@@ -121,6 +121,8 @@ body.kort #folkmeny .jt .prio button{ min-height:32px; min-width:32px; }`;
     if (J.auto && sistBytt) boks.append(el('div', { klasse: 'nu' }, 'Sist: ' + sistBytt + '.'));
     // jobbene som står fast, alltid synlig
     for (const q of fast) boks.append(el('div', { klasse: 'fastlinje' }, `${NAVN(q.type)} står fast: ${q.grunn}` + (q.mangler > 0 ? ` (mangler ${q.mangler})` : '') + '.'));
+    // (F2) de som ikke kommer fram til arbeidsplassen (spill/folkgang-visning.js: «ingen vei», «døra er låst» …)
+    if (window.FolkgangSpill) for (const t of FolkgangSpill.fastLinjer()) boks.append(el('div', { klasse: 'fastlinje gang' }, t));
     // jobblista med prioritet og skift (i «fordel selv» bare når den er åpnet)
     if (J.auto || visTavle) {
       const ingen = [];
@@ -150,8 +152,9 @@ body.kort #folkmeny .jt .prio button{ min-height:32px; min-width:32px; }`;
   }
   // Ved hver person: hva hen gjør nå, og (når tavla fordeler) låst / utelukket
   function personDel(p, { el, knapp }) {
-    const ut = [], n = nå(p);
-    if (n) ut.push(el('span', { klasse: 'gjor ' + (n.hva === 'søvn' ? 'sover' : n.hva === 'mat' ? 'spiser' : ''), title: n.plan ? 'Døgnplan: ' + n.plan : '' }, ' · ' + n.tekst));
+    // (F2) hva personen gjør der hen er (går til …, står fast …) fra spill/folkgang-visning.js, ellers døgnplanens tekst
+    const ut = [], n = nå(p), gang = window.FolkgangSpill ? FolkgangSpill.tekst(p) : '';
+    if (n) ut.push(el('span', { klasse: 'gjor ' + (n.hva === 'søvn' ? 'sover' : n.hva === 'mat' ? 'spiser' : ''), title: n.plan ? 'Døgnplan: ' + n.plan : '' }, ' · ' + (gang || n.tekst)));
     if (J.auto) {
       // låst og utelukket står som brikker (trykk = ta bort); «Jobber …» åpner valgene for personen
       const b = el('span', { klasse: 'jtp' }), lås = J.lås[p.id], ute = J.ute[p.id] || [];

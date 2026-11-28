@@ -485,9 +485,11 @@
   function tegnFolk(g, vx0, vy1) { const m = kam.m; if (api.av || m >= REGLER.folkUnder || (typeof på3d !== 'undefined' && på3d) || !rot.FolkSpill || !rot.LeirSpill || !rot.Leir) return;
     const F = FolkSpill.tilstand && FolkSpill.tilstand(), L = LeirSpill.tilstand(), S = rot.OppstartSpill && OppstartSpill.tilstand(); if (!F || !L || !S || !S.leir || !F.personer) return;
     const r = Math.max(3, figurR(m) * .85), t = typeof tid === 'number' ? tid : 0; g.save(); nullstill(g);
-    F.personer.forEach((p, i) => { if (p.død || p.borte || p.helse <= 0) return; const q = folkPlass(p, i, L.bygg, S.leir, t, Leir.BYGG); if (!q) return;
+    // (F2, 28. nov) plassene fra spill/folkgang-visning.js (folk som går etter døgnplanen og veien) – jakken i jobbens farge; ellers som før
+    const gang = rot.FolkgangSpill && FolkgangSpill.plass2d;
+    F.personer.forEach((p, i) => { if (p.død || p.borte || p.helse <= 0) return; const gq = gang ? FolkgangSpill.plass2d(p) : undefined, q = gq !== undefined ? gq : folkPlass(p, i, L.bygg, S.leir, t, Leir.BYGG); if (!q) return;
       const x = (q.x - vx0) / m, y = (vy1 - q.y) / m; if (x < -20 || y < -20 || x > VW + 20 || y > VH + 20) return;
-      api.mann(g, x, y, r, -q.a, { sivil: true, farge: JAKKER[i % JAKKER.length], hår: HÅR[(i * 3) % HÅR.length], går: p.oppgave === 'frakt', fase: i }); });
+      api.mann(g, x, y, r, -q.a, { sivil: true, farge: gq ? gq.farge : JAKKER[i % JAKKER.length], hår: HÅR[(i * 3) % HÅR.length], går: gq ? gq.går : p.oppgave === 'frakt', fase: i }); });
     g.restore(); }
   // tegn på nytt når folkene har flyttet seg (hvert halve spillminutt) og de synes
   let sistFolk = -1;
