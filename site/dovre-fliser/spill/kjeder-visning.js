@@ -32,8 +32,10 @@
   const mill = v => (Math.round(v / 1e5) / 10).toString().replace('.', ',') + ' mill. kr';
   const nf = (v, d = 1) => (Math.round((v || 0) * 10 ** d) / 10 ** d).toString().replace('.', ',');
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const har = (l, t) => !!(l && l.bygg.some(b => b.type === t && LB.virker(b)));
-  const finnes = (l, t) => !!(l && l.bygg.some(b => b.type === t));
+  // (ut10-fabrikkbygg) et industribygg tatt i bruk som fabrikk (fb_fiskemottak …) teller som maskinen det har
+  const er = (b, t) => b.type === t || (LB.BYGG[b.type] && LB.BYGG[b.type].fabrikkbygg && LB.BYGG[b.type].maskinType === t);
+  const har = (l, t) => !!(l && l.bygg.some(b => er(b, t) && LB.virker(b)));
+  const finnes = (l, t) => !!(l && l.bygg.some(b => er(b, t)));
   const skriv = (n, v) => { try { localStorage.setItem(n, JSON.stringify(v)); } catch (e) { /* fullt eller sperret */ } };
   const lesN = n => { try { return JSON.parse(localStorage.getItem(n) || 'null'); } catch (e) { return null; } };
 

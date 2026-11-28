@@ -102,7 +102,9 @@
     let nb = 0, ns = 0, nk = 0, røyk = nå - T.røykSist > LIVR.røyk && fart; if (røyk) T.røykSist = nå;
     for (const k of T.kilder) {
       const x0 = k.X - u.cx, y0 = k.Y - u.cy; if (Math.abs(x0) > u.S || Math.abs(y0) > u.S) continue;
-      let z0; try { z0 = k.moh !== null && k.moh !== undefined ? (k.moh + k.n * 3 - u.h0) * (R.EX || 1) : (hoyde3d(k.X, k.Y, u) - u.h0) * (R.EX || 1) + .25 + k.n * 3; } catch (e) { continue; }
+      let z0; try { z0 = k.moh !== null && k.moh !== undefined ? (k.moh + k.n * 3 - u.h0) * (R.EX || 1) : (hoyde3d(k.X, k.Y, u) - u.h0) * (R.EX || 1) + .25 + k.n * 3;
+        // (ut10-fabrikkbygg) en maskin inne i et hus (fabrikkbygget): gulvet i interiøret når det er bygget
+        if ((k.moh === null || k.moh === undefined) && window.Interior3d && Interior3d.høyde) { const terr = (x, y) => (hoyde3d(x + u.cx, y + u.cy, u) - u.h0) * (R.EX || 1), g = Interior3d.høyde(x0, y0, terr); if (Number.isFinite(g)) z0 = g; } } catch (e) { continue; }
       const c = Math.cos(k.a), s = Math.sin(k.a), pos = (lx, ly) => [x0 + lx * c - ly * s, y0 + lx * s + ly * c];
       for (const d of k.liv) {
         const [x, y] = pos(d.x || 0, d.y || 0);

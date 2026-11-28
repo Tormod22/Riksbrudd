@@ -413,6 +413,10 @@
     // ballepressas stempel går opp og ned, steinknuseren rister
     bs_flishogger: [{ del: 'røyk', x: 1.6, y: 0, z: 2.4 }], bs_filetmaskin: [{ del: 'bånd', z: .95 }], bs_ballepresse: [{ del: 'stempel', x: 0, y: 0, z: 2.1, slag: .3 }],
     bs_knuser: [{ del: 'stempel', x: 0, y: 0, z: 2.9, slag: .12 }],
+    // (ut10-fabrikkbygg) maskinene i industribygg dere har tatt i bruk (spill/fabrikkbygg.js, fb_<maskin>): står der møbelet står i hallen
+    fb_sagbruk: [{ del: 'blad', x: 0, y: 0, z: 1.05, r: .5, akse: 'y' }], fb_flishogger: [{ del: 'røyk', x: 1.2, y: 0, z: 2.4 }], fb_steinknuser: [{ del: 'stempel', x: 0, y: 0, z: 2.9, slag: .12 }],
+    fb_fiskemottak: [{ del: 'bånd', z: 1.05 }], fb_filetmaskin: [{ del: 'bånd', z: .95 }], fb_mølle: [{ del: 'bånd', z: 1.2 }], fb_raffineri: [{ del: 'røyk', x: 0, y: 0, z: 5.6 }],
+    fb_smie: [{ del: 'røyk', x: 0, y: 0, z: 2.8 }], fb_ballepresse: [{ del: 'stempel', x: 0, y: 0, z: 2.1, slag: .3 }],
   };
   // (ut9-maskiner2) delene i byggesettet som tegnes med modellene her (fabrikk-visning.js bygg3d): del -> modell
   const FABRIKK = { bs_flishogger: 'flishogger', bs_filetmaskin: 'filetmaskin', bs_ballepresse: 'ballepresse', bs_knuser: 'knuser' };

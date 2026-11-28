@@ -137,4 +137,4 @@ O.leggTilKrav({ navn: 'sagbruket', sjekk(RES) {
   return ut;
 } });
 
-module.exports = { SB, fullDrift, sagVarsel, råd, fasteNå };
+module.exports = { SB, fullDrift, sagVarsel, råd, fasteNå, sagFolk };
