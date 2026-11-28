@@ -25,6 +25,8 @@
   const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const meter = d => (d >= 1000 ? (Math.round(d / 100) / 10).toString().replace('.', ',') + ' km' : Math.round(d) + ' m');
   const gjest = () => !!(window.NETT && NETT.gjest);
+  // (ut3-varekontrakt) varekontraktene (lever, leveranseavtale, kjøpsavtale) har visningen sin i spill/vare-visning.js
+  const VS = () => window.VareSpill || null, erVare = k => !!(VS() && VS().erVare(k));
   let S = null, leirId = '', klar = false, åpen = false, sistHtml = '', sistTegn = 0, lagreTid = 0, melding = '';
 
   // ---------- lagring (per leir, ren JSON) ----------
@@ -108,13 +110,16 @@
   }
   function rydd(k) {
     for (let i = ENHETER.length - 1; i >= 0; i--) if (ENHETER[i].kontrakt === k.id && (ENHETER[i].sperre || ENHETER[i].angrepslag)) ENHETER.splice(i, 1);
-    const b = bilFor(k); if (b) { const i = KJORETOY.indexOf(b); if (i >= 0) KJORETOY.splice(i, 1); }
+    // (ut3-varekontrakt) bare bilen kontrakten selv satte ut (eskorten) – aldri spillerens egen lastebil som kjører en levering
+    const b = bilFor(k); if (b && b.kontrakt === k.id) { const i = KJORETOY.indexOf(b); if (i >= 0) KJORETOY.splice(i, 1); }
+    if (erVare(k)) VS().ferdig(k);
     skitten = true;
   }
 
   // ---------- er kravet oppfylt? ----------
   // gir { i, tapt, hentet, andel } til Selskap.steg (se reglene)
   function vurder(k) {
+    if (erVare(k)) return VS().vis(k);
     const N = SK.REGLER.nær, s = Sp(), L = s && s.leir;
     if (k.type === 'eskorte') { const b = bilFor(k); if (!b || !(b.antall >= 1)) return { tapt: true };
       const hele = Math.hypot(k.sted.x - k.fra.x, k.sted.y - k.fra.y) || 1, igjen = Math.hypot(k.sted.x - b.x, k.sted.y - b.y);
@@ -201,7 +206,7 @@
     if (!klar || !S) return null; const st = SK.trådSteg(S), fk = førsteK();
     if (st && fk) return { tekst: st.lapp(fk), pek: st.id === 'send' || st.id === 'hjem' ? 'kart' : st.pek, k: fk, steg: st.id, hjelp: st.tekst(fk, knappFor()) };
     const ak = S.sider[ID].aktive.slice().sort((a, b) => a.frist - b.frist)[0];
-    if (ak) { const v = vurder(ak); return { tekst: SK.lappFor(ak, v, tid) + ' · ' + SK.fristTekst(ak, tid), pek: klarTilLevering(ak) ? 'selskap' : 'kart', k: ak, hjelp: SK.kravTekst(ak) }; }
+    if (ak) { const v = vurder(ak); return { tekst: SK.lappFor(ak, v, tid) + ' · ' + SK.fristTekst(ak, tid), pek: klarTilLevering(ak) || erVare(ak) ? 'selskap' : 'kart', k: ak, hjelp: SK.kravTekst(ak) }; }
     const n = S.tilbud.filter(q => SK.kanTa(q, har(), S.sider[ID]).ok).length;
     return { tekst: n ? `Velg en kontrakt i Selskapet (${n} ledig${n === 1 ? '' : 'e'})` : 'Ingen kontrakter nå – nye tilbud kommer i morgen tidlig', pek: 'selskap', k: null };
   }
@@ -225,7 +230,7 @@
   function hendelser(ut) {
     for (const h of ut) {
       const k = h.k;
-      if (h.type === 'levert') { if (window.OppstartSpill) OppstartSpill.gi(h.kr); logg(`Kontrakt levert: ${k.tittel}. ${k.giver.navn} betalte ${kr(h.kr)}.`); rydd(k); kobling(h); levertØyeblikk(k, h.kr);
+      if (h.type === 'levert') { if (window.OppstartSpill && h.kr > 0) OppstartSpill.gi(h.kr); logg(erVare(k) ? VS().levertTekst(k, h.kr) : `Kontrakt levert: ${k.tittel}. ${k.giver.navn} betalte ${kr(h.kr)}.`); rydd(k); kobling(h); if (h.kr > 0) levertØyeblikk(k, h.kr);
         try { window.dispatchEvent(new CustomEvent('riksbrudd-kontrakt', { detail: { type: 'levert', id: k.id, kr: h.kr } })); } catch (e) { /* gammel nettleser */ } }
       else if (h.type === 'brutt') { const bot = Math.min(h.kr || 0, (Sp() && Sp().penger) || 0); if (bot > 0) OppstartSpill.betal(bot);
         const grunn = SK.bruttTekst(k) || (h.grunn === 'frist' ? 'fristen gikk ut' : 'dere avbrøt den');
@@ -244,6 +249,7 @@
         a.menn.length = 6; a.angrepslag = true; a.kontrakt = k.id; a.ingenAI = true; a.født = tid; try { if (window.Strid && Strid.bevæpn) Strid.bevæpn(a, 'lett'); } catch (e) { /* uten stridsregler */ } ENHETER.push(a);
         logg(`${navnFor(h.rival)} ligger i bakhold ${meter(fram)} foran ${k.bil}! Send et lag for å rydde vegen, eller kjør en annen veg – uten eskorte kan bilen gå tapt.`); } }
       else if (h.type === 'rivalTok') { /* stille: står i oversikten */ }
+      else if (VS()) VS().hendelse(h);
     }
     if (ut.length) { lagre(); skitten = true; }
   }
@@ -293,13 +299,13 @@ body.kort #levertkort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }`;
       for (let i = ENHETER.length - 1; i >= 0; i--) { const e = ENHETER[i]; if (!e.angrepslag) continue;
         if (!aktive.has(e.kontrakt) || (Number.isFinite(e.født) && tid - e.født > 360) || !Number.isFinite(e.født) && (e.født = tid, false)) { ENHETER.splice(i, 1); ut = true; } }
       if (ut) skitten = true; }
-    const mål = {}; for (const k of S.sider[ID].aktive) mål[k.id] = vurder(k);
+    const mål = {}; for (const k of S.sider[ID].aktive) mål[k.id] = erVare(k) ? VS().mål(k) : vurder(k);
     hendelser(SK.steg(S, ID, tid, d, mål));
     const dag = dagNå();
     // (R18-A) mens den første kontrakten pågår, kom ingen nye tilbud – én ting om gangen. (kritikerløkka r3, Jonas: den første kontrakten
     // kunne ikke fullføres, og «Ingen tilbud nå» sto både dag 2 og dag 3.) NÅ: første dag er det bare den første kontrakten, men HVER ny
     // morgen kommer nye tilbud, også mens den første pågår.
-    if (dag !== S.dag && auto()) { S.dag = dag; hendelser(SK.dagSteg(S, tid)); const n = nyeTilbud(); if (n.length) logg(`Selskapet: ${n.length} nye kontrakttilbud. Se «Selskapet».`); }
+    if (dag !== S.dag && auto()) { S.dag = dag; hendelser(SK.dagSteg(S, tid)); const n = nyeTilbud(), nv = VS() ? VS().morgen() : []; if (n.length + nv.length) logg(`Selskapet: ${n.length + nv.length} nye kontrakttilbud${nv.length ? ` (${nv.length} med varer)` : ''}. Se «Selskapet».`); }
     tråd();
     // (r3) nødlageret som ikke er sjekket mot kartet (kartet var ikke lastet), prøves igjen hvert 15. sekund
     if (performance.now() - landSist > 15000) landLager();
@@ -310,7 +316,7 @@ body.kort #levertkort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }`;
   function ta(id) {
     if (!S) return { ok: false }; const r = SK.godta(S, ID, id, tid, null, har()); if (!r.ok) { melding = r.grunn; tegn(true); if (!åpen) logg(r.grunn); return r; }
     const k = r.k; if (k.type === 'rydd') { lagSperre(k); k.sperreSatt = true; } if (k.type === 'eskorte') { lagBil(k); k.bilSatt = true; }
-    logg(`Kontrakt tatt: ${k.tittel}. Frist om ${k.timer} timer.`); melding = ''; lagre(); skitten = true; tegn(true); return r;
+    logg(erVare(k) && k.type !== 'lever' ? `Avtale inngått: ${k.tittel}.` : `Kontrakt tatt: ${k.tittel}. Frist om ${k.timer} timer.`); if (k.storlia && VS()) VS().storliaTatt(k); melding = ''; lagre(); skitten = true; tegn(true); return r;
   }
   function avslå(id) { if (!S) return false; const n = S.tilbud.length; S.tilbud = S.tilbud.filter(k => k.id !== id); lagre(); tegn(true); return S.tilbud.length < n; }
   // lever(id, tving): leverer straks når kravet er oppfylt (tving: bare for prøver)
@@ -397,6 +403,7 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     } catch (e) { MARSJ.set(nø, { feil: true, venter: false, ingen: false, km: d / 1000, timer: d / 1000 / 3 }); }
   }
   function tilbudKort(k) {
+    if (erVare(k)) return VS().kort(k, false, { marsj: k.type === 'lever' ? marsj(k) : null, låst: SK.kravFor(k).nivå > nivåNå().nr });
     const igjen = Math.max(0, k.utløper - tid), går = igjen >= 60 ? `${Math.round(igjen / 60)} t` : `${Math.round(igjen)} min`;
     // (R18-A) kravet: låst nivå gir en grå knapp; mangler leiren noe, står det rødt (knappen forklarer det når du trykker)
     const kt = SK.kanTa(k, har(k), S.sider[ID]), K = SK.kravFor(k), låst = K.nivå > nivåNå().nr;
@@ -411,6 +418,7 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
       + kravLinje + `<div class="rad"><span>Tilbudet står i ${går} til.</span></div><div class="knapper"><button class="hoved" data-s="ta" data-id="${k.id}"${låst ? ' disabled title="Låst til selskapet når nivå ' + K.nivå + '"' : ''}>Ta kontrakten</button><button data-s="avslå" data-id="${k.id}">Avslå</button><button data-s="vis" data-id="${k.id}">Vis i kartet</button></div></div>`;
   }
   function aktivKort(k) {
+    if (erVare(k)) return VS().kort(k, true, { marsj: k.type === 'lever' ? marsj(k) : null });
     const klarNå = klarTilLevering(k), v = vurder(k); let status = '', andel = 0;
     if (k.type === 'hold') { andel = k.framdrift / (k.hold * 60); status = `Holdt ${Math.floor(k.framdrift / 60)} t ${Math.round(k.framdrift % 60)} min av ${k.hold} t` + (v.fiender ? ' – fiender ved stedet, tida står' : v.lag ? ' – laget holder stedet' : ' – ingen lag der ennå'); }
     else if (k.type === 'eskorte') { andel = v.andel || 0; status = v.tapt ? 'Bilen er borte.' : `${esc(k.bil || 'Bilen')}: ${meter(v.igjen || 0)} igjen. Velg bilen i kartet og gi den ordre.`; }
@@ -456,6 +464,7 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     // (R18-A) handlingene går gjennom kommandolaget (window.KOMMANDO, spill/kommando-visning.js); uten det kalles de rett
     const K = window.KOMMANDO, kom = (type, f) => (K ? K({ type, id, stille: true }) : f(id));
     if (s === 'lukk') vis(false); else if (s === 'ta') kom('kontraktTa', ta); else if (s === 'avslå') kom('kontraktAvslå', avslå); else if (s === 'lever') kom('kontraktLever', lever); else if (s === 'avbryt') kom('kontraktAvbryt', avbryt); else if (s === 'pris') kom('kontraktPris', pris);
+    else if (s === 'vare') { if (VS()) { VS().knapp(id, b.dataset.v); melding = ''; tegn(true); } }
     else if (s === 'vis') { const k = S && (S.tilbud.find(q => q.id === id) || S.sider[ID].aktive.find(q => q.id === id)); if (k) { const p = k.type === 'rydd' && k.sperre ? k.sperre : k.type === 'eskorte' && bilFor(k) ? bilFor(k) : k.sted; gåTil(p.x, p.y); } } });
   function vis(på) {
     åpen = på === undefined ? !åpen : !!på; panel.classList.toggle('på', åpen);
@@ -475,6 +484,8 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     // (R18-A) den første kontrakten vises i kartet også før den er tatt, så spilleren ser hvor det bærer
     for (const k of [...S.sider[ID].aktive, ...S.tilbud.filter(q => q.første)]) {
       if (k.type === 'forsyning') { tegnLager(g, k, P); continue; }
+      // avtalene hentes/leveres ved leiren – ingen merke i kartet
+      if (k.type === 'avtale' || k.type === 'kjøp') continue;
       const [x, y] = P(k.sted.x, k.sted.y), r = k.type === 'hold' ? Math.max(8, SK.REGLER.nær.hold / m) : 9;
       g.strokeStyle = '#d9a441'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke(); g.setLineDash([]);
       g.fillStyle = '#d9a441'; g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x + 5, y); g.lineTo(x, y + 6); g.lineTo(x - 5, y); g.closePath(); g.fill();

@@ -50,7 +50,8 @@
     const n = navn || 'dere';
     return { tittel: `${REGLER.storlia.firma} har hørt om dere`,
       tekst: `Ryktet går: ${n} holder ord. ${REGLER.storlia.firma} har tømmer som skal fram gjennom dalen, og de vil gjerne ha et selskap de kan stole på.`,
-      neste: trinn && trinn.nr < 2 ? 'Neste mål: trinn 2, Leverandør – et selskap folk stoler på. Selskapet viser hva som mangler.' : 'Dere er på vei til å bli en leverandør. Selskapet viser veien videre.' };
+      // (ut3-varekontrakt) kortet leder til Storlias første tømmerkontrakt (spill/vare.js), som kommer når trinn 2 er nådd
+      neste: trinn && trinn.nr < 2 ? 'Neste mål: trinn 2, Leverandør – et selskap folk stoler på. Da har Storlia en tømmerkontrakt til dere. Selskapet viser hva som mangler.' : 'Storlia har en tømmerkontrakt til dere: billig tømmer – og et sagbruk gjør det til planker de kjøper. Se Selskap → Kontrakter.' };
   }
   // kroner med «mill.» – samme form som resten av spillet
   const des = v => (Math.round(v * 10) / 10).toFixed(1).replace('.', ',').replace(/,0$/, '');

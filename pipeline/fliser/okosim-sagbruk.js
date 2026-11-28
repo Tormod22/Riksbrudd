@@ -31,9 +31,10 @@ O.leggTilDel({ id: 'sagbruk',
     for (const q of Object.values(r.status)) if (q.type === 'sagbruk') { sim.prod.sagGikk = (sim.prod.sagGikk || 0) + q.drift; const g = q.grunn; if (g && q.drift < 1) { const S = sim.prod.sagSto = sim.prod.sagSto || {}; S[g] = (S[g] || 0) + 1 - q.drift; } }
   },
   slutt(sim, res) { if (sim.prod) res.sag = { gikk: sim.prod.sagGikk || 0, timer: Math.max(1, (sim.t - (sim.sagFra || 0)) / 60), sto: sim.prod.sagSto || {}, laget: sim.prod.P.laget, brukt: sim.prod.P.brukt }; },
+  // (ut3-varekontrakt) det varekontraktene trenger (sim.vareReserve, okosim-vare.js), selges ikke
   døgn(sim) {
     if (!sim.prod || !sim.selgProd) return; const L = sim.L;
-    for (const v of ['tre', 'ved', 'flis']) { const har = Math.floor(Math.max(0, (L.lager[v] || 0) - (v === 'flis' ? SB.flisReserve : 0)) * 10) / 10, m = Marked.kanSelge(sim.M, v, har); if (!(m > 0)) continue;
+    for (const v of ['tre', 'ved', 'flis']) { const har = Math.floor(Math.max(0, (L.lager[v] || 0) - (v === 'flis' ? SB.flisReserve : 0) - ((sim.vareReserve && sim.vareReserve[v]) || 0)) * 10) / 10, m = Marked.kanSelge(sim.M, v, har); if (!(m > 0)) continue;
       const kr = Math.round(m * Marked.pris(sim.M, v, Leir.MATERIALER[v].pris) * Marked.SALG); L.lager[v] -= m; Marked.selg(sim.M, v, m); sim.gi(kr, v === 'tre' ? 'planker' : v); }
   },
 });

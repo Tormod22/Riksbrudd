@@ -239,7 +239,7 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     const gml = $('storliakort'); if (gml) gml.remove(); clearTimeout(storliaTid);
     const T = B.storliaTekst(navn(), regnTrinn()), k = document.createElement('div'); k.id = 'storliakort'; k.setAttribute('role', 'status');
     k.innerHTML = `<small>Nytt i selskapet</small><b>${esc(T.tittel)}</b><p>${esc(T.tekst)}</p><p>${esc(T.neste)}</p><div class="knapper"><button type="button" class="hoved" data-k="åpne">Åpne Selskapet</button><button type="button" data-k="ok">Senere</button></div>`;
-    k.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; e.stopPropagation(); k.remove(); clearTimeout(storliaTid); if (b.dataset.k === 'åpne') vis(true, 'oversikt'); });
+    k.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; e.stopPropagation(); k.remove(); clearTimeout(storliaTid); if (b.dataset.k === 'åpne') vis(true, regnTrinn().nr >= 2 ? 'kontrakter' : 'oversikt'); });
     document.body.appendChild(k); H.storlia = true; lagre();
     if (!tving && typeof logg === 'function') logg(`${B.REGLER.storlia.firma} har hørt om dere. Neste mål: trinn 2, Leverandør – se Selskap → Oversikt.`);
     const t0 = performance.now(), se = () => { if (!k.isConnected) return; if (performance.now() - t0 > B.REGLER.storlia.vis * 1000) { k.remove(); return; } storliaTid = setTimeout(se, 1000); }; storliaTid = setTimeout(se, 1000);
