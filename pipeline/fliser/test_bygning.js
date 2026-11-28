@@ -1,4 +1,4 @@
-// Test for spill/bygning.js (byggemodellen, fase B0): node pipeline/fliser/test_bygning.js  (RASK=1: færre prøvehus)
+// Test for spill/bygning.js (byggemodellen, fase B0): node pipeline/fliser/test_bygning.js  (standard: 448 prøvehus; FULL=1: alle 2128)
 const B = require('../../site/dovre-fliser/spill/bygning.js'), I = require('../../site/dovre-fliser/spill/interior.js');
 let feil = 0; const ok = (b, t) => { console.log((b ? 'ok   ' : 'FEIL ') + t); if (!b) feil++; };
 const rekt = (w, h) => [[0, 0], [w, 0], [w, h], [0, h]];
@@ -29,7 +29,7 @@ const tall = (o, sti = '') => { if (typeof o === 'number') return Number.isFinit
 }
 
 // ---------- tusenvis av prøvehus ----------
-const KART = Object.keys(I.KLASSE).filter(k => !I.KLASSE[k].leir), N = process.env.RASK ? 8 : 38;
+const KART = Object.keys(I.KLASSE).filter(k => !I.KLASSE[k].leir), N = process.env.FULL ? 38 : 8;
 const prøve = []; let nr = 0, tid = 0, tidBolig = 0, nBolig = 0, krasj = 0; const krasjL = [];
 for (const kl of KART) for (const [fn, f] of Object.entries(FORMER)) for (let k = 0; k < N; k++) {
   const stor = STOR.test(kl), w = (stor ? 12 : 6) + (k * 4.3) % (stor ? 45 : 14), d = (stor ? 9 : 5) + (k * 2.9) % (stor ? 24 : 8), v = k * .53 + .2;
