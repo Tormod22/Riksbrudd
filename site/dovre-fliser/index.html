@@ -3548,7 +3548,7 @@ function framdrift(tekst, andel) {
 // ---------- styring ----------
 function zoom(fak, cx = VW / 2, cy = VH / 2) {
   const X = kam.x + (cx - VW / 2) * kam.m, Y = kam.y - (cy - VH / 2) * kam.m;
-  kam.m = Math.max(0.1, Math.min(MAKS_M, kam.m / fak));
+  kam.m = Math.max(window.MIN_ZOOM_M || 0.1, Math.min(MAKS_M, kam.m / fak));
   kam.x = X - (cx - VW / 2) * kam.m; kam.y = Y + (cy - VH / 2) * kam.m; skitten = true;
 }
 const ptr = new Map(); let pinch = null;
@@ -3733,6 +3733,8 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
 <script src="/dovre-fliser/spill/interior.js?v=12bff811cd"></script>
 <script src="/dovre-fliser/spill/bygning.js?v=a3a7c8e34a"></script>
+<script src="/dovre-fliser/spill/plantegning.js?v=3225ea75af"></script>
+<script src="/dovre-fliser/spill/plantegning-visning.js?v=19929a3159"></script>
 <script src="/dovre-fliser/spill/interior3d.js?v=539e5f7f27"></script>
 <script src="/dovre-fliser/spill/hud.js?v=57b2800eba"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=2ee4fa965b"></script>
