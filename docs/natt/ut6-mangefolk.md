@@ -85,7 +85,7 @@ ordre, i en utpost, har fri) – da én flat liste (høyst 60). Panelet tegnes i
   i kartet, personkortet med «Gå hit»/«Gjør dette nå» (og bredere kort på telefon), «Gjør dette nå» huskes etter omlasting. Ingen sidefeil.
 - Vakta `ut6-mangefolk` ok på PC og mobil (0,5–0,9 s). Feil lagt inn med vilje (arbeidstida i utposten telt også på reisen) → vakta feilet på
   «utposten: personen bidrar ikke etter reisetida». Andre vakter etter endringene: ut3-folkgar, ut4-maskinfolk, ut5-oppforsel, ut1-jobber, folk, leir2d,
-  ut3-rekruttering, lagring – ok. Ikke prøvd med 3D åpent (vakta rører ikke 3D).
+  ut3-rekruttering, lagring – ok. Vakta også ok med 3D åpent (4,3 s).
 
 ## IKKE gjort / begrensninger
 - Folk på vakt i en utpost teller fortsatt i `FolkRegler.arbeidere('vakt')` (bemannede vakttårn i leiren regnes av folk.js etter antallet); tempoet (stedF) er riktig.
