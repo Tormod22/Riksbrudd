@@ -83,6 +83,10 @@ sjekk(tegnet > hus.length, `etasjer med vegger: ${tegnet} av ${totalt} (tomme ${
   const lest = PT.lesLogg(JSON.stringify(Lg), '196400,6898900'), annen = PT.lesLogg(JSON.stringify(Lg), '1,2');
   sjekk(PT.antall(lest) === 1 && PT.antall(annen) === 0, 'loggen leses bare for samme leir');
   sjekk(PT.antall(PT.lesLogg('{ødelagt', 'x')) === 0, 'ødelagt lagring gir tom logg');
+  // husets kartdata i loggen: modellen kan lages på nytt uten kartflisene (3D)
+  const k = PT.husKart(Lg, q.e.i, Object.assign({ r: 3, ekstra: 1 }, q.e), q.tett, q.P);
+  sjekk(k.P[0][0] === Math.round(q.P[0][0] * 100) / 100 && k.e.r === 3 && !('ekstra' in k.e), 'husKart lagrer omriss og egenskaper');
+  const r2 = PT.info(k.P, k.e, k.tett, 300, H); sjekk(JSON.stringify(B.fraKart(r2.P, r2.info).etasjer.map(e => e.vegger.length)) === JSON.stringify(B.fraKart(PT.info(q.P, Object.assign({ r: 3 }, q.e), q.tett, 300, H).P, PT.info(q.P, Object.assign({ r: 3 }, q.e), q.tett, 300, H).info).etasjer.map(e => e.vegger.length)), 'modellen fra loggens kartdata er lik');
   const m1 = B.medEndringer(m0, PT.endringer(lest, q.e.i)), o1 = PT.figur(m1, 1).åpninger.find(o => o.id === vindu.id);
   sjekk(o1.sperre === 'planker', 'vinduet er barrikadert etter ny lasting');
   sjekk(PT.figur(m0, 1).åpninger.find(o => o.id === vindu.id).sperre === null, 'kartmodellen er uendret');

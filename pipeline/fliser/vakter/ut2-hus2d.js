@@ -49,7 +49,7 @@ module.exports = {
           før.L.lager.tre = (før.L.lager.tre || 0) + 1; const tre0 = før.L.lager.tre;
           const s = P2.endre({ hus: i, e: 1, del: 'åpning', id: v.id, gjør: 'barrikader' });
           ok(s.ok, 'barrikaden ble avvist: ' + s.feil); ok(Math.abs(tre0 - før.L.lager.tre - PT.planker(v)) < .011, 'plankene ble ikke trukket fra lageret');
-          const lagret = JSON.parse(localStorage.getItem(NØ) || 'null'); ok(lagret && lagret.hus[i] && lagret.hus[i].length === 1, 'barrikaden ble ikke lagret');
+          const lagret = JSON.parse(localStorage.getItem(NØ) || 'null'); ok(lagret && lagret.hus[i] && lagret.hus[i].length === 1, 'barrikaden ble ikke lagret'); ok(lagret && lagret.kart && lagret.kart[i] && lagret.kart[i].P.length === 4, 'husets kartdata ble ikke lagret');
           // som etter ny lasting: glem modellen, les loggen og lag modellen på nytt
           P2.HUS.delete(i); P2.lesInn(); P2.nyttHus(PT.åpent(Pv.concat([Pv[0]])), e, 0); const m2 = P2.modell(i), o2 = PT.figur(m2, 1).åpninger.find(q => q.id === v.id);
           ut.sperre = o2 && o2.sperre; ok(o2 && o2.sperre === 'planker', 'barrikaden vises ikke etter ny lasting');
