@@ -23,7 +23,7 @@
   // (Ø1, 28. nov) hogst gir TØMMER (m³), som må sages til planker («tre») på sagbruket – eller selges billig som det er.
   // Riving gir fortsatt planker, betong og stål. Gamle hogstfelt i en lagring gir det de ga før (j.mat står i lagringen).
   const MAT = ['tre', 'betong', 'stål', 'tømmer'];
-  const ny = () => ({ versjon: 1, jobber: [], hogd: [], revet: [], neste: 1 });
+  const ny = () => ({ versjon: 1, jobber: [], hogd: [], revet: [], neste: 1, husFerdig: [] });
   const r1 = v => Math.round(v * 10) / 10;
   const sum = m => MAT.reduce((s, k) => s + (m[k] || 0), 0);
   const tom = () => ({ tre: 0, betong: 0, stål: 0, tømmer: 0 });
@@ -73,11 +73,28 @@
     if (!leir) return { feil: 'Sett opp leiren først.' };
     if (!hus || !hus.P || hus.P.length < 3) return { feil: 'Fant ikke huset.' };
     if (R.revet.some(q => q.i === hus.i)) return { feil: 'Huset er revet.' };
-    if (R.jobber.some(j => j.type === 'riving' && j.hus.i === hus.i)) return { feil: 'Huset rives allerede.' };
+    if (R.jobber.some(j => j.type === 'riving' && !j.endringer && !j.stoppet && j.hus.i === hus.i)) return { feil: 'Huset rives allerede.' };
     const P = hus.P.map(([x, y]) => [r1(x), r1(y)]), c = midt(P);
     if (avstand(c, leir) > REGLER.maksAvstand) return { feil: `For langt fra leiren (høyst ${REGLER.maksAvstand / 1000} km).` };
     const ut = husUtbytte(hus.t, areal(P), hus.h); if (ut.feil) return ut;
-    return { jobb: nyJobb(R, 'riving', c.x, c.y, ut, leir, { hus: { i: hus.i, P, t: hus.t, h: hus.h || 6 }, gruppe: ut.gruppe }) };
+    // (B3, 28. nov) et hus som er delvis revet (etasjene ovenfra, spill/husendring-visning.js) gir bare det som står igjen: andel 0–1
+    const andel = hus.andel > 0 && hus.andel < 1 ? hus.andel : 1;
+    if (andel < 1) { for (const k of MAT) ut.mat[k] = r1(ut.mat[k] * andel); ut.timer = r1(REGLER.riving.grunn + sum(ut.mat) / REGLER.riving.perArbeider); }
+    const ekstra = { hus: { i: hus.i, P, t: hus.t, h: hus.h || 6 }, gruppe: ut.gruppe };
+    if (Array.isArray(hus.etasjer)) ekstra.etasjer = hus.etasjer.slice();
+    return { jobb: nyJobb(R, 'riving', c.x, c.y, ut, leir, ekstra) };
+  }
+  // (B3, 28. nov) Husarbeid – én del av et hus (spill/husendring.js): rive en vegg, lage en åpning, sette inn bjelke eller søyle, rive dekke/tak
+  // eller én etasje. Folk på 'riving' gjør det (samme kø som hele hus). o = { hus { i, P, t, h }, endringer [Bygning-endringer], mat, timer, navn }.
+  // Når arbeidet er gjort, legges endringene i R.husFerdig (visningen fører dem i husets endringslogg) – huset blir IKKE revet.
+  function startDel(R, o, leir) {
+    if (!leir) return { feil: 'Sett opp leiren først.' };
+    if (!o || !o.hus || !Array.isArray(o.hus.P) || o.hus.P.length < 3 || !Array.isArray(o.endringer) || !o.endringer.length) return { feil: 'Ugyldig husarbeid.' };
+    const P = o.hus.P.map(([x, y]) => [r1(x), r1(y)]), c = midt(P);
+    if (avstand(c, leir) > REGLER.maksAvstand) return { feil: `For langt fra leiren (høyst ${REGLER.maksAvstand / 1000} km).` };
+    const mat = tom(); for (const k of MAT) mat[k] = Math.max(0, Math.round(((o.mat && o.mat[k]) || 0) * 1000) / 1000);
+    return { jobb: nyJobb(R, 'riving', c.x, c.y, { mat, timer: Math.max(.1, o.timer || .1) }, leir, { hus: { i: o.hus.i, P, t: o.hus.t, h: o.hus.h || 6 },
+      endringer: o.endringer.map(d => Object.assign({}, d)), navn: o.navn || 'husarbeid' }) };
   }
   function midt(P) { let x = 0, y = 0; for (const p of P) { x += p[0]; y += p[1]; } return { x: x / P.length, y: y / P.length }; }
   const finn = (R, id) => R.jobber.find(j => j.id === id);
@@ -111,7 +128,10 @@
       const d = Math.min(j.arbeid - j.gjort, n(opg) * dt / 60); if (d <= 0) continue;
       for (const k of MAT) j.haug[k] += j.mat[k] * d / j.arbeid; j.gjort += d;
       if (j.gjort >= j.arbeid - 1e-9) { j.gjort = j.arbeid;
-        if (j.type === 'hogst') R.hogd.push({ x: j.x, y: j.y, r: j.r }); else R.revet.push({ i: j.hus.i, P: j.hus.P, t: j.hus.t, h: j.hus.h, gruppe: j.gruppe });
+        if (j.type === 'hogst') R.hogd.push({ x: j.x, y: j.y, r: j.r });
+        // husarbeid (B3): endringene føres i husets logg av visningen; huset står
+        else if (j.endringer) { (R.husFerdig = R.husFerdig || []).push({ jobb: j.id, hus: j.hus.i, endringer: j.endringer, navn: j.navn }); hend.push({ hva: 'husFerdig', jobb: j }); continue; }
+        else R.revet.push({ i: j.hus.i, P: j.hus.P, t: j.hus.t, h: j.hus.h, gruppe: j.gruppe });
         hend.push({ hva: 'ferdig', jobb: j }); }
     }
     // nær leiren: rett i lageret
@@ -215,10 +235,11 @@
         .map(j => ({ ...j, haug: { ...tom(), ...j.haug }, levert: { ...tom(), ...j.levert }, mat: { ...tom(), ...j.mat }, påBil: false, frakt: 'fots', bil: null }));
       n.hogd = (Array.isArray(R.hogd) ? R.hogd : []).filter(f => f && isFinite(f.x) && isFinite(f.y) && f.r > 0);
       n.revet = (Array.isArray(R.revet) ? R.revet : []).filter(q => q && q.i !== undefined && Array.isArray(q.P));
+      n.husFerdig = (Array.isArray(R.husFerdig) ? R.husFerdig : []).filter(q => q && q.hus !== undefined && Array.isArray(q.endringer));
       n.neste = Math.max(n.neste || 1, ...n.jobber.map(j => j.id + 1)); return n;
     } catch (e) { return null; }
   }
-  const api = { REGLER, MAT, ny, areal, gruppe, husUtbytte, hogstUtbytte, startHogst, startRiving, avbryt, finn, fram, iHaug, ta, lever, steg, lastebil, bilSteg, bilTekst,
+  const api = { REGLER, MAT, ny, areal, gruppe, husUtbytte, hogstUtbytte, startHogst, startRiving, startDel, avbryt, finn, fram, iHaug, ta, lever, steg, lastebil, bilSteg, bilTekst,
     erHogd, ledigSkog, kant, iFelt, revetSett, kjøpsverdi, timerMed, fotsTimer, sum, midt, tilJSON, fraJSON };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Ressurser = api;
