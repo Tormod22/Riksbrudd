@@ -23,10 +23,15 @@
     // lys i vinduene: når mørket (NATT.mørke, 0–1) er over dette; brakka slukker mellom leggetid og morgen (folk sover)
     lysMørke: .18, leggetid: [23.5, 5.5],
     // byggene som har vinduer med lys (vinduene står i VINDU under)
-    lysBygg: { brakke: 1, sykestue: 1, verksted: 1 },
+    lysBygg: { brakke: 1, sykestue: 1, verksted: 1, kjøkken: 1, kontrollrom: 1, vakttårn: 1 },
     // så stor andel av vinduene har lys (resten er mørke rom)
     vinduAndel: .7,
     alltidLys: ['vakttårn', 'kontrollrom', 'sykestue'],
+    // bygg med bare ett «vindu» (kjøkkenets luke): det lyser alltid når bygget lyser
+    alleVinduer: ['kjøkken'],
+    // (ut9-liv2) lyskasteren i vakttårnet: ett sveip fram og tilbake på periode sekunder, ±sveip radianer, strålen lengde m, vidde (halv vinkel)
+    // og så mye ned mot bakken (radianer)
+    lyskaster: { periode: 26, sveip: 1.1, lengde: 34, vidde: .13, ned: .2 },
     // småting: så langt ut fra veggen (m), så mye luft rundt (m) og så mange forsøk
     ut: 1.6, luft: .8, forsøk: 12,
     // vasketøyet: snora er så lang (m), stolpene så høye (m); ett per brakke
@@ -78,15 +83,29 @@
     brakke: { w: .9, h: .9, z: 1.95, sider: [[3, [-4, -1.3, 1.3, 4]], [-3, [-4, -1.3, 1.3, 4]]], ender: [[6, 0], [-6, 0]] },
     sykestue: { w: 1.1, h: 1, z: 1.95, sider: [[3.5, [-4.2, -2.4, 2.6, 4.2]], [-3.5, [-3.5, 0, 3.5]]] },
     verksted: { w: 2.2, h: .8, z: 3.4, ender: [[7, -3.5], [7, 0], [-7, -3.5], [-7, 0]] },
+    // (ut9-liv2) kontrollrommet (modellen «hovedhus», 9 × 12 m, to etasjer), kjøkkenets utleveringsluke og lykta på lyskasteren i vakttårnet:
+    // [x, y, z (midten), side, bredde, høyde] rett fra modellene
+    kontrollrom: { liste: [
+      ...[-4.2, -2.6, 2.6, 4.2].map(y => [4.5, y, 1.95, 'x+', 1.1, 1.3]), ...[-4.2, -2.1, 2.1, 4.2].map(y => [4.5, y, 4.45, 'x+', 1.1, 1.3]),
+      ...[-4, -1.3, 1.3, 4].flatMap(y => [[-4.5, y, 1.95, 'x-', 1.1, 1.3], [-4.5, y, 4.45, 'x-', 1.1, 1.3]]), [0, 6, 4.35, 'y+', 2.4, 1.1], [0, -6, 4.35, 'y-', 2.4, 1.1]] },
+    kjøkken: { liste: [[2.47, 1.6, 1.75, 'x+', 2.3, .95]] },
+    vakttårn: { liste: [[1.53, .6, 6.62, 'x+', .34, .34]] },
   };
+  const SIDE = { 'x+': [.08, 0, 0], 'x-': [-.08, 0, Math.PI], 'y+': [0, .08, Math.PI / 2], 'y-': [0, -.08, -Math.PI / 2] };
   function vinduer(type) {
     const V = VINDU[type]; if (!V) return []; const ut = [];
     for (const [x, ys] of V.sider || []) for (const y of ys) ut.push({ lx: x + Math.sign(x) * .1, ly: y, z: V.z, a: x > 0 ? 0 : Math.PI, w: V.w, h: V.h });
     for (const [y, x] of V.ender || []) ut.push({ lx: x, ly: y + Math.sign(y) * .1, z: V.z, a: y > 0 ? Math.PI / 2 : -Math.PI / 2, w: V.w, h: V.h });
+    for (const [x, y, z, side, w, h] of V.liste || []) { const [dx, dy, a] = SIDE[side]; ut.push({ lx: x + dx, ly: y + dy, z, a, w, h }); }
     return ut;
   }
   // brenner lyset bak vindu nr. k i bygg nr. id? (ikke alle – noen rom er mørke; i vakttårn/kontrollrom/sykestue alle)
-  const vinduPå = (type, id, k) => R.alltidLys.includes(type) || hash(id, k + 17) < R.vinduAndel;
+  const vinduPå = (type, id, k) => R.alltidLys.includes(type) || R.alleVinduer.includes(type) || hash(id, k + 17) < R.vinduAndel;
+  // (ut9-liv2) lyskasteren i vakttårnet om natta: { på, vinkel (radianer ut fra byggets +x, feier fram og tilbake) } ved sekund t
+  function lyskaster(m, t, nr = 0) {
+    const L = R.lyskaster; if (m < R.lysMørke) return { på: false, vinkel: 0 };
+    return { på: true, vinkel: Math.sin((t / L.periode + hash(nr, 5)) * 2 * Math.PI) * L.sveip };
+  }
 
   // ---------- plasser for småting ----------
   // et punkt i byggets egne meter til kartets meter
@@ -169,6 +188,6 @@
     return h;
   }
 
-  const api = { REGLER, stilling, røyk, PIPE, lys, VINDU, vinduer, vinduPå, tilKart, inni, avstPoly, fri, plassVed, småting, antallHunder, nyHund, hundSteg, iTid, hash };
+  const api = { REGLER, stilling, røyk, PIPE, lys, VINDU, vinduer, vinduPå, lyskaster, tilKart, inni, avstPoly, fri, plassVed, småting, antallHunder, nyHund, hundSteg, iTid, hash };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Leirliv = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

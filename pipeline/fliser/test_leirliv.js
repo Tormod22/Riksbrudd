@@ -32,6 +32,14 @@ ok(vin.every(v => Math.abs(v.lx) <= 3.2 && Math.abs(v.ly) <= 6.2 && v.z > 1 && v
 ok(LL.vinduer('solcelle').length === 0, 'bygg uten vinduer: ingen');
 ok(LL.vinduPå('sykestue', 3, 1) && [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].some(k => !LL.vinduPå('brakke', 1, k)), 'noen vinduer i brakka er mørke, sykestua lyser i alle');
 ok(LL.røyk('brakke', 22, false, true) > 0 && LL.røyk('brakke', 22, false, false) === 0, 'brakkeovnen ryker om kvelden bare når det er kaldt');
+// (ut9-liv2) flere bygg med lys, lyskasteren
+ok(LL.vinduer('kontrollrom').length === 18 && LL.vinduer('kjøkken').length === 1 && LL.vinduer('vakttårn').length === 1, 'kontrollrom 18 vinduer, kjøkkenets luke, lykta i tårnet');
+ok(LL.vinduer('kontrollrom').every(v => Math.abs(v.lx) <= 4.7 && Math.abs(v.ly) <= 6.2 && v.z > 1 && v.z < 5), 'kontrollrommets vinduer står på veggene (9 × 12 m)');
+ok(LL.vinduPå('kjøkken', 5, 0) && LL.lys('kjøkken', 20, .8) && !LL.lys('kjøkken', 2, .9), 'kjøkkenluka lyser om kvelden, ikke midt på natta');
+ok(LL.lys('vakttårn', 3, .9) && LL.lys('kontrollrom', 3, .9), 'vakttårnet og kontrollrommet lyser hele natta');
+{ const a = LL.lyskaster(.9, 0, 1), b = LL.lyskaster(.9, LL.REGLER.lyskaster.periode / 4, 1), d = LL.lyskaster(.05, 3, 1);
+  ok(a.på && b.på && Math.abs(a.vinkel - b.vinkel) > .3 && Math.abs(b.vinkel) <= LL.REGLER.lyskaster.sveip + 1e-9, 'lyskasteren feier om natta');
+  ok(!d.på, 'lyskasteren er av om dagen'); }
 // småting: aldri inni et bygg, aldri oppå hverandre
 const bygg = [
   { id: 1, type: 'brakke', x: 0, y: 0, ret: 0, ferdig: true, fot: Leir.BYGG.brakke.fot },

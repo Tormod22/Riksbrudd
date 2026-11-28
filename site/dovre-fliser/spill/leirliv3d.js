@@ -114,16 +114,20 @@
     // vinduene: en firkant som vender ut (+x), selvlysende og varm
     const q = new THREE.PlaneGeometry(1, 1); q.rotateY(Math.PI / 2); const vmat = new THREE.MeshBasicMaterial({ color: 0xffc77a, fog: true });
     M.vindu = lagInst(q, vmat, MAKS.vindu, R);
+    // (ut9-liv2) lyskasterens stråle: en åpen kjegle langs +x med spissen i lykta, svak og additiv (ikke et lys – lyser ikke opp noe)
+    const LK = LL.REGLER.lyskaster, kj = new THREE.ConeGeometry(LK.lengde * Math.tan(LK.vidde), LK.lengde, 18, 1, true); kj.rotateZ(Math.PI / 2); kj.translate(LK.lengde / 2, 0, 0);
+    const smat = new THREE.MeshBasicMaterial({ color: 0xfff1c8, transparent: true, opacity: .09, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true });
+    M.stråle = lagInst(kj, smat, 6, R);
     // røyken: punkter med egen alder (aA 0–1), gjennomsiktige og grå
     const N = MAKS.røyk * LL.REGLER.røyk.dotter, pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3)); pg.setAttribute('aA', new THREE.BufferAttribute(new Float32Array(N).fill(1), 1));
     const tex = røykTekstur(), rmat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uT: { value: tex }, uC: { value: new THREE.Color(.55, .55, .56) }, uS: { value: 600 }, uB: { value: new THREE.Vector2(LL.REGLER.røyk.bredde[0], LL.REGLER.røyk.bredde[1]) } },
       vertexShader: 'attribute float aA; uniform float uS; uniform vec2 uB; varying float vA; void main() { vA = aA; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = uS * mix(uB.x, uB.y, aA) / max(1.0, -mv.z); gl_Position = projectionMatrix * mv; }',
       fragmentShader: 'uniform sampler2D uT; uniform vec3 uC; varying float vA; void main() { float a = texture2D(uT, gl_PointCoord).a * (1.0 - vA) * min(1.0, vA * 8.0); if (a < 0.01) discard; gl_FragColor = vec4(uC, a); }' });
     M.røyk = new THREE.Points(pg, rmat); M.røyk.frustumCulled = false; M.røyk.userData.kilde = 'leirliv3d.js'; R.scene.add(M.røyk);
-    S = { scene: R.scene, geo, mat, hmat, vmat, tex, q, M, nøk: '', kilder: [], vinduer: [], sistStatisk: 0, sistLys: '' };
+    geo.stråle = kj; S = { scene: R.scene, geo, mat, hmat, vmat, smat, tex, q, M, tårn: [], nøk: '', kilder: [], vinduer: [], sistStatisk: 0, sistLys: '' };
   }
   function kast() { if (!S) return; for (const m of Object.values(S.M)) { if (m.parent) m.parent.remove(m); if (m.dispose) m.dispose(); }
-    for (const g of Object.values(S.geo)) g.dispose(); S.q.dispose(); S.M.røyk.geometry.dispose(); S.M.røyk.material.dispose(); S.tex.dispose(); S.hmat.dispose(); S.vmat.dispose(); S = null; }
+    for (const g of Object.values(S.geo)) g.dispose(); S.q.dispose(); S.M.røyk.geometry.dispose(); S.M.røyk.material.dispose(); S.tex.dispose(); S.hmat.dispose(); S.vmat.dispose(); S.smat.dispose(); S = null; }
   const o3 = () => (lag.o || (lag.o = new THREE.Object3D()));
   function zVed(x, y, u, R) { return (hoyde3d(x, y, u) - u.h0) * R.EX; }
   // småtingene, vinduene og pipene når byggene eller utsnittet er endret (sjekkes hvert sekund)
@@ -135,9 +139,10 @@
     for (const t of T) { const m = S.M[t.k]; if (!m) continue; o.position.set(t.x - u.cx, t.y - u.cy, zVed(t.x, t.y, u, R)); o.rotation.set(0, 0, t.a); o.scale.setScalar(1); o.updateMatrix(); m.setMatrixAt(n[t.k]++, o.matrix); }
     for (const k in n) { S.M[k].count = n[k]; S.M[k].instanceMatrix.needsUpdate = true; }
     // vinduene og pipene står på bygget (samme grunnhøyde og størrelse som modellen i leir-visning.js)
-    S.vinduer = []; S.kilder = [];
+    S.vinduer = []; S.kilder = []; S.tårn = [];
     for (const b of B) { if (!b.ferdig) continue; const G = window.LeirSpill && LeirSpill.grunn3d ? LeirSpill.grunn3d(b.b, u, R) : null, z0 = (G ? G.topp : zVed(b.x, b.y, u, R)) - .05, k = 1 + (b.nivå - 1) * .08;
       LL.vinduer(b.type).forEach((v, i) => { const [x, y] = LL.tilKart(b, v.lx * k, v.ly * k); S.vinduer.push({ type: b.type, id: b.id, i, x: x - u.cx, y: y - u.cy, z: z0 + v.z * k, a: v.a + b.ret, w: v.w * k, h: v.h * k }); });
+      if (b.type === 'vakttårn' && S.tårn.length < 6) { const [x, y] = LL.tilKart(b, 1.53 * k, .6 * k); S.tårn.push({ id: b.id, x: x - u.cx, y: y - u.cy, z: z0 + 6.62 * k, ret: b.ret }); }
       const p = LL.PIPE[b.type]; if (p && S.kilder.length < MAKS.røyk) { const [x, y] = LL.tilKart(b, p[0] * k, p[1] * k); S.kilder.push({ type: b.type, id: b.id, x: x - u.cx, y: y - u.cy, z: z0 + p[2] * k }); } }
     S.sistLys = '';
   }
@@ -160,6 +165,12 @@
     p.needsUpdate = true; A.needsUpdate = true;
     S.M.røyk.material.uniforms.uS.value = R.renderer ? R.renderer.domElement.height * 1.05 : 600;
   }
+  // lyskasteren feier sakte om natta
+  function stråler() {
+    const m = window.NATT ? NATT.mørke : 0, t = performance.now() / 1000, o = o3(); let n = 0;
+    for (const T of S.tårn) { const L = LL.lyskaster(m, t, T.id); if (!L.på) continue; o.position.set(T.x, T.y, T.z); o.rotation.order = 'ZYX'; o.rotation.set(0, LL.REGLER.lyskaster.ned, T.ret + L.vinkel); o.scale.setScalar(1); o.updateMatrix(); S.M.stråle.setMatrixAt(n++, o.matrix); }
+    o.rotation.order = 'XYZ'; S.M.stråle.count = n; S.M.stråle.instanceMatrix.needsUpdate = true;
+  }
   function figurer(u) {
     const F = window.Folk3d && Folk3d.figurer ? Folk3d.figurer() || [] : [], synlig = window.Folk3d && Folk3d.antall() > 0, o = o3(); let nk = 0, np = 0;
     if (synlig) for (const p of F) { if (p.stilling !== 'kikkert' && p.stilling !== 'planker') continue; const m = p.stilling === 'kikkert' ? S.M.kikkert : S.M.planker, n = p.stilling === 'kikkert' ? nk++ : np++; if (n >= MAKS.figur) continue;
@@ -180,7 +191,7 @@
     const nær = !!lr && Math.abs(lr.x - u.cx) < u.S - 60 && Math.abs(lr.y - u.cy) < u.S - 60;
     for (const m of Object.values(S.M)) m.visible = nær; if (!nær) return;
     const ms = performance.now(); if (ms - S.sistStatisk > 1000 || S.u !== u) { S.sistStatisk = ms; if (S.u !== u) S.nøk = ''; S.u = u; statisk(R, u); vinduLys(); }
-    røyk(R); figurer(u); hunder3d(R, u);
+    røyk(R); figurer(u); hunder3d(R, u); stråler();
   });
 
   // ---------- vakta ----------
