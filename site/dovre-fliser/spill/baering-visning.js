@@ -72,7 +72,7 @@
     if (!aktiv()) return { linjer: [], tekst: 'Folk bærer ikke ennå: døgnplanen er av, så maskinene tar rett fra lageret.' };
     const S = B.stat, D0 = B.døgnStart || { sek: 0, turer: 0, m3: 0, gåSek: 0 }, i = { sek: S.sek - D0.sek, turer: S.turer - D0.turer, m3: S.m3 - D0.m3, gå: S.gåSek - D0.gåSek };
     const snitt = S.turer ? S.sek / S.turer / 60 : 0, gåAndel = S.sek > 0 ? S.gåSek / S.sek : 0;
-    return { linjer: BR.linjer(B), i, før: døgnFør, snitt, gåAndel, tekst: '' };
+    return { linjer: BR.linjer(B, Lr()), i, før: døgnFør, snitt, gåAndel, tekst: '' };
   }
 
   // ---------- 2D ----------
@@ -111,7 +111,7 @@
   KROKER.tegn[KROKER.tegn.length - 1].bygg = true;
 
   window.addEventListener('riksbrudd-spill', () => { id = ''; les(); });
-  window.BaeringSpill = { på: true, test: false, aktiv, tilstand: () => B, mating: () => B.m, kraftPer: () => B.kraftPer, linjer: () => (aktiv() ? BR.linjer(B) : []),
+  window.BaeringSpill = { på: true, test: false, aktiv, tilstand: () => B, mating: () => B.m, kraftPer: () => B.kraftPer, linjer: () => (aktiv() ? BR.linjer(B, Lr()) : []),
     plasser: b => BR.plasser(b), maskinTekst, bæreTekst, status, lagre, les: () => { id = ''; les(); }, tøm: () => { const A = lager(); return A ? BR.tøm(B, A) : null; },
     ekstraPlasser: L => (aktiv() && window.Produksjon ? Produksjon.maskinene(L).reduce((s, b) => s + (BR.REGLER.bærere[b.type] || 0), 0) : 0),
     nullstill: () => { B = BR.ny(); } };

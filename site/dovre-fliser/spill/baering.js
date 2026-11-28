@@ -261,11 +261,12 @@
 
   // ---------- det visningen og panelet viser ----------
   // linjene på jobbtavla: «Bær tømmer til sagbruket (2 bærer)», «Bær planker fra sagbruket til lageret – lageret er fullt»
-  function linjer(B) {
+  function linjer(B, L) {
     const ut = [], på = {}; for (const o of Object.values(B.bær)) { const k = `${o.retning}:${o.bygg}:${o.vare}`; på[k] = (på[k] || 0) + 1; }
     const sett = new Set();
     for (const j of B.jobber || []) { sett.add(j.id); const n = på[j.id] || 0; ut.push(j.tekst + (n ? ` (${n} bærer)` : '') + (j.blokk ? ` – ${j.blokk}` : '')); }
-    for (const [k, n] of Object.entries(på)) { if (sett.has(k)) continue; const [r, id, v] = k.split(':'); ut.push(`Bær ${vn(v)} ${r === 'inn' ? 'til maskinen' : 'til lageret'} (${n} bærer)`); }
+    for (const [k, n] of Object.entries(på)) { if (sett.has(k)) continue; const [r, id, v] = k.split(':'); const b = L && L.bygg ? L.bygg.find(q => q.id === +id) : null, navn = b ? navnB(b) : 'maskinen';
+      ut.push(r === 'inn' ? `Bær ${vn(v)} til ${navn} (${n} bærer)` : `Bær ${vn(v)} fra ${navn} til lageret (${n} bærer)`); }
     return ut;
   }
   // tilstanden til én maskin for panelet: { inn: { v: m }, ut: { v: m }, påPlass, folk, bærere }
