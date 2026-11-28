@@ -15,14 +15,25 @@
   const infra = () => (typeof INFRA !== 'undefined' && INFRA) || null;
   const pkt = o => (o && o.deler && o.deler[0] ? { x: o.deler[0][0], y: o.deler[0][1] } : null);
   function nærmest(liste, x, y, filter) { let d = Infinity; for (const o of liste || []) { if (filter && !filter(o)) continue; const p = pkt(o); if (p) d = Math.min(d, Math.hypot(p.x - x, p.y - y)); } return d; }
-  // høyden: kartflisene i 2D (hoydeVed), ellers 3D-utsnittet (hoyde3d) når 3D er åpent
+  // (ut9-industri2) høyden fra en ferdig kartflis på HVILKET SOM HELST nivå (finest først). hoydeVed leser bare flisene på nivået kartet
+  // står på nå – rett etter en zoom (oppstarten går inn på leiren) er de ikke laget ennå, og da manglet høyden (vakta ut8-industri feilet
+  // på PC med «omgivelsene ved leiren mangler høyde»).
+  function høydeFlis(X, Y) {
+    if (typeof FERDIG === 'undefined' || typeof span !== 'function' || typeof res !== 'function' || typeof G === 'undefined' || !G) return null;
+    for (let z = 17; z >= 0; z--) { const s = span(z), x = Math.floor((X - G.x0) / s), y = Math.floor((G.y0 - Y) / s), t = FERDIG.get(z + '/' + x + '/' + y);
+      if (!t || !t.E) continue; const px = Math.floor((X - (G.x0 + x * s)) / res(z)), py = Math.floor(((G.y0 - y * s) - Y) / res(z)), v = t.E[(py + 1) * (G.T + 2) + px + 1];
+      if (v === v && Number.isFinite(v)) return v; }
+    return null;
+  }
+  // høyden: kartflisene i 2D (hoydeVed, ellers et annet nivå), ellers 3D-utsnittet (hoyde3d) når 3D er åpent
   const høyde = (x, y) => { try { let v = typeof hoydeVed === 'function' ? hoydeVed(x, y) : null;
+    if (!Number.isFinite(v)) v = høydeFlis(x, y);
     if (!Number.isFinite(v) && typeof hoyde3d === 'function' && typeof R3 !== 'undefined' && R3 && R3.ut) { const u = R3.ut; if (Math.abs(x - u.cx) < u.S && Math.abs(y - u.cy) < u.S) v = hoyde3d(x, y, u); }
     return Number.isFinite(v) ? v : null; } catch (e) { return null; } };
   // Omgivelsene rundt (X, Y). null når stedet ikke er kjent (bygget mangler X/Y).
   function omgivelser(info) {
     if (!info || !Number.isFinite(info.X) || !Number.isFinite(info.Y)) return null;
-    const nøkkel = info.i | 0; if (CACHE.has(nøkkel)) return CACHE.get(nøkkel);
+    const nøkkel = Number.isFinite(info.i) ? info.i | 0 : null; if (nøkkel !== null && CACHE.has(nøkkel)) return CACHE.get(nøkkel);
     // rundes til 10 m, så 2D (plantegningen) og 3D (hus3d) regner fra samme punkt
     const x = Math.round(info.X / 10) * 10, y = Math.round(info.Y / 10) * 10, F = infra(), o = {};
     if (F) {
@@ -36,8 +47,11 @@
     const h0 = høyde(x, y); if (h0 !== null) o.moh = h0;
     // helningen: største høydeforskjell til fire punkter 80 m unna
     if (h0 !== null) { let d = 0; for (const [dx, dy] of [[80, 0], [-80, 0], [0, 80], [0, -80]]) { const h = høyde(x + dx, y + dy); if (h !== null) d = Math.max(d, Math.abs(h - h0)); } o.bratt = d / 80; }
-    // huskes bare når både infrastrukturen og høyden er lest (ellers kunne første svar bli et annet enn det neste)
-    if (F && h0 !== null) CACHE.set(nøkkel, o);
+    // (ut9-industri2) STABILT: svaret huskes første gang infrastrukturen er lest – også uten høyden (da anslås typen uten høyde og
+    // helning). Samme bygg får altså samme type i plantegningen, huspanelet og 3D, og den skifter ikke når flere kartfliser er lest.
+    // (Før ble svaret bare husket med høyden, og en plantegning laget før høyden var lest kunne vise en annen type enn panelet etterpå.)
+    // Også uten infrastruktur (de første sekundene, eller når den ikke kan hentes) huskes svaret – ellers kunne typen skifte når den kom.
+    o.utenHøyde = h0 === null; o.utenInfra = !F; if (nøkkel !== null) CACHE.set(nøkkel, o);
     return o;
   }
   I.omgivelser = omgivelser;
