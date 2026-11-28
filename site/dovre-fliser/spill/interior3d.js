@@ -310,9 +310,9 @@
       case 'krydderhylle': { const z0 = 1.38, c = LYST_TRE; t(-b, b, -d, d, z0, z0 + .02, c); t(-b, b, -d, d, z0 + .24, z0 + .26, c); t(-b, -b + .02, -d, d, z0, z0 + .45, c); t(b - .02, b, -d, d, z0, z0 + .45, c);
         k(-b + .02, b - .02, d - .02, d - .01, z0 + .05, z0 + .07, MØRK); hylleVarer({ l: m.b - .06, d: m.d - .02, nivåer: [z0 + .02, z0 + .26], hv: .18, maks: 9 }); break; }
       case 'barneseng': { const c = m.f > .5 ? HVIT : LYST_TRE; for (const sx of [-1, 1]) for (const sy of [-1, 1]) t(sx * b - (sx > 0 ? .04 : 0), sx * b + (sx > 0 ? 0 : .04), sy * d - (sy > 0 ? .04 : 0), sy * d + (sy > 0 ? 0 : .04), 0, h, c);
-        for (const sx of [-1, 1]) { t(sx * b - .02, sx * b + .02, -d, d, h - .05, h, c); t(sx * b - .02, sx * b + .02, -d, d, .2, .24, c); for (let i = 1; i < 7; i++) t(sx * b - .012, sx * b + .012, -d + i * m.d / 7 - .012, -d + i * m.d / 7 + .012, .24, h - .05, c); }
+        for (const sx of [-1, 1]) { t(sx * b - .02, sx * b + .02, -d, d, h - .05, h, c); t(sx * b - .02, sx * b + .02, -d, d, .2, .24, c); for (let i = 1; i < 5; i++) t(sx * b - .012, sx * b + .012, -d + i * m.d / 5 - .012, -d + i * m.d / 5 + .012, .24, h - .05, c); }
         for (const sy of [-1, 1]) t(-b, b, sy * d - .02, sy * d + .02, .2, h, c); s(-b + .04, b - .04, -d + .04, d - .04, .24, .36, [.9, .9, .86]); s(-b + .05, b - .05, -d * .1, d - .06, .36, .4, lys(1.2)); break; }
-      case 'kommode': { const c = m.f > .6 ? HVIT : m.f > .3 ? LYST_TRE : TRE; t(-b, b, -d, d, .08, h, c); bein(.08, c, .04, 'tre');
+      case 'kommode': { const c = m.f > .6 ? HVIT : m.f > .3 ? LYST_TRE : TRE; t(-b, b, -d, d, .08, h, c); k(-b + .04, b - .04, -d + .04, d - .04, 0, .08, MØRK);
         for (let i = 0; i < 3; i++) { const z = .12 + i * (h - .16) / 3; t(-b + .03, b - .03, d, d + .012, z + .01, z + (h - .16) / 3 - .01, c); k(-.06, .06, d + .012, d + .025, z + (h - .16) / 6 - .012, z + (h - .16) / 6 + .012, MESSING); } break; }
       case 'garderobe': { const c = m.f > .5 ? HVIT : LYST_TRE, n = Math.max(2, Math.round(m.b / .7)); k(-b, b, -d, d - .03, 0, h, c, 'tre');
         for (let i = 0; i < n; i++) { const x0 = -b + i * m.b / n, sp = i === Math.floor(n / 2) && m.f * 9 % 1 < .5; k(x0 + .005, x0 + m.b / n - .005, d - .03 + (i % 2) * .012, d - .012 + (i % 2) * .012, .05, h - .05, sp ? [.72, .8, .86] : c.map(v => v * .97)); }
