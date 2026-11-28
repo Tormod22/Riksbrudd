@@ -148,6 +148,17 @@
     return flyttet;
   }
 
+  // (ut5-oppforsel) det rydd() ville flyttet nå, uten å flytte noe: høyst n av [{ id, v, m, fra, til (plass-id), bygg }]
+  // (spill/oppforsel-visning.js lar ledige folk bære dem inn synlig; rydd() flytter dem når turen er gått)
+  function ryddbare(Leir, L, V, n = 4) {
+    const Ps = plasser(Leir, L, V), Pm = new Map(Ps.map(P => [P.id, P])), ut = [];
+    for (const u of V.e) { if (ut.length >= n) break; if (u.r || u.p === 'bæres') continue; const nå = Pm.get(u.p);
+      if (!(u.p === 'ute' || (nå && nå.sone && nå.sone !== u.v))) continue;
+      const P = bestePlasser(Ps, u.v).find(P => P.id !== u.p && P.id !== 'ute' && rang(P, u.v) < (nå ? rang(nå, u.v) : 9) && P.cap(u.v) - sum(V, u.v, q => q.p === P.id) >= u.m - REGLER.eps);
+      if (P) ut.push({ id: u.id, v: u.v, m: u.m, fra: u.p, til: P.id, bygg: P.bygg || null }); }
+    return ut;
+  }
+
   // ---------- reservering og henting (API-et bærerne i F3 bruker) ----------
   const finn = (V, id) => V.e.find(u => u.id === id) || null;
   // reserverer enheten for hvem. Gir { ok } eller { feil }
@@ -236,7 +247,7 @@
   // kobler varelageret til leir.js: hver endring via Leir.leggInn/uttak/kjøp/salg/trekk avstemmes straks. hentV(L) gir V for leiren.
   function koble(Leir, hentV) { Leir.varer = (L, vare, grunn) => { const V = hentV(L); if (V) avstem(Leir, L, V, { vare, grunn }); }; }
 
-  const api = { REGLER, VARER, ny, plasser, avstem, avvik, rydd, reserver, slipp, hent, lever, bruk, beskjeder, finnNy, finn, inne, ute, stjel, slitasje, brann,
+  const api = { REGLER, VARER, ny, plasser, avstem, avvik, rydd, ryddbare, reserver, slipp, hent, lever, bruk, beskjeder, finnNy, finn, inne, ute, stjel, slitasje, brann,
     settSone, punkt, oversikt, antallTekst, sum, total, tilJSON, fraJSON, koble };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Varelager = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

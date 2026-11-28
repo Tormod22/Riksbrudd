@@ -223,7 +223,9 @@
       + (B.sykestue ? 3 : 0)
       - (F.personer.reduce((s, p) => s + p.helse, 0) / Math.max(1, F.personer.length) < .6 ? 10 : 0)
       + (F.ubetalt > 0 ? R.ubetaltMoral : 0);
-    F.mål = Math.max(5, Math.min(95, mål + (o.moralTillegg || 0)));   // moralTillegg: f.eks. uten vann (spill/overlev.js)
+    // (ut5-oppforsel) api.moralF(F, L): venner, uvenner, fritid og ulykker (spill/oppforsel-visning.js); uten kroken 0 – som før
+    const mf = api.moralF ? +api.moralF(F, L) || 0 : 0;
+    F.mål = Math.max(5, Math.min(95, mål + (o.moralTillegg || 0) + mf));   // moralTillegg: f.eks. uten vann (spill/overlev.js)
     const steg1 = R.moralFart * dt / 60; F.moral += Math.max(-steg1, Math.min(steg1, F.mål - F.moral));
     // lav moral et helt døgn: den minst lojale forlater gjengen
     if (F.moral < R.lavMoral) { const førM = F.misnøye; F.misnøye += dt;
@@ -343,7 +345,7 @@
   function fjern(F, id) { if (!F || id === undefined || id === null) return null; const i = F.personer.findIndex(p => p.id === id); if (i < 0) return null; return F.personer.splice(i, 1)[0]; }
   // personId(m): mannens kobling til folket – Leirvakta har tallet (p.id), en tropp har hele personposten (som ikke står i folket)
   const personId = m => (m && (typeof m.person === 'number' || typeof m.person === 'string') ? m.person : null);
-  const api = { varmeAndel: null, døgnF: null, stedF: null, tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor, personF: null, lønnSats, lønnSum, ledelse };
+  const api = { varmeAndel: null, døgnF: null, stedF: null, tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor, personF: null, lønnSats, lønnSum, ledelse, moralF: null };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.FolkRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
