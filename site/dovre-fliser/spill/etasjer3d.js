@@ -187,13 +187,16 @@
     STAT.bygget++; STAT.byggMs += performance.now() - t0; a.ferdig = true;
   }
   function kast(R) { const a = aktiv; if (!a) return; for (const me of [a.trapp, ...a.nett.values()]) { if (!me) continue; if (R && R.scene) R.scene.remove(me); me.geometry.dispose(); }
-    if (a.P && a.P.inne) delete a.P.inne.over; aktiv = null; settEtasje2D(null, 1); }
+    if (a.P && a.P.inne) delete a.P.inne.over;
+    // interiøret i 1. etasje vises igjen (det kan ha vært skjult mens du var høyere oppe)
+    for (const o of window.Interior3d && Interior3d.aktive ? Interior3d.aktive() : []) if (o.plan === a.pl) for (const me of o.nett) if (me !== o.ytre && me !== o.funn) me.visible = true;
+    aktiv = null; settEtasje2D(null, 1); }
   // hvilke etasjer som vises: din og den under; den over mens du står i trappa
   function synlig(a) { const på = a.trappNå !== null && a.trappNå !== undefined, Es = E(), t = på ? a.m.trapper.find(q => q.id === a.trappNå) : null;
     // (etasjen over vises også når du står ved foten av en trapp opp – ellers ser du himmelen gjennom trapphullet)
     for (const [n, me] of a.nett) me.visible = !!t && (n === t.fra || n === t.til) || n === a.n || n === forrige(a, a.n) || (a.vedOpp && n === neste(a, a.n));
     // interiøret i 1. etasje (interior3d) vises når du er i 1. etasje, i kjelleren eller i 2.
-    for (const o of window.Interior3d && Interior3d.aktive ? Interior3d.aktive() : []) if (o.plan === a.P.inne) for (const me of o.nett) me.visible = Math.abs(a.n) <= 2 || (t && (t.fra === 1 || t.til === 1));
+    for (const o of window.Interior3d && Interior3d.aktive ? Interior3d.aktive() : []) if (o.plan === a.pl) for (const me of o.nett) if (me !== o.ytre && me !== o.funn) me.visible = Math.abs(a.n) <= 2 || (t && (t.fra === 1 || t.til === 1));
     void Es; }
   const neste = (a, n) => { const k = a.m.etasjer.findIndex(e => e.n === n); return k >= 0 && k < a.m.etasjer.length - 1 ? a.m.etasjer[k + 1].n : null; };
   const forrige = (a, n) => { const k = a.m.etasjer.findIndex(e => e.n === n); return k > 0 ? a.m.etasjer[k - 1].n : null; };
@@ -219,9 +222,9 @@
     const k = window.Gange && Gange.kropp ? Gange.kropp() : null, x = k ? k.x : R.bane.x, y = k ? k.y : R.bane.y;
     // interiører som ventet på modellen: bygges på nytt (i biter) når du kommer nær
     for (const P of Interior3d.aktivP ? Interior3d.aktivP() : []) if (P.etasjerVent && avst(R, P) <= BIT.nær) { delete P.etasjerVent; STAT.påNytt = (STAT.påNytt || 0) + 1; Interior3d.glem(P); }
-    if (aktiv && (aktiv.u !== R.ut || !aktiv.P.inne || (!Interior.inni(aktiv.P, x, y) && Interior.avstKant(aktiv.P, x, y) > BIT.BORT))) kast(R);
+    if (aktiv && (aktiv.u !== R.ut || !aktiv.P.inne || aktiv.P.inne !== aktiv.pl || (!Interior.inni(aktiv.P, x, y) && Interior.avstKant(aktiv.P, x, y) > BIT.BORT))) kast(R);
     if (!aktiv) { const P = Interior3d.inne(x, y); if (!P || !P.etasjer || !P.inne) return; const h = PT() && PT().hus(P.etasjer.i), m = h && h.m; if (!m || m.etasjer.length < 2) return;
-      aktiv = { P, h, m, u: R.ut, ox: P.etasjer.ox, oy: P.etasjer.oy, g0: P.inne.gulv, nett: new Map(), trapp: null, n: 1, trappNå: null, jobb: null, ferdig: false };
+      aktiv = { P, pl: P.inne, h, m, u: R.ut, ox: P.etasjer.ox, oy: P.etasjer.oy, g0: P.inne.gulv, nett: new Map(), trapp: null, n: 1, trappNå: null, jobb: null, ferdig: false };
       aktiv.jobb = byggG(R, aktiv); P.inne.over = sperrer; planlegg(); }
     const a = aktiv; if (!Interior.inni(a.P, x, y)) { if (a.n !== 1) { a.n = 1; synlig(a); } a.trappNå = null; settEtasje2D(null, 1); return; }
     const [mx, my] = lokal(a, x, y), r = E().stå(a.m, a.n, mx, my), før = a.n;
