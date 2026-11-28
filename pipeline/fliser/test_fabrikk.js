@@ -122,4 +122,14 @@ function døgn(L, ctxF, timer = 24) { const P = PR.ny(); L.lager.tømmer = 200; 
 { const L = leir(hall()); const før = Leir.lagerplass(L); const h = leggTil(L, 'bs_hylle_1', 0, 4, 1); ok(!h.feil && Leir.lagerplass(L) === før + 6, `hyllerekka gir 6 m³ lagerplass (${før} -> ${Leir.lagerplass(L)})`);
   const R = BS.rom(BS.fraLeir(L, Leir), L.romBruk).find(r => r.hyller.length); ok(R && R.type.id === 'lagerrom', 'rommet med bare hyller er et lagerrom'); }
 
+// 9. veien til bruksplassen (Vei): gjennom porten; uten port: «ingen vei til bruksplassen»; fotavtrykket sperrer
+{ const Vei = require(SP + '/vei.js');
+  const L = leir(hall()), b = leggTil(L, 'bs_sagbenk_1', 3, 3, 1).b, P = FB.plasser(b), K = Vei.lag({ leir: L, start: [-8, -8], prøve: true });
+  const r = P.bruks.map(q => Vei.kanNå({ x: q.x, y: q.y, bruksplass: true }, { kart: K }));
+  ok(r.every(q => q.ok), 'alle bruksplassene nås gjennom porten' + (r.some(q => !q.ok) ? ': ' + r.map(q => q.grunn).join(', ') : ''));
+  const midt = Vei.kanNå({ x: b.x, y: b.y }, { kart: K }); ok(!midt.ok, 'midt i sagbenken er sperret: ' + midt.grunn);
+  const D2 = hall(false).map(d => (/_port_/.test(d.type) ? { ...d, type: 'bs_vegg_blikk_4' } : d)), L2 = leir(D2), b2 = leggTil(L2, 'bs_sagbenk_1', 3, 3, 1).b, P2 = FB.plasser(b2);
+  const K2 = Vei.lag({ leir: L2, start: [-8, -8], prøve: true }), r2 = Vei.kanNå({ x: P2.bruks[0].x, y: P2.bruks[0].y, bruksplass: true }, { kart: K2 });
+  ok(!r2.ok && /bruksplassen|dør/.test(r2.grunn), 'hall uten port: ' + r2.grunn); }
+
 console.log(feil ? `\n${feil} FEIL` : '\nAlle testene for fabrikken er ok'); if (feil) process.exit(1);

@@ -522,10 +522,11 @@
     deler = norm(deler); const hus = deler.filter(d => kat(d) !== 'forsvar'), harRute = new Set(), forelder = new Map();
     const finn = k => { while (forelder.get(k) !== k) { forelder.set(k, forelder.get(forelder.get(k))); k = forelder.get(k); } return k; };
     const node = k => { if (!forelder.has(k)) forelder.set(k, k); return k; }, slå = (a, b) => { const x = finn(node(a)), y = finn(node(b)); if (x !== y) forelder.set(x, y); };
-    for (const d of hus) if (RUTE(d) || kat(d) === 'trapp') for (const [i, j] of ruter(d)) harRute.add(`${i},${j}`);
+    const flate = d => RUTE(d) || kat(d) === 'trapp' || TING(d) || kat(d) === 'lampe';
+    for (const d of hus) if (flate(d)) for (const [i, j] of ruter(d)) harRute.add(`${i},${j}`);
     for (const d of hus) {
       const id = 'd' + d.id;
-      if (RUTE(d) || kat(d) === 'trapp') { for (const [i, j] of ruter(d)) { slå(id, `R${i},${j}`); for (const [di, dj] of [[1, 0], [0, 1]]) if (harRute.has(`${i + di},${j + dj}`)) slå(`R${i},${j}`, `R${i + di},${j + dj}`); } continue; }
+      if (flate(d)) { for (const [i, j] of ruter(d)) { slå(id, `R${i},${j}`); for (const [di, dj] of [[1, 0], [0, 1]]) if (harRute.has(`${i + di},${j + dj}`)) slå(`R${i},${j}`, `R${i + di},${j + dj}`); } continue; }
       if (kat(d) === 'søyle') { slå(id, `V${d.i},${d.j}`); for (const [i, j] of [[d.i, d.j], [d.i - 1, d.j], [d.i, d.j - 1], [d.i - 1, d.j - 1]]) if (harRute.has(`${i},${j}`)) slå(id, `R${i},${j}`); continue; }
       for (const k of kanter(d)) { const [[ax, ay], [bx, by]] = k.a === 'x' ? [[k.i, k.j], [k.i + 1, k.j]] : [[k.i, k.j], [k.i, k.j + 1]];
         slå(id, `V${ax},${ay}`); slå(id, `V${bx},${by}`); for (const [i, j] of ruterVed(k)) if (harRute.has(`${i},${j}`)) slå(id, `R${i},${j}`); }

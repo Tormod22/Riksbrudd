@@ -59,7 +59,9 @@
     const l = L(); if (!l || !(dt > 0)) return; les();
     if (!PR.maskinene(l).length) { sist = { status: {}, kw: 0, varme: 0 }; return; }
     const mangler = window.LeirSpill && LeirSpill.siste ? LeirSpill.siste().mangler : new Set(), Mt = mating();
-    const før = sist.status; sist = PR.steg(P, l, dt, Mt ? { mating: Mt.mating(), kraftPer: Mt.kraftPer(), mangler, ferdighet: ferdighet() } : { kraft: kraft(), mangler, ferdighet: ferdighet() });
+    // (B5) maskinene i en egenbygd hall: fart (flyt, lys, varme) og slitasje (tak) per maskin, høvel og sag i samme rom (spill/fabrikk-visning.js)
+    const hall = window.FabrikkSpill ? FabrikkSpill.ctx(l, sist.status) : {};
+    const før = sist.status; sist = PR.steg(P, l, dt, Mt ? { ...hall, mating: Mt.mating(), kraftPer: Mt.kraftPer(), mangler, ferdighet: ferdighet() } : { ...hall, kraft: kraft(), mangler, ferdighet: ferdighet() });
     // et stopp meldes én gang (ny grunn), ikke oftere enn hvert 30. spillminutt per maskin
     for (const [bid, s] of Object.entries(sist.status)) { const f = før[bid];
       if (!s.går && s.grunn && s.grunn !== 'av' && f && f.går && (meldt[bid] === undefined || nåTid() - meldt[bid] > VIS.meldHvert || nåTid() < meldt[bid])) {
@@ -70,7 +72,7 @@
   if (typeof KROKER !== 'undefined') KROKER.sim.push(simSteg);
 
   // ---------- statistikken: produksjon og «hvorfor saga sto» (snitt over døgnet: × 24 = per døgn) ----------
-  function sagaAndel(g) { const S = Object.values(sist.status).filter(s => s.type === 'sagbruk'); if (!S.length) return 0;
+  function sagaAndel(g) { const S = Object.values(sist.status).filter(s => (s.maskin || s.type) === 'sagbruk'); if (!S.length) return 0;
     return 24 * S.reduce((a, s) => a + (s.grunn === g ? 1 - s.drift : 0), 0) / S.length; }
   const perDøgn = v => 24 * Object.values(sist.status).reduce((a, s) => a + ((s.ut && s.ut[v]) || 0), 0);
   function kilder() {
@@ -114,7 +116,7 @@
     for (const b of M) { const B = LB.BYGG[b.type], R = PR.REGLER.maskiner[b.type], s = sist.status[b.id] || { går: false, tekst: 'venter', folk: 0, drift: 0 };
       const strøm = R.gir ? `gir ${nf(s.kw || 0, 0)} av ${R.gir} kW` : `${R.kw} kW`;
       h += `<div class="by mrad" data-maskin="${b.id}"><span>${esc(B.navn)}<small>${esc(PR.oppskrift(b.type))}</small><small>Folk ${nf(s.folk || 0, 1)} av ${R.folk}${s.kvalitet ? ' (dyktige: +10 %)' : ''} · ${strøm} · slitt ${Math.round((1 - (b.hp || 0)) * 100)} %</small>`
-        + (mating() ? `<small class="mating">${esc(mating().maskinTekst(b))}</small>` : '') + '</span>'
+        + (mating() ? `<small class="mating">${esc(mating().maskinTekst(b))}</small>` : '') + (window.FabrikkSpill && FabrikkSpill.tekst(b.id) ? `<small class="hall">I hallen: ${esc(FabrikkSpill.tekst(b.id))}</small>` : '') + '</span>'
         + `<em class="${s.går && s.drift >= .98 ? 'grønn' : s.går || b.av ? '' : 'rød'}">${esc(s.går ? s.tekst : b.av ? 'slått av' : s.tekst)}</em>`
         + `<button type="button" data-pr="av" data-id="${b.id}" data-av="${b.av ? '0' : '1'}">${b.av ? 'Slå på' : 'Slå av'}</button></div>`; }
     h += '<ul class="tall">' + VARER.map(([v, navn]) => `<li><span>${navn}</span><b>${nf((l.lager && l.lager[v]) || 0, 1)} av ${plass} m³</b></li>`).join('');
@@ -202,7 +204,7 @@
   window.addEventListener('load', () => setTimeout(oppsett, 0));
   window.addEventListener('pagehide', lagre);
 
-  window.ProduksjonSpill = { html, etter, tilstand: () => P, siste: () => sist, kraft, lagre, steg: simSteg, les: () => { id = ''; les(); }, kjøpTømmerbil, oppsett, VIS,
+  window.ProduksjonSpill = { status: () => sist.status, html, etter, tilstand: () => P, siste: () => sist, kraft, lagre, steg: simSteg, les: () => { id = ''; les(); }, kjøpTømmerbil, oppsett, VIS,
     // for vakta og testene: nullstill tellingene
     nullstill: () => { P = PR.ny(); sist = { status: {}, kw: 0, varme: 0 }; } };
 })();
