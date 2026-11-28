@@ -183,7 +183,9 @@
       return { navn: b.navn, grunn: b.grunn, mann, vern: b.mann > 0, id: b.by.e.id, folk: b.by.e.folk || 0, pris: b.mann > 0 && Kr && Kr.vernPris ? Kr.vernPris(b.by.e.folk || 0) : 0 }; }) }; }
   // «Marsjen går gjennom Lillehammer – bygdevern ca. 14 mann. Det finnes ingen god omveg: laget (4 mann) må slåss seg gjennom der.»
   function ruteFareTekst(b, har) { const hvem = b.vern ? `bygdevern ca. ${b.mann} mann` : b.grunn + (b.mann ? `, ca. ${b.mann} mann` : '');
-    return `Marsjen går gjennom ${b.navn} – ${hvem}. Det finnes ingen god omveg: ` + (har && b.mann >= har ? `laget (${har} mann) er for svakt til å slåss seg gjennom` : 'laget må slåss seg gjennom der') + (b.vern ? ', eller gjør en avtale med bygdevernet først.' : '.'); }
+    const svak = har && b.mann >= har;
+    return `Marsjen går gjennom ${b.navn} – ${hvem}. Det finnes ingen god omveg: ` + (svak ? `laget (${har} mann) er for svakt til å slåss seg gjennom.` : 'laget må slåss seg gjennom der.')
+      + (b.vern ? ' Gjør en avtale med bygdevernet først' + (svak ? ', eller send flere.' : '.') : svak ? ' Send flere, eller velg et annet mål.' : ''); }
   // til Strategi.trekk: forsvaret på ruta for forslaget (b, lag) – { mann, navn } når ruta går gjennom fiendtlige tettsteder, ellers null.
   // Ukjente ruter bestilles (høyst RUTE_FORAN om gangen) mens krigskartet er åpent.
   const RUTE_FORAN = 2; let ruteBestilt = 0;
