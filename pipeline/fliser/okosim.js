@@ -411,6 +411,10 @@ const reserve = (sim, døgn) => døgnUt(sim) * døgn;
 const førsteK = sim => sim.SK.tilbud.find(k => k.første);
 function kontraktTime(sim, tr) {
   if (!tr || tr.jobb || !tr.hjemme || tr.garnisonI || friske(tr.menn) < 2 || sim.t < (tr.ledigFra || 0)) return;
+  // (ut2-balanse) som i spillet: åpner spilleren Selskapet uten tilbud og uten aktive kontrakter, kommer nye tilbud straks – høyst én gang
+  // per spilldøgn (Selskap.påfyll, selskap-visning.js vis())
+  const S = sim.SK; if (!S.tilbud.length && !Selskap.side(S, ID).aktive.length && Selskap.påfyll(S, Math.floor(sim.t / 1440), ID))
+    Selskap.lagTilbud(S, ID, sim.t, steder(sim), Selskap.lagRand(sim.frø * 613 + sim.t + 7), { infl: sim.M.infl });
   const k = førsteK(sim) || besteKontrakt(sim, tr); if (k) taKontrakt(sim, tr, k);
 }
 leggTilStrategi({ id: 'ingenting', navn: 'gjør ingenting', fornuftig: false, tekst: 'startleiren og ti personer; kjøper bare mat og diesel' });

@@ -221,6 +221,12 @@
     while (S.tilbud.length > REGLER.maksTilbud) { const i = S.tilbud.findIndex(q => !q.første); if (i < 0) break; S.tilbud.splice(i, 1); }
     return nye;
   }
+  // (ut2-balanse 28. nov) PÅFYLL: åpner spilleren Selskapet uten tilbud og uten aktive kontrakter, kommer nye tilbud straks (selskap-visning.js,
+  // så den røde tråden kan gå videre etter den første kontrakten). Før kunne det skje så ofte spilleren ville – én tropp på 60× kunne da ta
+  // langt flere kontrakter i døgnet enn morgentilbudene (økonomitesten: opptil 97 på 30 døgn). Nå bare i starten – før selskapet (id) har
+  // levert eller brutt mer enn den første kontrakten – og høyst én gang per spilldøgn: svarer true (og merker døgnet) når det er lov.
+  function påfyll(S, dag, id) { if (!S || S.påfylt === dag) return false; const sd = id ? side(S, id) : null;
+    if (sd && tall(sd.sum.levert) + tall(sd.sum.brutt) > 1) return false; S.påfylt = dag; return true; }
   // finnes det alt et tilbud eller en aktiv kontrakt av samme type på samme sted (eskorte: samme fra og til)?
   const sammeSted = (a, b) => !!(a && b && ((a.id != null && b.id != null && a.id === b.id) || (a.navn && a.navn === b.navn)));
   function opptatt(S, sd, typ, sted, fra) {
@@ -473,7 +479,7 @@
       const d = typeof t === 'string' ? JSON.parse(t) : t; if (!d || d.versjon !== REGLER.versjon || !d.sider) return null;
       if (leir && (!d.leir || Math.round(leir.x) !== d.leir.x || Math.round(leir.y) !== d.leir.y)) return null;
       const S = ny(d.leir, {}); S.nr = tall(d.nr, 0);
-      if (d.tråd && typeof d.tråd === 'object') S.tråd = { k: String(d.tråd.k || ''), gjort: (Array.isArray(d.tråd.gjort) ? d.tråd.gjort : []).filter(x => TRÅD.some(s => s.id === x)), byggVed: Number.isFinite(d.tråd.byggVed) ? d.tråd.byggVed : null, slutt: !!d.tråd.slutt, brutt: !!d.tråd.brutt }; S.dag = tall(d.dag, -1); S.rivalDag = tall(d.rivalDag, -1);
+      if (d.tråd && typeof d.tråd === 'object') S.tråd = { k: String(d.tråd.k || ''), gjort: (Array.isArray(d.tråd.gjort) ? d.tråd.gjort : []).filter(x => TRÅD.some(s => s.id === x)), byggVed: Number.isFinite(d.tråd.byggVed) ? d.tråd.byggVed : null, slutt: !!d.tråd.slutt, brutt: !!d.tråd.brutt }; S.dag = tall(d.dag, -1); S.rivalDag = tall(d.rivalDag, -1); if (Number.isFinite(d.påfylt)) S.påfylt = d.påfylt;
       S.tilbud = (Array.isArray(d.tilbud) ? d.tilbud : []).filter(k => k && k.id && REGLER.TYPER[k.type] && k.sted && Number.isFinite(k.sted.x));
       // (R1-løkka) gamle første kontrakter het «Hent nødlageret i nødlageret»: tittelen lages på nytt
       for (const k of S.tilbud) if (k.type === 'forsyning') k.tittel = tittel(k);
@@ -489,7 +495,7 @@
   }
 
   const api = { REGLER, SIDER, ORD, ny, side, endreRykte, ord, rykteTekst, typeVekter, giverVekter, antallTilbud, betaling, lagTilbud, tittel, kravTekst, bruttTekst, retningOrd,
-    godta, lever, bryt, avbryt, steg, dagSteg, marsjVurdering, nivå, nesteNivå, kravFor, kanTa, kravKort, førsteKontrakt, TRÅD, oppdaterTråd, trådSteg, lappFor, hardhendt, settPris, fristTekst, tilJSON, fraJSON, lagRand };
+    godta, lever, bryt, avbryt, steg, dagSteg, marsjVurdering, nivå, nesteNivå, kravFor, kanTa, kravKort, førsteKontrakt, TRÅD, oppdaterTråd, trådSteg, lappFor, hardhendt, settPris, fristTekst, tilJSON, fraJSON, lagRand, påfyll };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Selskap = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

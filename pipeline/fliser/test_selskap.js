@@ -215,3 +215,21 @@ console.log(`Alle ${n} testene for selskap.js er ok`);
   assert.ok(snitt(bakhold) >= 2 * snitt(rolig), `bakhold betaler minst dobbelt: ${Math.round(snitt(bakhold))} mot ${Math.round(snitt(rolig))}`);
   assert.ok(angrepB / bakhold.length > .6 && angrepR / rolig.length < .3, `bakholdet kommer som oftest (${angrepB}/${bakhold.length}), sjelden på rolige ruter (${angrepR}/${rolig.length})`);
   console.log(`ok   eskorte etter risiko: ${rolig.length} rolige (snitt ${Math.round(snitt(rolig) / 1000)} 000 kr), ${bakhold.length} med bakhold (snitt ${Math.round(snitt(bakhold) / 1000)} 000 kr)`); }
+
+// (ut2-balanse 28. nov) påfyll når Selskapet åpnes tomt: høyst én gang per spilldøgn, og bare før selskapet har levert/brutt mer enn den første
+{ const S = S0.ny({ x: 0, y: 0 }), sd = S0.side(S, 'blå');
+  ok(S0.påfyll(S, 3, 'blå') && !S0.påfyll(S, 3, 'blå') && S0.påfyll(S, 4, 'blå'), 'påfyll: høyst én gang per døgn');
+  sd.sum.levert = 1; ok(S0.påfyll(S, 5, 'blå'), 'påfyll: etter den første kontrakten');
+  sd.sum.levert = 2; ok(!S0.påfyll(S, 6, 'blå'), 'påfyll: ikke når to kontrakter er levert');
+  const T = S0.fraJSON(S0.tilJSON(S)); ok(T && T.påfylt === 5, 'påfyll: døgnet lagres'); }
+// (ut2-balanse) eskorten betales etter strekket fra -> til, med tak på vegfaktoren, og rolig/bakhold etter RISIKO
+{ const R = S0.REGLER, r = { pålitelig: 50, hardhendt: 25, billig: 50 };
+  ok(S0.betaling('eskorte', r, 'vanlig', 100000) === S0.betaling('eskorte', r, 'vanlig', 10000) && S0.betaling('eskorte', r, 'vanlig', 4000) < S0.betaling('eskorte', r, 'vanlig', 10000), 'eskorte: vegfaktoren har tak (× ' + R.TYPER.eskorte.meterTak + ')');
+  ok(S0.betaling('hent', r, 'vanlig', 100000) > S0.betaling('hent', r, 'vanlig', 10000), 'andre typer: ingen tak på vegfaktoren');
+  const T = S0.ny({ x: 0, y: 0 }), st = [{ navn: 'A', x: 3000, y: 0, slag: 'tettsted', id: 1 }, { navn: 'B', x: 3000, y: 15000, slag: 'tettsted', id: 2 }]; let n = 0, galt = 0;
+  for (let i = 0; i < 60; i++) for (const k of S0.lagTilbud(T, 'blå', i * 1440, st, S0.lagRand(i + 11))) { if (k.type !== 'eskorte') continue; n++;
+    const strekk = Math.hypot(k.sted.x - k.fra.x, k.sted.y - k.fra.y), f = k.risiko === 'bakhold' ? R.RISIKO.bakhold.faktor : R.RISIKO.rolig.faktor;
+    const venta = Math.round(S0.betaling('eskorte', T.sider.blå.rykte, 'vanlig', strekk, 0, S0.REGLER.NIVÅER[k.nivå - 1].faktor) * f / 1e4) * 1e4;
+    if (Math.abs(k.betaling - venta) > 2e4) galt++; T.tilbud = []; }
+  ok(n > 5 && !galt, `eskorte: betalingen følger strekket og risikoen (${n} tilbud, ${galt} avvik)`); }
+console.log('ut2-balanse: påfyll og eskortebetaling ok');
