@@ -27,7 +27,7 @@
     // planker over en åpning: m³ tre per m² (bord og lekter), og minst
     planker: { perM2: .04, min: .05 },
     // trykk på en åpning: innen så mange skjermpunkter (eller minst så mange meter)
-    treff: { punkter: 16, meter: .5 },
+    treff: { punkter: 16, meter: .5, maks: 1.2 },
   };
 
   // ---------- som hus3d i index.html ----------

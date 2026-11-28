@@ -236,7 +236,9 @@
     for (const h of S.nær) {
       if (!h.klar || !h.m) continue; const x = X - h.o[0], y = Y - h.o[1];
       if (X < h.bb[0] - 2 || X > h.bb[2] + 2 || Y < h.bb[1] - 2 || Y > h.bb[3] + 2) continue;
-      const n = etasjeFor(h), q = PT.finnÅpning(PT.figur(h.m, n), x, y, Math.max(R.treff.meter, R.treff.punkter * kam.m));
+      // åpningene kan velges når huset er stort nok på skjermen (ellers går trykket til huspanelet som før)
+      if (Math.max(h.bb[2] - h.bb[0], h.bb[3] - h.bb[1]) / kam.m < R.detaljPunkter * .8) continue;
+      const n = etasjeFor(h), q = PT.finnÅpning(PT.figur(h.m, n), x, y, Math.min(R.treff.maks, Math.max(R.treff.meter, R.treff.punkter * kam.m)));
       if (q) { S.valgt = { i: h.i, e: n, id: q.id }; sistHtml = ''; visVelger(); tegnPå(); return true; }
     }
     if (S.valgt) { S.valgt = null; sistHtml = ''; visVelger(); tegnPå(); }
