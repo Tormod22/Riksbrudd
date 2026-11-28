@@ -165,6 +165,7 @@
   const nf = (v, d = 1) => (Math.round(v * 10 ** d) / 10 ** d).toString().replace('.', ',');
   function oppskrift(t) {
     const M = REGLER.maskiner[t]; if (!M) return '';
+    if (M.tillegg) return `høvler plankene fra sagbenken i rommet: planker × ${nf(REGLER.høvleri.tre, 1)}, flis × ${nf(REGLER.høvleri.flis, 1)}`;
     const inn = M.inn.map(r => Object.entries(r).map(([v, m]) => `${nf(m, 2)} m³ ${VARENAVN[v] || v}`).join(' + ')).join(' eller ');
     const ut = Object.entries(M.ut).map(([v, m]) => `${nf(m, 2)} m³ ${VARENAVN[v] || v}`);
     if (M.gir) ut.push(`${M.gir} kW og varme`);
@@ -175,6 +176,7 @@
     const M = REGLER.maskiner[t]; if (!M) return '';
     const d = s && s.går ? s.drift : 0;
     if (M.gir) return `${nf(M.gir * d, 0)} kW`;
+    if (M.tillegg) return d > 0 ? `høvler` : '';
     const [v, m] = Object.entries(M.ut)[0]; return `${nf(m * d, 1)} m³/t`;
   }
   // Andelen av varmebehovet kjelene dekker: varme (fyringssteder fra steg) mot behovet (FolkRegler.behov: fyring)

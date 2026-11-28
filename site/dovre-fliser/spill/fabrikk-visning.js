@@ -89,11 +89,15 @@
       // flytpila: port inn -> sag -> (høvel) -> port ut
       if (I.flytPunkter && I.flyt !== 1) { const ok = I.flyt > 1; g.strokeStyle = ok ? 'rgba(120,205,110,.85)' : 'rgba(232,163,90,.85)'; g.fillStyle = g.strokeStyle; g.lineWidth = 2.2; g.setLineDash(ok ? [] : [6, 4]);
         const Q = I.flytPunkter; for (let k = 1; k < Q.length; k++) pil(g, sx(Q[k - 1].x), sy(Q[k - 1].y), sx(Q[k].x), sy(Q[k].y), 7); g.setLineDash([]);
-        const t = ok ? `+${Math.round((I.flyt - 1) * 100)} % flyt` : `hulter til bulter −${Math.round((1 - I.flyt) * 100)} %`, mx = sx(Q[1].x) + 4, my = sy(Q[1].y) - 8;
-        g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.75)'; g.strokeText(t, mx, my); g.fillText(t, mx, my); }
+        const t = ok ? `+${Math.round((I.flyt - 1) * 100)} % flyt` : `hulter til bulter −${Math.round((1 - I.flyt) * 100)} %`;
+        // teksten midt på saga, på siden uten bruksplasser (venstre for flyten)
+        const mx = sx((Q[1].x + Q[2].x) / 2), my = sy((Q[1].y + Q[2].y) / 2), vx = sx(Q[2].x) - sx(Q[1].x), vy = sy(Q[2].y) - sy(Q[1].y), vl = Math.hypot(vx, vy) || 1, ut = (LB.BYGG[b.type].maskinDel.b * U / 2) / m + 10;
+        const tx = mx + vy / vl * ut, ty = my - vx / vl * ut; g.save(); g.textAlign = vy / vl > .3 ? 'left' : vy / vl < -.3 ? 'right' : 'center'; g.font = 'bold 12px sans-serif';
+        g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(t, tx, ty + 4); g.fillText(t, tx, ty + 4); g.restore(); }
       // innmating og utmating: stiplede ruter; bruksplassene: oransje ringer
       g.setLineDash([3, 3]); g.strokeStyle = 'rgba(240,215,154,.8)'; g.lineWidth = 1.2; const r = U / 2 / m;
-      for (const [p, t] of [[P.inn, 'inn'], [P.ut, 'ut']]) { if (!p || (t === 'inn' && FB.mtype(b.type) === 'høvel')) continue; g.strokeRect(sx(p.x) - r, sy(p.y) - r, 2 * r, 2 * r); if (r > 9) { g.fillStyle = 'rgba(240,215,154,.9)'; g.fillText(t, sx(p.x), sy(p.y) + 4); } }
+      // (med bæringen på tegner baering-visning.js feltene med mengdene – da ikke her)
+      if (!(Mt && Mt.aktiv && Mt.aktiv())) for (const [p, t] of [[P.inn, 'inn'], [P.ut, 'ut']]) { if (!p || (t === 'inn' && FB.mtype(b.type) === 'høvel')) continue; g.strokeRect(sx(p.x) - r, sy(p.y) - r, 2 * r, 2 * r); if (r > 9) { g.fillStyle = 'rgba(240,215,154,.9)'; g.fillText(t, sx(p.x), sy(p.y) + 4); } }
       g.setLineDash([]);
       for (const p of P.bruks) { g.beginPath(); g.arc(sx(p.x), sy(p.y), Math.max(3, r * .7), 0, 6.283); g.strokeStyle = s && s.går ? '#f0a050' : 'rgba(240,160,80,.7)'; g.stroke(); }
       // grunnen når den ikke har full fart (mørkt, kaldt, uten tak)

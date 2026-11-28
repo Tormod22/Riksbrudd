@@ -59,6 +59,8 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   function egneMaler() { try { const v = JSON.parse(localStorage.getItem(MALNØKKEL) || '[]'); return Array.isArray(v) ? v.filter(BS.malGyldig) : []; } catch (e) { return []; } }
   function lagreMal(deler, navn) { const m = BS.tilMal(deler, navn); if (!m) return null; const L0 = egneMaler(); L0.push(m); while (L0.length > 12) L0.shift(); try { localStorage.setItem(MALNØKKEL, JSON.stringify(L0)); } catch (e) { /* sperret */ } return L0.length - 1; }
   const prisTekst = t => { const d = D[t]; if (!d) return ''; const L = d.s * G, k = d.kat === 'gulv' || d.kat === 'tak' ? `${String(Math.round(L * L * 10) / 10).replace('.', ',')} m²` : d.kat === 'søyle' ? 'søyle' : d.kat === 'trapp' ? 'trapp' : `${String(L).replace('.', ',')} m`;
+    // (B5) maskiner, lamper og hyller: prisen per stykk, målene og strømmen
+    if (['maskin', 'lampe', 'lager'].includes(d.kat)) return `${LB.kroner(d.pris)} og ${tidTekst(d.tid * 60)} arbeid` + (d.l ? ` · ${String(d.b * G).replace('.', ',')} × ${String(Math.round(d.l * G * 10) / 10).replace('.', ',')} m` : '') + (d.kw ? ` · ${String(-d.kw).replace('.', ',')} kW` : '') + (d.tung ? ' · betonggulv' : '');
     return `${LB.kroner(d.pris)} og ${tidTekst(d.tid * 60)} per ${k}`; };
   const stoffTekst = st => { const S = BS.STOFF[st]; return S ? `${S.navn}: spenn ${S.spenn} m${S.brenner ? ', brenner' : ''}` : ''; };
   const velg = (k, v) => () => { V[k] = v; if (k === 'fane') { V.rot = 0; V.malValg = false; } A = null; B = null; forslag = []; if (k === 'fane' && v === 'plan') sentrerPlan(); oppdater(); };
