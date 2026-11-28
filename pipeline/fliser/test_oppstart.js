@@ -66,6 +66,9 @@ ok(svg.startsWith('<svg') && svg.includes('Per b') && !svg.includes('<b>'), 'por
   const ps = O.startplasser(L, 4, 0, skrent); ok(ps.lag.every(([x]) => x < 44 * 32), 'lagene settes ikke opp på en skrent leiren ikke når til fots');
   // bare sjø: ingen plass (teller hvor mange som står i vann)
   const hav = lagV(() => false); ok(O.startplasser(L, 4, 4, hav).iVann === 8, 'bare sjø rundt leiren: meldes som 8 i vann');
+  // (ut8-kr-krig, Ingrid 28. nov: «Speiderbil 1 står 0,9 km fra leiren») nærmeste veg 800 m unna: kjøretøyene står likevel i leiren
+  const fjernVeg = lagV(() => true, (x, y) => Math.abs(y - 480) < 16), pv = O.startplasser(L, 4, 4, fjernVeg);
+  ok(pv.kj.every(([x, y]) => Math.hypot(x - L.x, y - L.y) <= 260), 'vegen er 800 m unna: kjøretøyene står innen 250 m fra leiren – ' + pv.kj.map(([x, y]) => Math.round(Math.hypot(x - L.x, y - L.y))).join(', ') + ' m');
 }
 // KJØNNET (runde 6, kritikken: «Kvinne» ga skjeggstubb og herrefrisyre)
 { const p = O.portrett(); ok(p.facialHair === 'skjeggstubb' && p.hair === 'short', 'startportrettet er en mann med skjeggstubb og kort hår');
