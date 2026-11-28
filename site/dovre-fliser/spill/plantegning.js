@@ -83,7 +83,7 @@
   // det Bygning.fraKart trenger. Pv = omrisset i verdensmeter (åpent, mot klokka), moh = høyden over havet ved første hjørne.
   function info(Pv, e, tett, moh, H) {
     const o = ramme(Pv), P = lokal(Pv, o), T = husTak(P, e, tett, H);
-    const inf = { i: e.i, t: e.t, kl: T.kl, h: e.h || 6, tett: tett || 0, k: e.k, moh, tak: T.tak, vegg: T.vegg > 0 ? T.vegg : undefined };
+    const inf = { i: e.i, t: e.t, kl: T.kl, h: e.h || 6, tett: tett || 0, k: e.k, ind: e.ind, X: o[0], Y: o[1], moh, tak: T.tak, vegg: T.vegg > 0 ? T.vegg : undefined };
     if (T.dør) inf.dør = { x: T.dør.x, y: T.dør.y, w: T.dør.w };
     return { o, P, info: inf, tak: T };
   }
