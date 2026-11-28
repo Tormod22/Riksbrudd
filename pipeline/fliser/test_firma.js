@@ -174,6 +174,8 @@ const G = Fi.ny(leir); Fi.sikreHjem(G, steder, V.hjemsted); Fi.inngåPakt(G, 'hv
 G.firmaer.push(Fi.nyttFirma('Furuli Bygg', { ny: true, hjem: { navn: 'Otta', x: 1, y: 2, id: 1 } }));
 const G2 = Fi.fraJSON(JSON.parse(JSON.stringify(Fi.tilJSON(G))));
 ok(G2 && JSON.stringify(Fi.tilJSON(G2)) === JSON.stringify(Fi.tilJSON(G)), 'lagring: likt etter tilJSON/fraJSON');
+G.fastÅpne = [{ id: 'k9', firma: 'Storlia Tømmer' }]; G.overraskelse = { side: 'rød', faktor: 1.3, til: 500 };
+const G3 = Fi.fraJSON(JSON.parse(JSON.stringify(Fi.tilJSON(G)))); ok(G3.fastÅpne[0].id === 'k9' && G3.overraskelse.til === 500, 'lagring: faste tilbud ute og overraskelsen huskes');
 ok(Fi.fraJSON({ versjon: 99 }) === null && Fi.fraJSON(null) === null, 'ukjent lagring gir null');
 
 console.log(`test_firma: ${n} sjekker ok`);

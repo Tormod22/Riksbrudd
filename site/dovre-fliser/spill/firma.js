@@ -378,7 +378,11 @@
       F.pakter = Array.isArray(d.pakter) ? d.pakter.filter(p => p && p.id && RIVALER[p.side] && (p.type === 'hvile' || p.type === 'allianse') && Number.isFinite(p.slutt)) : [];
       F.talt = Array.isArray(d.talt) ? d.talt.map(String).slice(-300) : []; F.tekno = d.tekno && typeof d.tekno === 'object' ? { ...d.tekno } : {};
       for (const s of ['rød', 'grønn']) { F.brudd[s] = tall(d.brudd && d.brudd[s]); F.pause[s] = tall(d.pause && d.pause[s]); }
-      F.nr = tall(d.nr); F.dag = tall(d.dag, -1); return F;
+      F.nr = tall(d.nr); F.dag = tall(d.dag, -1);
+      // visningens egne felt: faste tilbud som ligger ute, overraskelsen og innsynet etter et svik
+      if (Array.isArray(d.fastÅpne)) F.fastÅpne = d.fastÅpne.filter(o => o && o.id && o.firma).map(o => ({ id: String(o.id), firma: String(o.firma) }));
+      for (const k of ['overraskelse', 'innsyn']) if (d[k] && typeof d[k] === 'object' && Number.isFinite(d[k].til)) F[k] = { ...d[k] };
+      return F;
     } catch (e) { return null; }
   }
 
