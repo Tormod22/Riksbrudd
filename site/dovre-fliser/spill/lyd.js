@@ -35,7 +35,9 @@
   rot.Lyd = Lyd;
 
   // ---------- lydmotoren ----------
-  let ac = null, ut = null, måler = null, kan = {}, støy = null, brun = null, på = true, startet = false;
+  // (Ø4, 28. nov) hoved = alt (☰ «Lyd» av/på, stille når fanen er skjult); ut = 3D-lydene rundt kameraet (av i 2D). Lydene i 2D
+  // (spill/lyd2d.js) har egne kanaler inn i hoved – se Lyd.motor().
+  let ac = null, hoved = null, ut = null, måler = null, kan = {}, støy = null, brun = null, på = true, startet = false;
   try { på = localStorage.getItem('riksbrudd-lyd') !== 'av'; } catch (e) { /* privat vindu */ }
   function lagStøy(brunt) {
     const n = ac.sampleRate * 4, b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0); let s = 0;
@@ -53,9 +55,10 @@
     if (startet) { if (ac && ac.state === 'suspended') ac.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     try { ac = new AC(); } catch (e) { return; }
-    startet = true; ut = ac.createGain(); ut.gain.value = på ? 1 : 0; ut.connect(ac.destination);
-    // måler (testene leser lydstyrken med Lyd.sjekk().rms)
-    måler = ac.createAnalyser(); måler.fftSize = 2048; ut.connect(måler);
+    startet = true; hoved = ac.createGain(); hoved.gain.value = på ? 1 : 0; hoved.connect(ac.destination);
+    ut = ac.createGain(); ut.gain.value = typeof på3d !== 'undefined' && på3d ? 1 : 0; ut.connect(hoved);
+    // måler (testene leser lydstyrken med Lyd.sjekk().rms) – på hovedkanalen, så den måler både 3D og 2D
+    måler = ac.createAnalyser(); måler.fftSize = 2048; hoved.connect(måler);
     støy = lagStøy(false); brun = lagStøy(true);
     kanal('vind', 'bandpass', 420, .7); kanal('plyst', 'bandpass', 1300, 9); kanal('hav', 'lowpass', 520, .5, true); kanal('bølge', 'lowpass', 900, .4);
     kanal('glipe', 'bandpass', 950, 11); kanal('innsjø', 'bandpass', 700, 1.2); kanal('regn', 'highpass', 1800, .3); kanal('regnLav', 'lowpass', 900, .4); kanal('by', 'lowpass', 160, .6, true);
@@ -167,7 +170,8 @@
     sistPos = { x: c.x, y: c.y };
   });
   // 2D: lyden tones ned (spillet viser kartet), og den hviler når fanen er skjult
-  setInterval(() => { if (!ac || !ut) return; const mål = på && typeof på3d !== 'undefined' && på3d && !document.hidden ? 1 : 0; ut.gain.setTargetAtTime(mål, ac.currentTime, .3); }, 250);
+  setInterval(() => { if (!ac || !ut) return; hoved.gain.setTargetAtTime(på && !document.hidden ? 1 : 0, ac.currentTime, .3);
+    ut.gain.setTargetAtTime(typeof på3d !== 'undefined' && på3d ? 1 : 0, ac.currentTime, .3); }, 250);
   for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, () => { if (på) start(); }, { passive: true });
 
   // ☰ «Lyd»
@@ -175,6 +179,10 @@
   const settKnapp = () => { b.textContent = 'Lyd'; b.classList.toggle('av', !på); b.setAttribute('aria-pressed', String(på)); };
   b.onclick = () => { på = !på; try { localStorage.setItem('riksbrudd-lyd', på ? 'på' : 'av'); } catch (e) { /* privat vindu */ } if (på) start(); settKnapp(); };
   settKnapp(); const lm = document.getElementById('lagmeny'); if (lm) lm.appendChild(b);
-  Lyd.start = start; const rms = () => { if (!måler) return 0; const d = new Float32Array(måler.fftSize); måler.getFloatTimeDomainData(d); let q = 0, m = 0; for (const v of d) { q += v * v; m = Math.max(m, Math.abs(v)); } return { rms: Math.sqrt(q / d.length), topp: m }; };
+  Lyd.start = start;
+  // (Ø4) lydmotoren for lydene i 2D (spill/lyd2d.js): null før nettleseren har sluppet lyden fram (første trykk)
+  Lyd.motor = () => (startet && ac && hoved ? { ac, hoved, støy, brun } : null);
+  Lyd.på = () => på;
+  const rms = () => { if (!måler) return 0; const d = new Float32Array(måler.fftSize); måler.getFloatTimeDomainData(d); let q = 0, m = 0; for (const v of d) { q += v * v; m = Math.max(m, Math.abs(v)); } return { rms: Math.sqrt(q / d.length), topp: m }; };
   Lyd.sjekk = () => ({ ...rms(), startet, tilstand: ac ? ac.state : null, kanaler: Object.keys(kan).length, på, nivå: { ...NV } });
 })(typeof globalThis !== 'undefined' ? globalThis : this);
