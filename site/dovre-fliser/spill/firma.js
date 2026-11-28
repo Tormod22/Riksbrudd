@@ -18,7 +18,7 @@
  *   allianse   – mot den andre rivalen: ingen kamp mellom dere, delt etterretning (dere ser lagene deres og det de ser) og felles mål.
  * SVIK: å bryte en avtale gir en gevinst nå (overraskelse, penger tilbake) og koster «pålitelig» og holdningen hos alle firmaene.
  * TEKNOLOGI GJENNOM HANDEL (14.5): god holdning hos et firma låser opp noe – Storlia: høvleri på sagbruket, Dalsnes: bedre aggregat,
- *   Ytterø: fryselager (bare en lås til fisket finnes).
+ *   Ytterø: fryselager – en lås: med den kan leiren bygge et fiskemottak ved en kai (ut6-kjeder, spill/kjeder.js).
  * ALLE TALL ER CLAUDES FORSLAG (spillverdier, ikke fasit) – samlet i REGLER.
  */
 (function (rot) {
@@ -70,7 +70,7 @@
       aggregat: { firma: 'Dalsnes Kraftlag', navn: 'Bedre aggregat', holdning: 60, levert: 2, vernDøgn: 5, pris: 8e5,
         tekst: 'Dalsnes bygger om aggregatene: de bruker 20 % mindre diesel for den samme strømmen.', diesel: .8 },
       fryselager: { firma: 'Ytterø Sjømat', navn: 'Fryselager', holdning: 60, levert: 2, pris: 0, lås: true,
-        tekst: 'Ytterø viser dere hvordan fryselageret deres er bygget. Dere kan bygge et når fisket kommer til leiren (senere).' },
+        tekst: 'Ytterø viser dere hvordan fryselageret deres er bygget. Nå kan dere bygge et fiskemottak ved en kai (Leir → Bygg → Produksjon) og fryse fisken fra båtene.' },
     },
     // PAKTER MED RIVALENE
     pakt: {

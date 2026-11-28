@@ -283,7 +283,7 @@
     h += '<h3>Rivalene</h3>' + rivalHtml('rød') + rivalHtml('grønn');
     const T = Fi.tekno(F, { harSag: harSag() });
     h += '<h3>Teknologi gjennom handel</h3>' + T.map(t => `<div class="fi-boks"><h4>${esc(t.navn)}<small>fra ${esc(t.firma)}</small></h4><div class="fi-linje">${esc(t.tekst)}</div>`
-      + (t.iBruk ? '<div class="fi-linje"><b class="fi-frisk">I bruk.</b></div>' : t.låstOpp ? (t.bare ? '<div class="fi-linje">Låst opp – kan bygges når fisket kommer.</div>' : `<div class="fi-knapper">${knapp(`Ta i bruk (${kr(t.pris)})`, 'fi-tekno', { id: t.id })}</div>` + (t.manglerBruk.length ? `<p class="fi-mangler">Trenger ${esc(t.manglerBruk.join(', '))}.</p>` : ''))
+      + (t.iBruk ? '<div class="fi-linje"><b class="fi-frisk">I bruk.</b></div>' : t.låstOpp ? (t.bare ? '<div class="fi-linje">Låst opp – bygg et fiskemottak ved en kai (Leir → Bygg → Produksjon).</div>' : `<div class="fi-knapper">${knapp(`Ta i bruk (${kr(t.pris)})`, 'fi-tekno', { id: t.id })}</div>` + (t.manglerBruk.length ? `<p class="fi-mangler">Trenger ${esc(t.manglerBruk.join(', '))}.</p>` : ''))
         : `<p class="fi-mangler">Mangler: ${esc(t.mangler.join('; '))}</p>`) + '</div>').join('');
     const A = Fi.aktive(F).slice().sort((a, b) => (!!(b.fast || b.felles || b.vern) - !!(a.fast || a.felles || a.vern)) || b.holdning - a.holdning), K = F.firmaer.filter(f => f.konkurs);
     h += `<h3>Firmaene <small>${A.length} i området</small></h3>` + A.map(firmaHtml).join('');

@@ -248,6 +248,8 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
     // materialene: lager og kjøp
     hode.appendChild(el('h3', {}, `Materialer (lager ${plass} av hvert)`));
     for (const [k, M] of Object.entries(LB.MATERIALER)) {
+      // (ut6-kjeder) varene i de nye kjedene står bare her når dere har noe eller en maskin som bruker dem (Leir.visMateriale)
+      if (M.kjede && LB.visMateriale && !LB.visMateriale(L, k)) continue;
       const b = knapp(`+10 (${LB.kroner(10 * M.pris)})`, () => { const r = kom({ type: 'kjøpMateriale', materiale: k, mengde: 10 }); logg(r.feil || `Kjøpte ${String(r.mengde).replace('.', ',')} ${M.enhet} ${M.navn.toLowerCase()} for ${LB.kroner(r.pris)}.`); lagre(); visMeny(); });
       b.disabled = (L.lager[k] || 0) >= plass;
       // selg overskudd (halv pris) og en måler for hvor fullt lageret er

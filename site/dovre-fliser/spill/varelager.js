@@ -39,6 +39,17 @@
       flis: { str: 2, form: 'storsekk', navn: 'storsekk flis', flertall: 'storsekker flis' },
       ved: { str: 2, form: 'vedpall', navn: 'pall ved', flertall: 'paller ved' },
       diesel: { str: 200, form: 'fat', navn: 'fat diesel', flertall: 'fat diesel' },
+      // (ut6-kjeder, fase Ø9) varene i de nye kjedene – størrelsene er Claudes forslag
+      stein: { str: 2, form: 'haug', navn: 'steinhaug', flertall: 'steinhauger' },
+      pukk: { str: 2, form: 'haug', navn: 'pukkhaug', flertall: 'pukkhauger' },
+      sement: { str: 1, form: 'sekk', navn: 'pall sement', flertall: 'paller sement' },
+      skrap: { str: 1, form: 'bunt', navn: 'haug skrap', flertall: 'hauger skrap' },
+      deler: { str: .5, form: 'pall', navn: 'kasse deler', flertall: 'kasser deler' },
+      fisk: { str: .5, form: 'pall', navn: 'kasse fisk', flertall: 'kasser fisk' },
+      frossenfisk: { str: .5, form: 'pall', navn: 'kasse frossen fisk', flertall: 'kasser frossen fisk' },
+      korn: { str: 1, form: 'storsekk', navn: 'storsekk korn', flertall: 'storsekker korn' },
+      mel: { str: 1, form: 'sekk', navn: 'pall mel', flertall: 'paller mel' },
+      olje: { str: 1, form: 'fat', navn: 'tank råolje', flertall: 'tanker råolje' },
     },
     // kasser på hylleplass (ammunisjon, deler) – formen finnes for senere (F3/B5); leiren har ingen slike varer i L.lager ennå
     hylle: { str: 1, form: 'kasse' },
@@ -46,7 +57,7 @@
     slitasje: { tre: .004, tømmer: .001, flis: .006, ved: .005, betong: .003, stål: .0005 },
     regnFra: .15,
     // det som brenner (stål og betong tåler brannen)
-    brenner: { tre: true, tømmer: true, flis: true, ved: true, diesel: true },
+    brenner: { tre: true, tømmer: true, flis: true, ved: true, diesel: true, korn: true, mel: true, olje: true },
     // så mange enheter bærer folkene inn i timen (fra ute / feil sone til ledig plass inne)
     ryddPerTime: 12,
     // lagerplassen ute: avstand fra leirens midte; hver vare har sin blokk (rad etter rad nedover), dx/dy = avstand mellom enhetene,
@@ -54,13 +65,18 @@
     ute: { avstand: 24, bredde: 18, blokk: {
       tre: { dx: 1.6, dy: 1.45, rader: 3, h: 4.8 }, betong: { dx: 1.6, dy: 1.45, rader: 3, h: 4.8 }, stål: { dx: 1.8, dy: 1.1, rader: 4, h: 4.8 },
       tømmer: { dx: 1.9, dy: 4.6, rader: 1, h: 5.2, ret: Math.PI / 2 }, flis: { dx: 1.5, dy: 1.45, rader: 3, h: 4.8 }, ved: { dx: 1.6, dy: 1.45, rader: 3, h: 4.8 },
-      diesel: { dx: .85, dy: .85, rader: 2, h: 2.4 } } },
+      diesel: { dx: .85, dy: .85, rader: 2, h: 2.4 },
+      stein: { dx: 1.9, dy: 1.9, rader: 2, h: 4 }, pukk: { dx: 1.9, dy: 1.9, rader: 2, h: 4 }, sement: { dx: 1.6, dy: 1.45, rader: 3, h: 4.8 },
+      skrap: { dx: 1.8, dy: 1.1, rader: 4, h: 4.8 }, deler: { dx: 1.2, dy: 1.2, rader: 3, h: 3.6 }, fisk: { dx: 1.2, dy: 1.2, rader: 3, h: 3.6 },
+      frossenfisk: { dx: 1.2, dy: 1.2, rader: 3, h: 3.6 }, korn: { dx: 1.5, dy: 1.45, rader: 3, h: 4.8 }, mel: { dx: 1.6, dy: 1.45, rader: 3, h: 4.8 },
+      olje: { dx: .85, dy: .85, rader: 2, h: 2.4 } } },
     // rutene inne i et bygg (m) og kanten innenfor veggene
     rute: 1.6, kant: .7,
     // så små rester regnes som ingenting
     eps: 1e-6,
   };
-  const VARER = ['tre', 'betong', 'stål', 'tømmer', 'flis', 'ved', 'diesel'];
+  // (ut6-kjeder) de nye varene står etter diesel, så blokkene ute for de gamle ligger der de lå
+  const VARER = ['tre', 'betong', 'stål', 'tømmer', 'flis', 'ved', 'diesel', 'stein', 'pukk', 'sement', 'skrap', 'deler', 'fisk', 'frossenfisk', 'korn', 'mel', 'olje'];
   const ny = () => ({ versjon: 1, neste: 1, e: [], soner: {}, ute: null, beskjeder: [], tapt: {} });
   const r6 = v => Math.round(v * 1e6) / 1e6;
   const total = (L, k) => (k === 'diesel' ? +(L.drivstoff || 0) : +((L.lager && L.lager[k]) || 0)) || 0;

@@ -31,8 +31,21 @@
       // (ctx.sager / ctx.høvelFor fra spill/fabrikk.js): mens den går, gir sagbenken planker × høvleri.tre og flis × høvleri.flis.
       // Den bruker ingen råvare selv (tillegg) og står når ingen sagbenk i rommet har tømmer og plass.
       høvel: { folk: 1, kw: 5, inn: [], ut: {}, tillegg: true },
+      // (ut6-kjeder 28. nov, fase Ø9 – planen 4.2) FLERE KJEDER. Folk og strøm fra planens tabell; mengdene er Claudes forslag, regnet så
+      // hver maskin i full drift gir omtrent det samme per arbeider som saga (docs/natt/ut6-kjeder.md, økonomitesten okosim-kjeder.js).
+      // inn: [{}] = ingen råvare (steinbruddet bryter selv). tom = det maskinen står uten. enhet per vare i REGLER.enhet.
+      steinbrudd: { folk: 2, kw: 5, inn: [{}], ut: { stein: 1.5 }, tom: 'stein' },
+      steinknuser: { folk: 2, kw: 20, inn: [{ stein: 2 }], ut: { pukk: 1.8 }, tom: 'stein' },
+      betongblander: { folk: 1, kw: 5, inn: [{ pukk: .4, sement: .2 }], ut: { betong: .5 }, tom: 'pukk og sement' },
+      fiskemottak: { folk: 3, kw: 25, inn: [{ fisk: .8 }], ut: { frossenfisk: .7 }, tom: 'fisk' },
+      mølle: { folk: 2, kw: 10, inn: [{ korn: .6 }], ut: { mel: .5 }, tom: 'korn' },
+      // raffineriet: 0,25 t olje gir 20 l diesel i timen – dieselen går rett i leirens tank (spill/kjeder-visning.js flytter den)
+      raffineri: { folk: 4, kw: 40, inn: [{ olje: .25 }], ut: { diesel: 20 }, tom: 'olje' },
+      smie: { folk: 2, kw: 10, inn: [{ skrap: .5 }], ut: { stål: .15, deler: .03 }, tom: 'skrap' },
     },
-    rekkefølge: ['fyrkjele', 'høvel', 'sagbruk', 'vedkløyver'],
+    rekkefølge: ['fyrkjele', 'høvel', 'sagbruk', 'vedkløyver', 'steinbrudd', 'steinknuser', 'betongblander', 'fiskemottak', 'mølle', 'raffineri', 'smie'],
+    // (ut6-kjeder) enheten per vare i tekstene (resten er m³)
+    enhet: { stål: 't', sement: 't', skrap: 't', deler: 't', fisk: 't', frossenfisk: 't', korn: 't', mel: 't', olje: 't', diesel: 'l' },
     slitasje: .0015,          // hp per driftstime (en maskin i full drift er halvslitt etter ca. 14 døgn: da går den med halv fart til den er reparert)
     // KVALITET (planen 4.3): dyktige folk (snittferdighet på «maskin» over 1,2) gir 10 % mer ut av sagbruket og vedkløyveren
     kvalitet: { grense: 1.2, bonus: .1 },
@@ -50,7 +63,9 @@
   const GRUNNTEKST = { av: 'slått av', ødelagt: 'ødelagt', fullt: 'lageret fullt', folk: 'ingen folk', strøm: 'uten strøm', slitt: 'slitt – må repareres' };
   // (F3) med innmating og utmating (folk går og bærer, spill/baering.js): grunnene som planen 6.6 sier dem
   const MATETEKST = { av: 'slått av', ødelagt: 'i stykker', fullt: 'utmatingen full', folk: 'venter på folk', strøm: 'uten strøm', slitt: 'slitt – må repareres' };
-  const VARENAVN = { tre: 'planker', tømmer: 'tømmer', flis: 'flis', ved: 'ved', betong: 'betong', stål: 'stål' };
+  const VARENAVN = { tre: 'planker', tømmer: 'tømmer', flis: 'flis', ved: 'ved', betong: 'betong', stål: 'stål',
+    stein: 'stein', pukk: 'pukk', sement: 'sement', skrap: 'skrap', deler: 'deler', fisk: 'fisk', frossenfisk: 'frossen fisk', korn: 'korn', mel: 'mel', olje: 'olje', diesel: 'diesel' };
+  const enh = v => REGLER.enhet[v] || 'm³';
   // (B5) maskinene i byggesettet (bs_sagbenk_1 …) har maskinType i Leir.BYGG og bruker de samme reglene: REGLER.maskiner[type] peker
   // på det samme objektet som maskin-bygget (sagbruk …), så alle oppslag på b.type virker. base(t) gir maskintypen.
   function alias() { if (!LB || !LB.BYGG) return; for (const [t, B] of Object.entries(LB.BYGG)) if (B.maskinType && REGLER.maskiner[B.maskinType] && REGLER.maskiner[t] !== REGLER.maskiner[B.maskinType]) REGLER.maskiner[t] = REGLER.maskiner[B.maskinType]; }
@@ -78,8 +93,10 @@
   const utSum = Bf => Object.values(Bf.ut).reduce((s, m) => s + (m || 0), 0);
   const plassFor = (L, Bf) => (Bf ? () => Math.max(0, REGLER.buffer.ut - utSum(Bf)) : v => plass(L, v));
   function råvare(L, M, andel = 1, Bf) { if (M.tillegg) return {}; const h = hentFra(L, Bf); for (const r of M.inn) if (Object.entries(r).every(([v, m]) => h(v) >= m * andel * .05 + 1e-9)) return r; return null; }
-  const tomTekst = (t) => (base(t) === 'sagbruk' ? 'tom for tømmer' : base(t) === 'vedkløyver' ? 'tom for flis' : base(t) === 'høvel' ? 'venter på saga' : 'tom for brensel');
-  const venterTekst = (t) => (base(t) === 'sagbruk' ? 'venter på tømmer' : base(t) === 'vedkløyver' ? 'venter på flis' : base(t) === 'høvel' ? 'venter på saga' : 'venter på brensel');
+  // (ut6-kjeder) feltet «tom» på maskinen gir «tom for stein» / «venter på korn»; (B5) høvelen venter på saga
+  const tomFor = t => { const M = REGLER.maskiner[base(t)]; return M && M.tom ? M.tom : null; };
+  const tomTekst = (t) => (base(t) === 'sagbruk' ? 'tom for tømmer' : base(t) === 'vedkløyver' ? 'tom for flis' : base(t) === 'høvel' ? 'venter på saga' : tomFor(t) ? 'tom for ' + tomFor(t) : 'tom for brensel');
+  const venterTekst = (t) => (base(t) === 'sagbruk' ? 'venter på tømmer' : base(t) === 'vedkløyver' ? 'venter på flis' : base(t) === 'høvel' ? 'venter på saga' : tomFor(t) ? 'venter på ' + tomFor(t) : 'venter på brensel');
   const grunnTekst = (g, t, mating) => (g === 'tom' ? (mating ? venterTekst(t) : tomTekst(t)) : (mating ? MATETEKST : GRUNNTEKST)[g] || g);
 
   // det maskinen gir per time ved full drift – sagbruket med høvleri (b.høvleri) gir flere planker og mindre flis
@@ -166,8 +183,8 @@
   function oppskrift(t) {
     const M = REGLER.maskiner[t]; if (!M) return '';
     if (M.tillegg) return `høvler plankene fra sagbenken i rommet: planker × ${nf(REGLER.høvleri.tre, 1)}, flis × ${nf(REGLER.høvleri.flis, 1)}`;
-    const inn = M.inn.map(r => Object.entries(r).map(([v, m]) => `${nf(m, 2)} m³ ${VARENAVN[v] || v}`).join(' + ')).join(' eller ');
-    const ut = Object.entries(M.ut).map(([v, m]) => `${nf(m, 2)} m³ ${VARENAVN[v] || v}`);
+    const inn = M.inn.map(r => Object.entries(r).map(([v, m]) => `${nf(m, 2)} ${enh(v)} ${VARENAVN[v] || v}`).join(' + ')).filter(Boolean).join(' eller ') || 'fjellet';
+    const ut = Object.entries(M.ut).map(([v, m]) => `${nf(m, 2)} ${enh(v)} ${VARENAVN[v] || v}`);
     if (M.gir) ut.push(`${M.gir} kW og varme`);
     return `${inn} → ${ut.join(' + ')} per time`;
   }
@@ -177,7 +194,7 @@
     const d = s && s.går ? s.drift : 0;
     if (M.gir) return `${nf(M.gir * d, 0)} kW`;
     if (M.tillegg) return d > 0 ? `høvler` : '';
-    const [v, m] = Object.entries(M.ut)[0]; return `${nf(m * d, 1)} m³/t`;
+    const [v, m] = Object.entries(M.ut)[0]; return `${nf(m * d, enh(v) === 'l' ? 0 : 1)} ${enh(v)}/t`;
   }
   // Andelen av varmebehovet kjelene dekker: varme (fyringssteder fra steg) mot behovet (FolkRegler.behov: fyring)
   const varmeAndel = (varme, fyring) => (fyring > 0 ? Math.max(0, Math.min(1, varme / fyring)) : 0);

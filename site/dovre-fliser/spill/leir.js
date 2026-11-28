@@ -56,6 +56,16 @@
     sagbruk: { navn: 'Sagbruk', pris: 6e6, tid: 3, kw: -15, modell: 'verksted', fot: [-6.3, 12, -7.3, 7.3], mat: { tre: 12, betong: 15, stål: 6 }, maskin: true, tekst: 'Sager tømmer til planker og flis (3 folk, 15 kW)' },
     vedkløyver: { navn: 'Vedkløyver', pris: 8e5, tid: 1, kw: -3, modell: 'container', fot: [-3, 3.1, -1.2, 1.2], mat: { tre: 2, stål: 2 }, maskin: true, tekst: 'Kløyver flis og avkapp til ved (1 folk, 3 kW)' },
     fyrkjele: { navn: 'Fyrkjele', pris: 4e6, tid: 2, kw: 0, modell: 'aggregat', fot: [-1.6, 1.6, -1, 1], mat: { tre: 4, betong: 6, stål: 5 }, maskin: true, tekst: 'Brenner flis eller ved: gir 30 kW og varme i stedet for diesel (1 folk)' },
+    // (ut6-kjeder 28. nov, fase Ø9 – planen 4.2) FLERE KJEDER. Pris, folk og strøm fra planens tabell der den har dem (steinknuser, fiskemottak,
+    // mølle, raffineri, smie); steinbruddet og betongblanderen, tid og materialer er Claudes forslag. Reglene: spill/produksjon.js og spill/kjeder.js
+    // (plassreglene: steinbruddet ved fjell, fiskemottaket ved kai og med fryselager fra Ytterø Sjømat, smia ved verkstedet).
+    steinbrudd: { navn: 'Steinbrudd', pris: 2.5e6, tid: 1.5, kw: -5, modell: 'sandsekkvoll', fot: [-5, 5, -5, 5], mat: { stål: 3, betong: 2 }, maskin: true, tekst: 'Bryter stein i fjellsiden (2 folk, 5 kW) – må stå ved fjell' },
+    steinknuser: { navn: 'Steinknuser', pris: 5e6, tid: 2, kw: -20, modell: 'container', fot: [-3, 3.1, -1.2, 1.2], mat: { stål: 6, betong: 4 }, maskin: true, tekst: 'Knuser stein til pukk (2 folk, 20 kW)' },
+    betongblander: { navn: 'Betongblander', pris: 1.2e6, tid: 1, kw: -5, modell: 'container', fot: [-3, 3.1, -1.2, 1.2], mat: { stål: 2 }, maskin: true, tekst: 'Blander pukk og sement til betong (1 folk, 5 kW)' },
+    fiskemottak: { navn: 'Fiskemottak', pris: 7e6, tid: 3, kw: -25, modell: 'verksted', fot: [-6.3, 12, -7.3, 7.3], mat: { tre: 6, betong: 20, stål: 8 }, maskin: true, tekst: 'Fryser fisk fra båtene (3 folk, 25 kW) – ved kai, krever fryselager' },
+    mølle: { navn: 'Mølle', pris: 3e6, tid: 2, kw: -10, modell: 'brakke', fot: [-3.4, 4.2, -6.4, 6.4], mat: { tre: 8, betong: 6, stål: 3 }, maskin: true, tekst: 'Maler korn til mel – kjøkkenet lager mat av melet (2 folk, 10 kW)' },
+    raffineri: { navn: 'Lite raffineri', pris: 18e6, tid: 4, kw: -40, modell: 'drivstofftank', fot: [-2.2, 3.7, -4, 4], mat: { stål: 20, betong: 12 }, maskin: true, tekst: 'Gjør olje fra basen om til diesel i leirens tank (4 folk, 40 kW)' },
+    smie: { navn: 'Smie', pris: 2.5e6, tid: 1.5, kw: -10, modell: 'container', fot: [-3, 3.1, -1.2, 1.2], mat: { tre: 2, betong: 4, stål: 2 }, maskin: true, tekst: 'Verkstedet utvidet: skrap blir stål og deler (2 folk, 10 kW) – trenger et verksted' },
   };
   // RUNDE 13 (kritiker H: «arbeid 8 mill. kr» av 8,4 mill. kr for et aggregat – «men arbeidet gjøres av mine egne folk»): grunnprisen
   // (BYGG[t].pris) betaler utstyret og de ferdige delene (aggregatet, lyskasteren, vinduer, beslag) – arbeidet gjør byggelagene dine uten
@@ -66,7 +76,14 @@
   // Nye varer med egen lagerplass (som de andre): TØMMER (hogst, kjøpes billig), FLIS og VED (fra sagbruket og vedkløyveren, spill/produksjon.js).
   // Prisene på tømmer, flis og ved er Claudes forslag (tømmer 8 000 kr/m³ fra planen; flis og ved: Claudes eget anslag).
   const MATERIALER = { tre: { navn: 'Planker', enhet: 'm³', pris: 20000 }, betong: { navn: 'Betong', enhet: 'm³', pris: 30000 }, stål: { navn: 'Stål', enhet: 't', pris: 60000 },
-    tømmer: { navn: 'Tømmer', enhet: 'm³', pris: 8000 }, flis: { navn: 'Flis', enhet: 'm³', pris: 6000 }, ved: { navn: 'Ved', enhet: 'm³', pris: 12000 } };
+    tømmer: { navn: 'Tømmer', enhet: 'm³', pris: 8000 }, flis: { navn: 'Flis', enhet: 'm³', pris: 6000 }, ved: { navn: 'Ved', enhet: 'm³', pris: 12000 },
+    // (ut6-kjeder, fase Ø9) VARENE I DE NYE KJEDENE – prisene er Claudes forslag (regnet så hver maskin i full drift gir omtrent det samme
+    // som saga per arbeider, se docs/natt/ut6-kjeder.md). kjede: true = vises i Leir → Lager bare når dere har noe eller en maskin som bruker det.
+    stein: { navn: 'Stein', enhet: 'm³', pris: 2500, kjede: true }, pukk: { navn: 'Pukk', enhet: 'm³', pris: 12000, kjede: true },
+    sement: { navn: 'Sement', enhet: 't', pris: 40000, kjede: true }, skrap: { navn: 'Skrap', enhet: 't', pris: 8000, kjede: true },
+    deler: { navn: 'Deler', enhet: 't', pris: 90000, kjede: true }, fisk: { navn: 'Fisk', enhet: 't', pris: 15000, kjede: true },
+    frossenfisk: { navn: 'Frossen fisk', enhet: 't', pris: 30000, kjede: true }, korn: { navn: 'Korn', enhet: 't', pris: 5000, kjede: true },
+    mel: { navn: 'Mel', enhet: 't', pris: 14000, kjede: true }, olje: { navn: 'Råolje', enhet: 't', pris: 20000, kjede: true } };
   // (ut4-balanse2 28. nov, Claudes forslag) flis 3 000 -> 6 000 og ved 9 000 -> 12 000 kr/m³: med 3 000 kr var strømmen fra fyrkjelen
   // ca. 20 ganger billigere enn diesel i timen (1 200 mot 27 000 kr for 30 kW) og 2–3 ganger billigere enn solceller over tid. Nå koster
   // brenselet noe (kjelen brenner også litt mer, spill/produksjon.js), og over tid er en kWt fra kjelen omtrent som fra solcellene
@@ -181,6 +198,8 @@
     if (!B.linje && !B.port && v.veger && påKartveg(P, v.veger)) return `${B.navn} står på vegen. Flytt bygget til siden av vegen.`;
     if (!B.linje && v.høyde) { const { d, grense } = bratt(b, v.høyde);
       if (d > grense) return `For bratt her (${Math.round(d)} m høydeforskjell under bygget).`; }
+    // (ut6-kjeder) egne plassregler for enkelte bygg (steinbruddet ved fjell, fiskemottaket ved kai …): api.kanByggeEkstra(L, b, v) -> feil | null
+    if (api.kanByggeEkstra) { const f = api.kanByggeEkstra(L, b, v); if (f) return f; }
     return null;
   }
   // Bratt-sjekken for seg (runde 8: helling i kartet og leirvalget, spill/helling.js, bruker den samme regelen): høydeforskjellen d mellom
@@ -546,7 +565,7 @@
   // det kjøpMateriale tar for hvert av dem. Prisen flytter seg da bare når lageret får (eller mister) en hel tidel.
   function manglerMat(L, mat) { const ut = {}; for (const [k, v] of Object.entries(mat || {})) { const m = Math.ceil(Math.max(0, (+v || 0) - ((L && L.lager && L.lager[k]) || 0)) * 10 - 1e-6) / 10; if (m > 0 && MATERIALER[k]) ut[k] = m; } return ut; }
   function manglerPris(L, mat) { return Object.entries(manglerMat(L, mat)).reduce((s, [k, m]) => s + Math.round(m * MATERIALER[k].pris), 0); }
-  const api = { hviler: null, maskinKW: null, varer: null, uttak, vedlikehold, manglerMat, manglerPris, grunn, følgerBakken, FØLGER_BAKKEN, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, påKartveg, VEGBREDDE, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
+  const api = { hviler: null, maskinKW: null, kanByggeEkstra: null, varer: null, uttak, vedlikehold, manglerMat, manglerPris, grunn, følgerBakken, FØLGER_BAKKEN, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, påKartveg, VEGBREDDE, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
     skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, selgMateriale, lagerplass,
     PRISDEL, harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, bratt, brattGrense, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

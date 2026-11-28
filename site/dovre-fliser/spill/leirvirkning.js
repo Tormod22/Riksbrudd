@@ -59,6 +59,14 @@
     sagbruk: { tekst: '2 m³ tømmer → 1,1 m³ planker + 0,7 m³ flis i timen (3 folk på «Maskiner», 15 kW)', strøm: true },
     vedkløyver: { tekst: '0,6 m³ flis → 0,5 m³ ved i timen (1 folk, 3 kW)', strøm: true },
     fyrkjele: { tekst: 'Brenner 0,6 m³ flis (eller ved) i timen: 30 kW og varme i stedet for diesel (1 folk)' },
+    // (ut6-kjeder, fase Ø9) de nye kjedene – reglene i spill/produksjon.js og spill/kjeder.js
+    steinbrudd: { tekst: 'Bryter 1,5 m³ stein i timen ved fjell (2 folk på «Maskiner», 5 kW)', strøm: true },
+    steinknuser: { tekst: '2 m³ stein → 1,8 m³ pukk i timen (2 folk, 20 kW)', strøm: true },
+    betongblander: { tekst: '0,4 m³ pukk + 0,2 t sement → 0,5 m³ betong i timen (1 folk, 5 kW)', strøm: true },
+    fiskemottak: { tekst: '0,8 t fisk fra båtene → 0,7 t frossen fisk i timen (3 folk, 25 kW)', strøm: true },
+    mølle: { tekst: '0,6 t korn → 0,5 t mel i timen; kjøkkenet lager mat av melet (2 folk, 10 kW)', strøm: true },
+    raffineri: { tekst: '0,25 t olje fra basen → 20 l diesel i timen til leirens tank (4 folk, 40 kW)', strøm: true },
+    smie: { tekst: '0,5 t skrap → 0,15 t stål + 0,03 t deler i timen (2 folk, 10 kW)', strøm: true },
     drivstofftank: { tekst: 'Rommer 5 000/10 000/20 000 l diesel (nivå 1–3) til aggregat, fyring og fyllestasjon' },
     aggregat: { tekst: 'Gir 20/35/50 kW (nivå 1–3), bruker diesel' },
     solcelle: { tekst: 'Gir 5/9/14 kW i dagslys (nivå 1–3)' },
@@ -172,7 +180,9 @@
     aggregat: 'strøm av diesel', solcelle: 'strøm av sol', kameramast: 'ser fiender', radiomast: 'radio 15–40 km', drivhus: 'dyrker mat', sandsekkvoll: 'vern 40 %',
     kjøkken: 'varm mat · moral', brønn: 'vann',
     // (ut4-balanse2) maskinene sto som «bare utseende» i byggelista
-    sagbruk: 'planker og flis', vedkløyver: 'ved av flis', fyrkjele: 'strøm og varme av flis' };
+    sagbruk: 'planker og flis', vedkløyver: 'ved av flis', fyrkjele: 'strøm og varme av flis',
+    steinbrudd: 'stein fra fjellet', steinknuser: 'pukk av stein', betongblander: 'betong av pukk', fiskemottak: 'frossen fisk', mølle: 'mel av korn',
+    raffineri: 'diesel av olje', smie: 'stål og deler av skrap' };
   const pst = f => Math.round(Math.abs(1 - f) * 100);
   function kort(id, B) {
     const v = VIRKNING[id] || {}, d = [];
