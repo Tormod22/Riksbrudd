@@ -1,0 +1,4 @@
+[
+["Lyd i kartet", "Spillet har lyd også i 2D, laget i koden og dempet: radioen spraker når et lag melder seg (to pip når du gir en ordre, bare sus når laget er utenfor radiokontakt), en rolig alarm når leiren angripes, kassaapparat når penger kommer inn og et dumpt klunk ved store kjøp, og telefonen ringer når noen vil snakke med dere. Nettleseren slipper lyden fram først etter at du har trykket eller brukt en tast.", "Vær, lyd og bilde"],
+["Kartlyd og Meldingslyd", "I ☰ under «Bilde og lyd»: «Lyd» slår all lyd av og på. «Kartlyd» er vind og regn i kartet og maskinene i leiren (saga, aggregatet, fyrkjelen) – de høres når du zoomer inn på leiren og bare når de går. «Meldingslyd» er radio, alarm, kasse og telefon. Trykk for å bla: Av, Lav, Middels, Høy.", "Vær, lyd og bilde"]
+]
