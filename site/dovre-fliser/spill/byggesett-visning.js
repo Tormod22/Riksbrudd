@@ -78,7 +78,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     if (V.fane === 'bærende') linje.append(gv('bærende', ['bs_søyle_tre', 'bs_søyle_betong', 'bs_søyle_stål', 'bs_bjelke_tre', 'bs_bjelke_stål']));
     if (V.fane === 'trapp') linje.append(gv('trapp', ['bs_trapp', 'bs_trapp_betong']));
     // (B5) maskiner, lys og lager inni (spill/fabrikk.js / fabrikk-visning.js)
-    if (V.fane === 'maskin') linje.append(gv('maskin', ['bs_sagbenk', 'bs_høvel', 'bs_vedkløyver', 'bs_fyrkjele', 'bs_lysrør', 'bs_lyskaster', 'bs_hylle', 'bs_pall']));
+    if (V.fane === 'maskin') linje.append(gv('maskin', BS.MASKINFANE || ['bs_sagbenk', 'bs_høvel', 'bs_vedkløyver', 'bs_fyrkjele', 'bs_lysrør', 'bs_lyskaster', 'bs_hylle', 'bs_pall']));
     if (V.fane === 'forsvar') linje.append(rad(...['bs_palisade', 'bs_mur', 'bs_voll', 'bs_piggtråd'].map(t => knapp(D[t].kort, velg('forsvar', t), grunn(V.forsvar) === t ? { klasse: 'på' } : {}))));
     if (V.fane === 'hus') { linje.append(rad(...Object.entries(BS.HUS).map(([k, M]) => valg('hus', k, M.navn)), ...egneMaler().map((M, k) => valg('hus', 'egen:' + k, M.navn))));
       linje.append(rad(knapp(V.malValg ? 'Trykk to hjørner rundt bygget …' : 'Lagre et bygg som mal', () => { V.malValg = !V.malValg; A = null; B = null; forslag = []; oppdater(); }, { id: 'bs-lagremal', ...(V.malValg ? { klasse: 'på' } : {}) }))); }

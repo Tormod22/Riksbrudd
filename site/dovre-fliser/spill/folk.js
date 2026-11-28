@@ -125,8 +125,10 @@
   // F.tempoF: lover, hendelser og seremonier i leiren (spill/samfunn.js, settes i steg); p.trener: i opplæring (lærer eller elev);
   // api.personF(p, o): egenskapene til personen (flittig, nattmenneske, modig – spill/rekruttering.js);
   // api.oppgaveF(o): faktor per oppgave utenfra (f.eks. frakt når vegene gror igjen, spill/overlev.js)
+  // (ut8-hverdag) api.tingTempo(o): verktøy på leirens lager (spill/tinglager-visning.js) – faktor ≥ 1; uten kroken 1 som før
   const personTempo = (F, p, o) => (o === 'fri' ? 1 : p.ferd[o] || 1) * moralFaktor(F.moral) * (p.seng || F.sist.alleSeng ? 1 : .85) * (.5 + .5 * Math.min(1, p.helse))
-    * (F.tempoF > 0 ? F.tempoF : 1) * (p.trener ? .6 : 1) * (api.oppgaveF ? api.oppgaveF(o) || 1 : 1) * (api.personF ? api.personF(p, o) || 1 : 1);
+    * (F.tempoF > 0 ? F.tempoF : 1) * (p.trener ? .6 : 1) * (api.oppgaveF ? api.oppgaveF(o) || 1 : 1) * (api.personF ? api.personF(p, o) || 1 : 1)
+    * (api.tingTempo ? api.tingTempo(o) || 1 : 1);
   // Snittet for dem som er i arbeid på oppgaven (0 når ingen er der), 0–1,5
   // (F0, 28. nov) api.døgnF(F, o): døgnplanen fra jobbtavla (spill/jobber.js) – 0 når ingen på oppgaven er i arbeidstida, høyere i
   // arbeidstida, så et helt døgn gir like mye som før. Uten jobbtavla (og i testene) 1.
@@ -201,6 +203,8 @@
       let dh = -(sult ? R.helseSult : 0) - kald * R.helseKulde;
       if (!sult && kald < .5) dh += R.helseNatur * (p.oppgave === 'fri' ? 2 : 1) + (o.helseTillegg > 0 ? o.helseTillegg : 0);   // helseTillegg: leirbyggene (spill/leirvirkning.js)
       if (p.helse < 1 && plasser > 0 && syke.includes(p) && stellere.length && !stellere.includes(p)) { dh += R.helseStell * stellKraft / stellere.length; plasser--; }
+      // (ut8-hverdag) api.tingHeling(F, L): medisin på leirens lager gir raskere heling (faktor ≥ 1 på det som leger); uten kroken som før
+      if (dh > 0 && p.helse < 1 && api.tingHeling) dh *= Math.max(1, +api.tingHeling(F, L) || 1);
       const før = p.helse; p.helse = Math.max(0, Math.min(1, p.helse + dh * d));
       if (før >= R.arbeidsfør && p.helse < R.arbeidsfør) H.push(`${p.navn} er syk og kan ikke arbeide.`);
       if (før < R.arbeidsfør && p.helse >= R.arbeidsfør) H.push(`${p.navn} er frisk igjen.`);
@@ -224,7 +228,8 @@
       - (F.personer.reduce((s, p) => s + p.helse, 0) / Math.max(1, F.personer.length) < .6 ? 10 : 0)
       + (F.ubetalt > 0 ? R.ubetaltMoral : 0);
     // (ut5-oppforsel) api.moralF(F, L): venner, uvenner, fritid og ulykker (spill/oppforsel-visning.js); uten kroken 0 – som før
-    const mf = api.moralF ? +api.moralF(F, L) || 0 : 0;
+    // (ut8-hverdag) api.tingMoral(F, L): kaffe, sjokolade, kortstokker, bøker … på lageret (spill/tinglager-visning.js); uten kroken 0
+    const mf = (api.moralF ? +api.moralF(F, L) || 0 : 0) + (api.tingMoral ? +api.tingMoral(F, L) || 0 : 0);
     F.mål = Math.max(5, Math.min(95, mål + (o.moralTillegg || 0) + mf));   // moralTillegg: f.eks. uten vann (spill/overlev.js)
     const steg1 = R.moralFart * dt / 60; F.moral += Math.max(-steg1, Math.min(steg1, F.mål - F.moral));
     // lav moral et helt døgn: den minst lojale forlater gjengen
@@ -345,7 +350,7 @@
   function fjern(F, id) { if (!F || id === undefined || id === null) return null; const i = F.personer.findIndex(p => p.id === id); if (i < 0) return null; return F.personer.splice(i, 1)[0]; }
   // personId(m): mannens kobling til folket – Leirvakta har tallet (p.id), en tropp har hele personposten (som ikke står i folket)
   const personId = m => (m && (typeof m.person === 'number' || typeof m.person === 'string') ? m.person : null);
-  const api = { varmeAndel: null, døgnF: null, stedF: null, tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor, personF: null, lønnSats, lønnSum, ledelse, moralF: null };
+  const api = { tingTempo: null, tingHeling: null, tingMoral: null, varmeAndel: null, døgnF: null, stedF: null, tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor, personF: null, lønnSats, lønnSum, ledelse, moralF: null };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.FolkRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
