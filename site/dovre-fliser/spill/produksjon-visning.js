@@ -108,7 +108,7 @@
   const VARER = [['tømmer', 'Tømmer'], ['tre', 'Planker'], ['flis', 'Flis'], ['ved', 'Ved']];
   function html() {
     const l = L(); if (!l) return '<p class="rolig">Sett opp leiren først.</p>';
-    les(); const M = PR.maskinene(l), plass = LB.lagerplass(l), f = F(), n = f && FR ? FR.arbeidere(f, 'maskin') : 0, trenger = M.reduce((s, b) => s + PR.REGLER.maskiner[b.type].folk, 0);
+    les(); const M = PR.maskinene(l), plass = LB.lagerplass(l), f = F(), n = f && FR ? FR.arbeidere(f, 'maskin') : 0, trenger = M.reduce((s, b) => s + PR.REGLER.maskiner[b.type].folk, 0) + (mating() ? mating().ekstraPlasser(l) : 0);
     let h = '<p class="rolig" style="margin:6px 0">Maskinene gjør tømmer om til planker, flis og ved. De går bare med folk på «Maskiner», strøm og noe å arbeide med.</p>';
     if (!M.length) h += '<div class="krav"><div>Ingen maskiner ennå.</div><small>Bygg et sagbruk i Leir → Bygg (gruppen Produksjon). Hogst gir tømmer – saga gjør det til planker. Uten saga kan tømmeret selges billig.</small></div>';
     for (const b of M) { const B = LB.BYGG[b.type], R = PR.REGLER.maskiner[b.type], s = sist.status[b.id] || { går: false, tekst: 'venter', folk: 0, drift: 0 };
