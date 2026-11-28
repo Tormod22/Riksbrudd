@@ -114,14 +114,14 @@
   // (ut8-kr-hus, kritikeren Jonas: «husvinduet viste huset selv når kartet sto på leiren») Husvinduet gjelder bare et hus som er på
   // skjermen: midten av huset innenfor bildet og huset minst så stort som når plantegningen kommer. Et hus i fokus («Se inn») som er
   // flyttet ut av bildet eller blitt for lite, slippes.
-  // (Statuslinja øverst og – på telefon – bunnmenyen dekker kanten av kartet: midten av huset må være i den delen du ser, SKJERM.topp/bunn
-  // punkter fra kanten. Claudes forslag.)
-  const SKJERM = { topp: 70, bunn: 30, bunnTelefon: 150 };
+  // (Statuslinja øverst og bunnmenyen/kommandolinja nederst dekker kanten av kartet: midten av huset må være i den delen du ser, SKJERM.topp/bunn
+  // punkter fra kanten og SKJERM.kant av bredden fra sidene – et hus helt ute i kanten av bildet får ikke vinduet. Claudes forslag.)
+  const SKJERM = { topp: 70, bunn: 100, bunnTelefon: 150, kant: .1 };
   function påSkjerm(h) {
     if (typeof kam === 'undefined' || typeof VW === 'undefined') return true;
     const cx = (h.bb[0] + h.bb[2]) / 2, cy = (h.bb[1] + h.bb[3]) / 2, sx = (cx - kam.x) / kam.m + VW / 2, sy = VH / 2 - (cy - kam.y) / kam.m;
     const bunn = VH - (VW <= 700 ? SKJERM.bunnTelefon : SKJERM.bunn);
-    return sx >= 0 && sx <= VW && sy >= SKJERM.topp && sy <= bunn && Math.max(h.bb[2] - h.bb[0], h.bb[3] - h.bb[1]) / kam.m >= R.minPunkter * .8;
+    return sx >= VW * SKJERM.kant && sx <= VW * (1 - SKJERM.kant) && sy >= SKJERM.topp && sy <= bunn && Math.max(h.bb[2] - h.bb[0], h.bb[3] - h.bb[1]) / kam.m >= R.minPunkter * .8;
   }
   const hoved = () => { const l = S.nær.filter(h => h.klar && h.m);
     if (S.fokus) { const f = l.find(h => h.i === S.fokus.i); if (f && påSkjerm(f)) return f; if (f) { S.fokus = null; S.sist = null; } }

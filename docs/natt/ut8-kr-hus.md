@@ -8,8 +8,8 @@ boligen 2556336 ved 59278 6742421) og på Dovre-testsiden, PC 1400 × 860 og tel
 - **×** (`#plan2dlukk`, `data-h="lukk"`) lukker vinduet for huset: `S.lukket = husets nummer`, fokuset slippes. Det kommer tilbake når du
   trykker på huset i plantegningen (første `KROKER.trykk` i fila), trykker «Se inn» (`seInn` → `åpneIgjen`), velger en etasje i huspanelet
   (etasjer-visning.js) eller zoomer ut og inn igjen. Et annet hus på skjermen får vinduet som før. Den gamle «Lukk» (bare med fokus) er erstattet.
-- **Bare hus på skjermen**: `påSkjerm(h)` – midten av huset i den delen av kartet du ser (SKJERM: 70 punkter fra toppen, 30 fra bunnen,
-  150 på telefon der bunnmenyen står) og huset minst `minPunkter × 0,8` stort. Et hus i fokus som er ute av bildet, slippes (`S.fokus = null`).
+- **Bare hus på skjermen**: `påSkjerm(h)` – midten av huset i den delen av kartet du ser (SKJERM: 70 punkter fra toppen, 100 fra bunnen
+  (kommandolinja), 150 på telefon (bunnmenyen), og ikke i de ytterste 10 % av bredden) og huset minst `minPunkter × 0,8` stort. Et hus i fokus som er ute av bildet, slippes (`S.fokus = null`).
   Før viste vinduet nærmeste hus i skannet (rx + 30 m rundt kartets midte), også utenfor bildet – derfor «viste huset selv når kartet sto på leiren».
 - **Ett overlegg om gangen** (bare for spilleren: `!navigator.webdriver || Plantegning2D.test === true`, som Paneler/Skjermlag):
   panelene i `LUKKER` (Leir, Folk, Samfunn, Krig, Deg, Tropper, Selskap, sekken, funnet, hjelpen …) lukker vinduet når du åpner dem selv
