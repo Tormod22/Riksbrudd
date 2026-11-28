@@ -85,7 +85,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     linje.append(el('div', { klasse: 'tekst' }, tekst || hjelp()), advarsel ? el('small', { klasse: 'advarsel' }, advarsel) : '', ekstra ? el('small', {}, ekstra) : '');
     const ok = forslag.filter(q => !q.feil), mangler = matMangler(), knp = [];
     if (V.fane === 'tak' && grunn(V.tak) === 'bs_tak_sal' || V.fane === 'hus' || V.fane === 'trapp') knp.push(knapp(V.fane === 'hus' ? '⟳ Snu' : V.fane === 'trapp' ? `Opp mot ${['øst', 'nord', 'vest', 'sør'][V.rot % 4]}` : `Møne: ${['auto', 'langs x', 'langs y'][V.rot]}`, () => { V.rot = (V.rot + 1) % (V.fane === 'tak' ? 3 : 4); oppdater(); }));
-    if (['vegg', 'gulv', 'bærende', 'trapp'].includes(V.fane)) knp.push(knapp(`Etasje: ${V.nivå === 'auto' ? 'auto' : V.nivå + 1}`, () => { V.nivå = V.nivå === 'auto' ? 0 : V.nivå >= BS.ETASJER - 1 ? 'auto' : V.nivå + 1; oppdater(); }, { title: 'Auto: delen legger seg i neste ledige etasje (høyst fire)' }));
+    if (['vegg', 'gulv', 'tak', 'bærende', 'trapp'].includes(V.fane)) knp.push(knapp(`${V.fane === 'tak' ? 'Over etasje' : 'Etasje'}: ${V.nivå === 'auto' ? 'auto' : V.nivå + 1}`, () => { V.nivå = V.nivå === 'auto' ? 0 : V.nivå >= BS.ETASJER - 1 ? 'auto' : V.nivå + 1; oppdater(); }, { title: 'Auto: delen legger seg i neste ledige etasje (høyst fire)' }));
     if (['vegg', 'gulv', 'tak', 'forsvar'].includes(V.fane) || (V.fane === 'bærende' && /bjelke/.test(V.bærende))) knp.push(knapp(V.nett === 4 ? 'Rutenett: hall 4,8 m' : 'Rutenett: 1,2 m', () => { V.nett = V.nett === 4 ? 1 : 4; A = null; B = null; forslag = []; oppdater(); }, { id: 'bs-nett', title: 'Hallrutenettet (4,8 m) legger store deler med ett trykk' }));
     if (V.fane === 'riv') { if (ok.length) knp.push(knapp(`Riv ${ok.length} (+${LB.kroner(rivPenger())})`, () => riv(), { id: 'bs-riv' })); }
     else if (ok.length) { knp.push(knapp(`Bygg ${ok.length > 1 ? ok.length + ' deler' : ''} (${LB.kroner(sum().pris)})`.replace('  ', ' '), () => bekreft(false), { id: 'bs-bygg', ...(mangler ? { disabled: '' } : {}) }));
@@ -368,7 +368,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
       for (const d of alle.slice().sort((a, b) => ordne(a) - ordne(b))) if (!under(d)) tegnDel(d, null);
       // rommene: navnet midt i (nær nok)
       if (G / m > 9) { g.save(); g.font = '12px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3;
-        for (const r of BS.rom(alle, (L() || {}).romBruk)) { if (r.etasje) continue; const x = sx(o.ox + r.ci * G), y = sy(o.oy + r.cj * G), t = r.navn + (r.senger ? ` · ${r.senger} senger` : '');
+        for (const r of BS.rom(alle, (L() || {}).romBruk)) { if (r.etasje) continue; const x = sx(o.ox + r.ci * G), y = sy(o.oy + r.cj * G), t = r.navn + (r.type && r.type.id === 'sovesal' ? ' · sovesal' : '') + (r.senger ? ` · ${r.senger} senger` : '');
           g.strokeStyle = 'rgba(0,0,0,.7)'; g.fillStyle = '#f2ead6'; g.strokeText(t, x, y + 4); g.fillText(t, x, y + 4); } g.restore(); } }
     // forslaget: grønt (kan bygges), rødt (får ikke plass); riv: rødt omriss
     for (const q of forslag) tegnDel(q.d, V.fane === 'riv' ? 'rgba(224,96,74,.75)' : q.feil ? 'rgba(224,96,74,.6)' : 'rgba(110,200,105,.62)');
