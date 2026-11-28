@@ -43,6 +43,20 @@ module.exports = {
         const tell = b => { let n = 0; const Bg = { boks: () => n++, z3: z => z, gx: 0, gy: 0 }, dd = BS.fraBygg(b, Leir), D = BS.DELER[b.type]; H3.bygg(Bg, dd, D, 0, 1); return n; };
         const fulle = [kh, sr, ts].map(tell); T.s = []; const tomme = [kh, sr, ts].map(tell); ut.klosser = { fulle, tomme };
         ok(fulle.every((n, k) => n > tomme[k]), 'tingene synes ikke på hyllene i leiren (' + fulle + ' mot ' + tomme + ')');
+        // (6, ut9-mobler3) leirens bygg: kjøkkenet og brakka har de nye møblene, og hyllene der viser tingene fra tinglageret
+        { const pk = I.plan(rekt(5.6, 8.4), { i: 9000001, kl: 'storkjøkken', h: 2.6, dør: dør(5.6, 1) }), pb = I.plan(rekt(6, 12), { i: 9000002, kl: 'brakke', h: 2.6, dør: dør(6, 1), senger: 8 });
+          const tk = new Set(pk.møbler.map(m => m.type)), tb = new Set(pb.møbler.map(m => m.type)); ut.leirMøbler = { kjøkken: tk.has('stålreol') && tk.has('overskap'), brakke: tb.has('hylle') && tb.has('kommode') };
+          ok(ut.leirMøbler.kjøkken && ut.leirMøbler.brakke, 'leirens kjøkken/brakke mangler de nye møblene ' + JSON.stringify(ut.leirMøbler));
+          const kj = { id: 987654 }; T.s = []; const tom = I3.leirVarer({ leir: 'kjøkken', bygg: { i: 9000000 + kj.id } });
+          TL.legg(T, TS.plasser(), 'peanøttsmør', 10, 0); TL.legg(T, TS.plasser(), 'kaffe', 6, 0); const full = I3.leirVarer({ leir: 'kjøkken', bygg: { i: 9000000 + kj.id } });
+          ut.leirVarer = { tom: tom && tom.fyll, full: full && full.fyll, kat: full && full.kat.map(q => q.kat).join('/') }; ok(tom && tom.fyll === 0 && full && full.fyll > 0 && full.kat.some(q => q.kat === 'mat'), 'kjøkkenet i leiren viser ikke tingene fra lageret ' + JSON.stringify(ut.leirVarer));
+          const reol = f => I3.deler({ type: 'stålreol', b: 1.8, d: .6, h: 2.2, f: .3, rolle: 'storkjøkken', fyll: f ? full.fyll : 0, kat: f ? full.kat : [] }).length; ok(reol(1) > reol(0), 'stålreolen i leirens kjøkken har ikke ting på seg'); }
+        // (7, ut9-mobler3) hverdagsting: tannbørster og håndkle ved vasken på badet; et åpnet kjøleskap viser innholdet
+        { const v = r => I3.deler({ type: 'vask', b: .6, d: .45, h: .85, f: .33, rolle: r }).length; ut.bad = [v('kjøkken'), v('bad')]; ok(ut.bad[1] > ut.bad[0], 'ingen tannbørster på badet ' + ut.bad);
+          const kjs = å => I3.deler({ type: 'kjøleskap', b: .62, d: .62, h: 1.85, f: .5, åpen: å, innFyll: .8 }).length; ut.kjøleskap = [kjs(false), kjs(true)]; ok(ut.kjøleskap[1] > ut.kjøleskap[0] + 4, 'det åpne kjøleskapet viser ikke innholdet ' + ut.kjøleskap);
+          // leirens kiste: åpen i 3D når lagerpanelet viser den
+          const ki = sett('bs_kiste_1', i0 + 8, j0); TL.legg(T, TS.plasser(), 'ullsokker', 4, 0, { plass: 'b' + ki.id }); const lukket = tell(ki); TS.åpne(true, 'b' + ki.id); const åpen = tell(ki); TS.åpne(false, null); ut.kiste = [lukket, åpen];
+          ok(åpen > lukket, 'kista står ikke åpen med tingene synlige når den vises i lagerpanelet ' + ut.kiste); }
         // (4) 2D-symbolene
         const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
         ut.symboler = ['bs_trehylle_1', 'bs_stålreol_1', 'bs_vitrine_1', 'bs_kjøkkenhylle_1', 'bs_kjølereol_1', 'bs_verktøyskap_1', 'bs_arkivskap_1', 'bs_smalhylle_1', 'bs_hjørnehylle_1', 'bs_tønnestativ_1']
@@ -56,6 +70,6 @@ module.exports = {
       return ut;
     });
     if (d.mangler) return { ok: false, tekst: 'mangler: ' + JSON.stringify(d), data: d };
-    return { ok: !d.feil.length, tekst: d.feil.length ? 'FEIL: ' + d.feil.join('; ') : `ok – ${d.iBruk} nye møbeltyper i prøvebyggene, største modell ${d.maksKlosser} klosser, hylle i hus ${d.hylle.tom} → ${d.hylle.full} klosser, leirens hyller ${d.klosser.tomme} → ${d.klosser.fulle}, ${d.symboler} symboler`, data: d };
+    return { ok: !d.feil.length, tekst: d.feil.length ? 'FEIL: ' + d.feil.join('; ') : `ok – leirens kjøkken ${JSON.stringify(d.leirVarer)}, bad ${d.bad}, kjøleskap lukket/åpent ${d.kjøleskap}, kiste ${d.kiste}; ${d.iBruk} nye møbeltyper i prøvebyggene, største modell ${d.maksKlosser} klosser, hylle i hus ${d.hylle.tom} → ${d.hylle.full} klosser, leirens hyller ${d.klosser.tomme} → ${d.klosser.fulle}, ${d.symboler} symboler`, data: d };
   },
 };

@@ -153,7 +153,7 @@
     // helse
     beboerrom: [['vegg', 'beboerbad', 1, { fri: .5, sider: 'kort' }], ['seng', 'sykeseng'], ['vegg', 'skap', 1], ['vegg', 'lenestol', 1], ['vegg', 'plante', 1, { fri: .5 }]],
     dagligstue: [['vegg', 'sofa', 2, { sider: 'lang' }], ['vegg', 'lenestol', A => Math.min(4, Math.floor(A / 10))], ['vegg', 'tvbenk', 1], ['bord', 'spisebord', 4], ['bord', 'spisebord', 4], ['vegg', 'bokhylle', 1], ['vegg', 'piano', 1], ['vegg', 'plante', 2, { fri: .5 }]],
-    vaktrom: [['vegg', 'pult', 2], ['vegg', 'medisinskap', 1], ['vegg', 'arkivskap', 1], ['vegg', 'skap', 1], ['vegg', 'vask', 1, { fri: .5 }]],
+    vaktrom: [['vegg', 'pult', 2], ['vegg', 'medisinskap', 1], ['vegg', 'hylle', 1], ['vegg', 'arkivskap', 1], ['vegg', 'skap', 1], ['vegg', 'vask', 1, { fri: .5 }]],
     venterom: [['vegg', 'skranke', 1, { sider: 'kort' }], ['rad', 'benk', 6, { fri: 1 }], ['vegg', 'plante', 2, { fri: .5 }]],
     behandlingsrom: [['vegg', 'undersøkelsesbenk', 1], ['vegg', 'pult', 1], ['vegg', 'vask', 1, { fri: .5 }], ['vegg', 'medisinskap', 1], ['vegg', 'stol', 1, { fri: .4 }]],
     // fjøset: båsrekker langs langveggene (gjødselkanal bak, fôrbrett foran mot fôrgangen i midten), melkerommet med tank og vask
@@ -614,11 +614,15 @@
         // drivhus: plantebed i rekker langs huset med gang mellom, vanntønne ved døra
         case 'drivhus': { const satt = yield* rutenett(r, 'plantebed', { du: lu >= lv ? 2.9 : 1.75, dv: lu >= lv ? 1.75 : 2.9, mU: .7, mV: .6, langsU: lu >= lv, fri: .8, maks: 16 });
           if (!satt.length) for (let k = 0; k < Math.min(6, Math.floor(A / 6)); k++) etSted(r, 'plantebed', { fri: .8 }, lang); etSted(r, 'tønne'); break; }
-        case 'brakke': { for (let k = 0; k < (pl.senger ? Math.ceil(pl.senger / 2) : Math.min(12, Math.floor(A / 6))); k++) etSted(r, 'køyeseng', { fri: .9 }, lang) || etSted(r, 'køyeseng', { fri: .9 }); etSted(r, 'ovn', { fri: .8 }, kort); etSted(r, 'skap'); etSted(r, 'skap'); etSted(r, 'knagger', { fri: .5 }); break; }
+        case 'brakke': { for (let k = 0; k < (pl.senger ? Math.ceil(pl.senger / 2) : Math.min(12, Math.floor(A / 6))); k++) etSted(r, 'køyeseng', { fri: .9 }, lang) || etSted(r, 'køyeseng', { fri: .9 }); etSted(r, 'ovn', { fri: .8 }, kort); etSted(r, 'garderobe') || etSted(r, 'skap'); etSted(r, 'skap'); etSted(r, 'knagger', { fri: .5 });
+          // (ut9-mobler3) leirens brakke: hylle med tingene fra leiren, kommode og skoskap
+          etSted(r, 'hylle'); etSted(r, 'kommode'); etSted(r, 'skoskap', { fri: .6 }); break; }
         case 'kontrollrom': { prøv(r, 'kartbord', (r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2, lu >= lv, false, { iVeien: true, fri: 1.4 });
-          for (let k = 0; k < 6; k++) { const p = etSted(r, 'pult'); if (p) foran(r, p, 'kontorstol', .1, { fri: .3, luft: -.1 }); } etSted(r, 'radio'); etSted(r, 'radio'); etSted(r, 'tavle', { fri: .3 }); etSted(r, 'arkivskap'); break; }
-        case 'storkjøkken': { etSted(r, 'kjøkkenbenk', { b: Math.min(3, Math.max(lu, lv) - 2) }, lang); etSted(r, 'komfyr'); etSted(r, 'komfyr'); etSted(r, 'kjøleskap'); etSted(r, 'kjøleskap'); etSted(r, 'hylle');
-          yield* rutenett(r, 'langbord', { du: lu >= lv ? 3.4 : 2.4, dv: lu >= lv ? 2.4 : 3.4, mU: 1.6, mV: 1.6, langsU: lu >= lv, maks: 3, fri: 1.2 }); break; }
+          for (let k = 0; k < 6; k++) { const p = etSted(r, 'pult'); if (p) foran(r, p, 'kontorstol', .1, { fri: .3, luft: -.1 }); } etSted(r, 'radio'); etSted(r, 'radio'); etSted(r, 'tavle', { fri: .3 }); etSted(r, 'arkivskap'); etSted(r, 'permreol'); etSted(r, 'vannkjøler', { fri: .5 }); break; }
+        case 'storkjøkken': { const kb = etSted(r, 'kjøkkenbenk', { b: Math.min(3, Math.max(lu, lv) - 2) }, lang); oppå(r, kb, 'overskap'); const k1 = etSted(r, 'komfyr'); oppå(r, k1, 'vifte'); etSted(r, 'komfyr'); etSted(r, 'kjøleskap'); etSted(r, 'kjøleskap'); etSted(r, 'hylle');
+          yield* rutenett(r, 'langbord', { du: lu >= lv ? 3.4 : 2.4, dv: lu >= lv ? 2.4 : 3.4, mU: 1.6, mV: 1.6, langsU: lu >= lv, maks: 3, fri: 1.2 });
+          // (ut9-mobler3) leirens kjøkken: stålreol og krydderhylle med tingene fra leirens lager, oppvaskmaskin
+          etSted(r, 'stålreol'); etSted(r, 'krydderhylle', { svev: true, fri: .3 }); etSted(r, 'oppvaskmaskin'); break; }
         case 'terminal': { yield* rutenett(r, 'seterad', { du: lu >= lv ? 3.4 : 2.2, dv: lu >= lv ? 2.2 : 3.4, mU: 3, mV: 3, langsU: lu >= lv, maks: 30, fri: 2 }); etSted(r, 'skranke'); etSted(r, 'skranke'); break; }
         default: if (MØBELSETT[r.rolle]) yield* oppskrift(r, MØBELSETT[r.rolle], lang, kort);
       }
