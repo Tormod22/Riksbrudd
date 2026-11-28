@@ -1686,7 +1686,7 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   møbler, industrimaskiner, industritype per bygg, lagringssystem med hverdagsting som peanøttsmør»): kritikkene i docs/kritikk/2026-11-28-ut-*.md,
   rettet i pakkene ut8-kr-saga/-krig/-penger/-hus/-telefon/-ro (notater i docs/natt/ut8-kr-*.md; nye filer storkjop.js – bekreft kjøp over
   1 mill. –, trykkvakt.js – tapte trykk ved høy fart –, telefonro.js). Boka om hele spillet: docs/spillet-hele.md (PDF i scratchpad spillbok/).
-  INDUSTRITYPE: byggjobben gir `ind` 0–14 (IND i bygninger.py = Industri.IND i spill/industri.js; release kart-hus-3af69d4a5eaf, 11 280 bygg
+  INDUSTRITYPE: byggjobben gir `ind` 0–14 (IND i bygninger.py = Industri.IND i spill/industri.js; release kart-hus-17066de338e5, 19 218 bygg
   med kjent type – resten anslås av IndustriSpill.omgivelser) og spill/maskiner.js (66 modeller, Maskiner.LIV, linjen råvare → maskiner →
   ferdigvare i Interior «linje»; maskiner-visning.js: bevegelige deler og lyd når ProduksjonSpill sier at maskinen går). Nye maskiner i egen
   fabrikk: flishogger, filetmaskin, ballepresse, steinknuser (ut9-maskiner2). HVERDAGSTING: spill/ting.js (249 ting i ti kategorier, holdbarhet,
