@@ -23,8 +23,8 @@ module.exports = { navn: 'selskapet: panel, kontrakt tatt og levert, penger og r
       krev(document.querySelector('[data-k="selskap"]') || [...document.querySelectorAll('#lagmeny button')].some(b => /Selskapet/.test(b.textContent)), 'ingen inngang til panelet (kommandolinja/☰)');
       // avslå tar bort et tilbud
       const n0 = S.tilbud.length; P.querySelector('[data-s="avslå"]').click(); krev(S.tilbud.length === n0 - 1, 'Avslå tok ikke bort tilbudet');
-      // en hold-kontrakt, tatt med knappen
-      const k = Object.assign(S.tilbud[0], { type: 'hold', hold: 1, timer: 11 }); k.tittel = Selskap.tittel(k); SS.vis(true);
+      // en hold-kontrakt, tatt med knappen (ut4-fiksa: på nivå 1 – tilbudene kan kreve et høyere nivå enn selskapet har)
+      const k = Object.assign(S.tilbud[0], { type: 'hold', hold: 1, timer: 11, nivå: 1 }); k.tittel = Selskap.tittel(k); SS.vis(true);
       const knapp = P.querySelector(`[data-s="ta"][data-id="${k.id}"]`); krev(knapp, 'fant ikke Ta-knappen'); if (knapp) knapp.click();
       krev(S.sider.blå.aktive.some(q => q.id === k.id), 'kontrakten ble ikke aktiv');
       const pål0 = S.sider.blå.rykte.pålitelig, p0 = OppstartSpill.tilstand().penger;
