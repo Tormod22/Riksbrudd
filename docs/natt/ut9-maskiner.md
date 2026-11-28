@@ -77,7 +77,15 @@ OBS: sagbruket som eget bygg har modellen «verksted» (lukket hus) – bladet s
   Testen fant med en gang fem modeller med kasser som gikk feil vei, fire tunge modeller og to maskiner i døråpninger – rettet.
 - `test_industri.js`, `test_interior.js`, `test_interior_biter.js`, `test_plantegning.js`, `test_bygning.js`, `test_kommando.js`,
   `test_produksjon.js`, `test_fabrikk.js` – ok.
-- Nettleser: se rapporten (vaktene, bilder i scratchpad `natt/ut9-maskiner/`).
+- Nettleser (Dovre-testsiden): vakta `ut9-maskiner` ok i 2D på PC og mobil (linjer i 13 bransjer, selvtest, kildene følger «går», 44–55
+  symboler tegnet) og i 3D på PC (steinhallen: grushaug → knuser → transportbånd → kjegleknuser, 9322 trekanter for hele hallen; sagbladet
+  roterer, knastene går, bladet er borte når maskinen står). Vaktene `ut8-industri`, `inne`, `ut5-fabrikk`, `ut2-sagbruk` ok på PC og mobil
+  og i 3D (ut8-industri feilet én gang på PC i 2D på «omgivelsene ved leiren mangler høyde» – det samme skjer på `claude/nattfiks` uten
+  denne pakka; på mobil og i 3D var den ok). ut8-vakta godtar nå «sløyelinje» i linja i plantegningen (der sto «sløyebenk» før).
+- Feil med vilje: fiskehallen uten linje og sagbladet uten fart -> vakta feilet på begge («bransjer uten produksjonslinje: 6»,
+  «sagbladet/båndet går ikke»). Testen fant også at maskinene vendte mot midten i stedet for i flytretningen (rettet, egen test).
+- Bilder (scratchpad `natt/ut9-maskiner/`): inne i sagbruket, knuserhallen, fiskehallen og oljehallen (PC 1400), metallverkstedet og
+  bryggeriet (mobil 390), plantegningene med symbolene (PC og mobil). Ca. 9 600–10 500 trekanter for interiøret i en hall på 680 m².
 
 ## Ikke gjort
 - Punkt 5 (nye maskiner du kan bygge i egen fabrikk – barkemaskin, filetmaskin, ballepresse) er IKKE laget: det krever nye varer og nye
