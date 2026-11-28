@@ -503,4 +503,4 @@ function kjør(strategiId, frø, o = {}) {
   return res;
 }
 
-module.exports = { REGLER, DELER, STRATEGIER, KRAV, leggTilDel, leggTilStrategi, leggTilKrav, kjør, nySim, kamp, marsjTimer, bilTimer, gåKmt, kontraktTimer, ekteStartpenger, mill, API, taKontrakt, besteKontrakt, sendTilBy, lagRegion };
+module.exports = { REGLER, DELER, STRATEGIER, KRAV, leggTilDel, leggTilStrategi, leggTilKrav, kjør, nySim, kontraktTime, steder, BYGGELISTE, fyllTropp, døgnUt, kamp, marsjTimer, bilTimer, gåKmt, kontraktTimer, ekteStartpenger, mill, API, taKontrakt, besteKontrakt, sendTilBy, lagRegion };
