@@ -10,9 +10,18 @@ gikk fra 40–45 til 16–20 mill. på 1,5–3 døgn. Alle tallene under er Clau
   **bygdelaget/kommunen i stedet selv** (bygdevernet slipper dere inn: krig-visning.js `oppdragFor`), i et tettsted ingen andre holder
   og uten kjente fiender, eller ved en bru. Nærmest først (fra 800 m – Ulvik lå 1,3 km fra Jonas' leir, og vanlige tilbud starter på
   2,5 km), helst innen 9 km, ellers lenger ut. Fristen får en time ekstra per km. Merket `k.lett`.
-- `REGLER.lett = { styrke: 4, min: 800, maksMeter: 9000, nærmeste: 3, holdSjanse: .5, ekstraPerKm: 1, garnison: 8, betaling: .85, maksNivå: 2, rykte: .5 }`:
+- `REGLER.lett = { styrke: 4, min: 800, maksMeter: 9000, nærmeste: 3, holdSjanse: .5, ekstraPerKm: 1, garnison: 8, betaling: .85, maksNivå: 2, rykte: .5, kmt: 3, omveg: 1.3, lager: .7, lagerTimer: 24 }`:
   betaler 85 % av et vanlig tilbud, gir halvt rykte («pålitelig») ved levering, finnes bare på nivå 1–2 og bare når ingen vanlig
   kontrakt er i gang (se økonomitesten under – ellers ble det en snarvei til nivå 4 og over 200 mill.).
+- RESERVEN `Selskap.lagerJobb` (gjennomspillingen ved Ulvik: Mosevakt og så Ravnsund tok Ulvik dag 4, og Granvin/Eidfjord lå over fjorden):
+  når ingen tettsteder eller bruer passer, et nødlager som skal hentes («Hent nødlageret øst for leiren», type `forsyning`, ikke
+  `første`) på land nær leiren – `o.lager()` fra visningen (`lagerPlass`, dreid BORT fra nærmeste tettsted). 0,7 × en hentejobb
+  (ca. 0,8–0,95 mill.), frist 24 t, høyst ett om gangen. Lages også når kartet ikke har noen steder for vanlige tilbud.
+- `o.klarbar` (visningen): dens egen vurdering avgjør om leiren alt har et tilbud den klarer – `kanTa` uten advarsel og den UTREGNEDE
+  marsjen (`SelskapSpill.marsj`); uten utregnet marsj teller tilbudet ikke ved morgentilbudene (streng), fordi luftlinja bommet på
+  fjordene (Eidfjord: ca. 10 km i luftlinje, 31 km på vegen). Uten `o.klarbar` (Node/modellen) brukes reglenes anslag (`klarbar` med
+  fristen sjekket i luftlinje × 1,3 i 3 km/t). En rolig eskorte med eget kjøretøy teller som klarbar i reglene (prøvd uten: da flyttet
+  båndet til «byer med avtaler» seg og selvtesten mistet kraft – beholdt).
 - `Selskap.forsvarFor(k, sted, id)`: det kjente forsvaret for en jobb – samme regel som `forsvarVed` i visningen (bygdevernet teller
   ikke for stedets egen bygd/kommune; garnison når et annet selskap holder stedet). `Selskap.klarbar(k, styrke, sd, sted, kjøretøy)`.
 - Visningen (selskap-visning.js): `nyeTilbud` gir stedene vern/fiender/garnison (`medForsvar`, fra `StrategiSpill.kjentForsvar`) og
@@ -47,6 +56,13 @@ tropp klarer den.» (knapp «Se kontrakten»), ellers lever de som er i gang / t
 rekker ca. N døgn» når den er lav. Diesel = `LeirSpill.diesel().perDøgn` × dagens pris; vedlikehold = `PengerSpill.vedlikehold()`.
 
 Ikke endret (med vilje): lønna (brukerens 15 000), dieselprisen og vedlikeholdet (1 %) – de deles av mange systemer og bånd.
+
+GJENNOMSPILLING på /norge (dev.py, webdriver AV, leir i lia over Ulvik som Jonas, scratchpad natt/ut8-kr-penger/spill.js – tiden
+spoles med sim(0,1)-steg som løkka): første kontrakt 07:27, brakke + dieseltank + aggregat (ca. 11 mill.), så det lappen peker på hvert
+døgn: «Hent legen … i Ulvik» (1,2 mill.), «Hold Ulvik i 4 timer» (1,1), «Hent presten … i Ulvik» (1,4) – kassa 30,1 → 33,3 mill. dag 4
+med drift ca. 240 000 kr/døgn. Da rivalene tok Ulvik (dag 4), sto lappen på små oppdrag til reserven (nødlageret) kom inn. En kjøring
+mistet troppen og en nødlagerjobb (troppen gikk mot Ulvik – derfor legges nødlageret nå bort fra tettstedet). Kassa blør ikke lenger
+av seg selv, men inntekten er beskjeden (ca. 1 mill. per døgn) til spilleren tar større kontrakter med sterkere lag.
 
 ## 3. Små oppdrag i Kontrakter (MIDDELS)
 Kontrakter har gruppen «Små oppdrag» (samme `SpilletSpill.O().liste` som Leir → Mål, som står som før) med navn, belønning, frist,
