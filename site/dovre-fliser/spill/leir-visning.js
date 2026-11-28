@@ -929,6 +929,11 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   // Leir-menyen, byggpanelet, 2D og 3D leser L som før. Reglene (KROKER.sim) går ikke hos en gjest, og en gjest lagrer ikke.
   // 3D lages bare på nytt når byggene er endret (framdriften følges av tidtakeren over). speil(null) = tilbake til eget spill.
   let speilNøkkel = '';
+  // (ut8-kr-saga) leiren – med folkene og oppgavene deres i L.folk – lagres også når siden skjules eller lukkes. Før ble den bare lagret
+  // hvert 10. spillminutt og ved byggejobber, så «+» på Maskiner i Selskap → Produksjon var borte etter en omlasting (saga sto uten folk).
+  const lagreVedLukk = () => { if (L && !speilNøkkel) lagre(); };
+  window.addEventListener('pagehide', lagreVedLukk);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') lagreVedLukk(); });
   function speil(Ny) {
     if (!Ny) { const var_ = speilNøkkel; speilNøkkel = ''; if (var_) { L = null; start(); } return; }
     const S = spill(); L = Ny; if (S && S.leir) L.midt = { x: S.leir.x, y: S.leir.y }; leirKnapp.hidden = false;
