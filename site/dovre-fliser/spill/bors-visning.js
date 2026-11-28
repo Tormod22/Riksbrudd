@@ -53,7 +53,12 @@
     for (const f of firmaer()) { const v = Bo.firmaVerdi(f, K[f.navn] || {}); const a = B.firmaer[f.navn]; ut[f.navn] = { ...v, kurs: Bo.kurs(v.verdi, a ? a.stemning : 1), f }; }
     return ut;
   }
-  function ukeNetto() { try { const P = window.PengerSpill, SB = window.Selskapsbilde; if (!P || !P.døgn || !P.døgnNå || !SB || !SB.uke || !P.tilstand || !P.tilstand()) return 0; const u = SB.uke(n => P.døgn(n), P.døgnNå()); return u && u.dager ? u.netto : 0; } catch (e) { return 0; } }
+  // ukas resultat fra dagboka over pengene (de siste 7 døgnene), uten pengene fra børsen selv og «annet» (ellers ville en notering
+  // telt som resultat og løftet kursen igjen) – Claudes valg
+  const UTENOM = ['børs og investorer', 'annet'];
+  function ukeNetto() { try { const P = window.PengerSpill; if (!P || !P.døgn || !P.døgnNå || !P.tilstand || !P.tilstand()) return 0; const d = P.døgnNå(); let n = 0;
+    for (let i = Math.max(1, d - R.uke + 1); i <= d; i++) { const D = P.døgn(i); if (!D) continue; n += (+D.inn || 0) - (+D.ut || 0); for (const k of UTENOM) if (D.p && Number.isFinite(+D.p[k])) n -= +D.p[k]; }
+    return n; } catch (e) { return 0; } }
   const angrepUke = () => (B.angrep || []).filter(t => nåMin() - t < 7 * DØGN).length;
   function rivalKurs(side) { let v = 0; try { v = window.SeierSpill && SeierSpill.rivalVerdi ? SeierSpill.rivalVerdi(side).sum : 15e6; } catch (e) { v = 15e6; } return { verdi: v, kurs: Bo.kurs(v, B.rivaler[side].stemning) }; }
   // alle kursene nå: { meg, rød, grønn, firma: { navn: { verdi, resultat, kurs } }, verdi (ditt selskap) }
@@ -246,7 +251,7 @@
   function fane() {
     if (!klar) start(); if (!klar) return '<p class="rolig">Velg leir først.</p>';
     const K = kurser(), m = B.meg, nv = nivå(), nå = nåMin(), børs = Bo.børsverdi(K.meg);
-    let h = `<p class="rolig" style="margin:6px 0">Selskapets verdi og eierne. Fra nivå ${R.nivå.andeler} kan dere kjøpe andeler i firmaene og få investorer; fra nivå ${R.nivå.notering} kan selskapet noteres på <b>Gråbørsen</b> – en handelsplass for private militærselskaper, smuglere og skyggefond.</p>`;
+    let h = `<p class="rolig" style="margin:6px 0">Selskapets verdi og eierne. Fra nivå ${R.nivå.andeler} kan dere kjøpe andeler i firmaene og få investorer; fra nivå ${R.nivå.notering} kan selskapet noteres på Gråbørsen – en handelsplass for private militærselskaper, smuglere og skyggefond.</p>`;
     if (melding) h += `<p class="fi-melding">${esc(melding)}</p>`;
     if (m.oppkjøpt) h += `<div class="fi-boks"><h4>Kjøpt opp</h4><div class="fi-linje">${esc(sidenavn(m.oppkjøpt))} eier over halvparten av selskapet. Dere kan spille videre, men børsen er stengt for dere.</div></div>`;
     // kursen og grafen
