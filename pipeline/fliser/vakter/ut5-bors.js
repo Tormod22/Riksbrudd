@@ -16,6 +16,9 @@ module.exports = {
     const penger = () => OS.tilstand().penger, settPenger = v => { const p = penger(); if (p > v) OS.betal(p - v); else if (p < v) OS.gi(v - p); };
     const sd = S.sider.blå, før = { penger: penger(), S: SK.tilJSON(S), F: Fi.tilJSON(FS.tilstand()), B: Bo.tilJSON(BS.tilstand()), tid, seierTest: SE.test,
       lagring: Object.keys(localStorage).filter(n => /^riksbrudd-(selskap$|firma|bors|seier)/.test(n)).map(n => [n, localStorage.getItem(n)]), logg: typeof loggLinjer !== 'undefined' ? loggLinjer.slice() : null };
+    // (ut6-fiksd) firmaet dere eier (Storlia) leverer tømmer til leiren i døgnene vakta spoler: lageret settes tilbake etterpå
+    // (18 m³ tømmer ble liggende ute, og oppførsel-vakta (F4) fikk ikke båret sin vare inn før tida var ute)
+    const Lr = window.LeirSpill && LeirSpill.tilstand(), lager0 = Lr ? { ...Lr.lager } : null, varer0 = (() => { try { return localStorage.getItem('riksbrudd-varer'); } catch (e) { return null; } })();
     const vent = ms => new Promise(r => setTimeout(r, ms));
     try {
       OS.gi(200e6); BS.nullstill();
@@ -59,10 +62,13 @@ module.exports = {
       for (const n of Object.keys(localStorage).filter(n => /^riksbrudd-(selskap$|firma|bors|seier)/.test(n))) localStorage.removeItem(n);
       for (const [n, v] of før.lagring) localStorage.setItem(n, v);
       if (SE.lesPåNytt) SE.lesPåNytt(); if (SS.lagre) SS.lagre();
+      if (Lr && lager0) { for (const k of Object.keys(Lr.lager)) Lr.lager[k] = lager0[k] || 0; Object.assign(Lr.lager, lager0);
+        try { if (varer0 === null) localStorage.removeItem('riksbrudd-varer'); else localStorage.setItem('riksbrudd-varer', varer0); } catch (e) { /* privat */ }
+        if (window.VarelagerSpill) { try { if (VarelagerSpill.last) VarelagerSpill.last(); VarelagerSpill.avstem(); } catch (e) { /* */ } } }
       if (før.logg && typeof loggLinjer !== 'undefined') { loggLinjer.length = 0; loggLinjer.push(...før.logg); }
     }
-    d.tilbake = { penger: penger() === før.penger, tid: tid === før.tid, bors: JSON.stringify(Bo.tilJSON(BS.tilstand())) === JSON.stringify(før.B) };
-    if (!d.tilbake.penger || !d.tilbake.tid || !d.tilbake.bors) feil.push('ble ikke satt tilbake: ' + JSON.stringify(d.tilbake));
+    d.tilbake = { penger: penger() === før.penger, tid: tid === før.tid, bors: JSON.stringify(Bo.tilJSON(BS.tilstand())) === JSON.stringify(før.B), lager: !Lr || !lager0 || Object.keys(lager0).every(k => Math.abs((Lr.lager[k] || 0) - lager0[k]) < 1e-6) };
+    if (!d.tilbake.penger || !d.tilbake.tid || !d.tilbake.bors || !d.tilbake.lager) feil.push('ble ikke satt tilbake: ' + JSON.stringify(d.tilbake));
     return { ok: !feil.length, tekst: feil.length ? feil.join('; ') : `rabatt ${d.rabatt.join(' -> ')}, utbytte ${d.utbytte}, notering ${Math.round(d.notering / 1e6)} mill., brudd ${d.stemning.join(' -> ')}, oppkjøp ${d.oppkjøp[0]}`, data: d };
   }),
 };
