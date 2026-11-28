@@ -37,7 +37,11 @@ module.exports = { navn: 'ut2-seier: tre veier til seier og avslutningen', kjør
       } else ut.utenTettsteder = true;
       const B = SS.bilde(); krev(B && B.A && ['blå', 'rød', 'grønn'].every(s => ['makt', 'penger', 'gjenoppbygging'].every(v => B.A[s][v] && Number.isFinite(B.A[s][v].fremdrift))), 'SeierSpill.bilde mangler en side eller en vei');
       if (B) { ut.fremdrift = Object.fromEntries(['makt', 'penger', 'gjenoppbygging'].map(v => [v, Math.round(B.A.blå[v].fremdrift * 100)])); ut.verdi = Math.round(B.verdi.blå.sum / 1e6);
-        krev(B.verdi.blå.sum >= OppstartSpill.tilstand().penger, 'selskapets verdi er mindre enn kassa');
+        // (ut6-fiksd) med børsen (ut5-bors) er verdien børsverdien: den følger stemningen (brutte kontrakter fra vaktene før senker den) og
+        // ukas netto, og kan da være under kassa. Da sjekkes at seieren bruker børsverdien; uten børsen som før (verdien ≥ kassa).
+        const bø = window.BorsSpill && BorsSpill.seierInn ? BorsSpill.seierInn() : null;
+        if (bø) krev(B.verdi.blå.sum > 0 && Math.abs(B.verdi.blå.sum - bø.verdier.blå) < 1, 'selskapets verdi er ikke børsverdien (' + B.verdi.blå.sum + ' mot ' + bø.verdier.blå + ')');
+        else krev(B.verdi.blå.sum >= OppstartSpill.tilstand().penger, 'selskapets verdi er mindre enn kassa');
         if (nye.length) { krev(B.A.blå.gjenoppbygging.holdt >= 3, 'gjenoppbyggingen teller ikke prøvetettstedene (' + B.A.blå.gjenoppbygging.holdt + ')');
           krev(B.A.blå.makt.andel > 0, 'makt: stillingen har ikke prøvetettstedene'); } }
       // Selskapet → Oversikt
