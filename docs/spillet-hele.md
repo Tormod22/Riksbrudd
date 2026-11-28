@@ -130,6 +130,18 @@ kommer tidligst etter et døgn, og de tre første døgnene er det bare ett røve
 Er du usikker på hva du skal gjøre, står neste mål øverst i Leir-menyen, og fanen «Mål» har hele lista i fire kapitler – fra første
 brakke til første tettsted.
 
+### 3.6 Den første timen – et eksempel
+
+Ingrid velger en li over Dombås, med veg og skog like ved. Leiren legges, og Neste-lappen sier: «Lag en tropp». Hun tar fire av folkene,
+gir dem rifler og sender dem mot låven med bygdelagets nødlager. Mens troppen marsjerer, setter hun to på bygg og bestiller en brakke, et
+aggregat og en dieseltank, og kjøper 500 liter diesel. Farten settes til 60×. Troppen melder seg på radio når den er framme, og nødlageret
+bæres hjem. Bygdelaget betaler 1,5 millioner.
+
+Om kvelden står brakka ferdig, og folkene går dit for å sove. Kl. 06 kommer morgenmøtet: maten rekker tre døgn, moralen er god, og det står
+to nye kontrakter og en søker i Folk. Et vakttårn melder røvere fra nord. Ingrid trykker «Forsvar leiren», troppen går i stilling bak
+sandsekkene, og røverne snur etter en kort ildkamp – og etterlater kassa si. Slik har hun på en time vært innom tropp, marsj, radio,
+bygging, folk, mat, kontrakter og forsvar.
+
 ## 4. Leiren og byggingen
 
 ### 4.1 Leir-menyen
@@ -844,6 +856,33 @@ Ingen av delene er pynt. Det du gjør ett sted, merkes et annet sted.
 | Butikker, anlegg, flyplasser, jernbane, veger i nabolandene | OpenStreetMap |
 | Landskapet rundt Norge | Copernicus DEM og ESA WorldCover |
 | Farger fra lufta | Landsat |
+
+### 18.1 Hva kritikerne sa
+
+Spillet er prøvd av to oppdiktede kritikere i tre runder (26. november): Ingrid Sæther, som spiller strategi og økonomi på PC, og Jonas Bakke,
+som spiller mest på telefon og går i 3D. Etter hver runde ble det de fant, rettet.
+
+| | Runde 1 | Runde 2 | Runde 3 |
+|---|---|---|---|
+| Ingrid Sæther (strategi) | 3 | 3 | 4 |
+| Jonas Bakke (stemning) | 4 | 4 | 4 |
+
+> «Riksbrudd har tatt et reelt steg som strategispill. Krigen om en by er nå et sammenhengende system: krav, avtale, sammenlagte lag,
+> garnison, fredstid, motangrep og seier.» – Ingrid Sæther, runde 3
+
+> «Riksbrudd har blitt et vakrere og varmere spill. Lyset i leiren, begravelsene, funnene og gangmodusen på telefonen gjør at jeg vil
+> tilbake.» – Jonas Bakke, runde 3
+
+Det som ble rettet, var blant annet en første kontrakt som sendte troppen i døden, rotete skjerm på telefon, uklare angrep og for mye skatt fra tettstedene.
+Etter kritikerne er hele selskapsplanen bygget: byavtaler, varer og sagbruk, det nye byggesystemet, folk som går, ledere, firmaer, eksport
+og Gråbørsen.
+
+### 18.2 Det som gjenstår
+
+- Bykampen i et ekte motangrep på hele Norge er ikke spilt helt gjennom.
+- Marsjtiden i kontrakttilbudene regnes fra leiren, ikke fra der lagene står.
+- Lyden er ikke vurdert av kritikerne (nettleseren deres var dempet).
+- Alle tall er forslag. Økonomitesten holder dem i balanse, men de må prøves av ekte spillere.
 
 ## 19. Ordliste
 
