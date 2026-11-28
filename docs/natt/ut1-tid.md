@@ -82,3 +82,12 @@ Langt trykk 550 ms. `Statistikk.REGLER`: døgn 30, prøveHver 10 spillminutter.
 - «Folk står fast» betyr nå: byggejobber venter og ingen bygger (jobbtavla i F0 gir senere ekte «står fast fordi …»).
 - Tidslinja er ikke i 3D når du går (skjules med body.gaar) og ikke på telefon øverst (der er den lista i panelet).
 - Kontrakter med frist lenger fram enn 4 døgn står ikke i tidslinja (men står i «Spol til»).
+
+## Retting ut2 (28. nov, etter flettingen med jobbtavla F0, Selskapet Ø0 og seier)
+- `TidaSpill.øyeblikk()`: døgnplanen (spill/jobber.js) setter byggefarten til 0 utenfor arbeidstida. Anslagene i «Spol til» og tidslinja
+  bruker nå farten over hele døgnet (FolkRegler.døgnF slås av mens farten regnes), og «folk står fast» betyr at ingen kan bygge (ingen
+  byggelag eller ingen arbeidsfør på «bygg») – ikke at skiftet er over. Ellers ville «Pause ved folk står fast» slått til hver kveld.
+  `o.venter` = jobbene venter på arbeidstida.
+- Vakta `ut1-tid`: pauseprøven setter to arbeidsføre på «bygg» og venter til bildet sier «ikke fast» før alle får fri, og jobbtavla
+  fordeler ikke under prøven (settes tilbake etterpå). I full kjøring kunne tidligere vakter ha latt byggejobber stå uten byggere, så
+  «står fast» var sant fra før og ingenting endret seg (`{"tempo":10,"sist":null}`).

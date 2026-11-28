@@ -26,7 +26,7 @@ module.exports = {
       klikk('sp1'); await vent(50); krev(!FlytSpill.spolMål() && !FlytSpill.spoler(), 'et annet fartsvalg avbrøt ikke «Spol til»');
       // ---------- spol til byggingen er ferdig: stopper selv ----------
       KOMMANDO({ type: 'kjøpMateriale', materiale: 'stål', mengde: 4, stille: true });
-      const r = KOMMANDO({ type: 'bygg', bygg: { type: 'solcelle', x: S.leir.x - 55, y: S.leir.y + 45, ret: 0 }, stille: true });
+      let r = null; for (const [dx, dy] of [[-55, 45], [75, 75], [-90, -45], [120, -20], [-20, 140], [150, 120]]) { r = KOMMANDO({ type: 'bygg', bygg: { type: 'solcelle', x: S.leir.x + dx, y: S.leir.y + dy, ret: 0 }, stille: true }); if (r && r.ok) break; }
       krev(r && r.ok, 'prøvebygget ble ikke bestilt: ' + JSON.stringify(r && r.feil));
       const jobb = TidaSpill.øyeblikk().jobber.length; krev(jobb > 0, 'prøvebygget gir ingen byggejobb');
       krev(Tida.valg(TidaSpill.øyeblikk()).some(v => v.id === 'bygg'), '«Spol til» mangler «Byggingen er ferdig»');
@@ -46,15 +46,34 @@ module.exports = {
       else krev(!linjeVis, 'tidslinja står øverst på telefon (skal bare være i panelet)');
       TidaSpill.settTidslinje(false);
       // ---------- pause av seg selv: folk står fast ----------
-      if (F && F.personer.length) {
+      // (ut2) i en full kjøring kan tidligere vakter ha latt byggejobber stå uten byggere (da er «står fast» alt sant, og ingenting
+      // endrer seg), og jobbtavla (spill/jobber.js) kan fordele folkene på nytt midt i prøven. Derfor: tavla fordeler ikke under prøven,
+      // to arbeidsføre settes på «bygg» først, og vi venter til bildet sier «ikke fast» før alle får fri.
+      // Byggelagene regnes av leirens egne folk (L.folk, Leir.folkLag). Etter en omlasting i en tidligere vakt kan FolkSpill.tilstand() være et
+      // annet objekt enn L.folk – da bruker vi L.folk (det er den leir.js leser).
+      const FF = L.folk && Array.isArray(L.folk.personer) ? L.folk : F, oppgFF = FF ? FF.personer.map(q => q.oppgave) : null; d.sammeFolk = FF === F;
+      const FR = window.FolkRegler, JS = window.JobberSpill, J0 = JS && JS.tilstand ? JSON.stringify(JS.tilstand()) : null, jl0 = localStorage.getItem('riksbrudd-jobber');
+      const af = FF ? FF.personer.filter(q => (FR && FR.arbeidsfør ? FR.arbeidsfør(q) : q.helse >= .4)) : [];
+      if (!(L.folk && Array.isArray(L.folk.personer))) d.pause = 'hoppet over: leiren har ingen egne folk (L.folk) – byggelagene regnes da uten folk';
+      else if (af.length) {
+        if (J0) JS.sett({ ...JSON.parse(J0), auto: false });
+        for (const q of af.slice(0, 2)) q.oppgave = 'bygg';
         TidaSpill.test = true; TidaSpill.settPause('fast', true); klikk('sp2'); await vent(50);
-        KOMMANDO({ type: 'kjøpMateriale', materiale: 'stål', mengde: 2, stille: true });
-        KOMMANDO({ type: 'bygg', bygg: { type: 'solcelle', x: S.leir.x + 60, y: S.leir.y - 50, ret: 0 }, stille: true });
-        await vent(700); for (const q of F.personer) q.oppgave = 'fri'; await vent(1400);
-        d.pause = { tempo, sist: TidaSpill.sistPause() && TidaSpill.sistPause().liste.map(q => q.type) };
+        // en byggejobb må finnes: prøv flere plasser (andre vakter kan ha bygget der før)
+        KOMMANDO({ type: 'kjøpMateriale', materiale: 'stål', mengde: 2, stille: true }); d.plass = null;
+        for (const [dx, dy] of [[60, -50], [-70, -60], [90, 40], [-100, 30], [40, 110], [-40, -120], [130, -90], [-140, 100]]) {
+          const q = KOMMANDO({ type: 'bygg', bygg: { type: 'solcelle', x: S.leir.x + dx, y: S.leir.y + dy, ret: 0 }, stille: true }); if (q && q.ok) { d.plass = [dx, dy]; break; } d.byggFeil = q && q.feil; }
+        krev(TidaSpill.øyeblikk().jobber.length > 0, 'fant ingen plass til en byggejobb i pauseprøven: ' + d.byggFeil);
+        for (let i = 0; i < 20 && TidaSpill.øyeblikk().fast; i++) await vent(100);
+        d.førFast = TidaSpill.øyeblikk().fast; await vent(700);
+        for (const q of FF.personer) q.oppgave = 'fri';
+        for (let i = 0; i < 30 && tempo !== 0; i++) await vent(100);
+        d.pause = { tempo, sammeFolk: d.sammeFolk, førFast: d.førFast, jobber: TidaSpill.øyeblikk().jobber.length, fastNå: TidaSpill.øyeblikk().fast, sist: TidaSpill.sistPause() && TidaSpill.sistPause().liste.map(q => q.type) };
+        krev(!d.førFast, '«folk står fast» var sant selv med to på «bygg»: ' + JSON.stringify(TidaSpill.øyeblikk()).slice(0, 200));
         krev(tempo === 0 && d.pause.sist && d.pause.sist.includes('fast'), '«Pause ved folk står fast» satte ikke spillet på pause: ' + JSON.stringify(d.pause));
-        F.personer.forEach((q, i) => { q.oppgave = før.oppg[i]; }); TidaSpill.settPause('fast', false); TidaSpill.test = før.test[1];
-      }
+        FF.personer.forEach((q, i) => { q.oppgave = oppgFF[i]; }); TidaSpill.settPause('fast', false); TidaSpill.test = før.test[1];
+        if (J0) { JS.sett(JSON.parse(J0)); if (jl0 === null) localStorage.removeItem('riksbrudd-jobber'); else localStorage.setItem('riksbrudd-jobber', jl0); }
+      } else d.pause = 'hoppet over: ingen arbeidsføre i leiren';
       // ---------- statistikken ----------
       StatistikkSpill.prøvNå(); const rad = StatistikkSpill.lukkNå();
       d.rad = rad && { d: rad.d, moral: rad.moral, folk: rad.folk, kassa: rad.kassa, bygg: rad.bygg };

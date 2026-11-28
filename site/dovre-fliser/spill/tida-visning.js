@@ -27,7 +27,13 @@
     try { const L = window.LeirSpill && LeirSpill.tilstand && LeirSpill.tilstand(), LB = window.Leir;
       if (L && LB && LB.jobber) {
         o.jobber = LB.jobber(L).map(j => { const B = LB.BYGG[j.b.type] || {}; return { id: j.b.id + ':' + j.hva, navn: B.navn || j.b.type, hva: j.hva, igjen: j.hva === 'bygg' ? j.b.igjen : (j.b.arbeid ? j.b.arbeid.igjen : 0), reise: j.reise || 0 }; });
-        o.lag = LB.byggelag ? LB.byggelag(L) : 1; o.fart = LB.folkTempo ? LB.folkTempo(L) : 1;
+        o.lag = LB.byggelag ? LB.byggelag(L) : 1;
+        // (ut2, 28. nov) døgnplanen (jobbtavla, spill/jobber.js) setter byggefarten til 0 utenfor arbeidstida. Anslagene bruker farten
+        // over hele døgnet (døgnplanen slått av mens vi regner – den gir like mye arbeid per døgn), og «folk står fast» betyr at ingen
+        // kan bygge – ikke at skiftet er over for kvelden. o.venter = jobbene venter på arbeidstida.
+        const FR = window.FolkRegler, d0 = FR ? FR.døgnF : null; let nå = 1;
+        try { nå = LB.folkTempo ? LB.folkTempo(L) : 1; if (FR) FR.døgnF = null; o.fart = LB.folkTempo ? LB.folkTempo(L) : 1; } finally { if (FR) FR.døgnF = d0; }
+        o.venter = o.jobber.length > 0 && o.fart > 0 && !(nå > 0);
         o.fast = o.jobber.length > 0 && !(o.lag > 0 && o.fart > 0); } } catch (e) { /* leiren er ikke klar */ }
     try { const FS = window.ForsvarSpill; const A = FS && FS.angrep ? FS.angrep() : null, n = FS && FS.neste ? FS.neste() : null;
       if (A) o.angrep = { aktiv: true, min: 0 }; else if (n && Number.isFinite(n.min)) o.angrep = { aktiv: false, min: n.min }; } catch (e) { /* ingen forsvar */ }
