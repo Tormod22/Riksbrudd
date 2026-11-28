@@ -167,7 +167,7 @@
     let ute = 0;
     for (const j of P.jobber) { let n = 0; for (const [pid, jj] of P.slukk) if (jj.k === j.k && Gs.pers[pid] && Gs.pers[pid].ved) n++;
       if (n && Math.random() < OP.slukkSjanse(n, dtMin)) { const [i, jx] = W.rute(j.x, j.y), k = i + ',' + jx; if (V.brann.celler[k]) { delete V.brann.celler[k]; V.brann.brent[k] = Math.round(nåTid()); ute++; } } }
-    if (ute) oppdaterBranner(V, W);
+    if (ute) { P.slukket = (P.slukket || 0) + ute; oppdaterBranner(V, W); }
   }
   function oppdaterBranner(V, W) { const Lb = W.brannListe(V.brann), B = window.BRANNER, BR = window.BRENT; if (B) { B.length = 0; for (const c of Lb.brenner) B.push(c); } if (BR) { BR.length = 0; for (const c of Lb.brent) BR.push(c); }
     try { window.dispatchEvent(new Event('riksbrudd-brann')); } catch (e) { /* eldre nettleser */ } if (typeof skitten !== 'undefined') skitten = true;

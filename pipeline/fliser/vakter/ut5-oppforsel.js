@@ -37,9 +37,9 @@ module.exports = {
         const pl = OS.plan(); ut.brann = { jobber: pl.jobber.length, slukkere: pl.slukk.size, linje: FolkgangSpill.fastLinjer().find(t => /^Slukk brannen/.test(t)) || null };
         krev(ut.brann.jobber === 1 && ut.brann.slukkere >= 2, 'brann: ingen slukkejobb/slukkere ' + JSON.stringify(ut.brann));
         krev(/brakke/.test(ut.brann.linje || ''), 'brann: jobbtavla mangler slukkejobben ' + JSON.stringify(ut.brann));
-        steg(12, 15); const fr = [...OS.plan().slukk.keys()].filter(i => G().pers[i] && G().pers[i].ved).length; ut.brann.framme = fr;
-        krev(fr >= 1, 'brann: ingen slukkere kom fram');
-        for (let k = 0; k < 40 && BRANNER.length; k++) steg(1, 300); ut.brann.igjen = BRANNER.length;
+        let fr = 0; for (let k = 0; k < 12 && BRANNER.length; k++) { steg(1, 15); fr = Math.max(fr, [...OS.plan().slukk.keys()].filter(i => G().pers[i] && G().pers[i].ved).length); }
+        ut.brann.framme = fr; krev(fr >= 1 || OS.plan().slukket > 0, 'brann: ingen slukkere kom fram');
+        for (let k = 0; k < 40 && BRANNER.length; k++) steg(1, 300); ut.brann.igjen = BRANNER.length; ut.brann.avOss = OS.plan().slukket || 0;
         krev(!BRANNER.length, 'brann: brannen slokner ikke');
         V.brann = Verden.nyBrann(); listerPåNytt(); steg(1, .25);
       }
@@ -60,6 +60,16 @@ module.exports = {
       const q = P[1]; q.oppgave = 'maskin'; tid = kl(13); q.seng = true; const t0 = OS.trøtt(q); tid = kl(2); q.seng = false; const t1 = OS.trøtt(q);
       ut.ulykke = { uthvilt: +OP.ulykkeSjanse(t0, false).toFixed(5), sliten: +OP.ulykkeSjanse(t1, false).toFixed(5), vern: +OP.ulykkeSjanse(t1, true).toFixed(5) };
       krev(ut.ulykke.sliten > ut.ulykke.uthvilt * 3 && ut.ulykke.vern < ut.ulykke.sliten, 'ulykkessjansen ' + JSON.stringify(ut.ulykke));
+      // 6. RYDDING: en vare ute når det er plass i et lagertelt – en ledig bærer den inn
+      const VL = window.VarelagerSpill && VarelagerSpill.V ? VarelagerSpill.V() : null;
+      if (VL && window.Varelager && Varelager.ryddbare) { const e0 = JSON.stringify(VL.e), n0 = VL.neste; ut.rydd = {};
+        try { const telt = legg('lagertelt', 10, 34); VL.e.push({ id: VL.neste++, v: 'tre', m: .5, p: 'ute', i: 99, r: null });
+          P.forEach((p, i) => { p.oppgave = i === 5 ? 'fri' : 'bygg'; }); tid = kl(10); steg(2, .25);
+          ut.rydd.ryddere = OS.plan().rydd.size; ut.rydd.linje = FolkgangSpill.fastLinjer().find(t => /^Rydd lageret/.test(t)) || null;
+          krev(ut.rydd.ryddere === 1 && ut.rydd.linje, 'rydding: ingen ledig rydder ' + JSON.stringify(ut.rydd));
+          steg(30, 10); ut.rydd.ute = VL.e.filter(u => u.p === 'ute').length; ut.rydd.inne = VL.e.filter(u => u.p === 'b' + telt.id).length;
+          krev(ut.rydd.ute === 0 && ut.rydd.inne >= 1, 'rydding: varen ble ikke båret inn ' + JSON.stringify(ut.rydd)); }
+        finally { VL.e.splice(0, VL.e.length, ...JSON.parse(e0)); VL.neste = n0; } }
       const r = OS.kjøpVern(1); ut.ulykke.kjøpt = OS.tilstand().vern; krev(r.ok && OS.tilstand().vern === OP.REGLER.vern.pakke, 'kjøp av verneutstyr: ' + JSON.stringify(r));
     } catch (e) { ut.feil.push('unntak: ' + e.message); }
     finally {
@@ -69,6 +79,6 @@ module.exports = {
       S0.penger = penger0; if (window.OppstartSpill && OppstartSpill.lagre) try { OppstartSpill.lagre(); } catch (e) { /* uten lagring */ }
       OS.alarm = null; OS.nullstill(); OS.sett(JSON.parse(tilst0)); tid = tid0; JobberSpill.test = jt0; OS.test = ot0; FolkgangSpill.nullstill(); if (typeof skitten !== 'undefined') skitten = true;
     }
-    return { ok: !ut.feil.length, tekst: ut.feil.length ? ut.feil.join('; ') : `alarm ${ut.alarm.iTilflukt} i tilflukt (${ut.alarm.sted}), brann slukket av ${ut.brann ? ut.brann.slukkere : '–'}, skadet til sykestua, venner +${(ut.venner.etter - ut.venner.før).toFixed(1)} moral, ulykke ${ut.ulykke.uthvilt}→${ut.ulykke.sliten} (vern ${ut.ulykke.vern})`, data: ut };
+    return { ok: !ut.feil.length, tekst: ut.feil.length ? ut.feil.join('; ') : `alarm ${ut.alarm.iTilflukt} i tilflukt (${ut.alarm.sted}), brann slukket av ${ut.brann ? ut.brann.slukkere : '–'}, skadet til sykestua, venner +${(ut.venner.etter - ut.venner.før).toFixed(1)} moral, rydding ${ut.rydd ? ut.rydd.inne + " inn" : "–"}, ulykke ${ut.ulykke.uthvilt}→${ut.ulykke.sliten} (vern ${ut.ulykke.vern})`, data: ut };
   }),
 };
