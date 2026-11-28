@@ -191,6 +191,10 @@
         const k = b.hus.k + '>' + a.navn, q = lokal(H, a.x, a.y), d = Math.hypot(a.x - b.x, a.y - b.y); let I = S.inntak.get(k);
         if (d > R.nær + 30) { if (I) S.inntak.delete(k); continue; }
         if (!I && d <= R.nær) { const ing = HV.inngang(H.m), vei = HV.veiInn(H.m, q[0], q[1]); I = { start: t, f: inni(H.m.P, q[0], q[1]) ? 0 : ing.forsinkelse, vei, inne: false, hus: H.i, a: a.navn, b: b.navn }; S.inntak.set(k, I);
+          // fiendens lag går mot inngangen (3 m utenfor den) – bare når de står stille, så AI-ens egne ordre ikke avbrytes
+          if (a.side !== 'blå' && !a.sti && vei && typeof ordre === 'function') { let cx = 0, cy = 0; for (const p of H.m.P) { cx += p[0]; cy += p[1]; } cx /= H.m.P.length; cy /= H.m.P.length;
+            const dx = vei.x - cx, dy = vei.y - cy, l = Math.hypot(dx, dy) || 1, X = H.o[0] + vei.x + dx / l * 3, Y = H.o[1] + vei.y + dy / l * 3;
+            if (Math.hypot(X - a.x, Y - a.y) > 4) try { ordre(a, X, Y, true); } catch (e) { /* uten marsj */ } I.mot = [Math.round(X), Math.round(Y)]; }
           if (b.side === 'blå' || a.side === 'blå') si(`${b.side === 'blå' ? (typeof synlig === 'function' && !synlig(a) ? 'Fienden' : a.navn) : a.navn} stormer huset der ${b.navn} står – ${vei ? 'mot ' + HV.VEINAVN[vei.type] + (vei.sperre ? ' (barrikadert)' : '') : 'rundt huset'}${I.f > R.åpen ? `; barrikadene holder dem ute ca. ${Math.round(I.f)} min` : ''}.`); }
         if (I && !I.inne && t - I.start >= I.f) { I.inne = true; if (b.side === 'blå' || a.side === 'blå') si(`${b.side === 'blå' ? 'Fienden' : a.navn} er inne i huset der ${b.navn} står – veggene verner ikke lenger.`); }
       }

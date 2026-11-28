@@ -19,7 +19,8 @@ ut3-etasjer (etasjene).
   over 45 % av veggens lengde, rives den (ras etter Bygning.ras). Loggen: «Bolig: et vindu er knust av skuddene.» / «… – deler av huset raste sammen.»
 - **Inngang:** fiender innen 60 m fra et hus der et lag står, stormer det: «Ravnsunds patrulje stormer huset der 1. lag står – mot døra;
   barrikadene holder dem ute ca. 9 min.» Etter forsinkelsen: «Fienden er inne i huset der 1. lag står – veggene verner ikke lenger.» – da gir
-  veggene ikke vern mot dem (×1,2 på deres treff, nærkamp). Forsinkelse: åpen vei inn (dør, port, hull, knust vindu, revet vegg) 1 min; bare
+  veggene ikke vern mot dem (×1,2 på deres treff, nærkamp). Fiendens lag som står stille, får en marsjordre til 3 m utenfor inngangen
+  (`ordre(a, X, Y, true)`; AI-ens egne ordre avbrytes ikke mens laget går). Forsinkelse: åpen vei inn (dør, port, hull, knust vindu, revet vegg) 1 min; bare
   vinduer uten planker 3 min; alt barrikadert 6 min + 1 min per sperret åpning (høyst 30).
 - **Plantegningen:** når et lag står i huset, huset er vårt, eller «Vis vern» er trykket: veggene farges etter vernet (grønn sterk ≥ 60 %:
   mur, betong; oransje middels: tre; rød svak: blikk, glass), skadde vegger stiplet, knuste åpninger og hull med rødt kryss. Raden sier
@@ -106,7 +107,9 @@ kjeller ×0,25. Overtak: 3 km; senger se over; kaserne 1 per 8 m²; lager 0,6 m�
   ekte hus-fliser. Granaten din i 3D og ingeniørenes sprengning er bare prøvd gjennom `smellVed` (samme vei), ikke ved å kaste en granat.
 
 ## Ikke gjort
-- Fiendens AI søker ikke selv inn i hus eller velger etasje; den stormer bare når den er innen 60 m av et hus der et lag står.
+- Fiendens AI søker ikke selv inn i hus eller velger etasje; den stormer bare når den er innen 60 m av et hus der et lag står (og går da mot
+  inngangen). Etasjevalget (`s.husEtasje`) lagres ikke med laget (lagring.js) – laget står i 1. etasje etter ny lasting.
+- Kjøretøy som skyter på et lag i et hus (enheter-visning) gir ingen vern: kroken gjelder bare lag med mannskap på begge sider.
 - Utpost og verksted har ingen egen virkning ennå (bare navnet, sengene og lagerrommene). Byggesettet kan ikke legge deler INNE i et kartets hus
   (ombygging = husendring sine endringer). Overtatte hus vises ikke annerledes i 3D.
 - Vernet i 3D når du går selv (bakkekamp sin Dekning) er uendret – denne pakka gjelder lagene i kartet.
