@@ -89,9 +89,8 @@ pekeren er nede. KOMMANDOER (Kommando.registrer, leir: true): `tingFlytt { stabe
   trykk på kjøleskapet i 2D, Leir-menyen og panelet (bilder kart*.png, panel*.png, kjol*.png, meny*.png, mer.png, tre.png = 3D uten tak). Ingen sidefeil.
 - Vakt `pipeline/fliser/vakter/ut8-hverdag.js`: ok på PC og mobil (40–140 ms), alt satt tilbake (bygg, mat, penger, tinglager like før og etter).
   Feil med vilje (kjøleskapet kjøler ikke: faktor 3) → vakta feilet på «mat i kjøleskap holder lenger».
-- Andre vakter i samme side: ut5-fabrikk, ut3-varer, ut3-etasjer, ut4-byggesett3, lut, folk, leirvirkning, ut4-maskinfolk ok. `ut5-oppforsel` feilet
-  tre ganger på «rydding: varen ble ikke båret inn» når den kom etter sju andre vakter, men gikk så fem ganger på rad med samme rekkefølge (og alene) –
-  ser ut som tidsavhengig (den samme rekkefølgen på grenen før mine endringer gikk to av to). Bør ses på i den samlede kjøringen.
+- Andre vakter i samme side: ut5-fabrikk, ut3-varer, ut3-etasjer, ut4-byggesett3, lut, folk, leirvirkning, ut4-maskinfolk ok. `ut5-oppforsel` feiler av og til på «rydding: varen ble ikke båret inn» når den kommer etter sju andre vakter – det gjør den også på grenen
+  FØR mine endringer (base aa8511a: 1 av 4 kjøringer feilet; min gren: 3 av 11), så det er tidsavhengig og ikke fra denne pakka.
 
 ## Ikke gjort / å vite
 - Røverne stjeler ikke ting (bare materialene ute, som før); `låst` på medisinskapene er lagt inn for det, men brukes ikke ennå.
