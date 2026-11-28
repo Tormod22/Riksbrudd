@@ -104,7 +104,7 @@
   }
   // spillerens styrke til det lette tilbudet: det største laget, men minst en tropp på fire (folkene kan alltid lage en)
   const styrkeNå = () => Math.max(SK.REGLER.lett ? SK.REGLER.lett.styrke : 4, har().størsteLag || 0);
-  function nyeTilbud(liste) { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, medForsvar(medEier(liste || steder())), null, { infl: infl(), styrke: styrkeNå(), kjøretøy: har().kjøretøy, klarbar: q => kanKlare(q, true), lager: () => { const s = Sp(); return s && s.leir ? lagerPlass(s.leir, (S.nr % 8) * Math.PI / 4 + .4) : null; } }); lagre(); return n; }
+  function nyeTilbud(liste) { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, medForsvar(medEier(liste || steder())), null, { infl: infl(), styrke: styrkeNå(), kjøretøy: har().kjøretøy, klarbar: q => kanKlare(q, true), lager: () => { const s = Sp(); return s && s.leir ? lagerPlass(s.leir, Math.PI + ((S.nr % 3) - 1) * Math.PI / 4) : null; } }); lagre(); return n; }
 
   // ---------- det som legges ut i verden når en kontrakt tas ----------
   const egneLag = () => ENHETER.filter(s => s.side === ID && levende(s) && !s.karakter);
@@ -672,7 +672,8 @@ body.kort #nestelapp small{ display:none; }
   // (R1-løkka 26. nov, kritikken: «den første kontrakten er en felle») nødlageret ligger i en låve F.avstand fra leiren – så nær at
   // radioen aldri mister kontakten (se REGLER.første) – i retning bygda som gir jobben, på land, i spillkartet og minst F.utenfor
   // meter utenfor alle tettsteder (der står bygdevernet). Retningene prøves fra bygdas retning og utover til begge sider.
-  // vri (ut8-kr-penger): dreier retningen, så et nytt nødlager (Selskap.lagerJobb) ikke ligger der det forrige lå
+  // vri (ut8-kr-penger): dreier retningen. Et nytt nødlager (Selskap.lagerJobb) legges BORT fra nærmeste tettsted (π) – lagerJobb brukes når
+  // tettstedene rundt er holdt av andre eller har fiender (gjennomspillingen: troppen gikk mot Ulvik, som Mosevakt holdt) – og dreies litt
   function lagerPlass(L, vri = 0) {
     const F = SK.REGLER.første, byer = (typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || [], G = window.Garnison;
     const bygd = steder().filter(q => q.slag === 'tettsted').map(q => ({ q, d: Math.hypot(q.x - L.x, q.y - L.y) })).filter(o => o.d >= F.min && o.d <= F.maks).sort((a, b) => Math.abs(a.d - F.ønsket) - Math.abs(b.d - F.ønsket))[0];

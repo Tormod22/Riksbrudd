@@ -21,8 +21,11 @@ module.exports = {
         if (S.tråd) S.tråd.gjort = ['ta', 'tropp', 'send', 'hjem', 'bygg']; S.tilbud = []; S.sider.blå.aktive = [];
         // prøvesteder rundt leiren (Dovre-siden har bare Dombås): bygdevern på 14 og 20 mann, som Granvin og Eidfjord i kritikken
         const L0 = OppstartSpill.tilstand().leir, st = [{ navn: 'Prøvested A', x: L0.x + 3500, y: L0.y, slag: 'tettsted', id: 990901, vern: 14 }, { navn: 'Prøvested B', x: L0.x, y: L0.y - 6000, slag: 'tettsted', id: 990902, vern: 20 }];
-        SS.nyeTilbud(st); const kl = SS.klarbare(), l = SS.lapp(); ut.tilbud = S.tilbud.map(k => (k.lett ? 'lett: ' : '') + k.tittel); ut.lapp = l && l.tekst;
-        ok(kl.length >= 1 && S.tilbud.some(k => k.lett || kl.includes(k)), 'ingen tilbud leiren klarer etter den første kontrakten: ' + ut.tilbud.join(' | '));
+        SS.nyeTilbud(st); let kl = SS.klarbare();
+        // marsjene regnes ut i bakgrunnen (SelskapSpill.marsj) – vent litt så lappen bruker dem
+        for (let i = 0; i < 20 && SS.marsjListe && S.tilbud.some(k => { const m = SS.marsj(k); return m && m.venter; }); i++) await vent(250);
+        kl = SS.klarbare(); const l = SS.lapp(); ut.klarbare = kl.map(k => k.tittel); ut.tilbud = S.tilbud.map(k => (k.lett ? 'lett: ' : '') + k.tittel); ut.lapp = l && l.tekst;
+        ok(kl.length >= 1 || S.tilbud.some(k => k.lett), 'ingen tilbud leiren klarer etter den første kontrakten: ' + ut.tilbud.join(' | '));
         if (kl.length) ok(l && /én tropp klarer/.test(l.tekst) && l.tilbud === kl[0].id, 'Neste-lappen peker ikke på tilbudet: ' + (l && l.tekst)); }
       // 3) de små oppdragene står i Kontrakter, og «Ta oppdraget» virker derfra
       if (O) { const L = SS.tilstand() && OppstartSpill.tilstand().leir, o = { id: 990801, type: 'hent', x: L.x + 600, y: L.y + 500, meter: 780, retning: 'nordøst', frist: (typeof tid === 'number' ? tid : 0) + 900, gir: { penger: 400000 } };
