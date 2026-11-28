@@ -412,6 +412,9 @@
       B.ønsker = Array.isArray(d.ønsker) ? d.ønsker.filter(ø => ø && REGLER.ØNSKER[ø.type]).slice(-40) : [];
       B.nr = tall(d.nr); B.dag = tall(d.dag, -1);
       if (d.tellere && typeof d.tellere === 'object') for (const k of Object.keys(B.tellere)) B.tellere[k] = d.tellere[k] == null ? null : tall(d.tellere[k]);
+      // (ut6-fiksd) angrepene på leiren (spillminutter) lagres av tilJSON og leses nå inn igjen – før ble de borte ved lasting, så tryggheten
+      // og ønsket «ro» glemte ukas angrep (og ut5-bors-vakta så at børsen ikke ble satt tilbake)
+      if (Array.isArray(d.angrep)) B.angrep = d.angrep.filter(t => Number.isFinite(+t)).map(t => +t).slice(-40);
       return B;
     } catch (e) { return null; }
   }

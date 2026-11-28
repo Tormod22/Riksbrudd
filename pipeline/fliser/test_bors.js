@@ -135,5 +135,7 @@ sjekk(T && T.meg.notert && T.meg.egne === 80 && T.firmaer['Storlia Tømmer'].du 
 sjekk(B.fraJSON(null) === null && B.fraJSON({ tull: 1 }) === null, 'tåler tull');
 const T2 = B.fraJSON({ meg: { egne: 70, fritt: 70, rival: {} } }); sjekk(T2 && B.sjekkSum(T2), 'retter en ødelagt sum');
 
+// (ut6-fiksd) angrepene på leiren overlever lagring og lasting
+{ const T3 = B.ny({ x: 1, y: 2 }); T3.angrep = [3992, 4109]; const T4 = B.fraJSON(B.tilJSON(T3)); sjekk(T4 && JSON.stringify(T4.angrep) === '[3992,4109]' && JSON.stringify(B.tilJSON(T4)) === JSON.stringify(B.tilJSON(T3)), 'angrepene huskes etter lagring'); }
 console.log(feil ? `test_bors: ${feil} av ${n} FEIL` : `test_bors: ${n} sjekker ok`);
 process.exit(feil ? 1 : 0);

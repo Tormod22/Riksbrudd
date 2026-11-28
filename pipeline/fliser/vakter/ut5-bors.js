@@ -68,6 +68,8 @@ module.exports = {
       if (før.logg && typeof loggLinjer !== 'undefined') { loggLinjer.length = 0; loggLinjer.push(...før.logg); }
     }
     d.tilbake = { penger: penger() === før.penger, tid: tid === før.tid, bors: JSON.stringify(Bo.tilJSON(BS.tilstand())) === JSON.stringify(før.B), lager: !Lr || !lager0 || Object.keys(lager0).every(k => Math.abs((Lr.lager[k] || 0) - lager0[k]) < 1e-6) };
+    // (ut6-fiksd) feltene i børsen som er ulike, står i meldingen (feilen kom bare i lange kjøringer)
+    if (!d.tilbake.bors) { const a = Bo.tilJSON(BS.tilstand()), b = før.B; d.tilbake.ulike = Object.keys({ ...a, ...b }).filter(k => JSON.stringify(a[k]) !== JSON.stringify(b[k])).map(k => k + ': ' + JSON.stringify(b[k]).slice(0, 200) + ' -> ' + JSON.stringify(a[k]).slice(0, 200)); }
     if (!d.tilbake.penger || !d.tilbake.tid || !d.tilbake.bors || !d.tilbake.lager) feil.push('ble ikke satt tilbake: ' + JSON.stringify(d.tilbake));
     return { ok: !feil.length, tekst: feil.length ? feil.join('; ') : `rabatt ${d.rabatt.join(' -> ')}, utbytte ${d.utbytte}, notering ${Math.round(d.notering / 1e6)} mill., brudd ${d.stemning.join(' -> ')}, oppkjøp ${d.oppkjøp[0]}`, data: d };
   }),
