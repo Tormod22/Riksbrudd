@@ -19,6 +19,8 @@
     kaserneM2: 8,
     // lagerplass per m² gulv: i rom merket lager, og i alle rom når huset brukes som lager (som byggesettets lagerrom: 0,6)
     lagerM2: .6,
+    // høyst så mye per hus (et stort bygg skal ikke gi hele leirens lager)
+    maksSenger: 40, maksLager: 300,
   };
   const BRUK = {
     utpost: { navn: 'Utpost', tekst: 'et sted å holde og forsvare – sengene teller i leiren' },
@@ -37,13 +39,13 @@
       for (const q of e.møbler || []) if (q.tilstand === 'hel' && REGLER.seng[q.type]) n += REGLER.seng[q.type];
       if (bruk === 'kaserne') for (const r of e.rom || []) { if (!dekkeHelt(e, r) || IKKE_SOVE.test(r.rolle || '')) continue;
         const harSeng = (e.møbler || []).some(q => q.tilstand === 'hel' && REGLER.seng[q.type] && inni(r.P, q.x, q.y)); if (!harSeng) madrass += Math.floor((r.areal || 0) / REGLER.kaserneM2); } }
-    return n + madrass;
+    return Math.min(REGLER.maksSenger, n + madrass);
   }
   // lagerplass (m³) i huset
   function lager(m, bruk) {
     if (!m || !m.etasjer) return 0; let A = 0;
     for (const e of m.etasjer) { if (!brukbar(e)) continue; for (const r of e.rom || []) { if (!dekkeHelt(e, r)) continue; if (bruk === 'lager' || LAGERROM.test(r.rolle || '') || (e.kjeller && bruk !== 'kaserne')) A += r.areal || 0; } }
-    return Math.round(A * REGLER.lagerM2 * 10) / 10;
+    return Math.min(REGLER.maksLager, Math.round(A * REGLER.lagerM2 * 10) / 10);
   }
   function inni(P, x, y) { if (!P) return false; let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) inn = !inn; return inn; }
   // kan huset tas over? avstand = meter fra leiren

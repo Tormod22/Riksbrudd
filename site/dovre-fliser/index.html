@@ -1039,7 +1039,7 @@ async function oppdaterSikt(s) {
     const nær = await lagVindu([X - 400, Y - 400, X + 400, Y + 400], false), iB = !!s.sti;
     // været (spill/vaer.js) korter inn sikten: tåke 30 %, snø 55 %, regn 70 %
     const r = Terreng.siktvidde(nær, X, Y, s.speider, iB) * (window.VAER ? VAER.sikt : 1) * KROKER.sikt.reduce((v, f) => v * f(s), 1), R = r + 100;
-    const v = await lagVindu([X - R, Y - R, X + R, Y + R], false), m = Terreng.siktfelt(v, X, Y, r);
+    const v = await lagVindu([X - R, Y - R, X + R, Y + R], false), m = Terreng.siktfelt(v, X, Y, r, 2 + (s.øyneEkstra || 0));   // øyneEkstra: et lag i en høyere etasje (spill/husvern-visning.js)
     const [oi, oj] = Terreng.rute(v, X, Y), Rc = Math.ceil(r / v.r) + 1;
     const i0 = Math.max(0, oi - Rc), j0 = Math.max(0, oj - Rc), i1 = Math.min(v.w - 1, oi + Rc), j1 = Math.min(v.h - 1, oj + Rc), w = i1 - i0 + 1, h = j1 - j0 + 1;
     // (R17, funn 21) tidlig i lastingen kan laget ligge utenfor vinduet (w/h under 1) eller sikten være NaN: prøv igjen om 2 s
@@ -3740,14 +3740,17 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
 <script src="/dovre-fliser/spill/interior.js?v=aed3c52697"></script>
-<script src="/dovre-fliser/spill/bygning.js?v=3c240fad74"></script>
+<script src="/dovre-fliser/spill/bygning.js?v=c3d700aab6"></script>
 <script src="/dovre-fliser/spill/vei.js?v=fc8c13b81b"></script>
 <script src="/dovre-fliser/spill/plantegning.js?v=802255cb2a"></script>
 <script src="/dovre-fliser/spill/plantegning-visning.js?v=8c8292e647"></script>
 <script src="/dovre-fliser/spill/folkgang.js?v=d6ad141b28"></script>
 <script src="/dovre-fliser/spill/folkgang-visning.js?v=3d3ed364f5"></script>
 <script src="/dovre-fliser/spill/husendring.js?v=32aec12c1c"></script>
-<script src="/dovre-fliser/spill/husendring-visning.js?v=2cfdd106c2"></script>
+<script src="/dovre-fliser/spill/husendring-visning.js?v=46ccae37b3"></script>
+<script src="/dovre-fliser/spill/husvern.js?v=6382813a9f"></script>
+<script src="/dovre-fliser/spill/overtak.js?v=b316fa406b"></script>
+<script src="/dovre-fliser/spill/husvern-visning.js?v=965714e63b"></script>
 <script src="/dovre-fliser/spill/baering.js?v=0bd12bb29d"></script>
 <script src="/dovre-fliser/spill/baering-visning.js?v=a149f4088c"></script>
 <script src="/dovre-fliser/spill/interior3d.js?v=62e86b07f3"></script>

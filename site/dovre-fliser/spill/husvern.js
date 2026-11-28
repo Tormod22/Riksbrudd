@@ -15,11 +15,13 @@
   'use strict';
   const REGLER = {
     // hvor stor del av treffene én vegg tar, etter stoffet (0–1)
-    stopp: { tre: .35, mur: .65, betong: .75, blikk: .15, stål: .5, glass: .05, annet: .3 },
+    stopp: { tre: .3, mur: .7, betong: .8, blikk: .15, stål: .5, glass: .05, annet: .3 },
     // åpningene: et hel vindu tar nesten ingenting, ei dør litt; planker legger til, tettet mer; knust/hull = ingenting
     åpning: { vindu: .05, takvindu: .05, dør: .2, port: .25, hull: 0, planker: .3, tettet: .5 },
     // en skadet vegg tar halvparten av det den tok hel
     skadet: .5,
+    // laget tar dekning bak det som verner best: så stor del av vernet regnes fra den beste plassen (resten er snittet av plassene)
+    dekning: .6,
     // aldri mer vern enn dette (skudd går gjennom glipper, inn vinduer …)
     maks: .85,
     // i kjelleren (under bakken) tar veggene og jorda nesten alt
@@ -81,8 +83,9 @@
   // Mennene står spredt: snittet over punktene (husets koordinater)
   function vernSnitt(m, n, punkter, S) {
     if (!punkter.length) return { faktor: 1, andel: 0, vegger: [] };
-    let f = 0, beste = null; for (const T of punkter) { const v = vern(m, n, T, S); f += v.faktor; if (!beste || v.vegger.length > beste.vegger.length) beste = v; }
-    const faktor = f / punkter.length; return { faktor, andel: 1 - faktor, vegger: beste.vegger, kjeller: beste.kjeller };
+    // laget tar dekning: de beste plassene teller mest (REGLER.dekning av den beste, resten snittet)
+    let f = 0, beste = null; for (const T of punkter) { const v = vern(m, n, T, S); f += v.faktor; if (!beste || v.faktor < beste.faktor) beste = v; }
+    const faktor = REGLER.dekning * beste.faktor + (1 - REGLER.dekning) * f / punkter.length; return { faktor, andel: 1 - faktor, vegger: beste.vegger, kjeller: beste.kjeller };
   }
   // Punkter inne i huset rundt (x, y): midten og fire punkter mot rommene rundt (alle innenfor omrisset)
   function punkterRundt(m, x, y, r) {
