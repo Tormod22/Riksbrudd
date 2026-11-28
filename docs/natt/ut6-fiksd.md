@@ -46,9 +46,19 @@ menyen med 200 ms mellom; under last gikk sjekken glipp av at menyen var lukket,
 er samme feil (flisene øverst var rullet ut av syne). Gjenskapt med `natt/ut6-fiksd/rull.js` (lukk og åpne i samme ramme): 800 før, 0 etter.
 **Rettet:** `spill/leir-visning.js` – Leir-knappen setter `scrollTop = 0` når menyen åpnes. ui-vakta ok på PC og mobil.
 
+**Etterpå (rask kjøring 2):** `sjekk.js` K2 («menyen kan blas i: plassen holdes») lukker og åpner menyen i samme øyeblikk og venter at
+plassen står – motsatt av ui-vakta. Løst slik: lukket og åpnet innen 60 ms (ingen spiller rekker det) beholder plassen, ellers toppen.
+Begge går nå. Koordinatoren bør vurdere å skrive K2-sjekken om (den prøver egentlig at en ny tegning beholder plassen).
+
+## 5. Det samme gjaldt to vakter til (fant i rask kjøring 2)
+- `vakter/ut5-oppforsel.js` (F4, «rydding: varen ble ikke båret inn»): (a) det lukkede gjerdet fra K2 – gjerder og porter tas bort mens
+  vakta går; (b) `ut5-bors` la 18 m³ tømmer i lageret (firmaet dere eier, leverer i døgnene vakta spoler) – ni enheter lå ute foran vaktas
+  egen, og den ene rydderen rakk dem ikke. Vakta teller nå bare sin egen vare (id), og «inne» i et hvilket som helst lagerbygg.
+- `vakter/ut5-bors.js`: setter nå lageret og `riksbrudd-varer` tilbake (og sjekker det i «tilbake»).
+
 ## Fellesfiler endret
 - `site/dovre-fliser/index.html`: `lagVindu` (første linje i funksjonen, klemmingen av boksen) + versjonsmerker (versjon.py).
 - `site/dovre-fliser/terreng.js`: `nyttVindu` (to linjer).
 - `site/dovre-fliser/spill/leir-visning.js`: `leirKnapp.onclick` (`menyEl.scrollTop = 0` når den åpnes).
 - `site/dovre-fliser/spill/baering.js`: se punkt 1.
-- Vakter: `ut4-maskinfolk.js`, `ut3-varekontrakt.js`. Tester: `test_baering.js`, `test_terreng.js`.
+- Vakter: `ut4-maskinfolk.js`, `ut3-varekontrakt.js`, `ut5-oppforsel.js`, `ut5-bors.js`. Tester: `test_baering.js`, `test_terreng.js`.

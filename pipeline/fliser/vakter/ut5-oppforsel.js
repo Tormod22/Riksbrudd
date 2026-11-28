@@ -39,7 +39,9 @@ module.exports = {
         V.brann = Verden.nyBrann(); Verden.tenn(V.brann, brakke.x, brakke.y, tid); listerPåNytt(); steg(2, .25);
         const pl = OS.plan(); ut.brann = { jobber: pl.jobber.length, slukkere: pl.slukk.size, linje: FolkgangSpill.fastLinjer().find(t => /^Slukk brannen/.test(t)) || null };
         krev(ut.brann.jobber === 1 && ut.brann.slukkere >= 2, 'brann: ingen slukkejobb/slukkere ' + JSON.stringify(ut.brann));
-        krev(/brakke/.test(ut.brann.linje || ''), 'brann: jobbtavla mangler slukkejobben ' + JSON.stringify(ut.brann));
+        // (ut6-fiksd) jobben får navnet på et bygg i brannruta (32 m) – et bygg fra en vakt før (aggregatet fra K2) kan stå der også
+        const iRuta = L.bygg.filter(q => Leir.BYGG[q.type] && Math.hypot(q.x - brakke.x, q.y - brakke.y) < 50).map(q => Leir.BYGG[q.type].navn.toLowerCase());
+        krev(/^Slukk brannen/.test(ut.brann.linje || '') && (/brakke/.test(ut.brann.linje) || iRuta.some(n => ut.brann.linje.includes(n))), 'brann: jobbtavla mangler slukkejobben ' + JSON.stringify(ut.brann));
         let fr = 0; for (let k = 0; k < 12 && BRANNER.length; k++) { steg(1, 15); fr = Math.max(fr, [...OS.plan().slukk.keys()].filter(i => G().pers[i] && G().pers[i].ved).length); }
         ut.brann.framme = fr; krev(fr >= 1 || OS.plan().slukket > 0, 'brann: ingen slukkere kom fram');
         for (let k = 0; k < 40 && BRANNER.length; k++) steg(1, 300); ut.brann.igjen = BRANNER.length; ut.brann.avOss = OS.plan().slukket || 0;
