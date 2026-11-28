@@ -20,6 +20,9 @@ module.exports = {
       const kjør = (sek, hver) => { for (let t = 0; t < sek; t += 10) { tid = K9; sim(10 / 60); tid = K9; FolkgangSpill.steg(10); if (hver && hver(t)) return t; } return null; };
       try {
         tempo = 0; J.auto = false;
+        // (ut6-fiksd) vaktene før kan ha lagt et lukket gjerde uten port rundt leiren (sjekk.js, K2): da kommer ingen ut til lagerteltene.
+        // Gjerder og porter tas bort mens vakta går (L.bygg settes tilbake i finally). At bærerne da gir opp, prøves i test_baering.js.
+        L.bygg = L.bygg.filter(b => { const B = Leir.BYGG[b.type]; return !(B && ((B.linje && !B.veg) || B.port)); });
         const nyB = (type, dx, dy) => { const id = L.neste++; L.bygg.push({ id, type, x: S.leir.x + dx, y: S.leir.y + dy, ret: 0, igjen: 0, hp: 1, nivå: 1, pris: Leir.BYGG[type].pris, mat: {} }); return id; };
         const sid = nyB('sagbruk', 60, 60), kid = nyB('fyrkjele', 60, 85), tid1 = nyB('lagertelt', 88, 60);
         for (const k of Object.keys(L.lager)) if (['tømmer', 'tre', 'flis', 'ved'].includes(k)) L.lager[k] = 0; L.lager.tømmer = 12;

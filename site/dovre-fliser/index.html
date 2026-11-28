@@ -126,7 +126,7 @@ function skjulMelding(type) {
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
 <script src="/dovre-fliser/kartflis.js?v=2d4fa13884"></script>
-<script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
+<script src="/dovre-fliser/terreng.js?v=0c83ac7342"></script>
 <script src="/dovre-fliser/spill/simulering.js?v=441677f889"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/snodekke.js?v=46324f484e"></script>
@@ -929,7 +929,9 @@ async function fyllOmland(v, ZV, x0, y0, x1, y1) {
   await Promise.all(jobber);
 }
 async function lagVindu(b, medVeg, ZV = 9, omland = false) {   // ZV: detaljnivå (9 = 32 m for reglene; 3D bruker finere). omland: bare 3D
-  b = [Math.max(b[0], OMRÅDE[0]), Math.max(b[1], OMRÅDE[1]), Math.min(b[2], OMRÅDE[2] - 1), Math.min(b[3], OMRÅDE[3] - 1)];
+  // (ut6-fiksd) hver kant klemmes inn i området: et lag langt utenfor kartet ga før en snudd boks og negativ størrelse (RangeError i nyttVindu)
+  const kl = (t, a, z) => Math.min(Math.max(t, a), z);
+  b = [kl(b[0], OMRÅDE[0], OMRÅDE[2] - 1), kl(b[1], OMRÅDE[1], OMRÅDE[3] - 1), kl(b[2], OMRÅDE[0], OMRÅDE[2] - 1), kl(b[3], OMRÅDE[1], OMRÅDE[3] - 1)];
   const [x0, y0, x1, y1] = flisområde(b, ZV), T = G.T, nx = x1 - x0 + 1, ny = y1 - y0 + 1;
   const v = Terreng.nyttVindu(G.x0 + x0 * span(ZV), G.y0 - y0 * span(ZV), res(ZV), nx * T, ny * T), jobber = [];
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) jobber.push(Promise.all([hentFlis('hoyde', ZV, x, y), ZV <= 9 ? hentFlis('terreng', ZV, x, y) : null]).then(([h, t]) => {
@@ -3750,7 +3752,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/folkgang-visning.js?v=3d3ed364f5"></script>
 <script src="/dovre-fliser/spill/husendring.js?v=32aec12c1c"></script>
 <script src="/dovre-fliser/spill/husendring-visning.js?v=2cfdd106c2"></script>
-<script src="/dovre-fliser/spill/baering.js?v=0bd12bb29d"></script>
+<script src="/dovre-fliser/spill/baering.js?v=fa0903621e"></script>
 <script src="/dovre-fliser/spill/baering-visning.js?v=a149f4088c"></script>
 <script src="/dovre-fliser/spill/oppforsel.js?v=61cb2fe059"></script>
 <script src="/dovre-fliser/spill/oppforsel-visning.js?v=e2356fe603"></script>

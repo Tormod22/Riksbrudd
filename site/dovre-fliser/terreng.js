@@ -157,7 +157,9 @@
   // Fast tilfeldighet (samme frø gir samme kamp), så kamper kan spilles av og testes.
   function frø(n) { let s = n >>> 0 || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
+  // Aldri negativ eller ugyldig størrelse (et lag utenfor kartet skal ikke krasje siktberegningen): da blir vinduet tomt.
   function nyttVindu(x0, y0, r, w, h) {
+    w = w > 0 ? Math.floor(w) : 0; h = h > 0 ? Math.floor(h) : 0;
     return { x0, y0, r, w, h, H: new Float32Array(w * h).fill(NaN), K: new Uint8Array(w * h).fill(255), V: new Uint8Array(w * h) };
   }
 

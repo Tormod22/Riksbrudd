@@ -86,4 +86,10 @@ const S = (v, i, j) => T.senter(v, i, j);
   const m3 = lag(); m3.forEach(x => x.hp = .5);
   sjekk('kamp: sårede skyter ikke', T.ildrunde(m3, 100, {}, () => 0) === 0);
 }
+// (ut6-fiksd) et lag utenfor kartet ga negativ vindusstørrelse og RangeError fra oppdaterSikt
+{
+  const v = T.nyttVindu(0, 0, 32, -256, 256), v2 = T.nyttVindu(0, 0, 32, NaN, 3);
+  sjekk('vindu: negativ eller ugyldig størrelse gir tomt vindu', v.w === 0 && v.H.length === 0 && v2.w === 0 && v2.K.length === 0);
+  sjekk('vindu: sikt i tomt vindu krasjer ikke', T.siktfelt(v, 5, 5, 400).length === 0 && Number.isFinite(T.siktvidde(v, 5, 5, false, false)));
+}
 console.log(feil ? feil + ' feil' : 'Alle terrengtester ok'); process.exit(feil ? 1 : 0);
