@@ -64,7 +64,7 @@ module.exports = {
         // barrikadene forsinker inntaket: fienden 40 m fra trehuset med laget inne
         still(blå, midt(Pv1)); blå.husEtasje = 1; HS.plasser(); const c1 = midt(Pv1); still(rød, [c1[0], c1[1] + 40]);
         HS.S.inntak.clear(); HS.inntakSteg(); const k = blå.hus.k + '>' + rød.navn, f0 = HS.S.inntak.get(k) && HS.S.inntak.get(k).f;
-        L.lager.tre = 50; const m1n = P2.modell(i1), ute1 = HV.inngang(m1n).innganger.filter(q => q.id !== undefined);
+        L.lager.tre = (L.lager.tre || 0) + 2; const m1n = P2.modell(i1), ute1 = HV.inngang(m1n).innganger.filter(q => q.id !== undefined);
         for (const q of ute1) P2.endre({ hus: i1, e: 1, del: 'åpning', id: q.id, gjør: 'barrikader' });
         HS.S.inntak.clear(); HS.inntakSteg(); const f1 = HS.S.inntak.get(k) && HS.S.inntak.get(k).f;
         ut.inntak = { før: f0, etter: f1, sperret: HV.inngang(P2.modell(i1)).sperret };

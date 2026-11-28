@@ -136,6 +136,7 @@
     if (!b.hus) return f;
     const inn = S.inntak.get(b.hus.k + '>' + a.navn); if (inn && inn.inne) return f * HV.REGLER.inntak.inne;
     const v = vernFor(a, b); if (!v) return f;
+    if (b.side === 'blå' && !b.karakter && !(b.husVern && nå() - b.husVern.t < 30)) si(`${b.navn} ${HV.vernTekst(v)}.`);
     b.husVern = { andel: v.andel, kjeller: !!v.kjeller, t: nå() };
     // skuddene sliter på veggen (føres litt etterpå, utenfor kamprunden)
     if (v.H && v.H.h && v.vegger.length) { const n = a.menn.filter(m => m.hp >= 1).length, d = Math.hypot(a.x - b.x, a.y - b.y);
@@ -330,6 +331,16 @@
       if (ets.length > 1) for (const e of ets) { const b = knapp(e.n === -1 ? 'Kjeller' : e.navn && /loft/i.test(e.navn) ? 'Loft' : e.n + '. etg.', e.n === s.hus.n, () => kjør({ type: 'husEtasje', lag: nid(s), n: e.n })); b.dataset.etg = e.n; b.title = 'Flytt laget til ' + (e.navn || etgNavn(e.n)).toLowerCase(); Hd.appendChild(b); } }
     if (s.ingeniør && !s.sti) { let beste = null; const p = P2(); if (p) for (const h of p.HUS.values()) { if (!h.Pv) continue; const H = fraKart(h); if (!H) continue; const q = nærKant(H, s.x, s.y); if (q.d <= SPRENG && (!beste || q.d < beste.d)) beste = { H, d: q.d }; }
       if (beste) { const b = knapp('Spreng hull i huset', false, () => kjør({ type: 'husSpreng', lag: nid(s), hus: beste.H.i })); b.id = 'sprenghus'; b.title = 'Sprengstoff: river en lett vegg eller slår et stort hull i en bærende'; Hd.appendChild(b); } }
+  });
+
+  // ---------- Leir-menyen (fanen Bygg): de overtatte husene ----------
+  (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el, knapp: kn }) => {
+    const ider = Object.keys(OL.hus); if (!ider.length) return; const S2 = sum();
+    hode.appendChild(el('h3', { 'data-fane': 'bygg' }, 'Overtatte hus'));
+    hode.appendChild(el('div', { klasse: 'igang' }, `${ider.length} hus: ${S2.senger} senger, ${String(S2.lager).replace('.', ',')} m³ lager. Trykk på et hus i kartet for å bytte bruk eller gi det opp.`));
+    const rad = el('div', { klasse: 'mat' });
+    for (const i of ider) { const o = OL.hus[i]; rad.appendChild(kn(`${OT.BRUK[o.bruk].navn}: ${o.navn || 'hus'} (${o.senger || 0} senger)`, () => { if (o.c && typeof kam !== 'undefined') { if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false); kam.x = o.c[0]; kam.y = o.c[1]; kam.m = Math.min(kam.m, .8); tegnPå(); } }, { 'data-overtatt': i, title: 'Vis huset i kartet' })); }
+    hode.appendChild(rad);
   });
 
   lesInn();
