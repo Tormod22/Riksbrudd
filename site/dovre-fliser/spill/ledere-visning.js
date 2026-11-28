@@ -208,13 +208,13 @@
   function morgen() {
     const s = Sp(); if (!s) return; const U = S.uke && Array.isArray(S.uke.kassa) ? S.uke : (S.uke = { kassa: [] });
     U.kassa.push(Math.round(s.penger)); while (U.kassa.length > 8) U.kassa.shift();
-    if (navigator.webdriver) return;
+    if (!aktiv()) return;
     const RS = window.RekrutteringSpill, F = Fo(); if (!RS || !RS.tilstand || !F) return; const T = RS.tilstand(); if (!T || T.lokk) return;
     for (const A of Object.values(S.ledere)) { if (A.rolle === 'troppsjef') continue; const p = F.personer.find(q => q.id === A.person); if (!p) continue;
       const bud = LR.lokkBud(A, p, rng()); if (!bud) continue;
       const rv = window.Rekruttering ? Rekruttering.REGLER.rivaler[Math.floor(rng()() * Rekruttering.REGLER.rivaler.length)] : { id: 'ravnsund', navn: 'Ravnsund' };
       T.lokk = { id: p.id, navn: rv.navn, rival: rv.id, lønn: bud, frist: nåTid() + 720, person: p.navn };
-      const t = `${rv.navn} vil ha ${LR.tittel(A).toLowerCase()} ${p.navn} og byr ${kr(bud)} i døgnet. Svar i Folk-panelet innen 12 timer, ellers går hen.`;
+      const t = `${rv.navn} vil ha ${LR.ROLLER[A.rolle].navn.toLowerCase()} ${p.navn} og byr ${kr(bud)} i døgnet. Svar i Folk-panelet innen 12 timer, ellers går hen.`;
       melde(t); LR.notér(S, nåTid(), A.rolle, t, true); if (RS.lagre) RS.lagre(); break; }
   }
 
@@ -316,7 +316,7 @@
     ut.push(boks); return ut;
   }
 
-  Object.assign(api, { tilstand: () => S, sett: o => { S = LR.fraJSON(o); lagre(); }, les, lagre, steg, del, verdi, utbytte, kassaSjekk, prisFor, kandidater, person,
+  Object.assign(api, { morgen, tilstand: () => S, sett: o => { S = LR.fraJSON(o); lagre(); }, les, lagre, steg, del, verdi, utbytte, kassaSjekk, prisFor, kandidater, person,
     nullstill: () => { S = LR.ny(); lagre(); }, NØKKEL });
   window.LedereSpill = api;
 })();

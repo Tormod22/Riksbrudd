@@ -43,12 +43,13 @@ ok(LR.feilSjanse(1.2) === 0 && LR.feilSjanse(1.45) === 0 && Math.abs(LR.feilSjan
 {
   const R = { mat: 2, diesel: 1, bygg: 'plan', senger: 'ja' };
   const v = LR.matValg({ mat: 10, forbruk: 10 }, R, 1.3, fast(.9));
-  ok(v && v.rasjoner === 15 && Math.abs(v.dagerFør - 1) < 1e-9, `mat: rakk 1 døgn av 2 -> kjøper 15 rasjoner (2,5 døgn) (${v && v.rasjoner})`);
+  ok(v && v.rasjoner === 20 && Math.abs(v.dagerFør - 1) < 1e-9, `mat: rakk 1 døgn av 2 -> kjøper 20 rasjoner (3 døgn) (${v && v.rasjoner})`);
   ok(!LR.matValg({ mat: 25, forbruk: 10 }, R, 1.3, fast(.9)), 'mat: 2,5 døgn -> kjøper ikke');
+  const t2 = LR.byTilbud({ folk: 3000, kan: 'beskyttelse', grunnpris: 75000 }, { by: 20 }, 1.45); ok(JSON.stringify(t2.bud) === '[98000,75000,60000]', `forhandleren går ned: ${t2.bud}`);
   ok(!LR.matValg({ mat: 15, forbruk: 10 }, R, .7, fast(.9)) && LR.matValg({ mat: 15, forbruk: 10 }, R, 1.0, fast(.9)), 'lite dyktig leirsjef venter lenger (1,5 døgn: dyktig kjøper, lite dyktig ikke)');
-  ok(LR.matValg({ mat: 10, forbruk: 10 }, R, .7, fast(.01)).rasjoner < 15, 'et dårlig valg kjøper for lite');
+  ok(LR.matValg({ mat: 10, forbruk: 10 }, R, .7, fast(.01)).rasjoner < 20, 'et dårlig valg kjøper for lite');
   ok(!LR.matValg({ mat: 0, forbruk: 10 }, { ...R, mat: 0 }, 1.3, fast(.9)) && !LR.matValg({ mat: 0, forbruk: -2 }, R, 1.3, fast(.9)), 'mat av / drivhusene dekker: ingenting');
-  const d = LR.dieselValg({ liter: 100, perDøgn: 200, plass: 5000 }, R, 1.3, fast(.9)); ok(d && d.liter === 200, `diesel: 0,5 døgn av 1 -> ${d && d.liter} liter`);
+  const d = LR.dieselValg({ liter: 100, perDøgn: 200, plass: 5000 }, R, 1.3, fast(.9)); ok(d && d.liter === 300, `diesel: 0,5 døgn av 1 -> ${d && d.liter} liter`);
   ok(LR.dieselValg({ liter: 100, perDøgn: 200, plass: 120 }, R, 1.3, fast(.9)).liter === 100, 'diesel: høyst det tanken har plass til');
   const plan = [{ pid: 1, type: 'drivhus', pris: 2e6 }, { pid: 2, type: 'brakke', pris: 1e6 }, { pid: 3, type: 'vakttårn', pris: 4e6 }];
   ok(LR.byggValg({ plan, kø: 0, utenSeng: 0 }, R, 1.3, fast(.9)).pid === 1, 'bygg: planen i rekkefølge');

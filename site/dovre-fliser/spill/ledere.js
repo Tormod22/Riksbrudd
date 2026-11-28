@@ -30,10 +30,10 @@
     feil: { sjanse: .3, trygg: 1.2 },
     // lederne ser over sakene sine hvert «hvert» spillminutt
     hvert: 20,
-    // leirsjefen: kjøper når maten (dieselen) rekker under målet, for målet + «buffer» døgn; en dyktig leirsjef kjøper når det rekker
+    // leirsjefen: kjøper når maten (dieselen) rekker under målet, for målet + «buffer» døgn (høyst ett kjøp i døgnet); en dyktig leirsjef kjøper når det rekker
     // under målet, en lite dyktig først ved «sen» × målet. Et dårlig valg: kjøper bare «lite» av det som trengs. Rasjoner i hele 5.
-    mat: { buffer: .5, sen: .6, lite: .5, steg: 5 },
-    diesel: { buffer: .5, sen: .6, lite: .5, steg: 50 },
+    mat: { buffer: 1, sen: .6, lite: .5, steg: 5 },
+    diesel: { buffer: 1, sen: .6, lite: .5, steg: 50 },
     // byggingen: neste skisse bestilles når det står færre enn «kø» jobber i byggekøen
     bygg: { kø: 1 },
     // forhandleren: åpningsbudet = grunnprisen × (1 + «åpning» × dyktighet over 0,7 / 0,75); prøver hver by høyst hvert «hvert» spillminutt.
