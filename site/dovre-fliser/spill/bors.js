@@ -267,7 +267,7 @@
   // ---------- investorene ----------
   const investor = id => REGLER.INVESTORER.find(q => q.id === id) || null;
   function nyttØnske(B, id, type, nå, rand) {
-    const W = REGLER.ØNSKER[type]; if (!W) return null; const r = rand || Math.random;
+    const W = REGLER.ØNSKER[type]; if (!W) return null; const r = rand || lagRand(hash('ønske:' + id + ':' + B.nr + ':' + Math.round(tall(nå))));
     const ø = { id: 'ø' + (++B.nr), inv: id, type, fra: Math.round(nå), frist: Math.round(nå) + W.døgn * DØGN, status: 'aktiv' };
     if (type === 'unna') ø.rival = r() < .6 ? 'rød' : 'grønn';
     if (type === 'kontrakt') ø.oppdrag = OPPDRAGSTYPER[Math.floor(r() * OPPDRAGSTYPER.length) % OPPDRAGSTYPER.length];
@@ -280,7 +280,7 @@
   }
   // en henvendelse: { inv, tilbud: { andel, kr } | lån: { kr, rente, uker } } – kr for andelen settes etter kursen
   function henvendelse(B, nivå, nå, kursKr, rand) {
-    const r = rand || Math.random; if (tall(nivå, 1) < REGLER.nivå.investor || B.meg.oppkjøpt) return null;
+    const r = rand || lagRand(Math.floor(tall(nå)) + 9133); if (tall(nivå, 1) < REGLER.nivå.investor || B.meg.oppkjøpt) return null;
     const ledig = REGLER.INVESTORER.filter(q => !B.investorer[q.id]); if (!ledig.length || r() >= REGLER.investor.sjanse) return null;
     const q = ledig[0], h = { status: 'tilbud', tid: Math.round(nå), tilfreds: REGLER.investor.start };
     if (q.tilbud) { const n = Math.min(q.tilbud.andel, Math.max(0, B.meg.egne - 51)); if (n < 1) { B.investorer[q.id] = { status: 'nei', tid: Math.round(nå), tilfreds: 50 }; return null; } h.andel = n; h.kr = avrund(n * kursKr); }
