@@ -105,7 +105,8 @@
           if (igjen >= rest) { igjen -= rest; s.seg++; s.prog = 0; s.x = bx; s.y = by; }
           else { s.prog += igjen / t; igjen = 0; s.x = ax + (bx - ax) * s.prog; s.y = ay + (by - ay) * s.prog; }
         }
-        if (s.seg >= s.sti.length - 1) { s.sti = null; s.siktSkitten = true; if (s.side === SP) logg(s.navn + ' er framme.'); framme(s); }
+        // (ut8-kr-krig, Ingrid 28. nov: «Vaktlaget er framme» etter at laget var slått ut) et lag uten kampklare menn melder ikke at det er framme
+        if (s.seg >= s.sti.length - 1) { s.sti = null; s.siktSkitten = true; if (s.side === SP && (!Array.isArray(s.menn) || s.menn.some(q => q.hp >= 1))) logg(s.navn + ' er framme.'); framme(s); }
         flyttet();
       }
     }

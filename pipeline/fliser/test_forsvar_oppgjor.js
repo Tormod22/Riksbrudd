@@ -30,4 +30,9 @@ ok(O.tekst(null, nå) === null, 'uten bilde fra i går: ingenting');
   const før = { bølge: 0, aktiv: 0, falne: 0, slåttUt: 0, tid: 1000 }, nå = { bølge: 0, aktiv: 0, falne: 4, slåttUt: 1, tid: 2440, kamper: [{ lag: 'Speidertropp 1', fiende: 'bygdevernet', sted: 'i Lærdalsøyri', falne: 4, slått: true, start: 1200 }, { lag: 'Gammel', fiende: 'røverne', falne: 1, slått: false, start: 500 }] };
   const t = O2.tekst(før, nå).tekst; A2.ok(/Speidertropp 1 ble slått ut i kamp med bygdevernet i Lærdalsøyri/.test(t), t); A2.ok(!/ett lag er slått ut/i.test(t), 'ikke to ganger'); A2.ok(!/Gammel/.test(t), 'bare siste døgn');
   console.log('ok   oppgjøret sier hvem lagene kjempet mot (runde 13)'); }
+// (ut8-kr-krig, Ingrid 28. nov) morgenrapporten tar ikke med folk som gikk inn i en tropp (spilleren gjorde det selv)
+{ const O2 = require('../../site/dovre-fliser/spill/forsvar-oppgjor.js'), før = { navn: ['Hanne Dahl', 'Per Lie'], tid: 0 }, nå = { navn: ['Per Lie'], tropp: { 'Hanne Dahl': 'Speidertropp 1' }, tid: 1440 };
+  const a = O2.tekst(før, nå), b = O2.tekst(før, nå, { utenTropp: true });
+  if (!/gikk inn i Speidertropp 1/.test(a.tekst) || /Speidertropp|ikke lenger/.test(b.tekst)) { console.error('FEIL utenTropp:', a.tekst, '|', b.tekst); process.exit(1); }
+  console.log('ok   utenTropp: ' + b.tekst); }
 console.log(feil ? `${feil} FEIL` : 'alle tester ok'); process.exit(feil ? 1 : 0);

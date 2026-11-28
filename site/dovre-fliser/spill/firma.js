@@ -403,7 +403,8 @@
     return d.join(' · ');
   }
   function paktTekst(p, nå) {
-    const igjen = Math.max(0, Math.ceil((p.slutt - nå) / 1440));
+    // (ut8-kr-krig, Ingrid 28. nov: 7 døgn valgt, «8 døgn igjen») slutt er rundet til hele minutter, nå er det ikke: ett minutts slakk
+    const igjen = Math.max(0, Math.ceil((p.slutt - nå - 1) / 1440));
     if (p.type === 'allianse') return `Allianse med ${RIVALER[p.side]} mot ${RIVALER[p.mot]} – ${igjen} døgn igjen. Dere ser lagene deres og det de ser.`;
     return `Våpenhvile med ${RIVALER[p.side]} innen ${Math.round(p.r / 1000)} km av leiren – ${igjen} døgn igjen.`;
   }

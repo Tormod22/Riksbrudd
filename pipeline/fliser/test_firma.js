@@ -184,4 +184,8 @@ G.fastÅpne = [{ id: 'k9', firma: 'Storlia Tømmer' }]; G.overraskelse = { side:
 const G3 = Fi.fraJSON(JSON.parse(JSON.stringify(Fi.tilJSON(G)))); ok(G3.fastÅpne[0].id === 'k9' && G3.overraskelse.til === 500, 'lagring: faste tilbud ute og overraskelsen huskes');
 ok(Fi.fraJSON({ versjon: 99 }) === null && Fi.fraJSON(null) === null, 'ukjent lagring gir null');
 
+// (ut8-kr-krig, Ingrid 28. nov: valgt 7 døgn, sto «8 døgn igjen») – klokka var ikke et helt minutt da pakten ble inngått
+{ const F8 = Fi.ny({ x: 0, y: 0 }); const r8 = Fi.inngåPakt(F8, 'hvile', 'rød', { r: 10000, døgn: 7 }, 512.6);
+  ok(r8.ok && /– 7 døgn igjen/.test(Fi.paktTekst(r8.p, 512.6)), '7 døgn valgt gir «7 døgn igjen»: ' + (r8.ok ? Fi.paktTekst(r8.p, 512.6) : r8.grunn));
+  ok(r8.ok && /– 6 døgn igjen/.test(Fi.paktTekst(r8.p, 512.6 + 1440)), 'etter ett døgn: 6 igjen'); }
 console.log(`test_firma: ${n} sjekker ok`);

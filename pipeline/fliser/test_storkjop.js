@@ -1,0 +1,23 @@
+// Test: store kjøp må bekreftes (ut8-kr-krig) – spill/storkjop.js
+const a = require('assert'), K = require('../../site/dovre-fliser/spill/storkjop.js');
+a.strictEqual(K.pris('Tilby våpenhvile (2,7 mill. kr)'), 2.7e6);
+a.strictEqual(K.pris('Gjør avtale (8 mill. kr)'), 8e6);
+a.strictEqual(K.pris('Kjøp (1 500 000 kr)'), 1.5e6);
+a.strictEqual(K.pris('Kjøp leiesoldater (4 mann, 2,5 mill. kr)'), 2.5e6);
+a.strictEqual(K.pris('By over (21 000 kr/døgn)'), 0, 'pris per døgn er ikke et kjøp nå');
+a.strictEqual(K.pris('Send'), 0);
+a.ok(K.måBekreftes('Tilby våpenhvile (2,7 mill. kr)'), 'våpenhvilen bekreftes');
+a.ok(K.måBekreftes('Foreslå allianse (bidrag 1,2 mill. kr)'), 'alliansen bekreftes');
+a.ok(K.måBekreftes('Kjøp leiesoldater (4 mann, 2,5 mill. kr) Et ferdig lag'), 'leiesoldatene bekreftes');
+a.ok(!K.måBekreftes('Gi feltradio (1 mill. kr) og send'), 'akkurat 1 mill. er ikke over grensen');
+a.ok(!K.måBekreftes('Tilby våpenhvile (900 000 kr)'), 'under grensen');
+a.ok(!K.måBekreftes('Ja, betal 2,7 mill. kr'), 'bekreftelsen selv');
+a.ok(!K.måBekreftes('Selg 10 (1,5 mill. kr)'), 'salg er ikke kjøp');
+a.ok(!K.måBekreftes('Avbestill (3 mill. kr tilbake)'), 'avbestilling');
+a.ok(!K.måBekreftes('Riv 2 (+1,2 mill. kr)'), 'riving');
+a.ok(!K.måBekreftes('Ta et risikabelt oppdrag: røverposten (1,5 mill. kr)'), 'et oppdrag som betaler');
+a.ok(!K.måBekreftes('Emisjon 10 % (4,5 mill. kr)') && !K.måBekreftes('Noter 20 % (9 mill. kr)'), 'aksjer som gir penger inn');
+a.ok(K.måBekreftes('Kjøp tilbake 2 % (1,8 mill. kr)'), 'tilbakekjøp er et kjøp');
+a.strictEqual(K.hva('Tilby våpenhvile (2,7 mill. kr)'), 'Tilby våpenhvile');
+a.strictEqual(K.hva('Foreslå allianse (bidrag 1,2 mill. kr)'), 'Foreslå allianse');
+console.log('ok   storkjøp: pris i teksten, hva som må bekreftes');
