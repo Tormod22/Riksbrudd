@@ -1682,3 +1682,17 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   (IndexedDB under localStorage, LagringStor, versjon/omgjøring). ØKONOMITESTEN: node pipeline/fliser/test_okonomitest.js (okosim.js +
   okosim-*.js; OKO_STRENG=1, OKO_NYTT_BAND=1) – kjøres i hver fletting; nye økonomidele legger til en okosim-del. Flettingen: scratchpad
   inn2.sh (løser index.html-tagger, docs, okonomitest-band.json og api-linjer selv). Ikke publisert før brukeren sier «Publiser».
+  KRITIKERRUNDEN OG DETALJER (28. nov dag, brukeren: «fiks feil, lag PDF av hele spillet, legg til detaljer og liv – flere hyller,
+  møbler, industrimaskiner, industritype per bygg, lagringssystem med hverdagsting som peanøttsmør»): kritikkene i docs/kritikk/2026-11-28-ut-*.md,
+  rettet i pakkene ut8-kr-saga/-krig/-penger/-hus/-telefon/-ro (notater i docs/natt/ut8-kr-*.md; nye filer storkjop.js – bekreft kjøp over
+  1 mill. –, trykkvakt.js – tapte trykk ved høy fart –, telefonro.js). Boka om hele spillet: docs/spillet-hele.md (PDF i scratchpad spillbok/).
+  INDUSTRITYPE: byggjobben gir `ind` 0–14 (IND i bygninger.py = Industri.IND i spill/industri.js; release kart-hus-3af69d4a5eaf, 11 280 bygg
+  med kjent type – resten anslås av IndustriSpill.omgivelser) og spill/maskiner.js (66 modeller, Maskiner.LIV, linjen råvare → maskiner →
+  ferdigvare i Interior «linje»; maskiner-visning.js: bevegelige deler og lyd når ProduksjonSpill sier at maskinen går). Nye maskiner i egen
+  fabrikk: flishogger, filetmaskin, ballepresse, steinknuser (ut9-maskiner2). HVERDAGSTING: spill/ting.js (249 ting i ti kategorier, holdbarhet,
+  bruk) + tinglager.js/-visning.js («riksbrudd-ting», panelet Lageret, kommandoene tingFlytt/Bruk/Kast/Selg/Sekk), kjøl/frys/skap/hyller i
+  byggesettet (fanen Maskiner, BS.MASKINFANE), hyller.js/hyller-visning.js (tingene synes på hyllene i 3D, også i leirens egne bygg via
+  Interior3d.leirVarer). Møbler: 31 nye i interior.js MØBLER (Interior.VEGGHENGT sperrer ikke), lut.js har 13 nye beholdere (førstehjelp holdt
+  innenfor test_balanse). LIV: leirliv.js/leirliv3d.js (køyer om natta, måltid ved benken, hund, røyk, lys i vinduer, vasketøy),
+  karaktervern.js (karakterlaget settes inn igjen hvis noe tar det ut – ENHETER.splice(indexOf(x)) med −1 tok ut det siste laget: bruk alltid
+  `ENHETER.indexOf(x) >= 0 &&` før splice). Notatene: docs/natt/ut8-*.md og ut9-*.md.

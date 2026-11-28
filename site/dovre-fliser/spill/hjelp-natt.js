@@ -2097,6 +2097,141 @@ window.HJELP_TILLEGG = [
 "Lag og strid"
 ],
 [
+"Lageret: hverdagsting",
+"Når du leter gjennom hus, finner du også hverdagsting: mat (peanøttsmør, hermetikk, knekkebrød), hygiene, medisin, verktøy, elektro, klær, kjøkkenutstyr, bøker og kortstokker. Hva du finner, kommer an på rommene: kjøkkenet har mat, badet medisin og hygiene, boden og garasjen verktøy, soverommet klær – og butikkene har mest mat. Alt havner på leirens lager. Åpne det fra Leir-menyen (fanen Lager, «Åpne lageret») eller «Mer» → «Lager» nederst på PC. Trykk på en ting for å bruke, flytte, selge, kaste eller ta den med i sekken.",
+"Leiren"
+],
+[
+"Hyller og skap",
+"Tingene trenger plass. I byggesettet (fanen Maskiner) finner du hyllereol, pallplass, pallreol, kjøleskap, kjølerom, frysboks, medisinskap (låst), verktøytavle, garderobeskap, kiste og vanntønne – sett dem på gulvet i et rom. Lagerteltet, containeren, brakka, sykestua og verkstedet har litt plass fra før. Det som ikke får plass, står ute og holder kortere. Zoomet inn i kartet kan du trykke på en hylle eller et skap for å se hva som står der.",
+"Leiren"
+],
+[
+"Holdbarhet og kjøl",
+"Ferskvarer holder omtrent tre ganger så lenge i kjøleskap, frysevarer mange ganger lenger i frysboksen – men bare så lenge de har strøm. Ute holder tørre varer kortere, og klær, bøker og elektronikk blir ødelagt av fukt etter et par måneder. Det som går ut snart, står øverst i lageret. Det som har råtnet, kastes, og loggen sier fra.",
+"Leiren"
+],
+[
+"Folket bruker tingene",
+"Maten på lageret fyller på matlageret når det er under ett døgn igjen – det som går ut først, spises først. Medisin gjør at de syke blir friske raskere (den beste medisinen brukes først). Kaffe, sjokolade og tobakk brukes opp og gir moral; kortstokker, bøker, gitarer og en radio med batterier gir moral så lenge de finnes. Verktøy gir litt raskere arbeid: hammer og spiker til bygging, øks og motorsag til hogst, kikkert til vakt.",
+"Leiren"
+],
+[
+"Industribygg",
+"Industribygg har innredning etter hva slags industri de er: sagbruk, fiskeforedling, olje og gass, steinknuser, verksted, verft, kraft, bryggeri og mer. Trykk på et industribygg for å se typen («Industri – fiskeforedling»), eller zoom helt inn for plantegningen. Står det «anslått», er typen gjettet ut fra stedet – havn, oljeanlegg, kraftverk, fjell eller skog.",
+"I 3D"
+],
+[
+"Husvinduet",
+"Når du zoomer helt inn på et hus, kommer et vindu med etasjene (Kjeller, 1, 2, Loft). × lukker det – trykk på huset for å få det tilbake. På telefonen ligger riving, vern og «Ta over huset» bak «Mer». Vinduet forsvinner når du flytter kartet bort fra huset eller åpner et annet panel.",
+"Leiren"
+],
+[
+"Loftet i plantegningen",
+"Loftet vises med gulvbord der du kan stå oppreist, mørkt der taket er lavt, mønet som en gull strek og tingene som ligger der. Leting på loftet og i kjelleren teller som et hus du har lett gjennom.",
+"Leiren"
+],
+[
+"Gå inne i et hus",
+"Står karakteren din inne i et hus i kartet, starter «Gå» i 3D inne i huset – i samme etasje.",
+"I 3D"
+],
+[
+"Marsjruta før du sender",
+"Før et lag sendes fra Krig, regner spillet ut marsjruta. Går den gjennom et tettsted med bygdevern eller fiender, og det ikke finnes en god omveg, står det i bekreftelsen («Marsjen går gjennom Lillehammer – bygdevern ca. 14 mann»), med en knapp for avtale med bygdevernet. Slike mål står også bak de trygge i «Neste trekk».",
+"Lag og strid"
+],
+[
+"Store kjøp må bekreftes",
+"Alt som koster over 1 mill. kr – våpenhvile, allianser, avtaler, leiesoldater, aksjer, utstyr og bygg – må bekreftes én gang til med «Ja, betal» før pengene trekkes. «Nei, tilbake» eller Esc avbryter.",
+"Kom i gang"
+],
+[
+"Farten og ferdige bygg",
+"Et ferdig bygg senker ikke lenger farten av seg selv. Vil du det, slå det på i Leir → Mål (Tid og flyt). ⏭ stopper fortsatt når et bygg er ferdig.",
+"Leiren"
+],
+[
+"Pengene i starten",
+"Leiren koster penger hver dag: lønn (15 000 kr per person i døgnet), diesel til aggregatene og vedlikehold av byggene. Selskap → Oversikt viser hva leiren bruker i døgnet og de største postene. Pengene kommer fra kontraktene: hver morgen er det minst ett tilbud én tropp på fire kan klare – Neste-lappen peker på det. Finnes ingen kontrakt dere klarer, står de små oppdragene (Hent forsyninger, Ta en røverpost) også i Selskap → Kontrakter.",
+"Kom i gang"
+],
+[
+"Trinn og rykte",
+"Selskapet står på et av fire trinn (Overleve, Leverandør, Makt i regionen, Konsern). Under trinnet står ryktet som et nivå: det stiger med leverte kontrakter og ord dere holder. Trinn 3 krever nivå 3, trinn 4 nivå 4. Linja «Rykte: nivå 1 av 3 for trinn 3» øverst i Selskapet sier hvor dere står.",
+"Kom i gang"
+],
+[
+"Tillit hos byene",
+"En by vil ha beskyttelse fra dere når tilliten er 40. Byens kort i Selskapet → Byer viser veien dit: en levert kontrakt for byen gir +4 tillit, og to mann som vokter byen i 12 timer av døgnet gir +2 per døgn (opp til 50).",
+"Lag og strid"
+],
+[
+"Budkamp om en by",
+"Frir Ravnsund eller Mosevakt til en by, kan dere vinne den med lavere tillit hvis dere lover mer: med løftet 6 mann og hjelp innen 1 time holder tillit 30, med 4 mann 35. Prisen må være under rivalens. Byen sender også en kontrakt mens rivalen frir.",
+"Lag og strid"
+],
+[
+"Bygglista i grupper",
+"Byggene i Leir → Bygg står i grupper med boliger og produksjon øverst. Trykk på en gruppe for å folde den sammen eller åpne den. Utstyr og pynt ligger sammenfoldet nederst.",
+"Leiren"
+],
+[
+"Saga uten folk",
+"Maskinene går bare med folk på «Maskiner» som er på skift og står ved maskinen. Flyttes noen bort, sier loggen det, og raden i Selskap → Produksjon forteller hvorfor saga venter (på vei, sover, ingen satt på).",
+"Leiren"
+],
+[
+"Kjøpsavtaler og fullt lager",
+"Det som ikke får plass på lageret, tar selgeren med tilbake – og det betaler dere ikke for. Er lageret fullt når du inngår avtalen, må du bekrefte den. Leveransetilbudene regner med det saga faktisk laget siste døgn.",
+"Leiren"
+],
+[
+"Røvere som står fast",
+"Et røverlag som ikke kommer nærmere leiren på en snau time (og ikke skyter), gir opp og trekker seg unna. Da er angrepet over, og ⏭ spoler fritt igjen. Kampen om leiren holder ⏭ på 10× bare så lenge det blir skutt.",
+"Lag og strid"
+],
+[
+"Kort under angrep",
+"Kort med valg (fest, flyktninger, krangel …) venter mens leiren angripes. De kommer når angrepet er over. Trykk på «Et kort venter» hvis du vil se det med en gang.",
+"Leiren"
+],
+[
+"Vis i kartet på telefon",
+"«Vis i kartet» lukker panelet når målet ellers ville havnet bak det. Når du trykker Marsjer og har et oppdrag eller en kontrakt, viser kartet både troppen og målet.",
+"Kom i gang"
+],
+[
+"Livet i leiren",
+"Folkene i leiren gjør det døgnplanen sier: de sover i køyene i brakka om natta, spiser ved kjøkkenet (de tre første på benken under markisen), vakta står i tårnet med kikkert, og byggelaget bærer planker. Om kvelden lyser vinduene, og kjøkkenpipa og fyrkjelen ryker. Har gjengen minst seks personer, har dere en hund – den ligger ved bålet om natta. Alt dette er pynt og påvirker ikke spillet.",
+"Leiren"
+],
+[
+"Maskiner i industribyggene",
+"Industribyggene har maskiner etter hva slags industri de er: sagbruk har barkemaskin, sag og kantverk, fiskehaller har sløyelinje, filetmaskin og fryser, steinknuseriene har knusere og bånd, og så videre. Maskinene står i en linje fra porten og innover: råvaren kommer inn ved porten og går ut som ferdig vare i den andre enden. I plantegningen (Se inn) har hver maskin sitt tegn.",
+"I 3D"
+],
+[
+"Maskiner som går",
+"Når en maskin i leiren din går (sagbenk, vedkløyver, fyrkjele), ser du det i 3D: sagbladet snurrer, kløyveren går opp og ned og kjelen ryker. Står maskinen, står delene stille.",
+"Leiren"
+],
+[
+"Flere maskiner i fabrikken",
+"I byggesettet (fanen Maskiner) finnes nå også flishogger (tømmer til flis for fyrkjelen), filetmaskin (fisk fra båtene til frossen fisk – krever fiskemottak ved kai), ballepresse (skrap fra riving til stål) og steinknuser (stein til pukk). De trenger folk på «maskin» og strøm, som sagbenken. Står du nær en maskin som går i 3D, hører du den.",
+"Leiren"
+],
+[
+"Hyller og skap til tingene",
+"I byggesettet (fanen Maskiner) finnes nå mange slags hyller: trehylle, stålreol, glassvitrine, kjøkkenhylle, kjølereol (trenger strøm), låst verktøyskap og arkivskap, smal hylle, hjørnehylle og tønnestativ. Hver har sin plass i liter og passer best for noe: kjøkkenhylla tar mat og kjøkkenting, tønnestativet vann og drikke, verktøyskapet verktøy. Tingene legges selv på den hylla som passer best.",
+"Leiren"
+],
+[
+"Se tingene på hyllene",
+"Når en hylle har ting, står de på hylla i 3D – bokser, glass, flasker, esker og verktøy i fargene til det som ligger der. Jo fullere hylla er, jo mer står det. I forlatte hus står det også ting på hyllene, men noen er tømt av andre før deg.",
+"I 3D"
+],
+[
 "Kartet mens det lastes",
 "Når du zoomer eller åpner spillet, kommer kartet først uskarpt for hele skjermen, og så blir det skarpt bit for bit. De skarpe bitene tones inn og glir mykt over i de uskarpe, så du ser ikke rette kanter. Venter du et par sekunder, er alt skarpt.",
 "Vær, lyd og bilde"
