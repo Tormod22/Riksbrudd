@@ -88,11 +88,14 @@
   }
   // kortet holder seg oppdatert mens det står (hva personen gjør, endrer seg)
   setInterval(() => { if (valgtId === null) return; const F = Fo(), p = F && F.personer.find(q => q.id === valgtId); if (!p) visKort(null); else visKort(p); }, 1000);
+  const innenfor = (P, x, y) => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) inn = !inn; return inn; };
   function nærmeste(X, Y, maks) { const F = Fo(); if (!F) return null; let best = null, bd = maks;
     for (const p of F.personer) { const q = plass2d(p); if (!q) continue; const d = Math.hypot(q.x - X, q.y - Y); if (d < bd) { bd = d; best = p; } } return best; }
   KROKER.trykk.unshift((X, Y) => {
     if (typeof kam === 'undefined' || kam.m >= 3 || (window.BYGGEVISNING && BYGGEVISNING.på && BYGGEVISNING.på())) { if (valgtId !== null) visKort(null); return false; }
-    const p = nærmeste(X, Y, Math.max(1.2, 10 * kam.m)); if (!p) { if (valgtId !== null) visKort(null); return false; }
+    // et trykk inne i et av leirens bygg hører til bygget (byggpanelet), ikke til folk som står ved døra
+    const L = Lr(); if (L && window.Leir && L.bygg.some(b => Leir.BYGG[b.type] && !Leir.BYGG[b.type].del && !Leir.BYGG[b.type].linje && innenfor(Leir.hjørner(b), X, Y))) { if (valgtId !== null) visKort(null); return false; }
+    const p = nærmeste(X, Y, Math.max(1, 9 * kam.m)); if (!p) { if (valgtId !== null) visKort(null); return false; }
     visKort(p); return true; });
 
   // ---------- jobbtavla og 3D ----------

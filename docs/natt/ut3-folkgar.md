@@ -35,7 +35,7 @@ Gren `claude/ut3-folkgar`. Bygger på F0 (jobbtavla og døgnplanen, `spill/jobbe
 - **2D:** prikker med retningsstrek i jobbens farge (`FolkgangSpill.FARGE`) når du er zoomet inn (0,6–3 m per punkt; sovende litt svakere);
   nærmere (under 0,6) tegner leir2d.js sine figurer ovenfra på de samme plassene med jakke i jobbens farge. Folk som er inne i et bygg
   med interiør (kontrollrom, kjøkken, sykestue, verksted, brakke) vises ikke i 2D; folk i egenbygde hus (byggesettets rom) vises i plantegningen.
-  **Trykk på en person** (zoomet inn, ikke mens du bygger): kortet `#folkgangkort` med navn, jobb, døgnplan og hva hen gjør og hvorfor
+  **Trykk på en person** (zoomet inn, ikke mens du bygger; et trykk inne i et av leirens bygg går fortsatt til bygget): kortet `#folkgangkort` med navn, jobb, døgnplan og hva hen gjør og hvorfor
   («Går til byggeplassen – bygger brakke», «Sover», «Spiser», «Har fri», «Står fast – kommer ikke til verkstedet: ingen vei dit»). Oppdateres hvert sekund.
   Ved personen i Folk-panelet står teksten fra gangen når den sier noe mer enn døgnplanen (går til …, står fast …).
 - **3D:** `folk3d.js` – figurene følger plassene fra gangen (`FolkgangSpill.plass`) i stedet for egen tilfeldig gange: går mykt etter plassen
