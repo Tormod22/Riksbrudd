@@ -6,7 +6,7 @@ lage kontrakter for tømmer, eksportere tømmer, maskiner som raffinerer tømmer
 Og samme dag: «byggene i hele spillet trenger et helt nytt system, hvor hvert eneste bygg består av vegger, tak og møbler … vegger en
 senere kan rive, eller bygge vinduer på … flere etasjer, loft … om en ønsker å bygge en stor fabrikk helt selv» (kapittel 5).
 Og: «da må vi også ha et bedre system for hvordan folkene oppfører seg og beveger seg i nye bygg, slik at de kan drive maskinene»
-(kapittel 6).
+(kapittel 6). Til slutt: «Legg til alle disse idéene» – det som trengs for at alt henger sammen, og flere idéer (kapittel 13 og 14).
 
 Planen tar også med de seks forbedringene brukeren likte i svaret på «Hvordan kan spillet gjøres bedre?»: ro i skjermen, én tydelig
 vei med kontraktene som rød tråd, en økonomi som gir valg hele spillet, en fiende som er en ekte motstander, lyd og den første halvtimen.
@@ -163,7 +163,7 @@ bygge vinduer på … bygg på flere etasjer kan kalkuleres basert på høyde, m
 fabrikk helt selv, skal en kunne bygge vegger, gulv, maskinplassering, lys og så videre.»
 
 Dette er et stort system, og det henger sammen med nesten alt annet: leting, tilflukt, riving, kamp, leiren og fabrikkene i kapittel 4.
-Derfor får det egne faser (B0–B7 i kapittel 14).
+Derfor får det egne faser (B0–B7 i kapittel 16).
 
 ### 5.1 Slik er det i dag
 
@@ -512,7 +512,144 @@ Kortere idéer som kan komme når grunnen over står. Hver av dem er et eget, li
 - **Depoter:** små lager langs handelsruta, så du ikke må kjøre helt hjem.
 - **Sesonger:** hogst er best om vinteren (frossen mark), fiske om høsten, ved selges dyrt i kulda. Vær og årstider finnes alt.
 
-## 13. De seks forbedringene
+## 13. Det som trengs for at alt henger sammen
+
+Brukeren 28. nov: «Legg til alle disse idéene i PDF-en.» Kapittel 3–12 legger til mye. Dette kapittelet er det som må til for at det
+skal gå an å spille med alt sammen: noen som styrer for deg, varer som faktisk ligger et sted, lagring som tåler mengden, en test av
+økonomien, oversikt og bedre kontroll over tida. De har et eget spor (G0–G5) i kapittel 16.
+
+### 13.1 Formenn og ledere
+
+Med 200 folk, flere byer, fabrikker og avtaler blir det for mye å styre alt selv. Derfor kan du gi noen av folkene en **lederrolle**:
+
+| Leder | Styrer | Du gir dem regler som … |
+|---|---|---|
+| **Leirsjef** | leiren: bygging, mat, senger, strøm | «hold alltid 2 døgn mat», «bygg ferdig planen før noe nytt» |
+| **Formann** (én per fabrikk) | maskinene, skiftene og bærerne der | «hold saga i gang, men aldri på bekostning av vakta» |
+| **Forhandler** | avtalene med byer og firmaer | «si ja til beskyttelse over 15 kr per innbygger», «aldri under markedspris» |
+| **Troppsjef** | en tropp ute | stridsreglene som finnes i dag, pluss «kom hjem når ammunisjonen er under 25 %» |
+| **Kasserer** | pengene | «hold alltid 5 mill. i kassa», «betal utbytte bare når uka gikk i pluss» |
+
+- **Lederen tar beslutningene du ellers måtte ta**, etter reglene dine og sin egen **dyktighet** (ferdigheten «ledelse», 0,7–1,45 som de
+  andre ferdighetene). En god formann fordeler bærerne smart; en dårlig lar saga stå.
+- **Du kan alltid ta over** («jeg styrer selv i dag»), og lederen melder bare det viktige i loggen.
+- **Ledere har verdi:** de krever høyere lønn (forslag: 1,5–2 ×), kan bli lokket bort av Ravnsund eller Mosevakt, og et selskap med gode
+  ledere er verdt mer på Gråbørsen.
+- **Inspirasjon** fra strategispill med guvernører og formenn – bare inspirasjon.
+
+### 13.2 Varer som tar fysisk plass
+
+Når folk skal bære tømmer (kapittel 6), må tømmeret ligge et sted:
+
+- **Hver vare ligger i en enhet med plass:** en tømmerhaug (2 m³), en pall (planker, sekker), en hylleplass, et fat (diesel), en kasse
+  (ammunisjon). Lageret er de plassene, ikke et tall. Lagertelt og hyller gir plass; varer kan også ligge ute (og tåle været dårligere).
+- **Reservering:** når en bærer går for å hente en haug, er den hans – ingen andre går dit for det samme. Når han kommer fram og
+  haugen er borte (stjålet, brent), finner han en ny.
+- **Lagersoner:** du kan si «planker her, tømmer der», og hvilken vare som skal ligge nærmest saga.
+- **Tallene i statuslinja blir som før** (summen av alt), så det enkle oversiktsbildet forsvinner ikke.
+- **Røvere kan stjele det som ligger ute**, og en brann i lageret tar det som ligger inne. Det gir en grunn til å bygge gode lager.
+
+### 13.3 Lagring som tåler mye mer
+
+Nettleserens enkle lagring (localStorage) gir bare noen få MB. Hus du har endret, 200 folk med plass og jobb, fabrikker, aksjer og
+avtaler blir mer enn det.
+
+- **Over på nettleserens database** (IndexedDB), som tåler hundrevis av MB.
+- **Versjon på lagringen:** hvert lagret spill sier hvilken versjon det er laget med, og spillet gjør gamle lagringer om til ny form når
+  det oppdateres (som `leir.js` gjør med versjon 1 → 2 i dag). Et spill skal aldri bli ødelagt av en oppdatering.
+- **Flere lagrede spill** («spor») og **eksport til fil**, så du kan ta vare på et spill eller flytte det til en annen maskin.
+- **Bare endringer lagres** (kapittel 5.3): et hus du ikke har rørt, tar ingen plass.
+- Samme form blir det tjeneren bruker i flerspiller senere (docs/plan-flerspiller.md).
+
+### 13.4 En økonomitest som spiller selv
+
+Kritikerne fant at byene ga to til tre ganger for mye (feil døgnlengde). Med sagbruk, byavtaler, aksjer og eksport blir slike feil
+større og vanskeligere å se.
+
+- **Et program som spiller 30 spilldøgn av seg selv** i Node, uten nettleser, med de samme reglene, og med faste strategier: «bare
+  kontrakter», «bare sagbruk», «byer med makt», «byer med avtaler», «børs tidlig», «gjør ingenting».
+- **Krav som sjekkes hver gang:** ingen strategi skal gjøre deg rik uten innsats (f.eks. over 200 mill. på 30 døgn), ingen fornuftig
+  strategi skal gjøre deg blakk uten sjanse, og «gjør ingenting» skal tape penger sakte.
+- **Hundrevis av kjøringer med ulikt frø** gir et bånd: slik går det vanligvis. Faller en endring utenfor båndet, sier testen fra – før
+  brukeren merker det.
+- Kjøres i `npm`-testene og før hver publisering, som de andre testene.
+
+### 13.5 Oversikt med grafer
+
+- **Produksjon:** hva hver maskin har laget per døgn, og **hvorfor den sto** («saga sto 4 t: tom for tømmer», «2 t: ingen bærere»). Den
+  vanligste grunnen står øverst.
+- **Penger:** inn og ut per post over 30 døgn (dagboka har tallene alt; nå som graf).
+- **Byene:** tillit, frykt og hvem som har dem, over tid.
+- **Folkene:** moral, helse, hvor mange som arbeider, står fast eller er syke.
+- **Børsen:** kursen (kapittel 10), med hendelsene merket.
+- I fanen Oversikt i Selskapet (kapittel 17) og i en egen fane **Statistikk**. På telefon én graf om gangen.
+
+### 13.6 Bedre kontroll over tida
+
+1× er sanntid, og en arbeidsdag er lang. Det må være lett å komme fram dit noe skjer:
+
+- **Spol til …:** «morgenen», «skiftet er ferdig», «saga er tom», «leveransen er framme», «avtalen går ut» – farten går til 600× og
+  stopper selv når det skjer (⏭ finnes i dag for neste hendelse).
+- **Automatisk pause** (valgfritt per type): angrep, en by ber om hjelp, en investor ringer, en maskin står, en leder trenger deg.
+- **Tidslinje** øverst (valgfri): de neste hendelsene du vet om (leveranser, frister, skift, ventet angrep), så du ser hva som kommer.
+- **Lesepausen** ved spoling (finnes) gjelder også de nye meldingene.
+
+## 14. Flere idéer
+
+Disse er ikke nødvendige for at resten skal virke, men gjør spillet rikere. Hver av dem er liten nok til å legges til senere.
+
+### 14.1 Rekruttering som et marked
+
+- **Folk søker jobb hos deg.** Hver morgen kommer noen søkere (flere når ryktet er godt og du har byer), med navn, alder, yrke,
+  ferdigheter, egenskaper og et **lønnskrav**.
+- **De beste har flere tilbud:** en dyktig mekaniker går til den som betaler mest eller har best rykte. Du kan by over.
+- **Rivalene lokker dine folk:** en misfornøyd formann kan få et tilbud fra Ravnsund. Moral, lønn og venner i leiren holder på dem.
+- Erstatter dagens «Rekrutter 500 000 kr» med noe du velger mellom.
+
+### 14.2 Opplæring
+
+- **Skole og øvingsfelt** (nye bygg): folk lærer en ferdighet raskere (maskinføring, sanitet, skyting, ledelse, forhandling).
+- **Opplæring tar tid** – personen arbeider ikke så lenge – men gir varig bedre folk. En investering, ikke en knapp.
+- **Mester og lærling:** en dyktig person som arbeider sammen med en ny, lærer bort ferdigheten sin (sakte, gratis).
+
+### 14.3 Spioner og sabotører
+
+- **En ny rekrutt kan være sendt av en rival.** Spionen gir rivalen innsyn (de vet hvor leiren og lageret er, hvilke kontrakter du har)
+  og kan sabotere en maskin eller åpne porten under et angrep.
+- **Du kan oppdage dem:** kameravakta ser noen som er der de ikke skal være, ryktet til søkeren stemmer ikke, eller en leder fatter
+  mistanke. Avhør, sparken – eller bruk spionen til å gi rivalen falske opplysninger.
+- **Du kan sende egne spioner** til rivalene (kapittel 12, etterretning).
+
+### 14.4 Ulykker og arbeidsmiljø
+
+- **Slitne folk skader seg:** nattskift, lite søvn og mørke øker sjansen for en ulykke ved maskinene (forslag: 1 % per skift ved full
+  tretthet, nesten null når de er uthvilt).
+- **Verneutstyr og lys** (nye ting i sekken / i bygget) senker sjansen. Sykestua og sanitet tar seg av de skadde.
+- **Ryktet:** mange ulykker gjør det vanskeligere å rekruttere og senker moralen. Et trygt selskap tiltrekker folk.
+
+### 14.5 Teknologi gjennom kontrakter
+
+- **Bedre maskiner låses opp gjennom handel**, ikke et forskningstre: høvleriet kommer fra Storlia Tømmer når du har levert dem nok, et
+  bedre aggregat fra Dalsnes Kraftlag, kjøleanlegg fra Ytterø Sjømat, nattsikter fra en utenlandsk kjøper du eksporterer til.
+- **Eurokreditt** (kapittel 11) kjøper teknologi som ikke finnes i Norge lenger.
+- Passer med at kontraktene er den røde tråden: å ha de rette partnerne er like viktig som å ha penger.
+
+### 14.6 Slutten på spillet – flere måter å vinne på
+
+I dag skjer det ingenting når du vinner. Forslag: tre veier, og du velger selv hvilken du går (eller blander):
+
+| Seier | Når | Følelsen |
+|---|---|---|
+| **Makt** | 60 % av folket i regionen er dine (medlemmer fullt, partnere halvt) – som Krig i dag | du styrer regionen |
+| **Penger** | selskapet ditt er størst på Gråbørsen, og ingen rival kan kjøpe deg opp | du eier regionen |
+| **Gjenoppbygging** | strøm, vann, veger og bruer virker i alle byene du har avtale med, og ingen sulter | du har bygget landet opp igjen |
+
+- Når du vinner, kommer en **avslutning** (en side i avisa, dagbokas oppsummering, tall for hele spillet) – og du kan **spille videre**
+  i samme verden, eller starte i en ny region med et lite forsprang (et rykte som følger deg).
+- Rivalene kan også vinne – på hvilken som helst av de tre veiene. Det gir dem ulike mål, og deg grunn til å følge med på mer enn
+  krigskartet.
+
+## 15. De seks forbedringene
 
 Dette må komme **først**, fordi alt det nye legger seg oppå det som er i dag:
 
@@ -530,7 +667,7 @@ Dette må komme **først**, fordi alt det nye legger seg oppå det som er i dag:
 6. **Den første halvtimen.** Startskjerm, leir, første kontrakt, ett angrep – og så det første glimtet av mer: «Storlia Tømmer har hørt
    om dere.» Spilleren skal vite hva neste mål er etter ti minutter, og se hele veien foran seg etter tretti.
 
-## 14. Rekkefølgen
+## 16. Rekkefølgen
 
 Hver fase kan spilles ferdig før den neste begynner, og hver har egne tester (regler uten DOM) og vakter, som resten av spillet.
 
@@ -574,13 +711,27 @@ og Ø8 gjør dem smarte.
 | **F4 – Oppførsel** | egenskaper, venner/uvenner, fritid, alarm og tilfluktsrom, skade og brann, rydding, streik | 2 runder | F2 |
 | **F5 – Mange folk og utposter** | 50–200 personer, regnet langt unna, trafikkart, prøveleirer i testene | 1–2 runder | F2–F4 |
 
+**Grunnmuren** (kapittel 13) er det fjerde sporet. Det er ikke synlig i seg selv, men alt annet blir vanskeligere uten det:
+
+| Fase | Innhold | Omfang (forslag) | Når |
+|---|---|---|---|
+| **G0 – Lagring** | nettleserens database, versjon og omgjøring av gamle lagringer, flere spor, eksport til fil | 1–2 runder | før B3 (endrede hus) og F2 (mange folk) |
+| **G1 – Økonomitesten** | 30 døgn av seg selv med faste strategier, bånd over hundrevis av kjøringer, i testene | 1–2 runder | sammen med Ø0, og utvides i hver Ø-fase |
+| **G2 – Tida** | spol til …, automatisk pause, tidslinje | 1 runde | sammen med Ø0 |
+| **G3 – Oversikt** | grafer for produksjon og hvorfor maskiner sto, penger, byer, folk, børs | 1–2 runder | etter Ø1 |
+| **G4 – Varer med plass** | hauger, paller, hyller, reservering, lagersoner, tyveri og brann | 2 runder | før F3 (bærerne) |
+| **G5 – Ledere** | leirsjef, formann, forhandler, troppsjef, kasserer med regler og dyktighet | 2–3 runder | etter F2 og Ø3 |
+
+Idéene i kapittel 14 (rekruttering, opplæring, spioner, ulykker, teknologi og slutten på spillet) har ingen fast plass – de kan komme
+når sporet de hører til er på plass. Slutten på spillet (14.6) bør komme tidlig, fordi den gir hele spillet et mål.
+
 F0 kan starte med en gang – den gjør Folk-panelet bedre også før byggene finnes.
 
 B0–B1 kan gå samtidig med Ø0–Ø2. Dagens interiør og byggesett virker hele veien til den nye utgaven er like god.
 
 En «runde» er én arbeidsøkt som i natt-løkkene (regler, visning, tester, kontroll). Tallene er grove anslag.
 
-## 15. Slik ser det ut
+## 17. Slik ser det ut
 
 - **2D først.** Alt i planen kan spilles i kartet og panelene. 3D gir bare utseende (maskinene, tømmerstabler, båter i havnen).
 - **Panelet Selskapet** (knappen «Selskap» i kommandolinja, tast S): Oversikt (verdi, kassa, kurs, ukas resultat, de tre viktigste
@@ -594,7 +745,7 @@ En «runde» er én arbeidsøkt som i natt-løkkene (regler, visning, tester, ko
   jobbtavla, og et trafikkart viser hvor folk går mest.
 - **Telefon:** panelet er et bunnark med fanene som rad øverst, ett tall per linje.
 
-## 16. Spørsmål til deg
+## 18. Spørsmål til deg
 
 Svarene bestemmer flere av detaljene over. Ingenting bygges før du har sagt ja til en fase.
 
@@ -618,3 +769,7 @@ Svarene bestemmer flere av detaljene over. Ingenting bygges før du har sagt ja 
 16. **Døgnplan og skift:** skal du sette tidene selv, eller holder det med «dag», «to skift» og «døgnet rundt» per maskin?
 17. **Egenskaper, venner og streik:** vil du ha folk med egne personligheter som kan skape trøbbel, eller skal de være mer like og lydige?
 18. **Direkte ordre til én person:** skal det gå an, eller skal alt gå gjennom jobbtavla?
+19. **Ledere:** hvor mye skal de få bestemme selv – bare følge reglene dine, eller også ta egne initiativ (og av og til feile)?
+20. **Varer med plass:** skal det synes i 2D (hauger og paller i kartet), eller holder det at folkene går dit?
+21. **Seier:** liker du de tre veiene (makt, penger, gjenoppbygging)? Skal spillet slutte, eller alltid kunne fortsette?
+22. **Spioner og ulykker:** er det gøy med slike overraskelser, eller blir det for mye uflaks?
