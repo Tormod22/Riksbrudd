@@ -2680,7 +2680,8 @@ function* hindringerG(u) {
   const rute = new Map(), legg = (x0, y0, x1, y1, o) => { for (let a = Math.floor(x0 / 20); a <= Math.floor(x1 / 20); a++) for (let c = Math.floor(y0 / 20); c <= Math.floor(y1 / 20); c++) { const k = a + ',' + c; if (!rute.has(k)) rute.set(k, []); rute.get(k).push(o); } };
   let n = 0;
   for (const P of (u.hus && u.hus.omriss) || []) { if ((++n & 63) === 0) yield; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of P) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } legg(x0, y0, x1, y1, { P, bb: [x0, y0, x1, y1] }); }
-  if (u.trær) for (const data of Object.values(u.trær)) for (let k = 0; k < data.length; k += 5) { if ((++n & 511) === 0) yield; legg(data[k], data[k + 1], data[k], data[k + 1], { x: data[k], y: data[k + 1] }); }
+  // (ut8-kr-hus: «inne i en trestamme» ved Ulvik) stammen er så tykk som treet er høyt (bjørka 0,055 × høyden ved foten): radius r per tre
+  if (u.trær) for (const data of Object.values(u.trær)) for (let k = 0; k < data.length; k += 5) { if ((++n & 511) === 0) yield; const h = data[k + 3], r = Number.isFinite(h) ? Math.max(.55, Math.min(1.6, h * .058)) : .55; legg(data[k] - r, data[k + 1] - r, data[k] + r, data[k + 1] + r, { x: data[k], y: data[k + 1], r }); }
   return rute;
 }
 // Ingenting skal stå inne i et hus: trær, steiner, busker, biler, flagg og gatelys som havnet i et omriss fjernes (vakt: spill/vakt3d.js)
@@ -2713,7 +2714,7 @@ function hindring3d(x, y, egen) {
     // et punkt utenfor boksen er aldri inni, så svaret er det samme.)
     else if (o.P) { const b = o.bb; if (b && (x + .4 < b[0] || x - .4 > b[2] || y + .4 < b[1] || y - .4 > b[3])) continue;
       for (const [dx, dy] of [[0, 0], [.4, 0], [-.4, 0], [0, .4], [0, -.4]]) if (inni(o.P, x + dx, y + dy)) return true; }
-    else if (Math.hypot(o.x - x, o.y - y) < .55) return true;
+    else if (Math.hypot(o.x - x, o.y - y) < (o.r || .55)) return true;
   }
   return false;
 }
@@ -3672,7 +3673,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/hjelp-natt.js?v=1eb023e385"></script>
 <script src="/dovre-fliser/spill/hjelp.js?v=4253278207"></script>
 <script src="/dovre-fliser/spill/bevegelse.js?v=9da5661eb9"></script>
-<script src="/dovre-fliser/spill/gange.js?v=826ee4ee4a"></script>
+<script src="/dovre-fliser/spill/gange.js?v=4c89fcc5fc"></script>
 <script src="/dovre-fliser/spill/veg.js?v=8da99c174d"></script>
 <script src="/dovre-fliser/spill/liv3d.js?v=12c8bc2ac4"></script>
 <script src="/dovre-fliser/spill/anlegg3d.js?v=7f6e8f0460"></script>
@@ -3761,7 +3762,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/bygning.js?v=c3d700aab6"></script>
 <script src="/dovre-fliser/spill/vei.js?v=6fd0b892d6"></script>
 <script src="/dovre-fliser/spill/plantegning.js?v=dace1a494f"></script>
-<script src="/dovre-fliser/spill/plantegning-visning.js?v=8c8292e647"></script>
+<script src="/dovre-fliser/spill/plantegning-visning.js?v=20ff065fcc"></script>
 <script src="/dovre-fliser/spill/folkgang.js?v=4d97e75c50"></script>
 <script src="/dovre-fliser/spill/folkgang-visning.js?v=129c9d1fc1"></script>
 <script src="/dovre-fliser/spill/husendring.js?v=32aec12c1c"></script>
@@ -3779,7 +3780,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/trafikkart-visning.js?v=2649b93460"></script>
 <script src="/dovre-fliser/spill/interior3d.js?v=b066f44e19"></script>
 <script src="/dovre-fliser/spill/etasjer.js?v=9ad7b426d4"></script>
-<script src="/dovre-fliser/spill/etasjer-visning.js?v=7db876c020"></script>
+<script src="/dovre-fliser/spill/etasjer-visning.js?v=fcd08435a2"></script>
 <script src="/dovre-fliser/spill/etasjer3d.js?v=cab5583ce8"></script>
 <script src="/dovre-fliser/spill/hud.js?v=57b2800eba"></script>
 <script src="/dovre-fliser/spill/filtre.js?v=2ee4fa965b"></script>
@@ -3790,7 +3791,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/gate.js?v=9ee37c3bc8"></script>
 <script src="/dovre-fliser/spill/gate3d.js?v=a14beb67ee"></script>
 <script src="/dovre-fliser/spill/leting.js?v=11f96f7964"></script>
-<script src="/dovre-fliser/spill/leting-visning.js?v=7bcfcff25c"></script>
+<script src="/dovre-fliser/spill/leting-visning.js?v=1b95c32bef"></script>
 <script src="/dovre-fliser/spill/lut.js?v=485c23b2da"></script>
 <script src="/dovre-fliser/spill/lut-visning.js?v=a5556f047b"></script>
 <script src="/dovre-fliser/spill/spor.js?v=8e78418546"></script>

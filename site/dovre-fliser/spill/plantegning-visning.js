@@ -17,7 +17,7 @@
   const hjelp = () => (typeof form === 'function' && typeof rund === 'function' && typeof harFall === 'function' && typeof takDeler === 'function'
     ? { form, rund, harFall, takDeler, Byhus: window.Byhus || null } : null);
   const HUS = new Map();
-  const S = { fokus: null, etasje: 1, valgt: null, nær: [], sist: null, skanner: false, prøve: new Map(), nr: 0 };
+  const S = { fokus: null, etasje: 1, valgt: null, nær: [], sist: null, skanner: false, prøve: new Map(), nr: 0, lukket: null, mer: false, merHus: null };
   let LOGG = PT.nyLogg(''), leir = '';
   const tegnPå = () => { if (typeof skitten !== 'undefined') skitten = true; };
 
@@ -111,14 +111,36 @@
     skann(cx, cy, rx, ry).then(l => { S.nær = l; tegnPå(); visVelger(); }).catch(e => console.warn('plantegning:', e)).finally(() => { S.skanner = false; });
   }
   const etasjeFor = h => (h.m && h.m.etasjer.some(e => e.n === S.etasje) ? S.etasje : 1);
-  const hoved = () => { const l = S.nær.filter(h => h.klar && h.m); if (S.fokus) { const f = l.find(h => h.i === S.fokus.i); if (f) return f; }
-    return l.sort((a, b) => Math.hypot((a.bb[0] + a.bb[2]) / 2 - kam.x, (a.bb[1] + a.bb[3]) / 2 - kam.y) - Math.hypot((b.bb[0] + b.bb[2]) / 2 - kam.x, (b.bb[1] + b.bb[3]) / 2 - kam.y))[0] || null; };
+  // (ut8-kr-hus, kritikeren Jonas: «husvinduet viste huset selv når kartet sto på leiren») Husvinduet gjelder bare et hus som er på
+  // skjermen: midten av huset innenfor bildet og huset minst så stort som når plantegningen kommer. Et hus i fokus («Se inn») som er
+  // flyttet ut av bildet eller blitt for lite, slippes.
+  // (Statuslinja øverst og bunnmenyen/kommandolinja nederst dekker kanten av kartet: midten av huset må være i den delen du ser, SKJERM.topp/bunn
+  // punkter fra kanten og SKJERM.kant av bredden fra sidene – et hus helt ute i kanten av bildet får ikke vinduet. Claudes forslag.)
+  const SKJERM = { topp: 70, bunn: 100, bunnTelefon: 150, kant: .1 };
+  function påSkjerm(h) {
+    if (typeof kam === 'undefined' || typeof VW === 'undefined') return true;
+    const cx = (h.bb[0] + h.bb[2]) / 2, cy = (h.bb[1] + h.bb[3]) / 2, sx = (cx - kam.x) / kam.m + VW / 2, sy = VH / 2 - (cy - kam.y) / kam.m;
+    const bunn = VH - (VW <= 700 ? SKJERM.bunnTelefon : SKJERM.bunn);
+    return sx >= VW * SKJERM.kant && sx <= VW * (1 - SKJERM.kant) && sy >= SKJERM.topp && sy <= bunn && Math.max(h.bb[2] - h.bb[0], h.bb[3] - h.bb[1]) / kam.m >= R.minPunkter * .8;
+  }
+  const hoved = () => { const l = S.nær.filter(h => h.klar && h.m);
+    if (S.fokus) { const f = l.find(h => h.i === S.fokus.i); if (f && påSkjerm(f)) return f; if (f) { S.fokus = null; S.sist = null; } }
+    return l.filter(påSkjerm).sort((a, b) => Math.hypot((a.bb[0] + a.bb[2]) / 2 - kam.x, (a.bb[1] + a.bb[3]) / 2 - kam.y) - Math.hypot((b.bb[0] + b.bb[2]) / 2 - kam.x, (b.bb[1] + b.bb[3]) / 2 - kam.y))[0] || null; };
 
   // ---------- tegningen ----------
   // fargene fra 2D-kartet (--ink, --ink-dim, panelet, gullet i knappene)
   const F = { gulv: 'rgba(20,17,11,.94)', kant: 'rgba(231,220,195,.25)', bærende: '#e7dcc3', skille: '#b3a789', revet: 'rgba(166,155,130,.85)', dør: '#c9b26a', vindu: '#9db4ba',
     planke: '#a8773d', plankeKant: '#4a3216', møbel: 'rgba(231,220,195,.09)', møbelKant: 'rgba(231,220,195,.38)', trapp: 'rgba(231,220,195,.55)', navn: '#c4b694', valgt: '#f0d79a',
-    våt: 'rgba(120,150,165,.13)', kjøkken: 'rgba(200,168,110,.09)', rom: 'rgba(231,220,195,.035)', ødelagt: '#b5543c' };
+    våt: 'rgba(120,150,165,.13)', kjøkken: 'rgba(200,168,110,.09)', rom: 'rgba(231,220,195,.035)', ødelagt: '#b5543c',
+    // loftet (ut8-kr-hus): gulvbord i tre, mørkere der taket er lavt, mønet og knelinjene i gull, takvinduene blå
+    loftGulv: 'rgba(92,70,42,.96)', loftBord: 'rgba(40,28,14,.55)', loftLavt: 'rgba(14,11,7,.55)', møne: '#c9b26a', kne: 'rgba(201,178,106,.75)', takvindu: '#9db4ba',
+    loftTing: 'rgba(168,126,72,.75)', loftTingKant: 'rgba(240,215,154,.8)', loftNavn: '#ead9ac' };
+  // romnavnene (Claudes forslag): rommet minst så stort (punkter, kvadratroten av arealet) og høyt (punkter) på skjermen; minste skrift
+  const ROMNAVN = { min: 24, høyde: 13, minSkrift: 10 };
+  const KORT = { Kjøkken: 'Kjøk.', Soverom: 'Sov.', Vaskerom: 'Vask', Vindfang: 'Vindf.', Korridor: 'Korr.', Trapperom: 'Trapp', Tilfluktsrom: 'Tilfl.', Dagligstue: 'Stue', Resepsjon: 'Resep.', Venterom: 'Vent' };
+  const TING = { flyttekasse: 'kasse', kiste: 'kiste', skrot: 'skrot', hylle: 'hylle', fyrkjele: 'kjele', tønne: 'tønne', køyeseng: 'køye', benk: 'benk' };
+  // takhøyden (Claudes forslag): under så mange meter er loftet «lavt» (du må bøye deg) – knelinjene står der
+  const LOFT = { lav: 1.5, bord: .6 };
   function tegn(g, vx0, vy1) {
     if (!aktiv()) { if (S.nær.length || velger.classList.contains('på')) { S.nær = []; S.valgt = null; visVelger(); } return; }
     vurderSkann();
@@ -133,9 +155,12 @@
         sperret: Fg.åpninger.filter(o => o.sperre).length, møbler: detalj ? Fg.møbler.length : 0, rom: Fg.rom.length, trapper: Fg.trapper.length, punkter: Math.round(str) });
       const sti = P => { g.beginPath(); P.forEach((p, k) => (k ? g.lineTo(X(p), Y(p)) : g.moveTo(X(p), Y(p)))); g.closePath(); };
       g.save(); g.lineCap = 'butt'; g.lineJoin = 'miter';
+      const etg = PT.etasje(md, n), loft = !!(etg && etg.loft);
       sti(md.P); g.fillStyle = F.gulv; g.fill(); g.strokeStyle = F.kant; g.lineWidth = 1; g.stroke();
-      for (const r of Fg.rom) { sti(r.P); g.fillStyle = /bad|vask|dusj|toalett/.test(r.rolle || '') ? F.våt : /kjøkken/.test(r.rolle || '') ? F.kjøkken : F.rom; g.fill(); }
-      if (detalj) for (const q of Fg.møbler) { sti(q.P); g.fillStyle = F.møbel; g.fill(); g.strokeStyle = q.ødelagt ? F.ødelagt : F.møbelKant; g.lineWidth = 1; g.stroke(); }
+      // (ut8-kr-hus) loftet: gulvbord, skråtaket (mønet og der det blir lavt) og takvinduene – før var det en mørk flate
+      if (loft) tegnLoft(g, md, X, Y, m, sti);
+      else for (const r of Fg.rom) { sti(r.P); g.fillStyle = /bad|vask|dusj|toalett/.test(r.rolle || '') ? F.våt : /kjøkken/.test(r.rolle || '') ? F.kjøkken : F.rom; g.fill(); }
+      if (detalj || loft) for (const q of Fg.møbler) { sti(q.P); g.fillStyle = loft ? F.loftTing : F.møbel; g.fill(); g.strokeStyle = q.ødelagt ? F.ødelagt : loft ? F.loftTingKant : F.møbelKant; g.lineWidth = 1; g.stroke(); }
       for (const t of Fg.trapper) {
         sti(t.P); g.fillStyle = 'rgba(231,220,195,.07)'; g.fill(); g.strokeStyle = F.trapp; g.lineWidth = 1; g.stroke();
         const vx = -t.uy, vy = t.ux, hl = t.l / 2, hb = t.b / 2; g.beginPath();
@@ -158,15 +183,58 @@
       }
       for (const o of Fg.åpninger) tegnÅpning(g, o, X, Y, m, S.valgt && S.valgt.i === h.i && S.valgt.e === n && S.valgt.id === o.id);
       if (detalj) { g.textAlign = 'center'; g.textBaseline = 'middle';
-        for (const r of Fg.rom) { const bx = Math.sqrt(Math.max(1, r.areal)) / m; if (bx < 46) continue; let fs = Math.max(11, Math.min(15, bx / 6));
-          // navnet må få plass i rommet (bredden på skjermen), ellers mindre skrift eller ikke noe navn
-          const xs = r.P.map(X), plass = (Math.max(...xs) - Math.min(...xs)) * .9; g.font = `${fs}px "Cormorant Garamond", Georgia, serif`;
-          while (fs > 10 && g.measureText(r.navn).width > plass) { fs--; g.font = `${fs}px "Cormorant Garamond", Georgia, serif`; }
-          if (g.measureText(r.navn).width > plass) continue;
-          g.fillStyle = F.navn; g.fillText(r.navn, X([r.x, r.y]), Y([r.x, r.y]));
-          if (bx > 80) { g.font = `${Math.max(10, fs - 3)}px "Cormorant Garamond", Georgia, serif`; g.fillStyle = 'rgba(196,182,148,.7)'; g.fillText(String(Math.round(r.areal)).replace('.', ',') + ' m²', X([r.x, r.y]), Y([r.x, r.y]) + fs); } } }
+        // (ut8-kr-hus, kritikeren: «plantegningen har ingen romnavn») navnet settes når det får plass i rommet på skjermen – med kortere
+        // navn (KORT) når det fulle ikke får plass; før krevde vi minst 46 punkter (kvadratroten av arealet), og på telefon kom nesten ingen
+        for (const r of Fg.rom) { const bx = Math.sqrt(Math.max(1, r.areal)) / m; if (bx < ROMNAVN.min) continue;
+          const xs = r.P.map(X), ys = r.P.map(Y), plass = (Math.max(...xs) - Math.min(...xs)) * .9, høy = Math.max(...ys) - Math.min(...ys); if (høy < ROMNAVN.høyde) continue;
+          let navn = loft ? 'Loft' : r.navn, fs = Math.max(ROMNAVN.minSkrift, Math.min(15, bx / 6)); g.font = `${fs}px "Cormorant Garamond", Georgia, serif`;
+          while (fs > ROMNAVN.minSkrift && g.measureText(navn).width > plass) { fs--; g.font = `${fs}px "Cormorant Garamond", Georgia, serif`; }
+          if (g.measureText(navn).width > plass && KORT[navn]) navn = KORT[navn];
+          if (g.measureText(navn).width > plass) continue;
+          const c = loft ? loftMidt(md) || [r.x, r.y] : [r.x, r.y], tx = X(c), ty = Y(c);
+          g.fillStyle = loft ? F.loftNavn : F.navn; g.fillText(navn, tx, ty); S.tegnet[S.tegnet.length - 1].navn = (S.tegnet[S.tegnet.length - 1].navn || 0) + 1;
+          const under = loft ? loftTekst(h, md, n) : bx > 80 && høy > fs * 2.4 ? String(Math.round(r.areal)).replace('.', ',') + ' m²' : '';
+          if (under) { g.font = `${Math.max(10, fs - 3)}px "Cormorant Garamond", Georgia, serif`; g.fillStyle = 'rgba(196,182,148,.75)'; if (g.measureText(under).width <= plass) g.fillText(under, tx, ty + fs); } }
+        // tingene på loftet (kasser, kiste, skrot, hylle) får navn når de er store nok på skjermen
+        if (loft) { g.font = '10px "Cormorant Garamond", Georgia, serif'; g.fillStyle = F.loftNavn;
+          for (const q of Fg.møbler) { const xs = q.P.map(X), w = Math.max(...xs) - Math.min(...xs), t = TING[q.type] || ''; if (!t || g.measureText(t).width > w + 4) continue;
+            let cx = 0, cy = 0; for (const p of q.P) { cx += X(p); cy += Y(p); } g.fillText(t, cx / q.P.length, cy / q.P.length); } } }
       g.restore();
     }
+  }
+  // Loftet sett ovenfra: gulvbord langs huset, mørkere der taket er lavere enn LOFT.lav (utenfor knelinjene), mønet som en gull strek
+  // (valmtak: mønet er kortere, og gratene går ut i hjørnene), knelinjene stiplet og takvinduene (m.tak.vinduer) som blå ruter.
+  // Aksene: u langs huset, v på tvers (m.akse fra Bygning); et punkt (u, v) er u·(ux, uy) + v·(vx, vy) i husets meter.
+  function tegnLoft(g, md, X, Y, m, sti) {
+    const A = md.akse, tak = md.tak || {}; if (!A) return;
+    const P = (u, v) => [u * A.ux + v * A.vx, u * A.uy + v * A.vy], lin = (a, b) => { g.moveTo(X(a), Y(a)); g.lineTo(X(b), Y(b)); };
+    const lu = A.u1 - A.u0, lv = A.v1 - A.v0, um = (A.u0 + A.u1) / 2, vm = (A.v0 + A.v1) / 2, møne = Math.max(tak.møne || 0, .1);
+    const valm = tak.form === 'valm', rl = valm ? Math.max(0, lu / 2 - lv / 2) : lu / 2, d = Math.max(0, lv / 2 * (1 - LOFT.lav / møne));
+    g.save(); sti(md.P); g.clip();
+    g.fillStyle = F.loftLavt; g.fill();
+    // der du kan stå oppreist: gulvbordene
+    const ru = valm ? rl + d : lu / 2 + 1; g.beginPath(); [P(um - ru, vm - d), P(um + ru, vm - d), P(um + ru, vm + d), P(um - ru, vm + d)].forEach((p, k) => (k ? g.lineTo(X(p), Y(p)) : g.moveTo(X(p), Y(p)))); g.closePath();
+    g.fillStyle = F.loftGulv; g.fill();
+    if (LOFT.bord / m >= 4) { g.strokeStyle = F.loftBord; g.lineWidth = 1; g.beginPath(); for (let v = A.v0 + LOFT.bord; v < A.v1; v += LOFT.bord) lin(P(A.u0 - 1, v), P(A.u1 + 1, v)); g.stroke(); }
+    // knelinjene (stiplet) og mønet
+    g.setLineDash([5, 4]); g.strokeStyle = F.kne; g.lineWidth = 1; g.beginPath(); lin(P(um - ru, vm - d), P(um + ru, vm - d)); lin(P(um - ru, vm + d), P(um + ru, vm + d));
+    if (valm) { lin(P(um - ru, vm - d), P(um - ru, vm + d)); lin(P(um + ru, vm - d), P(um + ru, vm + d)); } g.stroke(); g.setLineDash([]);
+    g.strokeStyle = F.møne; g.lineWidth = 2; g.beginPath(); lin(P(um - rl, vm), P(um + rl, vm));
+    if (valm) { g.lineWidth = 1.2; for (const [su, sv] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) lin(P(um + su * rl, vm), P(um + su * lu / 2, vm + sv * lv / 2)); } g.stroke();
+    // sperrene (takbjelkene) på tvers, hver 1,2 m – svakt
+    if (1.2 / m >= 10) { g.strokeStyle = 'rgba(201,178,106,.18)'; g.lineWidth = 1; g.beginPath(); for (let u = A.u0 + .6; u < A.u1; u += 1.2) lin(P(u, A.v0), P(u, A.v1)); g.stroke(); }
+    for (const w of tak.vinduer || []) { if (w.tilstand === 'revet') continue; const hb = (w.b || .8) / 2, hl = (w.l || 1) / 2;
+      g.beginPath(); [P(w.u - hl, w.v - hb), P(w.u + hl, w.v - hb), P(w.u + hl, w.v + hb), P(w.u - hl, w.v + hb)].forEach((p, k) => (k ? g.lineTo(X(p), Y(p)) : g.moveTo(X(p), Y(p)))); g.closePath();
+      g.fillStyle = 'rgba(157,180,186,.25)'; g.fill(); g.strokeStyle = F.takvindu; g.lineWidth = 1.2; g.stroke(); }
+    g.restore();
+  }
+  // der «Loft» står: midt i loftet, litt til siden for mønet (inne der du kan stå oppreist)
+  function loftMidt(md) { const A = md.akse; if (!A) return null; const um = (A.u0 + A.u1) / 2, lv = A.v1 - A.v0, møne = Math.max((md.tak && md.tak.møne) || 0, .1),
+    d = Math.max(0, lv / 2 * (1 - LOFT.lav / møne)), v = (A.v0 + A.v1) / 2 - Math.min(d * .55, lv * .2); return [um * A.ux + v * A.vx, um * A.uy + v * A.vy]; }
+  // linja under «Loft»: gjennomsøkt eller hva som ligger der
+  function loftTekst(h, md, n) {
+    const E2 = window.Etasjer2D; if (E2 && E2.erLett && E2.erLett(h, n)) return E2.rest && E2.rest(h, n) ? 'noe ligger igjen' : 'gjennomsøkt';
+    const et = PT.etasje(md, n), k = et ? et.møbler.filter(q => q.tilstand !== 'revet').length : 0; return k ? `${k} ting · ikke gjennomsøkt` : 'ikke gjennomsøkt';
   }
   function tegnÅpning(g, o, X, Y, m, valgt) {
     const hb = o.b / 2, c = [o.x, o.y], u = [o.ux, o.uy], n = [o.nx, o.ny], t2 = o.tykk / 2, p = (a, b) => [c[0] + u[0] * a + n[0] * b, c[1] + u[1] * a + n[1] * b];
@@ -195,12 +263,15 @@
   const css = document.createElement('style');
   css.textContent = `#plan2d{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 8px); z-index:7; display:none; box-sizing:border-box; max-width:min(600px,calc(100vw - 32px));
   background:var(--panel,rgba(22,18,12,.94)); border:1px solid var(--rule,#5b5140); color:var(--ink,#e7dcc3); padding:6px 10px; font-size:14px; line-height:1.35; }
-#plan2d.på{ display:block; } #plan2d .rad{ display:flex; flex-wrap:wrap; align-items:center; gap:4px; } #plan2d b{ font-weight:600; margin-right:6px; }
+#plan2d.på{ display:block; max-height:calc(100% - var(--topp,58px) - 40px); overflow-y:auto; } #plan2d .rad{ display:flex; flex-wrap:wrap; align-items:center; gap:4px; } #plan2d b{ font-weight:600; margin-right:6px; }
+#plan2d .hode .fyll{ flex:1 1 0; min-width:0; } #plan2d button.x{ min-width:34px; padding:0; font-size:19px; line-height:1; } #plan2d button.mer{ display:none; }
 #plan2d button{ min-height:32px; min-width:34px; padding:2px 10px; background:#2a2318; border:1px solid var(--rule,#5b5140); color:var(--ink,#e7dcc3); font:inherit; font-size:14px; cursor:pointer; }
 #plan2d button.valgt{ border-color:#c9b26a; color:#f0d79a; } #plan2d button.grå{ opacity:.55; } #plan2d small{ color:var(--ink-dim,#a69b82); }
 #plan2d .valg{ margin-top:5px; padding-top:5px; border-top:1px solid var(--rule,#5b5140); }
 @media (max-width:700px){ #plan2d{ left:12px; right:76px; top:auto; bottom:calc(150px + env(safe-area-inset-bottom,0px)); transform:none; max-width:none; font-size:13px; padding:5px 8px; }
-  #plan2d button{ font-size:13px; padding:2px 8px; } #plan2d .rad small{ display:none; } }`;
+  #plan2d button{ font-size:13px; padding:2px 8px; } #plan2d .rad small{ display:none; }
+  /* (ut8-kr-hus) telefon: én rad med knapper; resten bak «Mer» (det du har valgt, og det karakteren gjør nå, vises alltid) */
+  #plan2d.på{ max-height:46vh; } #plan2d button.mer{ display:inline-block; } #plan2d.ingenmer button.mer{ display:none; } #plan2d:not(.mer) > .rad:not(.hode):not(.viktig){ display:none; } }`;
   document.head.appendChild(css);
   const velger = document.createElement('div'); velger.id = 'plan2d'; velger.setAttribute('role', 'group'); velger.setAttribute('aria-label', 'Plantegning');
   (document.body || document.documentElement).appendChild(velger);
@@ -209,12 +280,55 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const tall = v => String(v).replace('.', ',');
   let sistHtml = '';
+  // ---------- (ut8-kr-hus) husvinduet: lukkeknapp, «Mer» på telefon og ett overlegg om gangen ----------
+  // Kritikeren Jonas (telefon): «Husvinduet blir stående over halve skjermen så lenge karakteren er i huset – i to spilldøgn, under
+  // morgenmøtet, angrepspanelet og Folk – uten ×.» Nå:
+  //  - × lukker vinduet for huset (S.lukket = husets nummer). Det kommer tilbake når du trykker på huset i plantegningen, trykker «Se inn»,
+  //    eller zoomer ut og inn igjen. Et annet hus på skjermen får vinduet som før.
+  //  - Vinduet gjelder bare et hus som er på skjermen (påSkjerm over); flytter du kartet bort eller zoomer ut, forsvinner det.
+  //  - Åpner du et panel selv (Leir, Folk, Tropper, Selskap, Deg …), lukkes vinduet. Kort som venter på svar (morgenmøtet, hendelser),
+  //    angrepsbanneret og – på telefon – lagpanelet skjuler det så lenge de står oppe.
+  //  - På telefon: én rad med knapper (navnet, etasjene, «Mer», ×); resten bak «Mer». Det du har valgt (en dør, en vegg) og det
+  //    karakteren gjør nå (går, leter, «Gå til loftet»), vises alltid.
+  // Panelregelen gjelder spilleren; i testene (navigator.webdriver) som før til Plantegning2D.test = true. Tallene er Claudes forslag.
+  const VINDU = { ekte: 1500, sjekk: 250 };
+  // panelene som lukker vinduet når du åpner dem, og de som bare skjuler det mens de står oppe
+  const LUKKER = ['leirmeny', 'folkmeny', 'samfunnmeny', 'region', 'krig', 'karakterark', 'verdenpanel', 'sjopanel', 'krigpanel', 'sekk', 'tropppanel', 'stridpanel',
+    'forklaring', 'evpanel', 'lagmeny', 'degmeny', 'kommer', 'mkommer', 'flismerliste', 'marsjvalg', 'selskap', 'funnpanel', 'lapppanel', 'logghel', 'hjelp'];
+  const SKJULER = ['alarm', 'morgenkort', 'hendelse', 'samfunnkort', 'formkort', 'krigkort', 'kontrollrom', 'oppstart', 'personkort', 'gaavalg'];
+  const SKJULER_TELEFON = ['panel', 'flytgruppe'];
+  const telefon = () => (window.matchMedia ? matchMedia('(max-width:700px)').matches : (typeof VW !== 'undefined' && VW <= 700));
+  const regel = () => !navigator.webdriver || (window.Plantegning2D && Plantegning2D.test === true);
+  const vises = id => { const e = document.getElementById(id); return !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden'; };
+  let sistEkte = 0; for (const t of ['pointerdown', 'keydown', 'click']) window.addEventListener(t, e => { if (e.isTrusted) sistEkte = performance.now(); }, true);
+  let åpneFør = new Set(), andreSist = { t: -1e9, lukker: [], skjuler: [] };
+  // de andre overleggene som står oppe nå (målt høyst hvert VINDU.sjekk ms)
+  function andre() { const nå = performance.now(); if (nå - andreSist.t < VINDU.sjekk) return andreSist;
+    const SL = window.Skjermlag, skj = SKJULER.concat(SL ? SL.KORT.concat(SL.ØVERST) : []).concat(telefon() ? SKJULER_TELEFON : []);
+    andreSist = { t: nå, lukker: LUKKER.filter(vises), skjuler: skj.filter(vises) }; return andreSist; }
+  // radene på telefon: de som alltid vises (valgt dør/vegg/rom, karakteren går eller leter, en knapp i etasjeraden)
+  function merk() {
+    let skjult = 0;
+    for (const r of velger.children) { if (!r.classList.contains('rad') || r.classList.contains('hode')) continue;
+      const t = r.textContent.trim(), viktig = !!r.querySelector('[data-h="avbryt"], [data-he="avbryt"], [data-he="likevel"]') || (r.id === 'etasjerad' && (/^(Går|Leter)/.test(t) || (/^Du er/.test(t) && !!r.querySelector('button'))));
+      r.classList.toggle('viktig', viktig); if (!viktig) skjult++; }
+    velger.classList.toggle('ingenmer', !skjult);
+  }
+  function skjul() { if (velger.classList.contains('på')) { velger.classList.remove('på'); sistHtml = ''; } }
   function visVelger() {
-    const h = aktiv() && !(typeof på3d !== 'undefined' && på3d) ? hoved() : null;
-    if (!h) { if (velger.classList.contains('på')) { velger.classList.remove('på'); sistHtml = ''; } return; }
-    const n = etasjeFor(h), et = PT.etasje(h.m, n), valg = PT.etasjeValg(h.m);
-    let html = `<div class="rad"><b>${esc(NAVN[h.info.kl] || 'Bygg')}</b>` + valg.map(v => `<button type="button" data-n="${v.n}" class="${v.n === n ? 'valgt' : ''}${v.stengt ? ' grå' : ''}" title="${esc(v.navn)}${v.stengt ? ' (stengt)' : ''}">${esc(v.kort)}</button>`).join('')
-      + (S.fokus ? '<button type="button" data-h="lukk" title="Tilbake til kartet">Lukk</button>' : '') + '</div>';
+    const h0 = aktiv() && !(typeof på3d !== 'undefined' && på3d) ? hoved() : null;
+    if (!aktiv()) { S.lukket = null; S.mer = false; }
+    if (!h0) { åpneFør = new Set(); return skjul(); }
+    if (S.merHus !== h0.i) { S.merHus = h0.i; S.mer = false; }
+    if (S.lukket === h0.i) return skjul();
+    if (regel()) { const A = andre(), nye = A.lukker.filter(id => !åpneFør.has(id)); åpneFør = new Set(A.lukker);
+      // et panel du åpnet selv (trykk eller tast siste VINDU.ekte ms): vinduet lukkes for dette huset
+      if (nye.length && velger.classList.contains('på') && performance.now() - sistEkte < VINDU.ekte) { lukk(h0); return skjul(); }
+      if (A.lukker.length || A.skjuler.length) return skjul(); }
+    const h = h0, n = etasjeFor(h), et = PT.etasje(h.m, n), valg = PT.etasjeValg(h.m);
+    let html = `<div class="rad hode"><b>${esc(NAVN[h.info.kl] || 'Bygg')}</b>` + valg.map(v => `<button type="button" data-n="${v.n}" class="${v.n === n ? 'valgt' : ''}${v.stengt ? ' grå' : ''}" title="${esc(v.navn)}${v.stengt ? ' (stengt)' : ''}">${esc(v.kort)}</button>`).join('')
+      + `<span class="fyll"></span><button type="button" data-h="mer" class="mer" aria-expanded="${S.mer ? 'true' : 'false'}" title="Flere valg for huset">${S.mer ? 'Mindre' : 'Mer'}</button>`
+      + '<button type="button" data-h="lukk" class="x" id="plan2dlukk" title="Lukk husvinduet (trykk på huset for å åpne det igjen)" aria-label="Lukk husvinduet">×</button></div>';
     const o = S.valgt && S.valgt.i === h.i ? PT.figur(h.m, S.valgt.e).åpninger.find(q => q.id === S.valgt.id) : null;
     if (o) {
       const tre = PT.planker(o), navn = PT.åpNavn(o) + (et ? ' i ' + et.navn.toLowerCase() : '');
@@ -224,15 +338,22 @@
     } else html += (window.HusEndring && HusEndring.rad(h, n, et)) || `<div class="rad"><small>${esc(et ? et.navn : '')}${et && et.stengt ? ' (stengt)' : ''} · trykk på et vindu eller en dør for å barrikadere</small></div>`;
     // (B2, ut3-etasjer) flere linjer fra andre moduler: window.PLAN2D_RAD = [(h, n) => html], knapper med data-et går til PLAN2D_KLIKK
     for (const f of window.PLAN2D_RAD || []) { try { html += f(h, n) || ''; } catch (e) { console.warn('plantegning:', e); } }
-    velger.classList.add('på');
+    velger.classList.add('på'); velger.classList.toggle('mer', !!S.mer); velger.dataset.hus = h.i;
     if (html === sistHtml || (typeof pekerNede === 'function' && pekerNede(velger))) return;
-    sistHtml = html; velger.innerHTML = html;
+    sistHtml = html; velger.innerHTML = html; merk();
   }
+  // lukk vinduet for huset h (×, eller et panel du åpnet)
+  function lukk(h) { if (h) S.lukket = h.i; S.fokus = null; S.valgt = null; S.sist = null; S.mer = false;
+    if (window.HusEndring && HusEndring.velg) try { HusEndring.velg(null); } catch (e) { /* uten valg */ } skjul(); tegnPå(); }
+  // åpne det igjen (trykk på huset, «Se inn»)
+  function åpneIgjen() { S.lukket = null; sistHtml = ''; }
+  setInterval(() => { if (S.nær.length || velger.classList.contains('på')) visVelger(); }, VINDU.sjekk * 2);
   velger.addEventListener('click', ev => {
     const b = ev.target.closest('button'); if (!b) return; ev.preventDefault(); ev.stopPropagation();
     if (b.dataset.et !== undefined) { for (const f of window.PLAN2D_KLIKK || []) try { f(b.dataset.et); } catch (e) { console.warn('plantegning:', e); } }
     else if (b.dataset.n !== undefined) { S.etasje = +b.dataset.n; S.valgt = null; }
-    else if (b.dataset.h === 'lukk') { S.fokus = null; S.valgt = null; S.sist = null; }
+    else if (b.dataset.h === 'lukk') { lukk(hoved()); return; }
+    else if (b.dataset.h === 'mer') S.mer = !S.mer;
     else if (b.dataset.h === 'avbryt') S.valgt = null;
     else if (b.dataset.h === 'barrikader' || b.dataset.h === 'åpne') { const v = S.valgt; if (v) handling({ hus: v.i, e: v.e, del: 'åpning', id: v.id, gjør: b.dataset.h }); }
     sistHtml = ''; visVelger(); tegnPå();
@@ -241,6 +362,9 @@
   // ---------- trykk i plantegningen ----------
   if (typeof KROKER !== 'undefined' && KROKER.trykk) KROKER.trykk.push((X, Y) => {
     if (!aktiv() || !BG()) return false;
+    // (ut8-kr-hus) et trykk på huset du lukket vinduet for, åpner det igjen
+    if (S.lukket !== null && S.lukket !== undefined) { const h = S.nær.find(q => q.i === S.lukket && q.klar);
+      if (h && X >= h.bb[0] - 1 && X <= h.bb[2] + 1 && Y >= h.bb[1] - 1 && Y <= h.bb[3] + 1) { åpneIgjen(); visVelger(); tegnPå(); return true; } }
     for (const h of S.nær) {
       if (!h.klar || !h.m) continue; const x = X - h.o[0], y = Y - h.o[1];
       if (X < h.bb[0] - 2 || X > h.bb[2] + 2 || Y < h.bb[1] - 2 || Y > h.bb[3] + 2) continue;
@@ -301,7 +425,7 @@
 
   // ---------- «Se inn» i huspanelet ----------
   function seInn(b) {
-    const Pv = b.Pv, e = b.e; S.fokus = { i: e.i, Pv, e, tett: b.tett || 0 }; S.etasje = 1; S.valgt = null; S.sist = null;
+    const Pv = b.Pv, e = b.e; S.fokus = { i: e.i, Pv, e, tett: b.tett || 0 }; S.etasje = 1; S.valgt = null; S.sist = null; åpneIgjen();
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; for (const [x, y] of Pv) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
     if (typeof kam !== 'undefined') { kam.x = (x0 + x1) / 2; kam.y = (y0 + y1) / 2; const pl = Math.max(120, Math.min(VW, VH - 180)) * R.seInn; kam.m = Math.max(R.minZoom, Math.min(R.zoom, Math.max(x1 - x0, y1 - y0) / pl)); }
     if (typeof på3d !== 'undefined' && på3d && typeof window.slå3d === 'function') window.slå3d(false);
@@ -364,6 +488,6 @@
   // nærmere zoom når en plantegning vises (zoom() i index.html leser window.MIN_ZOOM_M)
   try { Object.defineProperty(window, 'MIN_ZOOM_M', { configurable: true, get: () => (aktiv() && (S.fokus || S.nær.some(h => h.klar)) ? R.minZoom : .1) }); } catch (e) { /* finnes */ }
 
-  window.Plantegning2D = { S, HUS, hus: i => HUS.get(i) || null, modell: i => modell(HUS.get(i)), prøvehus, fjernPrøve, seInn, endre, handling, sjekk, registrer,
+  window.Plantegning2D = { test: false, S, HUS, lukk: () => lukk(hoved()), åpneIgjen, påSkjerm, VINDU, hus: i => HUS.get(i) || null, modell: i => modell(HUS.get(i)), prøvehus, fjernPrøve, seInn, endre, handling, sjekk, registrer,
     logg: () => LOGG, lagre, lesInn, oppdater, planker3d, planker: () => (PLANK ? PLANK.count : 0), aktiv, visVelger, nyttHus, NØKKEL, skannNå: () => { S.sist = null; tegnPå(); } };
 })();
