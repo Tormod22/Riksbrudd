@@ -116,3 +116,19 @@ stål) – med 0,3 ga den 3,5 × lønna.
 - Kornet fra byene er ikke prøvd i nettleseren med en ekte handelsavtale (bare i Node).
 - Rivalene har ingen egne kjeder (Ø8). Ingen egne 3D-modeller eller grafer for de nye varene. Forsikring, depoter, streik: se over.
 - `spillet-visning.js` (`settPriser`) setter ikke markedspris på de nye varene i `Leir.MATERIALER` – de kjøpes til grunnprisen (hyllene gjelder).
+
+## Prøvd
+- Regeltester: `test_kjeder.js` (med selvtest: en mølle uten mel oppdages), `test_laan.js` (selvtest: uten rente), `test_avis.js` (selvtest:
+  vektene bestemmer tittelen), og ALLE `pipeline/fliser/test_*.js` – grønne. `test_okonomitest.js` grønn (60 frø, ca. 35 s).
+- Nettleser (Dovre-testsiden, PC 1400 × 860 og mobil 390 × 844, bilder i scratchpad `natt/ut6-kjeder/`): steinknuser og mølle i leiren med
+  strøm og folk – knuseren laget pukk, mølla mel; fanen Produksjon med radene og «Kjedene»; byggelista (gruppen Produksjon med tegningene);
+  2D-tallene over maskinene («1,8 m³/t», «3 l/t», «ingen folk»); Leir → Lager «Bank og lån» (lån hos lånehaien via knappen: +2 mill.);
+  Leir → Mål «Avisa». Med `KjedeSpill.test = true`: korn fra en by med handelsavtale (0,125 t i timen, 500 kr), fangst fra en sjark til
+  fiskemottaket (0,39 t fisk, 0 rasjoner), mel til mat på kjøkkenet, ved 9 600 kr om sommeren og 16 800 om vinteren, steinbrudd på flat mark
+  avvist med forklaring, 100 m grusveg med pukk til halv pris. Ingen sidefeil. Oljebasen har 0 t på testsiden (raffineriet fikk olje fra lageret).
+- Vakt `pipeline/fliser/vakter/ut6-kjeder.js`: ok på PC og mobil (under 0,2 s); kassa, byggene, lageret, dieselen og lånene er som før
+  etterpå. Med en feil lagt inn med vilje (mølla uten mel) sa den «feilet: mel».
+- Andre vakter i samme side etter min: ut2-sagbruk, ut3-varer, ut4-eksport, ut4-firmaer, ut4-balanse2, ut4-maskinfolk, leir2d, leirvirkning,
+  lonn, morgen, ut1-selskap, start, ui, spill2d, kontrakter, lagring, selskap, ut3-riving, ut2-vei, ut3-rekruttering, ut2-byer – ok.
+  `okonomi` feiler («prognose … lik false») – kjent fra før (ut2-sagbruk.md). `ut2-lagring` feilet én gang etter elleve andre vakter i samme
+  side («lagringen ble ikke satt tilbake»), men er ok alene, etter `ut6-kjeder` og etter `lagring` – trolig rekkefølge, ikke denne pakka.
