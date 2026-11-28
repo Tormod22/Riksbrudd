@@ -277,8 +277,13 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
       if (q.hp <= 0 && før > 0) falne.push(mannNavn(q, s)); else if (q.hp > 0 && q.hp < 1 && før >= 1) sår.push(mannNavn(q, s)); } }
     return { falne, sår }; }
   const byggNavn = b => (window.Leir && Leir.BYGG[b.type] ? Leir.BYGG[b.type].navn : b.type);
+  // (ut8-kr-krig, Ingrid 28. nov: «Røvere 1.1 åpner ild mot Ingrid Sæther (deg) … 3 treff», men rapporten sa «Ingen tap hos oss») karakteren
+  // din: helsa (SpilletSpill.K().hp, 0–100) og mannen i karakterlaget (hp 0–1) ved starten og den laveste underveis
+  const karNå = () => { const SS = window.SpilletSpill && SpilletSpill.klar && SpilletSpill.klar() && SpilletSpill.K ? SpilletSpill.K() : null, e = ENHETER.find(q => q.side === 'blå' && q.karakter && Array.isArray(q.menn));
+    return { hp: SS && Number.isFinite(SS.hp) ? SS.hp : null, lag: e && e.menn[0] ? e.menn[0].hp : null, navn: e ? String(e.navn || '').replace(/\s*\(deg\)\s*$/, '') : '' }; };
+  KROKER.sim.push(() => { if (!fra || !fra.kar) return; const k = karNå(); if (k.hp !== null) fra.kar.minHp = Math.min(fra.kar.minHp ?? k.hp, k.hp); if (k.lag !== null) fra.kar.minLag = Math.min(fra.kar.minLag ?? k.lag, k.lag); });
   let løpNr = 0;
-  function startAngrep(A, id) { const b = blåTall(); fra = { id, løp: ++løpNr, friske: b.friske, falne: b.falne, bygg: byggNå(), menn: mennNå(), lag: A ? A.lag.slice() : [], navn: A ? A.navn : 'Røverne', røvere: A ? A.røvere : true, side: A ? A.side : null, t: tid,
+  function startAngrep(A, id) { const b = blåTall(); fra = { id, kar: karNå(), løp: ++løpNr, friske: b.friske, falne: b.falne, bygg: byggNå(), menn: mennNå(), lag: A ? A.lag.slice() : [], navn: A ? A.navn : 'Røverne', røvere: A ? A.røvere : true, side: A ? A.side : null, t: tid,
       // (kritikerløkka r1) hvem som kom: «ett røverlag på 6 mann fra nordvest» (til rapporten)
       kom: A ? `${A.røvere ? (A.lag.length === 1 ? 'ett røverlag' : A.lag.length + ' røverlag') : (A.lag.length === 1 ? 'ett lag' : A.lag.length + ' lag') + ' fra ' + A.navn} på ${A.lag.reduce((a, e) => a + (Array.isArray(e.menn) ? e.menn.length : 0), 0)} mann fra ${retn(retningMotFienden())}` : '' }; rapportNå = null; kampMeldt = ''; snartMeldt = ''; settMeldt = '';
     // (kritikerløkka r3) et nytt spill i samme side begynner på bølge 1 igjen: det som er husket om et angrep med samme nøkkel, gjelder ikke
@@ -292,7 +297,10 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     // telleren) – hver mann som var frisk ved starten og nå er såret, teller (navnTap), også når det kom nye til
     const ute = F0.lag.filter(e => !levende(e) || (Array.isArray(e.menn) && Terreng.slattUt(e.menn)) || (e.flykter && !e.lei) || (!ENHETER.includes(e) && !e.lei)).length, N = navnTap(F0), sårede = Math.max(0, F0.friske - b.friske - falne, N.sår.length);
     let deresFalne = 0, deresSåret = 0; for (const e of F0.lag) if (Array.isArray(e.menn)) for (const m of e.menn) { if (m.hp <= 0) deresFalne++; else if (m.hp < 1) deresSåret++; }
-    return { falne, sårede, skadet, ødelagt, fiender: F0.lag.length, fienderUte: ute, skadetNavn, ødelagtNavn, skadetBygg, kom: F0.kom || '', deresFalne, deresSåret,
+    // karakteren: truffet når helsa eller mannen i karakterlaget gikk ned underveis (selv om det er leget igjen)
+    let karakter = null; if (F0.kar) { const k0 = F0.kar, k = karNå(), ned = (k0.hp !== null && (k0.minHp ?? k0.hp) < k0.hp - .5) || (k0.lag !== null && (k0.minLag ?? k0.lag) < k0.lag - .01);
+      if (ned) karakter = { navn: k.navn || k0.navn, hp: k.hp, falt: k.lag !== null && k.lag <= 0 }; }
+    return { falne, sårede, skadet, ødelagt, fiender: F0.lag.length, fienderUte: ute, skadetNavn, ødelagtNavn, skadetBygg, kom: F0.kom || '', deresFalne, deresSåret, karakter,
       falneNavn: N.falne.length === falne ? N.falne : null, sårNavn: N.sår.length === sårede ? N.sår : null }; }
   // (runde 14, kritiker J: «kampen har begynt» og «slått tilbake» kom samme spillminutt) – rapporten kommer tidligst KAMP.minst
   // spillminutter etter at kampen om leiren begynte; til da venter den (ventRapport), og sluttAvSeg gir ingen egen

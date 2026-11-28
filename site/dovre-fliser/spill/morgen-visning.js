@@ -321,7 +321,7 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     // dagbokas rapport for i dag (før gårsdagens utfall skrives inn i dagboka)
     const db = rot.DagbokSpill && DagbokSpill.siste ? DagbokSpill.siste() : null;
     for (const t of igår) { logg('Morgenmøtet: ' + t); if (rot.DagbokSpill && DagbokSpill.noter) DagbokSpill.noter(t); }
-    const nå = snapOppgjør(); let oppgjør = null; try { if (S.oppFør && nå && rot.Oppgjor) { const r = Oppgjor.tekst(S.oppFør, nå); oppgjør = r ? r.tekst : null; } } catch (e) { oppgjør = null; } S.oppFør = nå;
+    const nå = snapOppgjør(); let oppgjør = null; try { if (S.oppFør && nå && rot.Oppgjor) { const r = Oppgjor.tekst(S.oppFør, nå, { utenTropp: true }); oppgjør = r ? r.tekst : null; } } catch (e) { oppgjør = null; } S.oppFør = nå;
     if (!(auto() || tving)) { lagre(); return { igår }; }
     const s = situasjon(); if (!s || !s.folk) { lagre(); return { igår }; }
     const rapport = [];

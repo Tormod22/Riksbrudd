@@ -88,3 +88,9 @@ console.log('ok   forsvar (runde 13): anslaget går ikke baklengs, «ikke sett �
   const r = F.sluttRapport({ hvem: 'Røverne', nr: 1, utfall: 'slått', kom: 'ett røverlag på 4 mann fra nordvest', deresFalne: 2, deresSåret: 1 });
   A.ok(/Det kom ett røverlag på 4 mann fra nordvest\./.test(r.tekst) && /Hos dem: 2 falt og 1 såret\./.test(r.tekst), r.tekst);
   console.log('ok   forsvar (kritikerløkka r1): sjansen, umulig nedtelling, hvem kom og tapene hos dem'); }
+// (ut8-kr-krig, Ingrid 28. nov) karakteren ble truffet: rapporten sier det, ikke «Ingen tap hos oss»
+{ const F2 = require('../../site/dovre-fliser/spill/forsvar.js'), A = require('assert');
+  const r = F2.sluttRapport({ hvem: 'Røverne', nr: 1, utfall: 'slått', fiender: 1, fienderUte: 1, karakter: { navn: 'Ingrid Sæther', hp: 64 } });
+  A.ok(!/Ingen tap hos oss/.test(r.tekst) && /Du ble truffet – helse 64 av 100\./.test(r.tekst) && /Ingen tap i lagene/.test(r.tekst), r.tekst);
+  A.ok(/Ingen tap hos oss/.test(F2.sluttRapport({ hvem: 'Røverne', nr: 1, utfall: 'slått' }).tekst));
+  console.log('ok   forsvar (ut8-kr-krig): skade på karakteren står i rapporten'); }
