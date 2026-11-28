@@ -160,7 +160,9 @@
       // (ut8-kr-hus) loftet: gulvbord, skråtaket (mønet og der det blir lavt) og takvinduene – før var det en mørk flate
       if (loft) tegnLoft(g, md, X, Y, m, sti);
       else for (const r of Fg.rom) { sti(r.P); g.fillStyle = /bad|vask|dusj|toalett/.test(r.rolle || '') ? F.våt : /kjøkken/.test(r.rolle || '') ? F.kjøkken : F.rom; g.fill(); }
-      if (detalj || loft) for (const q of Fg.møbler) { sti(q.P); g.fillStyle = loft ? F.loftTing : F.møbel; g.fill(); g.strokeStyle = q.ødelagt ? F.ødelagt : loft ? F.loftTingKant : F.møbelKant; g.lineWidth = 1; g.stroke(); }
+      if (detalj || loft) for (const q of Fg.møbler) { sti(q.P); g.fillStyle = loft ? F.loftTing : F.møbel; g.fill(); g.strokeStyle = q.ødelagt ? F.ødelagt : loft ? F.loftTingKant : F.møbelKant; g.lineWidth = 1; g.stroke();
+        // (ut9-maskiner) symbolet for maskintypen (spill/maskiner-visning.js)
+        if (window.PLAN2D_MØBEL && !q.ødelagt && !loft) for (const f of PLAN2D_MØBEL) f(g, q, X, Y); }
       for (const t of Fg.trapper) {
         sti(t.P); g.fillStyle = 'rgba(231,220,195,.07)'; g.fill(); g.strokeStyle = F.trapp; g.lineWidth = 1; g.stroke();
         const vx = -t.uy, vy = t.ux, hl = t.l / 2, hb = t.b / 2; g.beginPath();

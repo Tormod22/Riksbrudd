@@ -52,7 +52,7 @@ module.exports = {
           const m = P2.modell(i); ok(m && m.etasjer.length, 'prøvehuset fikk ingen modell');
           if (m) { const F = PT.figur(m, 1), rom = new Set(F.rom.map(q => q.rolle)), mt = new Set(F.møbler.map(q => q.type)); ut.plan = { rom: [...rom], møbler: [...mt].slice(0, 10) };
             ok(rom.has('fiskehall') && mt.has('sløyebenk') && mt.has('filetmaskin'), 'plantegningen: fiskehall/sløyebenk mangler: ' + JSON.stringify(ut.plan)); }
-          if (!i3d) { const el = document.getElementById('plan2dind'); ut.linje = el ? el.parentNode.textContent : null; ok(ut.linje && /Industri – fiskeforedling/.test(el.textContent) && /sløyebenk/i.test(ut.linje), 'linja i plantegningen: ' + ut.linje); }
+          if (!i3d) { const el = document.getElementById('plan2dind'); ut.linje = el ? el.parentNode.textContent : null; ok(ut.linje && /Industri – fiskeforedling/.test(el.textContent) && /sløye(benk|linje)/i.test(ut.linje), 'linja i plantegningen: ' + ut.linje); }
         } finally {
           P2.fjernPrøve(i); P2.S.fokus = før.fokus; P2.S.etasje = før.etasje; kam.x = før.kam.x; kam.y = før.kam.y; kam.m = før.kam.m; skitten = true;
         }

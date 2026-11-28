@@ -562,7 +562,9 @@
           yield* rutenett(r, 'maskin', { du: 7, dv: 6, mU: 3, mV: 3, langsU: lu >= lv, fri: 2, maks: 12 }); for (let k = 0; k < Math.min(8, Math.floor(A / 40)); k++) etSted(r, k % 2 ? 'pall' : 'tønne'); break; }
         case 'lagerhall': { const høy = pl.tak > 4.6; const satt = yield* rutenett(r, høy ? 'pallereol' : 'pall', { du: lu >= lv ? 3 : 4.2, dv: lu >= lv ? 4.2 : 3, mU: 2.5, mV: 2.5, langsU: lu >= lv, fri: 2.5, maks: 60, h: høy ? Math.min(4, pl.tak - .6) : undefined });
           // små lager (telt, boder): paller og hyller langs veggene i stedet
-          if (!satt.length) for (let k = 0; k < Math.min(8, Math.floor(A / 4)); k++) etSted(r, k % 3 ? 'pall' : 'hylle'); break; }
+          if (!satt.length) for (let k = 0; k < Math.min(8, Math.floor(A / 4)); k++) etSted(r, k % 3 ? 'pall' : 'hylle');
+          // (ut9-maskiner) rullebane og truck (spill/maskiner.js LAGERHALL, koblet inn av industri.js)
+          if (MØBELSETT.lagerhall_ekstra && satt.length) yield* oppskrift(r, MØBELSETT.lagerhall_ekstra, lang, kort); break; }
         case 'låve': { yield* rutenett(r, 'høyball', { du: 1.45, dv: 1.45, mU: 1, mV: 1, maks: 14, fri: 2, hopp: (cu, cv) => cu > r.u0 + lu * .45 }); for (let k = 0; k < Math.min(4, Math.floor(A / 40)); k++) etSted(r, 'bås', { fri: 1.5 });
           if (A > 90) prøv(r, 'traktor', r.u0 + lu * .7, (r.v0 + r.v1) / 2, lu < lv, false, { fri: 1.5 }); etSted(r, 'tønne'); break; }
         case 'garasje': { const i = pl.inngang, cu = i.inn[0] * ux + i.inn[1] * uy, cv = i.inn[0] * vx + i.inn[1] * vy, tvers = Math.abs(i.nx * ux + i.ny * uy) > .7;
@@ -590,6 +592,33 @@
         default: if (MØBELSETT[r.rolle]) yield* oppskrift(r, MØBELSETT[r.rolle], lang, kort);
       }
     }
+    // (ut9-maskiner) PRODUKSJONSLINJA (spill/maskiner.js LINJER): maskinene etter hverandre langs rommets lange akse, fra enden nærmest
+    // vareinngangen (eller hoveddøra) – råvaren inn – mot den andre enden (ferdigvaren ut). Linja står i et felt til siden for midten,
+    // på motsatt side av døra (gangveien fra døra til midten og forbi linja er fri: prøv() setter ikke store møbler i gangveiene).
+    // Får den ikke plass, snur den i et felt på den andre siden (U-form). '?type' = bare i noen bygg, ['a', 'b'] = én av dem; både det
+    // og hvilken side linja står på er fast per bygg (tilf). Maskiner høyere enn rommet hoppes over. Avstandene er Claudes forslag.
+    function linje(r, liste, o) {
+      const lu = r.u1 - r.u0 >= r.v1 - r.v0, L0 = lu ? r.u0 : r.v0, L1 = lu ? r.u1 : r.v1, T0 = lu ? r.v0 : r.u0, T1 = lu ? r.v1 : r.u1, B = T1 - T0, mt = (T0 + T1) / 2;
+      const inn = (pl.innganger || []).find(q => q.type === 'vare' && q.inn) || pl.inngang, ip = inn.inn[0] * (lu ? ux : vx) + inn.inn[1] * (lu ? uy : vy), it = inn.inn[0] * (lu ? vx : ux) + inn.inn[1] * (lu ? vy : uy);
+      const fraStart = Math.abs(ip - L0) <= Math.abs(ip - L1), vend = tilf() < .5 ? 1 : -1, side = Math.abs(it - mt) > B * .25 ? (it > mt ? -1 : 1) : vend;
+      // feltene: midtlinja i hvert felt er en firedel av bredden ut fra midten (høyst 5 m), og retningen snur i det andre feltet
+      const ut = Math.min(5, Math.max(1.6, B * .23)), felt = [[mt + side * ut, fraStart ? 1 : -1], [mt - side * ut, fraStart ? -1 : 1]], gap = .9, kant = 1.2;
+      const typer = []; for (const t of liste) { if (Array.isArray(t)) { typer.push(t[Math.floor(tilf() * t.length) % t.length]); continue; } if (t[0] === '?') { if (tilf() < .5) typer.push(t.slice(1)); continue; } typer.push(t); }
+      let f = 0, p = felt[0][1] > 0 ? L0 + kant : L1 - kant; const satt = [];
+      for (const type of typer) { const MB = MØBLER[type]; if (!MB || MB[2] > (pl.tak || 99) - .3) continue;
+        // lange ting (båten på slippen) står med lengden langs linja
+        const snudd = MB[1] > MB[0] * 1.5, b = snudd ? MB[1] : MB[0];
+        let ok = null;
+        for (let k = 0; k < 2 && !ok; k++) { const [t2, d2] = felt[f];
+          for (let s = 0; s < 14; s++) { const c = p + d2 * (b / 2 + s * .6); if (d2 > 0 ? c + b / 2 > L1 - kant : c - b / 2 < L0 + kant) break;
+            const cu = lu ? c : t2, cv = lu ? t2 : c, lU = snudd ? !lu : lu;
+            // maskinens x-akse peker i flytretningen (båndenes pil i 2D og knastene i 3D går riktig vei); den lange båten vender inn mot midten
+            ok = prøv(r, type, cu, cv, lU, snudd ? (lU ? t2 > mt : t2 < mt) : d2 < 0, Object.assign({ fri: 1.2 }, o)); if (ok) { p = c + d2 * (b / 2 + gap); break; } }
+          // feltet er fullt: snu i det andre feltet (fra enden der dette sluttet)
+          if (!ok && f === 0) { f = 1; p = felt[1][1] > 0 ? L0 + kant : L1 - kant; } else if (!ok) break; }
+        if (ok) { ok.linje = satt.length; satt.push(ok); } }
+      return satt;
+    }
     // MØBELSETT-motoren: én oppskrift per romtype (se tabellen over)
     function* oppskrift(r, steg, lang, kort) {
       const A = r.areal; let forrige = null;
@@ -605,6 +634,7 @@
         else if (hva === 'seng') { const s = etSted(r, type); if (s) { const lU = s.side === 0 || s.side === 2; prøv(r, 'nattbord', s.cu + (lU ? s.hu + .3 : 0), s.cv + (lU ? 0 : s.hv + .3), lU, false, { fri: .3 }); } }
         else if (hva === 'par') { for (let k = 0; k < n; k++) { const p = etSted(r, type); if (!p) break; foran(r, p, 'kontorstol', .1, { fri: .3, luft: -.1 }); } }
         else if (hva === 'rutenett') { const lu = r.u1 - r.u0 >= r.v1 - r.v0; yield* rutenett(r, type, Object.assign({ langsU: lu, maks: n }, o)); }
+        else if (hva === 'linje' && n > 0) linje(r, type, o);
         else if (hva === 'kran' && (r.u1 - r.u0) > 8 && pl.tak > 5) {
           // traverskranen: en bjelke på tvers av hallen oppe under taket (sperrer ikke), midt i hallen
           const lu = r.u1 - r.u0 >= r.v1 - r.v0, bredde = (lu ? r.v1 - r.v0 : r.u1 - r.u0) - .3; prøv(r, type, (r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2, !lu, false, { b: bredde, h: pl.tak - .25, fri: -50, iVeien: true, luft: -100, margin: .02, svev: true }); }
