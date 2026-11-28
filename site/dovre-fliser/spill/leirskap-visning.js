@@ -31,11 +31,13 @@
   const knapp = document.createElement('button'); knapp.id = 'skapknapp'; knapp.type = 'button'; document.body.appendChild(knapp);
   const css = document.createElement('style');
   css.textContent = '#skapknapp{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(200px + env(safe-area-inset-bottom,0px)); z-index:6; display:none; min-width:200px; min-height:42px; padding:6px 18px; background:rgba(28,23,15,.92); border:1px solid #c9b26a; color:#f0e2b0; font:inherit; font-size:16px; cursor:pointer; }'
-    + ' #skapknapp.på{ display:block; } body.kort #skapknapp{ bottom:calc(330px + env(safe-area-inset-bottom,0px)); font-size:15px; min-width:170px; } #lutknapp.på ~ #skapknapp.på{ bottom:calc(250px + env(safe-area-inset-bottom,0px)); }';
+    + ' #skapknapp.på{ display:block; } body.kort #skapknapp{ bottom:calc(330px + env(safe-area-inset-bottom,0px)); font-size:15px; min-width:170px; } body.skapnær #lutknapp{ display:none; }';
   document.head.appendChild(css);
   const grov = () => !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   let her = null;
   function oppdater() { const T = TS(), åpen = T && T.erÅpen && T.erÅpen(); her = !åpen ? nærmeste() : null;
+    // (lutens knapp for en hylle ved siden av skjules imens, så E ikke står på to knapper)
+    document.body.classList.toggle('skapnær', !!her);
     if (!her) { knapp.classList.remove('på'); return; } const t = `Åpne ${bestemt(her.navn)}${grov() ? '' : ' (E)'}`; if (knapp.textContent !== t) knapp.textContent = t; knapp.classList.add('på'); }
   setInterval(oppdater, 250);
   knapp.addEventListener('click', e => { e.preventDefault(); const q = her || nærmeste(); if (q) { åpne(q.pid); oppdater(); } });

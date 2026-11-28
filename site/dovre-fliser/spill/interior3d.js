@@ -119,7 +119,7 @@
     // (ut9-mobler3) ÅPNE SKAP: når du har åpnet skapet (LutSpill-panelet, se spill/hyller-visning.js), står døra/lokket åpent og innholdet synes
     // (ut10-skap) z0 = bunnen (veggskap), og tingene følger det som faktisk ligger der (m.innKat fra tinglageret i leirens bygg)
     const åpentSkap = (c, nv, kat, z0 = 0, hv = .3) => { k(-b, b, -d, -d + .04, z0, h, c); k(-b, -b + .04, -d, d - .03, z0, h, c); k(b - .04, b, -d, d - .03, z0, h, c); k(-b, b, -d, d - .03, z0, z0 + .06, c); k(-b, b, -d, d - .03, h - .06, h, c);
-      for (const z of nv) k(-b + .04, b - .04, -d + .04, d - .06, z - .015, z, c.map(v => v * .9)); hylleVarer({ l: m.b - .12, d: m.d - .14, y0: -d + .06, nivåer: nv, hv, fyll: m.innFyll === undefined ? .6 : m.innFyll, kat: m.innKat && m.innKat.length ? m.innKat : kat }); };
+      for (const z of nv) k(-b + .04, b - .04, -d + .04, d - .06, z - .015, z, c.map(v => v * .9)); hylleVarer({ l: m.b - .12, d: m.d - .14, y0: -d + .06, nivåer: nv, hv, fyll: m.innFyll === undefined ? .6 : m.innFyll > 0 ? Math.max(.3, m.innFyll) : 0, kat: m.innKat && m.innKat.length ? m.innKat : kat }); };
     // en skuff som er trukket ut: kasse foran møbelet i høyden z, med tingene oppi
     const åpenSkuff = (c, z, hs, kat) => { const y0 = d, y1 = d + Math.min(.45, m.d * .8); k(-b + .04, b - .04, y0, y1, z, z + .02, c); k(-b + .04, -b + .06, y0, y1, z, z + hs, c); k(b - .06, b - .04, y0, y1, z, z + hs, c); k(-b + .04, b - .04, y1 - .02, y1, z, z + hs + .02, c);
       hylleVarer({ l: m.b - .14, d: y1 - y0 - .05, y0: y0 + .02, nivåer: [z + .02], hv: Math.max(.05, hs - .03), fyll: m.innFyll === undefined ? .6 : m.innFyll, kat: m.innKat && m.innKat.length ? m.innKat : kat, maks: 8 }); };
