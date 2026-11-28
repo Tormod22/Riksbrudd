@@ -209,8 +209,8 @@
   // den over til stengt-tida er ute (nå = spillminuttet; uten nå gjelder ikke stengingen)
   function rivalMål(S, byer, side, nå) {
     const egne = byer.filter(o => o.eier === side); if (!egne.length) return null; let best = null, bp = -Infinity;
-    for (const o of byer) { if (o.eier) continue; const b = S.byer[o.id], kunde = !!(b && b.rival && b.rival.trinn === 'kunde' && b.rival.side === side);
-      if (b && ((b.rival && !kunde) || b.forhandler || rang(trinn(b)) >= rang('beskyttelse'))) continue;
+    for (const o of byer) { if (o.eier) continue; const b = S.byer[o.id], kunde = !!(b && b.rivalKunde && b.rivalKunde.side === side);
+      if (b && (b.rival || b.forhandler || rang(trinn(b)) >= rang('beskyttelse'))) continue;
       if (b && b.rivalStengt && b.rivalStengt.side === side && Number.isFinite(nå) && nå < b.rivalStengt.til) continue;
       let d = Infinity; for (const e of egne) d = Math.min(d, Math.hypot(o.x - e.x, o.y - e.y)); if (d > REGLER.rival.radius) continue;
       const p = Math.sqrt(1 + o.folk) / (1 + d / 1000) * (kunde ? REGLER.rivalLøfte.kundeVekt : 1); if (p > bp) { bp = p; best = o.id; } }
@@ -230,10 +230,12 @@
     const klar = Number.isFinite(b.rival.holdt) ? b.rival.holdt >= REGLER.rivalLøfte.handelEtter : nå - b.rival.start >= 7 * 1440;
     if (klar) { b.rival.trinn = 'handel'; return true; } return false; }
   // ---------- (ut5-rivaler, Ø8) RIVALENE SOM KUNDE OG MED LØFTER ----------
-  // En rival har levert en kontrakt for byen: den blir kunde (bare når byen ikke har en annen rival eller forhandler). Gir true når det er nytt.
+  // En rival har levert en kontrakt for byen: den blir kunde (b.rivalKunde – eget felt, så visningen av b.rival er som før). Den siste
+  // rivalen som leverte, er kunden. Gir true når det er nytt.
   function rivalKunde(b, side, nå) {
-    if (!b || b.rival || b.forhandler || (b.avtale && rang(b.avtale.trinn) >= rang('beskyttelse'))) return false;
-    b.rival = { side, trinn: 'kunde', pris: 0, start: Math.round(+nå || 0), kontrakter: 1 }; return true;
+    if (!b || (side !== 'rød' && side !== 'grønn')) return false; const før = b.rivalKunde && b.rivalKunde.side === side;
+    if (før) { b.rivalKunde.kontrakter = (b.rivalKunde.kontrakter || 0) + 1; return false; }
+    b.rivalKunde = { side, fra: Math.round(+nå || 0), kontrakter: 1 }; return true;
   }
   // én spilltime: mann = rivalens friske mann innen REGLER.radius (bare for beskyttelse og handel)
   function rivalTime(b, mann) {
@@ -268,7 +270,8 @@
         avtale: b.avtale && TRINN.includes(b.avtale.trinn) ? b.avtale : null, rival: b.rival && (b.rival.side === 'rød' || b.rival.side === 'grønn') ? b.rival : null,
         forhandler: b.forhandler || null, hjelp: b.hjelp || null, sistHjelp: b.sistHjelp, makt: !!b.makt, stengtTil: +b.stengtTil || 0 };
       // (ut5-rivaler) byen som har sagt opp en rival
-      if (b.rivalStengt && (b.rivalStengt.side === 'rød' || b.rivalStengt.side === 'grønn') && Number.isFinite(+b.rivalStengt.til)) S.byer[id].rivalStengt = { side: b.rivalStengt.side, til: +b.rivalStengt.til }; }
+      if (b.rivalStengt && (b.rivalStengt.side === 'rød' || b.rivalStengt.side === 'grønn') && Number.isFinite(+b.rivalStengt.til)) S.byer[id].rivalStengt = { side: b.rivalStengt.side, til: +b.rivalStengt.til };
+      if (b.rivalKunde && (b.rivalKunde.side === 'rød' || b.rivalKunde.side === 'grønn')) S.byer[id].rivalKunde = { side: b.rivalKunde.side, fra: +b.rivalKunde.fra || 0, kontrakter: +b.rivalKunde.kontrakter || 1 }; }
     return S;
   }
 

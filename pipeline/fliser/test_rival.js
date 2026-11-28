@@ -41,8 +41,8 @@ for (const v of RV.VEIER) ok(RV.PRIORITET[v] && RV.PRIORITET[v].tekst, 'priorite
   const l = RV.sabotasjeMål([], { tre: 20, betong: 0 }, .3); ok(l.slag === 'lager' && l.vare === 'tre' && l.mengde === 4, 'lageret');
   ok(RV.sabotasjeMål([], { tre: 1 }, .3) === null, 'ingenting å ta'); }
 // ---------- byavtalene for rivalene ----------
-{ const S = BA.ny(), b = BA.by(S, '5'); ok(BA.rivalKunde(b, 'rød', 0) && b.rival.trinn === 'kunde', 'rivalen blir kunde etter en kontrakt');
-  ok(!BA.rivalKunde(b, 'grønn', 0), 'bare én rival');
+{ const S = BA.ny(), b = BA.by(S, '5'); ok(BA.rivalKunde(b, 'rød', 0) && b.rivalKunde.side === 'rød' && !b.rival, 'rivalen blir kunde etter en kontrakt (uten avtale)');
+  ok(!BA.rivalKunde(b, 'rød', 10) && b.rivalKunde.kontrakter === 2, 'flere kontrakter teller');
   const byer = [{ id: '1', x: 0, y: 0, folk: 3000, eier: 'rød' }, { id: '5', x: 3000, y: 0, folk: 1000, eier: null }, { id: '6', x: 3000, y: 0, folk: 1000, eier: null }];
   ok(BA.rivalMål(S, byer, 'rød') === '5', 'rivalen frir helst der den er kunde'); ok(BA.rivalMål(S, byer, 'grønn') === null, 'den andre ingen egne');
   BA.rivalFrir(b, 'rød', 1000, 0, 'redd'); ok(BA.rivalSteg(b, 1440) === 'rival' && b.rival.trinn === 'beskyttelse', 'kunde -> beskyttelse');
@@ -53,7 +53,7 @@ for (const v of RV.VEIER) ok(RV.PRIORITET[v] && RV.PRIORITET[v].tekst, 'priorite
   let r; for (let d = 0; d < 5 && b.rival; d++) { for (let h = 0; h < 24; h++) BA.rivalTime(b, 1); r = BA.rivalDøgn(b, 1440 * (d + 8)); }
   ok(r && r.sierOpp && !b.rival && b.rivalStengt.side === 'rød', 'byen sier opp en rival som ikke holder løftet');
   ok(BA.rivalMål(S, byer, 'rød', 1440 * 9) === '6' && BA.rivalMål(S, byer, 'rød', 1440 * 30) === '5', 'byen vil ikke snakke med dem på en stund');
-  const S2 = BA.fraJSON(JSON.parse(JSON.stringify(S))); ok(S2.byer['5'].rivalStengt && S2.byer['5'].rivalStengt.side === 'rød', 'stengingen lagres');
+  const S2 = BA.fraJSON(JSON.parse(JSON.stringify(S))); ok(S2.byer['5'].rivalStengt && S2.byer['5'].rivalStengt.side === 'rød' && S2.byer['5'].rivalKunde.side === 'rød', 'stengingen og kunden lagres');
   // gamle lagringer (uten løftene): sju døgn som før
   const g = { rival: { side: 'rød', trinn: 'beskyttelse', start: 0 } }; ok(!BA.rivalVokser(g, 6 * 1440) && BA.rivalVokser(g, 7 * 1440), 'gamle avtaler som før'); }
 // ---------- firmaene for rivalene ----------

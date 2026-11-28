@@ -252,7 +252,13 @@
   // ---------- krigskartet og Partnere ----------
   const veiLinje = side => { const s = S.sider[side]; if (!s.vei) return null; const d = [RV.veiTekst(navn(side), s.vei)];
     if (s.sag) d.push(`sagbruk i ${s.sag.navn}`); const n = avtaleByer(side).filter(q => q.b.rival.trinn !== 'kunde').length; if (n) d.push(`${n} byavtale${n === 1 ? '' : 'r'}`); return d.join(' · '); };
-  { const KT = window.KRIG_TILLEGG = window.KRIG_TILLEGG || {}; KT.side = KT.side || []; KT.side.push(side => (SIDER.includes(side) && på() ? veiLinje(side) : null)); }
+  { const KT = window.KRIG_TILLEGG = window.KRIG_TILLEGG || {}; KT.side = KT.side || []; KT.side.push(side => (SIDER.includes(side) && på() ? veiLinje(side) : null));
+    // per tettsted: rivalen er kunde der, har sagbruket der, eller byen har sagt dem opp
+    (KT.by = KT.by || []).push(by => { if (!på() || !by || !by.e) return null; const T = BA(), b = T && T.byer ? T.byer[by.e.id] : null, d = [];
+      if (b && b.rivalKunde && !b.rival) d.push(`${navn(b.rivalKunde.side)} er kunde her (${b.rivalKunde.kontrakter} kontrakt${b.rivalKunde.kontrakter === 1 ? '' : 'er'})`);
+      if (b && b.rivalStengt && nå() < b.rivalStengt.til) d.push(`Byen har sagt opp ${navn(b.rivalStengt.side)}`);
+      for (const sd of SIDER) if (S.sider[sd].sag && String(S.sider[sd].sag.by) === String(by.e.id)) d.push(`${navn(sd)} har et sagbruk her`);
+      return d.length ? d.join(' · ') : null; }); }
   // én linje i rivalens boks i Partnere (firma-visning.js)
   function partnerTekst(side) {
     const s = S.sider[side], d = []; if (s.vei) d.push(RV.veiTekst(navn(side), s.vei)); const Fs = FT();
