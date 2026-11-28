@@ -589,7 +589,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
               rg.påVei = ub.igjen === ub.totalt && ub.reise > 0 && ub.reise < Leir.reise(L, ub.x, ub.y).full;
               ub.reise = .05; sim(.1); rg.framme = !(ub.reise > 0) && ub.igjen === ub.totalt && nyLogg(/Byggelaget er framme ved container/);
               // en fiende ved byggeplassen: den ødelegges, og de 2 t stål som ikke var brukt, kommer tilbake
-              const fi = nyttLag('Vaktfiende', ub.x + 30, ub.y, 'rød'), stål0 = L.lager.stål; ENHETER.push(fi); ub.hp = .0001; sim(.1); ENHETER.splice(ENHETER.indexOf(fi), 1);
+              const fi = nyttLag('Vaktfiende', ub.x + 30, ub.y, 'rød'), stål0 = L.lager.stål; ENHETER.push(fi); ub.hp = .0001; sim(.1); (ENHETER.indexOf(fi) >= 0 && ENHETER.splice(ENHETER.indexOf(fi), 1));
               rg.ødelagt = !L.bygg.includes(ub) && nyLogg(/Byggeplassen for container er ødelagt av Vaktfiende! Materialene som ikke var brukt, er tilbake på lageret: 2 t stål/); rg.stål = Math.round((L.lager.stål - stål0) * 10) / 10; }
             LeirSpill.rutenett(true); LeirSpill.inntil(true);
             // radiomasten (lagt rett inn, med strøm fra aggregatet): rekkevidden for et lag med feltradio per nivå
@@ -1163,7 +1163,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       try { const K = KameraSpill.kameraer(); ut.kamera = K.length; ut.r = K[0] && K[0].r; ut.ser = synlig(fi); ut.serIkke = synlig(langt); ut.kroker = KROKER.siktlys.length;
         const g = document.createElement('canvas').getContext('2d'); let f = ''; try { for (const q of KROKER.siktlys) q(g, b.x - 500, b.y + 500, 10); for (const q of KROKER.tåke) if (q.fritt) q(g, b.x - 500, b.y + 500, 10); } catch (e) { f = e.message; } ut.tegnFeil = f;
         b.av = true; ut.avslått = KameraSpill.kameraer().length; }
-      finally { L.bygg.splice(L.bygg.indexOf(b), 1); ENHETER.splice(ENHETER.indexOf(fi), 1); ENHETER.splice(ENHETER.indexOf(langt), 1); KameraSpill.kameraer(); }
+      finally { L.bygg.splice(L.bygg.indexOf(b), 1); (ENHETER.indexOf(fi) >= 0 && ENHETER.splice(ENHETER.indexOf(fi), 1)); (ENHETER.indexOf(langt) >= 0 && ENHETER.splice(ENHETER.indexOf(langt), 1)); KameraSpill.kameraer(); }
       return ut; });
     const slok = !sl.uten && sl.lyser === true && sl.utenKontakt === false && (sl.utenLeir || (sl.kamera === 1 && sl.r === 300 && sl.ser === true && sl.serIkke === false && sl.kroker >= 1 && !sl.tegnFeil && sl.avslått === 0));
     if (!slok) { feil++; console.log(JSON.stringify(sl)); }
@@ -1219,7 +1219,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         ut.holdninger = document.querySelectorAll('#stridpanel [data-holdning]').length; ut.valg = document.querySelectorAll('#stridpanel select').length; ut.bevRader = document.querySelectorAll('#stridpanel [data-bev]').length; ut.nå = /Styrkeforhold/.test(document.getElementById('stridpanel').textContent); StridSpill.lukk();
         // underlegent lag under ild: seks av tolv ute, fienden uskadd -> laget trekker seg når reglene får virke
         s.menn.slice(0, 5).forEach(m => { m.hp = 0; }); s.beskuttTid = tid; delete s.stridSist; StridSpill.test = true; const t0 = tid, tp = tempo; tempo = 60; for (let i = 0; i < 60 && s.stridSist === undefined; i++) await vent(100); tempo = tp; StridSpill.test = false; ut.trakk = s.stridSist !== undefined; for (let i = 0; i < 40 && s.planlegger; i++) await vent(100); ut.marsj = !!s.sti || !!s.planlegger; }
-      finally { StridSpill.test = false; KROKER.ser.splice(KROKER.ser.indexOf(serFi), 1); ENHETER.splice(ENHETER.indexOf(fi), 1); s.sti = null; s.menn = før.menn; s.her = før.her; s.strid = før.strid; delete s.bevSatt; s.beskuttTid = før.beskutt; s.stridSist = før.sist; StridSpill.SETT.clear(); if (før.penger !== null) OppstartSpill.tilstand().penger = før.penger; s.siktSkitten = true; valgt = null; if (window.lukkPanel) lukkPanel(); }
+      finally { StridSpill.test = false; KROKER.ser.splice(KROKER.ser.indexOf(serFi), 1); (ENHETER.indexOf(fi) >= 0 && ENHETER.splice(ENHETER.indexOf(fi), 1)); s.sti = null; s.menn = før.menn; s.her = før.her; s.strid = før.strid; delete s.bevSatt; s.beskuttTid = før.beskutt; s.stridSist = før.sist; StridSpill.SETT.clear(); if (før.penger !== null) OppstartSpill.tilstand().penger = før.penger; s.siktSkitten = true; valgt = null; if (window.lukkPanel) lukkPanel(); }
       return ut; });
     const strok = !str.uten && str.jevn === 1 && str.høy * 1.2 > 1.3 && str.lav < .9 && Math.abs(str.bakhold - 1.6) < 1e-9 && str.bevFi === 'lett' && str.våpenFi === 12 && str.holdIld === 0 && str.nær && str.bev === 'nærstrid' && str.maskinpistoler >= 7 && str.betalt === 200000 && str.motFi && str.forhold > 0 && str.knapp && str.holdninger === 4 && str.valg === 8 && str.bevRader === 4 && str.nå && str.trakk;
     if (!strok) { feil++; console.log(JSON.stringify(str)); }
@@ -1258,7 +1258,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         ut.sett = C.map(c => KameravaktSpill.ser({ ...c })); ut.synlig1 = fi.map(e => synlig(e)); ut.spor = V.spor(K).length; ut.oppgave = FolkRegler.OPPGAVER.includes('overvåking');
         const m = document.createElement('div'); let f = ''; try { for (const q of window.LEIR_MENY) q(m, { el: (t, a = {}, ...b) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) if (k === 'klasse') e.className = v; else e.setAttribute(k, v); e.append(...b); return e; }, knapp: (t, fn, a = {}) => { const b = document.createElement('button'); b.textContent = t; for (const [k, v] of Object.entries(a)) b.setAttribute(k, v); return b; } }); } catch (e) { f = e.message; }
         ut.menyFeil = f; ut.meny = !!m.querySelector('.kamvakt'); ut.knapper = m.querySelectorAll('.kamvakt [data-kam]').length;
-      } finally { for (const b of nye) L.bygg.splice(L.bygg.indexOf(b), 1); for (const e of fi) ENHETER.splice(ENHETER.indexOf(e), 1); F.personer.forEach((p, i) => { p.oppgave = førFolk[i]; }); KameravaktSpill.nullstill(); KameravaktSpill.test = false; KameraSpill.kameraer(); }
+      } finally { for (const b of nye) L.bygg.splice(L.bygg.indexOf(b), 1); for (const e of fi) (ENHETER.indexOf(e) >= 0 && ENHETER.splice(ENHETER.indexOf(e), 1)); F.personer.forEach((p, i) => { p.oppgave = førFolk[i]; }); KameravaktSpill.nullstill(); KameravaktSpill.test = false; KameraSpill.kameraer(); }
       return ut; });
     const kvtok = !kvt.uten && kvt.kam === 3 && String(kvt.usett) === 'false,false,true' && kvt.venter >= 2 && String(kvt.synlig0) === 'false,false,true' && String(kvt.sett) === 'true,true,true' && String(kvt.synlig1) === 'true,true,true' && kvt.spor >= 2 && kvt.oppgave && !kvt.menyFeil && kvt.meny && kvt.knapper >= 3;
     if (!kvtok) { feil++; console.log(JSON.stringify(kvt)); }
@@ -1311,7 +1311,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         // fiendens lastebil og stillinger
         const k2 = window.AI && AI.biler && AI.biler.rød; ut.bil = !!k2 && KJORETOY.includes(k2); if (k2) { const kx = k2.x, ky = k2.y; k2.x = s.x + 60000; k2.y = s.y; ut.skjult = !kjoretoySes(k2); k2.x = s.x + 50; k2.y = s.y; ut.sett = kjoretoySes(k2); k2.x = kx; k2.y = ky; }
         STILLINGER.push({ x: fi.x, y: fi.y, side: 'rød', kjent: true }); ut.vern = Fraksjoner.stillingVern(fi, STILLINGER); ut.ikkeOss = Fraksjoner.stillingVern({ x: fi.x, y: fi.y, side: 'blå' }, STILLINGER); STILLINGER.length = 0;
-      } finally { s.menn.forEach((m, i) => { if (erf0[i] === undefined) delete m.erf; else m.erf = erf0[i]; }); s.formasjon = f0; if (!f0) delete s.formasjon; s.x = x0; s.y = y0; ENHETER.splice(ENHETER.indexOf(fi), 1); O.penger = p0; valgt = null; if (window.lukkPanel) lukkPanel(); skitten = true; }
+      } finally { s.menn.forEach((m, i) => { if (erf0[i] === undefined) delete m.erf; else m.erf = erf0[i]; }); s.formasjon = f0; if (!f0) delete s.formasjon; s.x = x0; s.y = y0; (ENHETER.indexOf(fi) >= 0 && ENHETER.splice(ENHETER.indexOf(fi), 1)); O.penger = p0; valgt = null; if (window.lukkPanel) lukkPanel(); skitten = true; }
       return ut; });
     const frmok = !frm.uten && Math.abs(frm.linje - 1.15) < .01 && frm.flyttet && Math.abs(frm.spredt - .75) < .01 && Math.abs(frm.veteran - 1.18) < .01 && frm.tekst && frm.knapp && frm.bladde && frm.utstyrknapp && frm.åpnet && frm.rader >= 2 && frm.pris === 80000 && frm.byttet && frm.bil && frm.skjult && frm.sett && frm.vern === .6 && frm.ikkeOss === 1;
     if (!frmok) { feil++; console.log(JSON.stringify(frm)); }
@@ -1367,7 +1367,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       try { ut.menn = s ? s.menn.length : 0; ut.leder = s && s.menn[0].rolle === 'lagfører' && navn.includes(s.menn[0].navn); ut.uteAvFolk = F.personer.length === n0 - 3 && !F.personer.some(p => navn.includes(p.navn)); ut.iKartet = ENHETER.includes(s) && s.fraFolk === true;
         if (bil) { ut.ombord = s.ombord === bil; bil.x += 400; bil.y += 100; sim(.05); ut.følger = Math.hypot(s.x - bil.x, s.y - bil.y) < 3; ut.ingenOrdre = KROKER.kanOrdre.every(f => f(s)) === false; bil.x = S.x + 20; bil.y = S.y + 20; sim(.05); TropperSpill.gåAv(s); ut.av = !s.ombord; }
         s.menn[2].hp = 0; const o = TropperSpill.oppløs(s); ut.hjem = o.hjem; ut.tilbake = F.personer.length === n0 - 1 && !ENHETER.includes(s); }
-      finally { if (s && ENHETER.includes(s)) ENHETER.splice(ENHETER.indexOf(s), 1); if (bil && før) { bil.x = før.x; bil.y = før.y; bil.sti = før.sti; } }
+      finally { if (s && ENHETER.includes(s)) (ENHETER.indexOf(s) >= 0 && ENHETER.splice(ENHETER.indexOf(s), 1)); if (bil && før) { bil.x = før.x; bil.y = før.y; bil.sti = før.sti; } }
       ut.lag = ENHETER.length === lag0; return ut; });
     const trpok = !trp.uten && trp.knapp && trp.panel && !trp.feil && trp.menn === 3 && trp.leder && trp.uteAvFolk && trp.iKartet && (trp.ombord === undefined || (trp.ombord && trp.følger && trp.ingenOrdre && trp.av)) && trp.hjem === 2 && trp.tilbake && trp.lag;
     if (!trpok) { feil++; console.log(JSON.stringify(trp)); }
@@ -1413,7 +1413,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
           await vent(1300); const lm = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); if (!lm.classList.contains('på')) lk.click(); LeirSpill.fane('bygg'); await vent(200); nh.oversikt = !!lm.querySelector('.strom') && lm.querySelectorAll('.strom [data-bryter]').length >= 1 && /Batteri/.test(lm.querySelector('.strom').textContent); lk.click();
           Lq.bygg.splice(Lq.bygg.length - 2, 2); Lq.batteri = 0; NarHud.tegnVarsler(); nh.varsler = !!document.getElementById('varsler'); ut.nh = nh; }
         Object.assign(I, Utstyr.ny()); try { localStorage.removeItem('riksbrudd-utstyr'); } catch (e3) { /* ok */ } US.vis(); }
-      ENHETER.splice(ENHETER.indexOf(e), 1); K.hp = 100; Gange.stopp();
+      (ENHETER.indexOf(e) >= 0 && ENHETER.splice(ENHETER.indexOf(e), 1)); K.hp = 100; Gange.stopp();
       // tilbake som før
       SS.test = false; tempo = t0; Leir.MATERIALER.tre.pris = tre0; Leir.REGLER.salg = salg0; Leir.DRIVSTOFF.prisPerLiter = diesel0; FolkRegler.R.matPris = matpris0; Leir.MATERIALER.betong.pris = 30000; Leir.MATERIALER.stål.pris = 60000; S.penger = p0; F.moral = mor0; F.mat = mat0; F.personer.length = Math.min(F.personer.length, n0);
       SS.O().liste.length = 0; SS.T().aktiv = 0; SS.T().nesteSpill = SS.T().nesteEkte = Infinity; SS.H().åpen = null; SS.H().nesteSpill = SS.H().nesteEkte = Infinity; for (const k of ['riksbrudd-trussel', 'riksbrudd-marked', 'riksbrudd-oppdrag', 'riksbrudd-hendelser']) try { localStorage.removeItem(k); } catch (e2) { /* ok */ }
