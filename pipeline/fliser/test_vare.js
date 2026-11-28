@@ -98,6 +98,9 @@ ok(S.tilbud.includes(ks), 'de andre selskapene tar ikke Storlias tilbud');
   const a = V.rekker(kl, 0, 0, 0, { kilde: 'sto', maskin: true }); ok(!a.ok && /laget ingenting siste døgn/.test(a.tekst) && !/rekker det/.test(a.tekst), 'saga sto: ' + a.tekst);
   const b = V.rekker(kl, 0, 26.4, 0, { kilde: 'målt', maskin: true }); ok(b.ok && /laget 26,4 m³ siste døgn/.test(b.tekst), 'målt: ' + b.tekst);
   const c = V.rekker(kl, 0, 26.4, 0); ok(/gir 26,4 m³ per døgn/.test(c.tekst), 'uten kilde som før: ' + c.tekst); }
+// (ut8-kr-saga) et sted en rival holder, er aldri «rolig»
+{ const kr0 = { type: 'lever', vare: 'flis', mengde: 20, enhetPris: 1000, giver: { navn: 'Dalsnes Kraftlag' }, sted: { navn: 'Lismarka' }, risiko: 'rolig', rival: 'Ravnsund' };
+  ok(/holdes av Ravnsund/.test(V.krav(kr0)) && !/rolig/.test(V.krav(kr0)), 'rival: ' + V.krav(kr0).slice(-120)); }
 const S2 = SK.fraJSON(SK.tilJSON(S)); ok(S2.vare && S2.vare.storlia && S2.tilbud.some(q => q.storlia && q.type === 'kjøp'), 'lagres og leses');
 
 // MORGENTILBUDENE: høyst maksÅpne, aldri to like

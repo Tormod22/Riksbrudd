@@ -155,6 +155,15 @@
     return `${meter(Math.hypot(k.sted.x - p.x, k.sted.y - p.y))} i luftlinje` + (marsj && marsj.venter ? ' (regner ut ruta …)' : ''); };
   // døgnene som ruter: grønt = levert/kjøpt, rødt = mistet (rekkefølgen er ikke lagret – de leverte står først)
   const døgnRuter = k => `<div class="doegn" title="levert ${k.levertDøgn || 0} av ${k.døgn} døgn">${Array.from({ length: k.døgn }, (_, i) => `<i class="${i < (k.levertDøgn || 0) ? 'ja' : i < (k.døgnGjort || 0) ? 'nei' : ''}"></i>`).join('')}</div>`;
+  // (ut8-kr-saga, kritikeren: flis til Lismarka, «Ruta regnes som rolig» – men Ravnsund holdt Lismarka) navnet på rivalen som holder
+  // tettstedet, eller null. Nye leveranser tilbys ikke dit (morgen), og et tilbud som står, merkes farlig (k.rival, k.risiko = bakhold).
+  function rivalVed(sted) {
+    if (!sted || sted.id == null || typeof TETTSTEDER === 'undefined' || !window.Garnison) return null; let e = null;
+    try { e = Garnison.tilstand(TETTSTEDER, sted.id).eier; } catch (er) { return null; }
+    if (!e || e === ID) return null; const F = window.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER[e]; return F && F.navn ? F.navn : e;
+  }
+  function merkRival(k) { if (!k || k.type !== 'lever' || k.status !== 'tilbud') return; const r = rivalVed(k.sted);
+    if (r) { if (k.rival !== r) { k.rival = r; k.risiko = 'bakhold'; } } else if (k.rival) delete k.rival; }
   // finnes det en maskin som lager varen (så «sto siste døgn» kan sies)
   const maskinFor = v => { const l = L(), PR = window.Produksjon; return !!(l && PR && PR.maskinene(l).some(b => !b.av && PR.REGLER.maskiner[b.type] && PR.REGLER.maskiner[b.type].ut && PR.REGLER.maskiner[b.type].ut[v] > 0)); };
   // (ut8-kr-saga) kjøpsavtaler som spilleren har sagt «Inngå avtalen» til selv om lageret ikke har plass: andre trykk inngår den
@@ -163,9 +172,10 @@
     e.stopPropagation(); bekreftet.add(b.dataset.id);
     if (window.SelskapSpill) SelskapSpill.vis(true); }, true);
   function kort(k, aktiv, o = {}) {
+    merkRival(k);
     const P = perDøgn()[k.vare] || 0, h = har(k.vare);
     const rk = V.rekker(k, h, P, o.marsj && o.marsj.km > 0 ? V.bilTimer(o.marsj.km) : 0, { kilde: perDøgnKilde()[k.vare] || null, maskin: maskinFor(k.vare) });
-    let h1 = `<div class="kort vare${aktiv ? ' aktiv' : ''}${o.låst ? ' låst' : ''}" data-kontrakt="${k.id}"><b>${esc(k.tittel)}</b><div class="fra">${esc(SK.REGLER.TYPER[k.type].navn)}${k.type === 'lever' ? (k.risiko === 'bakhold' ? ' · <span class="krav">⚠ meldt bakhold</span>' : ' · rolig rute') : ''} · ${esc(k.giver.navn)}${aktiv ? ` · <span class="tall">${esc(SK.fristTekst(k, tid))}</span>` : ''}</div>`;
+    let h1 = `<div class="kort vare${aktiv ? ' aktiv' : ''}${o.låst ? ' låst' : ''}" data-kontrakt="${k.id}"><b>${esc(k.tittel)}</b><div class="fra">${esc(SK.REGLER.TYPER[k.type].navn)}${k.type === 'lever' ? (k.rival ? ` · <span class="krav">⚠ ${esc(k.sted.navn)} holdes av ${esc(k.rival)}</span>` : k.risiko === 'bakhold' ? ' · <span class="krav">⚠ meldt bakhold</span>' : ' · rolig rute') : ''} · ${esc(k.giver.navn)}${aktiv ? ` · <span class="tall">${esc(SK.fristTekst(k, tid))}</span>` : ''}</div>`;
     if (!aktiv) h1 += `<p>${esc(SK.kravTekst(k))}</p>`;
     if (k.type === 'lever') {
       h1 += `<div class="vlinje">${esc(k.sted.navn)}: ${esc(vegLinje(k, o.marsj))}</div>`;
@@ -201,7 +211,7 @@
   const steder = () => { try { return SS() && SS().steder ? SS().steder() : []; } catch (e) { return []; } };
   function morgen(tving) {
     const s = S(); if (!s || (!tving && (!auto() || trinnNr() < 2))) return [];
-    const n = V.lagTilbud(s, ID, tid, { steder: steder(), verdi: verdi(), leir: leir(), perDøgn: perDøgn() }); if (n.length) lagre(); return n;
+    const n = V.lagTilbud(s, ID, tid, { steder: steder().filter(q => !rivalVed(q)), verdi: verdi(), leir: leir(), perDøgn: perDøgn() }); if (n.length) lagre(); return n;
   }
   let storliaSist = 0;
   function storlia(tving) {
@@ -217,7 +227,7 @@
     logg(sag ? 'Storlia Tømmer: «Sag tømmeret til planker – vi kjøper plankene.» Leveringer av planker kommer i Selskapet.'
       : 'Storlia Tømmer: «Med et sagbruk blir tømmeret planker, og plankene kjøper vi.» Bygg et sagbruk (Leir → Bygg → Produksjon) – det gjør 48 m³ tømmer om til 26 m³ planker i døgnet.');
     // sagbruket er kjent: et leveringstilbud for planker følger straks, så tråden går videre
-    if (auto()) { const n = V.lagEtt(s, ID, 'lever', tid, { steder: steder(), verdi: verdi(), leir: leir() }, 'tre', 'Storlia Tømmer'); if (n) { s.tilbud.push(n); lagre(); } }
+    if (auto()) { const n = V.lagEtt(s, ID, 'lever', tid, { steder: steder().filter(q => !rivalVed(q)), verdi: verdi(), leir: leir() }, 'tre', 'Storlia Tømmer'); if (n) { s.tilbud.push(n); lagre(); } }
   }
   const erVare = V.erVare;
   // et lite tilskudd til steget i Selskapet: Storlia sjekkes hvert 5. sekund (trinnet kan nås når som helst)
@@ -233,7 +243,7 @@
     g.restore();
   });
 
-  Object.assign(api, { verdi, har, plass, perDøgn, perDøgnKilde, mål, vis, kort, send, knapp, hendelse, ferdig, levertTekst, morgen, storlia, storliaTatt, erVare, ledigBil, ledigLag, rett: { send },
+  Object.assign(api, { verdi, har, plass, perDøgn, perDøgnKilde, rivalVed, merkRival, mål, vis, kort, send, knapp, hendelse, ferdig, levertTekst, morgen, storlia, storliaTatt, erVare, ledigBil, ledigLag, rett: { send },
     // (ut4-eksport) lageret og kjøretøyene brukes også av eksporten (spill/eksport-visning.js): ta/legg flytter varer ut av og inn i lageret
     ta, legg, fri });
   window.VareSpill = api;

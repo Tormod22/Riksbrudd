@@ -154,7 +154,9 @@
   function krav(k) {
     const V = REGLER.VARER[k.vare] || { navn: k.vare };
     if (k.type === 'lever') return `${k.giver.navn} betaler ${prisTekst(k)} for ${mengdeTekst(k.vare, k.mengde)} ${V.navn} levert i ${k.sted.navn} (innen ${REGLER.nær.fram} m) før fristen. Last varene fra leirens lager på en lastebil eller tømmerbil ved leiren og kjør dem dit (flere turer går fint), la et lag bære litt, eller la ${REGLER.frakt.firma} ta det for ${Math.round(REGLER.frakt.andel * 100)} %.`
-      + (k.risiko === 'bakhold' ? ' Det er meldt om bakhold langs ruta – send et lag med bilen. Derfor betaler jobben litt bedre.' : ' Ruta regnes som rolig.');
+      // (ut8-kr-saga) k.rival = navnet på rivalen som holder stedet (settes av visningen): da er ruta aldri «rolig»
+      + (k.rival ? ` ${k.sted.navn} holdes av ${k.rival} – de kan ta lasten og bilen. Ikke send en bil alene: send et sterkt lag med, eller la det være.`
+        : k.risiko === 'bakhold' ? ' Det er meldt om bakhold langs ruta – send et lag med bilen. Derfor betaler jobben litt bedre.' : ' Ruta regnes som rolig.');
     if (k.type === 'avtale') return `${k.giver.navn} henter ${mengdeTekst(k.vare, k.perDøgn)} ${V.navn} ved leiren hvert døgn i ${k.døgn} døgn og betaler ${prisTekst(k)} (${kroner(k.dagKr)} per døgn). Mangler lageret varene når de kommer, blir det bot (${kroner(k.botDøgn)}). Alt levert gir en bonus på ${kroner(k.bonus)} til slutt. Fast pris – også om markedet stiger.`;
     return `Dere kjøper ${mengdeTekst(k.vare, k.perDøgn)} ${V.navn} hvert døgn i ${k.døgn} døgn til fast pris, ${prisTekst(k)} (${kroner(k.dagKr)} per døgn). Varene kommer til leiren – det som ikke får plass på lageret, tar ${k.giver.navn} med seg tilbake, og det betaler dere ikke for. Mangler kassa pengene, blir det bot (${kroner(k.botDøgn)}). Trygt når prisene stiger, dyrt når de faller.`
       + (k.storlia ? ' Tømmeret blir verdt mye mer som planker: et sagbruk gjør 48 m³ tømmer om til 26 m³ planker og 17 m³ flis i døgnet, og Storlia kjøper plankene.' : '');
