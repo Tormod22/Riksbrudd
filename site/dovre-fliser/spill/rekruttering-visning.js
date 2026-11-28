@@ -59,7 +59,8 @@
   (window.MORGEN_LINJER = window.MORGEN_LINJER || []).push(d => { if (!S) return null; if (auto() && S.dag !== d) morgenNå(); return S.sist && S.sist.dag === d && S.sist.tekst ? S.sist.tekst : null; });
 
   // ---------- tiden ----------
-  if (typeof KROKER !== 'undefined') KROKER.sim.push(dt => {
+  // steg(dt): søkere som går, svarfristen for tilbudene, opplæringen og (ikke i testene) mester og lærling – én gang per spillminutt
+  function steg(dt) {
     const F = Fo(), L = Lr(); if (!S || !F || !L) return;
     if (auto() && S.dag !== dagNå()) morgenNå();
     akk += dt; if (akk < 1) return; const d = akk; akk = 0;
@@ -67,7 +68,8 @@
     if (auto()) RK.mesterSteg(F, d);
     for (const h of H) if (typeof logg === 'function') logg(h);
     if (H.length) { lagre(); if (window.LeirSpill) LeirSpill.lagre(); }
-  });
+  }
+  if (typeof KROKER !== 'undefined') KROKER.sim.push(steg);
 
   // ---------- kommandoene ----------
   function endret() { lagre(); if (window.LeirSpill) LeirSpill.lagre(); if (window.FolkSpill) FolkSpill.vis(); if (typeof skitten !== 'undefined') skitten = true; }
@@ -157,5 +159,5 @@
     const egen = (p.egen || []).map(e => (RK.EGENSKAPER[e] ? RK.EGENSKAPER[e].navn : e));
     return ` · ${kr(RK.lønn(p))}/døgn` + (egen.length ? ' · ' + egen.join(', ') : '') + (p.skole ? ` · på øvingsfeltet (${oNavn(p.skole).toLowerCase()})` : '');
   }
-  window.RekrutteringSpill = { test: false, tilstand: () => S, sett: o => { S = RK.fraJSON(o) || RK.ny(); lagre(); }, start, morgen: morgenNå, ctx, del, personDel, hvorfor, ansett, svar, opplæring, lagre, NØKKEL };
+  window.RekrutteringSpill = { test: false, tilstand: () => S, sett: o => { S = RK.fraJSON(o) || RK.ny(); lagre(); }, start, morgen: morgenNå, steg, ctx, del, personDel, hvorfor, ansett, svar, opplæring, lagre, NØKKEL };
 })();
