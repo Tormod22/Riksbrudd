@@ -32,8 +32,13 @@
     try { const FS = window.ForsvarSpill; const A = FS && FS.angrep ? FS.angrep() : null, n = FS && FS.neste ? FS.neste() : null;
       if (A) o.angrep = { aktiv: true, min: 0 }; else if (n && Number.isFinite(n.min)) o.angrep = { aktiv: false, min: n.min }; } catch (e) { /* ingen forsvar */ }
     try { o.alarm = ENHETER.some(e => e.raid > 0 && levende(e)); } catch (e) { o.alarm = false; }
+    o.byBer = byBer;
     return o;
   }
+
+  // EN BY BER OM HJELP (kommer med byene i Ø3): window.dispatchEvent(new CustomEvent('riksbrudd-by-ber', { detail: { tekst } })) – teller
+  // opp, og «Pause ved: kontrakt eller by trenger deg» slår til
+  let byBer = 0; window.addEventListener('riksbrudd-by-ber', () => { byBer++; });
 
   // ---------- spol til ----------
   function spolTil(id) {
@@ -83,11 +88,11 @@ body.kort #tidslinje, body.smal #tidslinje, body.foto #tidslinje, body.gaar #tid
     ny.append(el('div', { klasse: 'hode' }, el('b', {}, '⏭ Spol til …'), x),
       el('small', {}, 'Farten går til 600× og stopper av seg selv. Alarm, fiender nær leiren og kort som venter på svar stopper alltid.'));
     const vb = el('div', { klasse: 'valg' });
-    for (const v of V) { const b = el('button', { 'data-spol': v.id }, v.tekst, el('span', {}, v.nå ? 'nå' : v.stille ? 'står stille – ingen bygger' : v.når === null ? '' : tidTekst(v.når, o.tid)));
+    for (const v of V) { const b = el('button', { 'data-spol': v.id }, v.tekst, el('span', {}, v.nå ? 'nå' : v.stille ? 'står stille – ingen bygger' : v.når === null ? '' : (v.frist ? 'senest ' : '') + tidTekst(v.når, o.tid) + (v.frist ? ' (en time før fristen)' : '')));
       if (v.nå || v.stille) b.setAttribute('disabled', ''); else b.onclick = () => spolTil(v.id); vb.append(b); }
     ny.append(vb);
     ny.append(el('h4', {}, 'Det som kommer'));
-    const ul = el('ul', { klasse: 'liste' }); for (const h of K) ul.append(el('li', {}, el('i', {}, h.når === null ? 'nå' : T.når(h.når, o.tid).replace(/^kl\. /, '')), h.tekst)); ny.append(ul);
+    const ul = el('ul', { klasse: 'liste' }); for (const h of K) ul.append(el('li', {}, el('i', {}, h.når === null ? 'nå' : T.kortNår(h.når, o.tid)), h.tekst)); ny.append(ul);
     ny.append(el('h4', {}, 'Pause av seg selv'));
     const br = el('div', { klasse: 'brytere' });
     for (const p of T.PAUSETYPER) { const på = !!valg.pause[p.id], b = el('button', { 'data-pause': p.id, title: 'Pause når ' + p.tekst, 'aria-pressed': String(på), klasse: på ? 'på' : '' }, p.navn + ': ' + (på ? 'på' : 'av'));
@@ -127,7 +132,7 @@ body.kort #tidslinje, body.smal #tidslinje, body.foto #tidslinje, body.gaar #tid
     const o = øyeblikk(), K = T.kjente(o).slice(0, T.REGLER.tidslinjeMaks), ny = el('div');
     ny.append(el('b', {}, 'Neste:'));
     for (const h of K) { const id = spolId(h), b = el('button', { title: (id && h.når !== null ? 'Spol hit: ' : '') + h.tekst + (h.når !== null ? ' (' + T.når(h.når, o.tid) + ', ' + T.om(h.når - o.tid) + ')' : ''), 'data-spol': id || '' },
-      el('i', {}, h.når === null ? 'nå' : T.kl(h.når)), h.tekst); ny.append(b); }
+      el('i', {}, h.når === null ? 'nå' : T.kortNår(h.når, o.tid)), h.tekst); ny.append(b); }
     if (ny.innerHTML === linjeSist) return; linjeSist = ny.innerHTML; linje.replaceChildren(...ny.childNodes);
     for (const b of linje.querySelectorAll('button')) b.onclick = () => { const id = b.getAttribute('data-spol'); const h = K.find(q => spolId(q) === id); if (id && h && h.når !== null) spolTil(id); else åpne(); };
   }

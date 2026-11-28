@@ -5,9 +5,9 @@ let feil = 0; const sjekk = (ok, t) => { if (!ok) { feil++; console.log('FEIL: '
 // klokka: tid 0 = dag 1 kl. 06:00
 sjekk(T.kl(0) === '06:00' && T.kl(18 * 60) === '00:00' && T.kl(1440 + 125) === '08:05', 'kl ' + [T.kl(0), T.kl(1080), T.kl(1565)]);
 sjekk(T.nesteMorgen(0) === 1440 && T.nesteMorgen(1439.5) === 1440 && T.nesteMorgen(1440) === 2880, 'nesteMorgen');
-// når() regner kalenderdøgn (fra midnatt): kl. 02 om natta er «i dag» for kl. 07 samme morgen
-sjekk(T.når(300, 0) === 'kl. 11:00' && T.når(1500, 0) === 'i morgen kl. 07:00', 'når ' + T.når(1500, 0));
-sjekk(T.når(1500, 1200) === 'kl. 07:00' && /^dag 3/.test(T.når(3000, 0)), 'når over midnatt ' + T.når(1500, 1200) + ' / ' + T.når(3000, 0));
+// når() følger spilldagen (skifter kl. 06, som statuslinja)
+sjekk(T.når(300, 0) === 'kl. 11:00' && T.når(1500, 0) === 'dag 2 kl. 07:00' && T.når(1300, 0) === 'kl. 03:40', 'når ' + T.når(1500, 0) + ' / ' + T.når(1300, 0));
+sjekk(T.kortNår(1500, 1450) === '07:00' && T.kortNår(4320, 0) === 'd. 4 06:00', 'kortNår ' + T.kortNår(4320, 0));
 sjekk(T.om(0.4) === 'nå' && T.om(35) === 'om 35 min' && T.om(135) === 'om 2 t 15 min' && T.om(3000) === 'om 2 d 2 t' && T.om(1440) === 'om 24 t', 'om ' + T.om(3000));
 
 // byggeplanen: to lag, tre jobber

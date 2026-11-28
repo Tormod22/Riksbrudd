@@ -19,23 +19,24 @@
     morgenKl: 6,          // morgenmøtet er kl. 06 (tid 0 = dag 1 kl. 06:00)
     fristFør: 60,         // «Spol til fristen» stopper så mange spillminutter før fristen, så du rekker å gjøre noe
     tidslinjeMaks: 5,     // så mange hendelser står i tidslinja
-    horisont: 2 * 1440,   // hendelser lenger fram enn dette (spillminutter) står ikke i tidslinja
+    horisont: 4 * 1440,   // hendelser lenger fram enn dette (spillminutter) står ikke i tidslinja (kontraktene har ofte 72 t)
     maksSpol: 3 * 1440,   // «Spol til …» stopper uansett etter så mange spillminutter
   };
   const DØGN = 1440;
   const to = n => String(n).padStart(2, '0');
   // klokkeslettet ved tid t: «14:05»
   function kl(t) { const m = ((Math.floor(t) + REGLER.morgenKl * 60) % DØGN + DØGN) % DØGN; return to(Math.floor(m / 60)) + ':' + to(m % 60); }
-  const dagNr = t => Math.floor((REGLER.morgenKl * 60 + t) / DØGN) + 1 - Math.floor(REGLER.morgenKl * 60 / DØGN);
+  // spilldagen (skifter kl. 06): dag 1 = tid 0–1439
+  const dagNr = t => Math.floor(t / DØGN) + 1;
   // spillminuttet for neste morgen kl. 06 (strengt etter t)
   const nesteMorgen = t => (Math.floor(t / DØGN) + 1) * DØGN;
-  // «kl. 14:05», «i morgen kl. 06:00», «dag 4 kl. 08:30»
+  // «kl. 14:05» samme spilldag, ellers «dag 4 kl. 08:30» – som statuslinja («DAG 4 · 08:30»; dagen skifter kl. 06)
   function når(t, nå) {
     if (!Number.isFinite(t)) return '';
-    const dn = Math.floor((t + REGLER.morgenKl * 60) / DØGN), d0 = Math.floor((nå + REGLER.morgenKl * 60) / DØGN);
-    if (dn === d0) return 'kl. ' + kl(t); if (dn === d0 + 1) return 'i morgen kl. ' + kl(t);
-    return 'dag ' + (Math.floor(t / DØGN) + 1) + ' kl. ' + kl(t);
+    return (Math.floor(t / DØGN) === Math.floor((nå || 0) / DØGN) ? '' : 'dag ' + (Math.floor(t / DØGN) + 1) + ' ') + 'kl. ' + kl(t);
   }
+  // kort til tidslinja: «14:05» eller «d. 4 08:30»
+  const kortNår = (t, nå) => (Math.floor(t / DØGN) === Math.floor((nå || 0) / DØGN) ? '' : 'd. ' + (Math.floor(t / DØGN) + 1) + ' ') + kl(t);
   // «om 2 t 15 min», «om 35 min», «nå»
   function om(min) {
     if (!Number.isFinite(min)) return ''; const m = Math.round(min); if (m < 1) return 'nå';
@@ -73,7 +74,7 @@
     const t = (o && o.tid) || 0, ut = [{ id: 'morgen', tekst: 'Morgenen (kl. 06)', når: nesteMorgen(t) }];
     for (const k of (o && o.kontrakter) || []) {
       if (k.klar) ut.push({ id: 'kontrakt:' + k.id, tekst: k.tittel + ': kan leveres nå', når: null, nå: true });
-      else ut.push({ id: 'kontrakt:' + k.id, tekst: k.tittel + ': framme eller fristen', når: Number.isFinite(k.frist) ? Math.max(t, k.frist - R.fristFør) : null });
+      else ut.push({ id: 'kontrakt:' + k.id, tekst: k.tittel + ': til den kan leveres', frist: true, når: Number.isFinite(k.frist) ? Math.max(t, k.frist - R.fristFør) : null });
     }
     const P = byggeplan(o);
     if (P.length) { const først = P.filter(j => j.ferdig !== null).sort((a, b) => a.ferdig - b.ferdig)[0];
@@ -134,9 +135,9 @@
   }
   const PAUSETYPER = [
     { id: 'angrep', navn: 'Angrep', tekst: 'leiren angripes' },
-    { id: 'trenger', navn: 'Kontrakt trenger deg', tekst: 'en kontrakt kan leveres, eller fristen er under en time unna' },
+    { id: 'trenger', navn: 'Kontrakt eller by trenger deg', tekst: 'en kontrakt kan leveres, fristen er under en time unna, eller en by ber om hjelp' },
     { id: 'fast', navn: 'Folk står fast', tekst: 'jobber venter, men ingen bygger' }];
-  const api = { REGLER, PAUSETYPER, kl, dagNr, nesteMorgen, når, om, byggeplan, kjente, valg, mål, nådd, pauser, jobbTekst };
+  const api = { REGLER, PAUSETYPER, kl, dagNr, nesteMorgen, når, kortNår, om, byggeplan, kjente, valg, mål, nådd, pauser, jobbTekst };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Tida = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
