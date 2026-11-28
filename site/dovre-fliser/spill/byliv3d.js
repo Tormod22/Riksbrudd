@@ -16,7 +16,7 @@
   };
   const iTid = (h, [a, b]) => (a <= b ? h >= a && h < b : h >= a || h < b);
   const hash = (a, b) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
-  // folk på benkene: benker = flat liste [x, y, z, a, …] (Gate.punkter(u.gate).benk); gir [{ x, y, z, a (retning figuren ser), nr }]
+  // folk på benkene: benker = flat liste [x, y, z, a, …] (u.gate.benk fra spill/gate3d.js – fire tall per benk); gir [{ x, y, z, a (retning figuren ser), nr }]
   // Benken vender fram langs sin +y (mot vegen); setet er 0,47 m høyt – figuren sitter med hofta over setet.
   function benkFolk(benker, h, mobil, våt) {
     const B = REGLER.benk, ut = []; if (!iTid(h, REGLER.dag) || våt || !benker) return ut; const maks = B.maks[mobil ? 1 : 0];
@@ -63,14 +63,14 @@
     S = { scene: R.scene, fl, hund: lagI(hund, 20), sykkel: lagI(sykkel, 12), mat, geo: [hund, sykkel], u: null, benk: [], sykler: [], o: new THREE.Object3D(), nøk: '' };
   }
   function kast() { if (!S) return; S.fl.kast(); for (const m of [S.hund, S.sykkel]) { if (m.parent) m.parent.remove(m); m.dispose(); } for (const g of S.geo) g.dispose(); S.mat.dispose(); S = null; }
-  const farger = nr => Figur3d.farger(JAKKER[nr % JAKKER.length], BUKSER[(nr >>> 3) % BUKSER.length], HÅR[(nr >>> 5) % HÅR.length], HUD[(nr >>> 7) % HUD.length]);
+  const farger = n0 => { const nr = Math.abs(Math.round(n0)) >>> 0; return Figur3d.farger(JAKKER[nr % JAKKER.length], BUKSER[(nr >>> 3) % BUKSER.length], HÅR[(nr >>> 5) % HÅR.length], HUD[(nr >>> 7) % HUD.length]); };
   KROKER.ramme3d.push(R => {
     if (!R.ut || typeof THREE === 'undefined' || !window.Figur3d || !window.MODELLER || !window.Liv3d) return; const u = R.ut;
     if (!S || S.scene !== R.scene || !S.fl.nær.parent) lag(R);
     const T = Liv3d.trafikk(), h = klokka(), V = window.VAER || {}, våt = (V.nedbør || V.regn || V.snø || 0) > .2, mob = mobil();
     if (S.u !== u || (!S.sykler.length && (T.folk || []).length)) { S.u = u; S.sykler = syklister((T.folk || []).map(o => o.v).filter((v, i, a) => a.indexOf(v) === i), mob); }
     const nå = performance.now(), dt = typeof tempo !== 'undefined' && tempo > 0 ? Math.min(.25, (nå - (sistMs || nå)) / 1000) : 0; sistMs = nå;
-    const benk = window.Gate3d ? (Gate3d.punkter(u).benk || []) : [], sitter = benkFolk(benk, h, mob, våt), dag = iTid(h, REGLER.dag), fl = S.fl, o = S.o, c = R.cam.position;
+    const benk = (u.gate && u.gate.benk) || [], sitter = benkFolk(benk, h, mob, våt), dag = iTid(h, REGLER.dag), fl = S.fl, o = S.o, c = R.cam.position;
     fl.start();
     for (const p of sitter) { o.position.set(p.x, p.y, p.z); o.rotation.set(0, 0, p.a); o.scale.setScalar(.95 + hash(p.nr, 2) * .1); o.updateMatrix();
       fl.legg(o.matrix, { fase: 0, sving: 0, bære: hash(p.nr, 3) < .3 ? .5 : 0, kne: -1, maske: Figur3d.DEL.hår | (hash(p.nr, 4) < .3 ? Figur3d.DEL.langt : 0), farger: farger(p.nr) }); }
@@ -86,6 +86,6 @@
     S.hund.count = nh; S.hund.instanceMatrix.needsUpdate = true; S.hund.instanceColor.needsUpdate = true;
     S.sist = { sitter: sitter.length, syklister: ns, hunder: nh, benker: benk.length / 4 };
   });
-  window.Byliv3d = { antall: () => (S && S.sist) || null, sitter: () => { const R = typeof R3 !== 'undefined' ? R3 : null; return R && R.ut && window.Gate3d ? benkFolk(Gate3d.punkter(R.ut).benk || [], klokka(), mobil(), false) : []; },
+  window.Byliv3d = { antall: () => (S && S.sist) || null, sitter: () => { const R = typeof R3 !== 'undefined' ? R3 : null; return R && R.ut ? benkFolk((R.ut.gate && R.ut.gate.benk) || [], klokka(), mobil(), false) : []; },
     sykler: () => (S ? S.sykler : []), hundPunkter: () => { if (!S) return []; const m = new THREE.Matrix4(), v = new THREE.Vector3(), ut = []; for (let i = 0; i < S.hund.count; i++) { S.hund.getMatrixAt(i, m); v.setFromMatrixPosition(m); ut.push([v.x, v.y, v.z]); } return ut; } };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

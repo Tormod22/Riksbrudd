@@ -55,7 +55,7 @@ module.exports = {
         tid = ((12 - 6 + 24) % 24) * 60; if (window.NATT) NATT.mørke = 0; await vent(700); const s2 = LV.sjekk(); ut.d3.dag = { kråker: s2.kråker, katt: s2.ting.katt + s2.ting.kattL, stråler: s2.stråler, iBygg: s2.iBygg, svever: s2.svever };
         krev(s2.kråker >= 1 && ut.d3.dag.katt === 1 && s2.stråler === 0 && s2.iBygg === 0 && s2.svever === 0, '3D: om dagen ' + JSON.stringify(ut.d3.dag));
         // byene: de som sitter, sitter på en benk (bare når utsnittet har benker)
-        if (window.Byliv3d && window.Gate3d) { const B = Gate3d.punkter(R3.ut).benk || [], Sb = Byliv3d.sitter(); ut.d3.by = { benker: B.length / 4, sitter: Sb.length };
+        if (window.Byliv3d && window.Gate3d) { const B = (R3.ut.gate && R3.ut.gate.benk) || [], Sb = Byliv3d.sitter(); ut.d3.by = { benker: B.length / 4, sitter: Sb.length };
           krev(Sb.every(p => { for (let k = 0; k < B.length; k += 4) if (Math.hypot(p.x - B[k], p.y - B[k + 1]) < .6) return true; return false; }), '3D: noen sitter ikke på en benk ' + JSON.stringify(ut.d3.by)); }
         const seng = window.Folk3d && Folk3d.plassVed ? Folk3d.plassVed(brakke, 0, 'seng') : null, bord = kjøk && window.Folk3d ? Folk3d.plassVed(kjøk, 1, 'bord') : null;
         ut.d3.seng = seng ? { ligger: !!seng.ligger, inne: LL.inni(Leir.hjørner(brakke), seng.x, seng.y) } : null; ut.d3.bord = bord ? { sitter: !!bord.sitter, nær: Math.hypot(bord.x - kjøk.x, bord.y - kjøk.y) < 8, iVeggen: LL.inni(Leir.hjørner(kjøk), bord.x, bord.y) } : null;
