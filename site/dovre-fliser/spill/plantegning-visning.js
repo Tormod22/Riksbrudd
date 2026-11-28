@@ -123,10 +123,14 @@
     if (!aktiv()) { if (S.nær.length || velger.classList.contains('på')) { S.nær = []; S.valgt = null; visVelger(); } return; }
     vurderSkann();
     const m = kam.m, sx = x => (x - vx0) / m, sy = y => (vy1 - y) / m;
+    // hva som ble tegnet i dette bildet (vakta leser det)
+    S.tegnet = [];
     for (const h of S.nær) {
       if (!h.klar || !h.m) continue; const md = h.m, [ox, oy] = h.o, X = p => sx(ox + p[0]), Y = p => sy(oy + p[1]);
       const str = Math.max(h.bb[2] - h.bb[0], h.bb[3] - h.bb[1]) / m; if (str < R.minPunkter * .8) continue;
       const detalj = str >= R.detaljPunkter, n = etasjeFor(h), Fg = PT.figur(md, n);
+      S.tegnet.push({ i: h.i, n, vegger: Fg.vegger.length, dører: Fg.åpninger.filter(o => o.type !== 'vindu').length, vinduer: Fg.åpninger.filter(o => o.type === 'vindu').length,
+        sperret: Fg.åpninger.filter(o => o.sperre).length, møbler: detalj ? Fg.møbler.length : 0, rom: Fg.rom.length, trapper: Fg.trapper.length, punkter: Math.round(str) });
       const sti = P => { g.beginPath(); P.forEach((p, k) => (k ? g.lineTo(X(p), Y(p)) : g.moveTo(X(p), Y(p)))); g.closePath(); };
       g.save(); g.lineCap = 'butt'; g.lineJoin = 'miter';
       sti(md.P); g.fillStyle = F.gulv; g.fill(); g.strokeStyle = F.kant; g.lineWidth = 1; g.stroke();
@@ -190,7 +194,8 @@
 #plan2d button{ min-height:32px; min-width:34px; padding:2px 10px; background:#2a2318; border:1px solid var(--rule,#5b5140); color:var(--ink,#e7dcc3); font:inherit; font-size:14px; cursor:pointer; }
 #plan2d button.valgt{ border-color:#c9b26a; color:#f0d79a; } #plan2d button.grå{ opacity:.55; } #plan2d small{ color:var(--ink-dim,#a69b82); }
 #plan2d .valg{ margin-top:5px; padding-top:5px; border-top:1px solid var(--rule,#5b5140); }
-@media (max-width:700px){ #plan2d{ left:16px; right:16px; transform:none; max-width:none; font-size:13px; } #plan2d button{ font-size:13px; padding:2px 8px; } }`;
+@media (max-width:700px){ #plan2d{ left:12px; right:76px; top:auto; bottom:calc(150px + env(safe-area-inset-bottom,0px)); transform:none; max-width:none; font-size:13px; padding:5px 8px; }
+  #plan2d button{ font-size:13px; padding:2px 8px; } #plan2d .rad small{ display:none; } }`;
   document.head.appendChild(css);
   const velger = document.createElement('div'); velger.id = 'plan2d'; velger.setAttribute('role', 'group'); velger.setAttribute('aria-label', 'Plantegning');
   (document.body || document.documentElement).appendChild(velger);
