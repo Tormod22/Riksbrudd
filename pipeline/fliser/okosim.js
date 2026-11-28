@@ -461,9 +461,12 @@ function kjør(strategiId, frø, o = {}) {
   }
   for (const [k, v] of Object.entries(sim.bok.inn)) sim.sum.inn[k] = (sim.sum.inn[k] || 0) + v; for (const [k, v] of Object.entries(sim.bok.ut)) sim.sum.ut[k] = (sim.sum.ut[k] || 0) + v;
   const slutt = sim.dager[sim.dager.length - 1];
-  return { strategi: strategiId, frø, dager: sim.dager, slutt: sim.kasse, maks, maksDag, blakkDag: sim.blakkDag, sluttBlakk: (sim.F.ubetalt || 0) > 0, blakkTimer: sim.blakkTimer,
+  // (Ø1, 28. nov) en del kan legge egne tall i resultatet: d.slutt(sim, res)
+  const res = { strategi: strategiId, frø, dager: sim.dager, slutt: sim.kasse, maks, maksDag, blakkDag: sim.blakkDag, sluttBlakk: (sim.F.ubetalt || 0) > 0, blakkTimer: sim.blakkTimer,
     sum: sim.sum, kontrakter: sim.kontrakter, byerTatt: sim.byerTatt, byerMistet: sim.byerMistet, byer: slutt ? slutt.byer : 0, nivå: slutt ? slutt.nivå : 1, folk: sim.F.personer.length + iTropper(sim),
     døde: sim.døde, bølger: sim.bølge, røverInn: sim.røverInn, røverUt: sim.røverUt, bygg: sim.L.bygg.length, hendelser: sim.hendelser, døgnUt: døgnUt(sim) };
+  for (const d of DELER) if (d.slutt) d.slutt(sim, res);
+  return res;
 }
 
 module.exports = { REGLER, DELER, STRATEGIER, KRAV, leggTilDel, leggTilStrategi, leggTilKrav, kjør, nySim, kamp, marsjTimer, bilTimer, gåKmt, kontraktTimer, ekteStartpenger, mill, API, taKontrakt, besteKontrakt, sendTilBy, lagRegion };

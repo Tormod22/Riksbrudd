@@ -14,7 +14,7 @@
   if (typeof document === 'undefined' || !window.Produksjon || !window.Leir) return;
   const PR = window.Produksjon, LB = window.Leir, FR = window.FolkRegler, NØKKEL = 'riksbrudd-produksjon';
   // Claudes forslag: tømmerbilens pris og når et stopp meldes i loggen (en gang per maskin og grunn, høyst hvert 30. spillminutt)
-  const VIS = { tømmerbilPris: 2.5e6, meldHvert: 30, grafHvert: 4000 };
+  const VIS = { tømmerbilPris: PR.REGLER.tømmerbil.pris, meldHvert: 30, grafHvert: 4000 };
   const nf = PR.nf, kr = v => (LB.kroner ? LB.kroner(v) : Math.round(v).toLocaleString('nb-NO') + ' kr');
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const L = () => (window.LeirSpill && LeirSpill.tilstand ? LeirSpill.tilstand() : null);

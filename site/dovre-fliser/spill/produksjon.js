@@ -28,11 +28,11 @@
       fyrkjele: { folk: 1, kw: 0, inn: [{ flis: .5 }, { ved: .35 }], ut: {}, gir: 30, varme: 3 },
     },
     rekkefølge: ['fyrkjele', 'sagbruk', 'vedkløyver'],
-    slitasje: .0015,          // hp per driftstime (en maskin i full drift er halvslitt etter ca. 14 døgn)
-    timerHuskes: 24 * 30,     // tellingene nullstilles ikke; grafen tar snitt per døgn
+    slitasje: .0015,          // hp per driftstime (en maskin i full drift er halvslitt etter ca. 14 døgn: da går den med halv fart til den er reparert)
+    tømmerbil: { pris: 2.5e6 },   // kjøpes i fanen Produksjon; 20 m³ per tur (Ressurser.REGLER.tømmerbil)
   };
-  const GRUNNER = ['av', 'ødelagt', 'fullt', 'tom', 'folk', 'strøm'];
-  const GRUNNTEKST = { av: 'slått av', ødelagt: 'ødelagt', fullt: 'lageret fullt', folk: 'ingen folk', strøm: 'uten strøm' };
+  const GRUNNER = ['av', 'ødelagt', 'fullt', 'tom', 'folk', 'strøm', 'slitt'];
+  const GRUNNTEKST = { av: 'slått av', ødelagt: 'ødelagt', fullt: 'lageret fullt', folk: 'ingen folk', strøm: 'uten strøm', slitt: 'slitt – må repareres' };
   const VARENAVN = { tre: 'planker', tømmer: 'tømmer', flis: 'flis', ved: 'ved', betong: 'betong', stål: 'stål' };
   const erMaskin = t => !!REGLER.maskiner[t];
 
@@ -80,11 +80,15 @@
       else {
         // arbeidskraften: maskinen tar så mange den trenger; med færre går den saktere
         const tatt = Math.min(M.folk, kraft); kraft -= tatt; s.folk = tatt;
-        let drift = Math.min(1, tatt / M.folk) * (LB && LB.effekt ? (b.hp < (LB.REGLER.halvSkade || .5) ? .5 : 1) : 1);
+        // slitt (hp under halvparten, som andre bygg i leir.js): halv fart til verkstedet eller byggelaget har reparert den
+        const fFolk = Math.min(1, tatt / M.folk), fSlitt = b.hp < ((LB && LB.REGLER.halvSkade) || .5) ? .5 : 1;
         // råvaren og plassen i lageret begrenser også
-        for (const [vare, m] of Object.entries(v.r)) drift = Math.min(drift, har(L, vare) / (m * t));
-        for (const [vare, m] of Object.entries(M.ut)) drift = Math.min(drift, plass(L, vare) / (m * t));
-        drift = Math.max(0, drift);
+        let fRå = 1, fPlass = 1;
+        for (const [vare, m] of Object.entries(v.r)) fRå = Math.min(fRå, har(L, vare) / (m * t));
+        for (const [vare, m] of Object.entries(M.ut)) fPlass = Math.min(fPlass, plass(L, vare) / (m * t));
+        const drift = Math.max(0, Math.min(fFolk * fSlitt, fRå, fPlass));
+        // grunnen når den ikke går fullt: det som begrenser mest
+        if (drift < 1 - 1e-6) s.grunn = fRå <= drift + 1e-9 && fRå < fFolk * fSlitt ? 'tom' : fPlass <= drift + 1e-9 && fPlass < fFolk * fSlitt ? 'fullt' : fSlitt < 1 && fSlitt <= fFolk ? 'slitt' : 'folk';
         if (drift > 1e-6) {
           s.går = true; s.drift = drift;
           for (const [vare, m] of Object.entries(v.r)) { const q = m * t * drift; L.lager[vare] = Math.max(0, har(L, vare) - q); s.inn[vare] = m * drift; P.brukt[vare] = (P.brukt[vare] || 0) + q; }
@@ -93,12 +97,12 @@
           s.kwBruk = M.kw * drift;
           if (b.hp > 0 && REGLER.slitasje > 0) b.hp = Math.max(.05, b.hp - REGLER.slitasje * t * drift);
           P.gikk += t * drift;
-        } else s.grunn = 'tom';
+        }
       }
       // tida maskinen sto (helt eller delvis), per grunn
       const stod = (1 - s.drift) * t; if (stod > 1e-9) { const g = s.grunn || (s.folk < M.folk - 1e-6 ? 'folk' : 'tom'); if (!s.grunn && s.drift < 1 - 1e-6) s.grunn = g; P.sto[g] = (P.sto[g] || 0) + stod; }
       // delvis drift: «går 50 % – for få folk» / «– lite tømmer»
-      const delvis = g => (g === 'folk' ? 'for få folk' : g === 'tom' ? tomTekst(b.type).replace('tom for', 'lite') : grunnTekst(g, b.type));
+      const delvis = g => (g === 'slitt' ? 'slitt, halv fart' : g === 'folk' ? 'for få folk' : g === 'tom' ? tomTekst(b.type).replace('tom for', 'lite') : grunnTekst(g, b.type));
       s.tekst = s.går ? (s.drift < .98 ? `går ${Math.round(s.drift * 100)} %` + (s.grunn ? ' – ' + delvis(s.grunn) : '') : 'går') : grunnTekst(s.grunn, b.type);
     }
     P.status = status;

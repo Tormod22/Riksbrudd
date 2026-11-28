@@ -32,6 +32,13 @@ const KJENT = {
   'grense:kontrakter': 'docs/natt/ut1-okotest.md, funn 1 (28. nov): én tropp som tar kontrakt etter kontrakt, når 200 mill. rundt dag 15–20',
   'grense:blandet': 'samme som over: kontraktene drar «blandet» over grensen',
   'utenSjanse:byer': 'docs/natt/ut1-okotest.md, funn 2 (28. nov): småbyene gir lite skatt, og troppen og garnisonene spiser kassa',
+  // (Ø1, 28. nov, docs/natt/ut2-sagbruk.md) hogst gir nå tømmer som selges billig (planen 4.1) – hogst og salg alene bærer ikke leiren
+  'utenSjanse:hogst': 'docs/natt/ut2-sagbruk.md: hogst gir tømmer (8 000 kr/m³ × 80 %), som planen sier skal være billig – sag det eller ta kontrakter',
+  // sagbruket fra start koster 36 av 40 mill. med startleiren; røverne herjer uten tropp, folk drar, og saga står (planen: sagbruk er trinn 2)
+  'utenSjanse:sagbruk': 'docs/natt/ut2-sagbruk.md: «bare sagbruk» fra første dag har ikke råd til noe annet; saga er trinn 2 i planen, etter kontraktene',
+  'uteIngenting:sagbruk': 'samme som over',
+  'sag:sagbruk': 'samme som over: folk drar (røverne herjer), og uten folk står saga – og da kjelen, og da strømmen',
+  'grense:kontraktSag': 'samme som «bare kontrakter» (funn 1 i ut1-okotest.md): kontraktene drar strategien over grensen',
 };
 const BAND_FIL = path.join(__dirname, 'okonomitest-band.json');
 

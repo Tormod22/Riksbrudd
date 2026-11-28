@@ -39,6 +39,10 @@ function leir(typer = ['sagbruk']) { const L = Leir.ny(); typer.forEach((t, i) =
   // lite tømmer: bruker det som er og står resten av timen
   const L3 = leir(), P3 = P0.ny(); L3.lager.tømmer = 1; s = P0.steg(P3, L3, 60, { kraft: 3 }).status[1]; ok(s.går && nær(s.drift, .5) && nær(L3.lager.tømmer, 0) && nær(P3.sto.tom, .5), 'halvt med tømmer: halv drift'); }
 
+// slitt: under halv hp går den med halv fart, og grunnen er «slitt»
+{ const L = leir(), P = P0.ny(); L.lager.tømmer = 10; L.bygg[0].hp = .4; const s = P0.steg(P, L, 60, { kraft: 3 }).status[1];
+  ok(s.går && nær(s.drift, .5) && s.grunn === 'slitt' && /slitt/.test(s.tekst) && nær(P.sto.slitt, .5), `slitt maskin: ${s.tekst}`); }
+
 // strøm til leir.js: en maskin som står, tar ikke strøm (api.hviler); kjelen gir 30 kW (api.maskinKW)
 { const L = leir(['sagbruk', 'aggregat']); L.drivstoff = 100; L.bygg.push({ id: 9, type: 'drivstofftank', igjen: 0, hp: 1, nivå: 1 });
   Leir.hviler = (l, b) => P0.hviler(l, b, 3);
