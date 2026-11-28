@@ -76,8 +76,10 @@ module.exports = {
           if (fk) { fk.click(); for (let i = 0; i < 40 && LeirSpill.plassering() && /For bratt/.test(LeirSpill.plassering().feil || ''); i++) await vent(100); await LeirSpill.prøv();
             const q = LeirSpill.plassering(); ut.etterFlytt = q && q.feil; krev(q && !/For bratt/.test(q.feil || ''), '«Flytt skissen» ga fortsatt «For bratt»'); }
           else krev(!!dk, 'verken «Flytt skissen» eller «Drei 90°» for den bratte skissen'); }
-        // 3c. byggesettet: et ferdig hus (brakke 3 × 4) i den bratte lia avvises som helhet («For bratt for huset»), ved leiren går det
-        if (bratt && window.Byggesett) { LeirSpill.avbryt(); Byggesett.åpne(); Byggesett.velg({ fane: 'hus', hus: 'brakke', rot: 0 });
+        // 3c. byggesettet: et ferdig hus i den bratte lia avvises som helhet («For bratt for huset»), ved leiren går det.
+        // (ut7, 28. nov) Hallen, ikke brakka: i byggesett 3 (1,2 m-ruter) er brakka 9,6 × 6 m (før 9,6 × 7,2 m), og i lia her er det bare
+        // ca. 7 m høydeforskjell under den – under Leir.BRATT (8 m), som er den samme grensen som før. Regelen er ikke endret; huset ble mindre.
+        if (bratt && window.Byggesett) { LeirSpill.avbryt(); Byggesett.åpne(); Byggesett.velg({ fane: 'hus', hus: 'hall', rot: 0 });
           Byggesett.trykk(bratt[0], bratt[1]); await Byggesett.oppdater(); const Fb = Byggesett.forslag();
           ut.husBratt = Fb.length ? Fb[0].feil : 'ingen deler'; krev(Fb.length && Fb.every(q => q.feil) && Fb.some(q => /For bratt for huset/.test(q.feil || '')), 'huset i den bratte lia ble ikke avvist: ' + ut.husBratt);
           Byggesett.trykk(S.leir.x - 12, S.leir.y - 36); await Byggesett.oppdater(); ut.husLeir = Byggesett.forslag().filter(q => /For bratt/.test(q.feil || '')).length;

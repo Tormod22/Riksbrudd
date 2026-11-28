@@ -644,6 +644,32 @@
     for (const m of pl.møbler) { if (!m.sperrer) continue; const dx = x - m.x, dy = y - m.y, c = Math.cos(m.a), si = Math.sin(m.a); if (Math.abs(dx * c + dy * si) < m.b / 2 && Math.abs(-dx * si + dy * c) < m.d / 2) return true; }
     return false;
   }
+  // INNGANGENE STÅR FRITT (ut7, 28. nov): en plan som er laget av noe annet enn plan() (1. etasje fra byggemodellen i etasjer3d.js)
+  // kan ha en skillevegg eller et stort møbel rett innenfor en inngang når modellens dør ikke står der 3D-huset har døra. friInngang
+  // tar bort veggbitene og de sperrende møblene i en sone innenfor hver inngang: døras bredde (+ FRI.side på hver side), fra FRI.ut
+  // utenfor veggen til FRI.inn innover. Gir antallet som ble tatt bort. (Tallene er Claudes forslag.)
+  const FRI = { side: 0, ut: .3, inn: 1.6 };
+  function friInngang(pl) {
+    let tatt = 0; const L = (pl.innganger || [pl.inngang]).filter(Boolean);
+    for (const i of L) {
+      const S = i.w / 2 + FRI.side, lok = (x, y) => [(x - i.x) * i.ux + (y - i.y) * i.uy, -((x - i.x) * i.nx + (y - i.y) * i.ny)];
+      const inne = (x, y) => { const [s, d] = lok(x, y); return Math.abs(s) < S && d > -FRI.ut && d < FRI.inn; };
+      // veggene: delen av hver vegg inne i sonen klippes bort (Liang–Barsky i døras akser)
+      const ny = [];
+      for (const w of pl.vegger) { const [s0, d0] = lok(w.ax, w.ay), [s1, d1] = lok(w.bx, w.by), ds = s1 - s0, dd = d1 - d0; let t0 = 0, t1 = 1, ute = false;
+        for (const [p, q] of [[-ds, s0 + S], [ds, S - s0], [-dd, d0 + FRI.ut], [dd, FRI.inn - d0]]) { if (Math.abs(p) < 1e-12) { if (q < 0) ute = true; continue; } const r = q / p; if (p < 0) t0 = Math.max(t0, r); else t1 = Math.min(t1, r); }
+        if (ute || t0 >= t1) { ny.push(w); continue; } tatt++;
+        const pkt = t => [w.ax + (w.bx - w.ax) * t, w.ay + (w.by - w.ay) * t], Lw = Math.hypot(w.bx - w.ax, w.by - w.ay);
+        if (t0 * Lw > .05) { const b = pkt(t0); ny.push(Object.assign({}, w, { bx: b[0], by: b[1] })); }
+        if ((1 - t1) * Lw > .05) { const a = pkt(t1); ny.push(Object.assign({}, w, { ax: a[0], ay: a[1] })); } }
+      pl.vegger = ny;
+      // møbler som sperrer: bort når midten, et hjørne eller midten av en kant er i sonen
+      pl.møbler = pl.møbler.filter(m => { if (!m.sperrer) return true; const c = Math.cos(m.a || 0), s = Math.sin(m.a || 0);
+        for (const [a, b] of [[0, 0], [1, 1], [1, -1], [-1, 1], [-1, -1], [1, 0], [-1, 0], [0, 1], [0, -1]]) { const lx = a * m.b / 2, ly = b * m.d / 2; if (inne(m.x + lx * c - ly * s, m.y + lx * s + ly * c)) { tatt++; return false; } }
+        return true; });
+    }
+    return tatt;
+  }
   // Høyden du står på: gulvet inne, og en trapp/rampe de siste meterne foran hver dør (i.trapp, ellers pl.trapp, ellers 1,5 m;
   // terreng(x, y) = bakken). null = vanlig terreng.
   function høyde(pl, x, y, terreng) {
@@ -655,7 +681,7 @@
   }
   // På trappa foran en dør eller i selve døråpningen
   function påTrapp(pl, x, y) { for (const i of pl.innganger || [pl.inngang]) { const dx = x - i.x, dy = y - i.y, ut = dx * i.nx + dy * i.ny; if (ut >= -.8 && ut < (i.trapp || pl.trapp || 1.5) + .3 && Math.abs(dx * i.ux + dy * i.uy) < i.w / 2 + .15) return true; } return false; }
-  const api = { KLASSE, TYPER, ROMSETT, MØBELSETT, TILGANG, ALDRI_VED_DØR, STILER, ÅR, TAK_MIN, MØBLER, VEGG, plan, planG, takhøyde, velgStil, type, nærKant, inniR, nærKantR, blokkert, høyde, påTrapp, inni, avstSeg, avstKant };
+  const api = { KLASSE, TYPER, ROMSETT, MØBELSETT, TILGANG, ALDRI_VED_DØR, STILER, ÅR, TAK_MIN, MØBLER, VEGG, FRI, plan, planG, takhøyde, velgStil, type, nærKant, inniR, nærKantR, blokkert, friInngang, høyde, påTrapp, inni, avstSeg, avstKant };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Interior = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
