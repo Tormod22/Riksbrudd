@@ -111,7 +111,10 @@
   const personTempo = (F, p, o) => (o === 'fri' ? 1 : p.ferd[o] || 1) * moralFaktor(F.moral) * (p.seng || F.sist.alleSeng ? 1 : .85) * (.5 + .5 * Math.min(1, p.helse))
     * (F.tempoF > 0 ? F.tempoF : 1) * (p.trener ? .6 : 1) * (api.oppgaveF ? api.oppgaveF(o) || 1 : 1);
   // Snittet for dem som er i arbeid på oppgaven (0 når ingen er der), 0–1,5
-  function tempo(F, o) { const A = på(F, o).filter(arbeidsfør); if (!A.length) return 0; return Math.min(1.5, Math.max(0, A.reduce((s, p) => s + personTempo(F, p, o), 0) / A.length)); }
+  // (F0, 28. nov) api.døgnF(F, o): døgnplanen fra jobbtavla (spill/jobber.js) – 0 når ingen på oppgaven er i arbeidstida, høyere i
+  // arbeidstida, så et helt døgn gir like mye som før. Uten jobbtavla (og i testene) 1.
+  const døgnF = (F, o) => { const v = api.døgnF ? api.døgnF(F, o) : 1; return v >= 0 ? v : 1; };
+  function tempo(F, o) { const A = på(F, o).filter(arbeidsfør); if (!A.length) return 0; return Math.min(1.5, Math.max(0, A.reduce((s, p) => s + personTempo(F, p, o), 0) / A.length)) * døgnF(F, o); }
   // Byggelagene: to personer = ett lag; et lag med én person går halvt så fort (byggTempo)
   const byggelag = F => Math.ceil(arbeidere(F, 'bygg') / 2);
   function byggTempo(F) { const n = arbeidere(F, 'bygg'), l = byggelag(F); return l ? tempo(F, 'bygg') * n / (2 * l) : 0; }
@@ -183,7 +186,7 @@
     const døde = [];
     for (const p of F.personer.filter(q => q.helse <= 0)) { H.push(`${p.navn} er død.`); døde.push(p); F.personer = F.personer.filter(q => q !== p); færre = true; }
     // verkstedet: reparerer skadde bygg (de mest skadde først), ellers stål av skrap
-    const vk = på(F, 'verksted').filter(arbeidsfør).slice(0, B.verksted * R.perVerksted).reduce((s, p) => s + personTempo(F, p, 'verksted'), 0);
+    const vk = på(F, 'verksted').filter(arbeidsfør).slice(0, B.verksted * R.perVerksted).reduce((s, p) => s + personTempo(F, p, 'verksted'), 0) * døgnF(F, 'verksted');
     if (vk > 0) { const skadd = L.bygg.filter(b => LB.ferdig(b) && !b.arbeid && b.hp < 1).sort((a, b) => a.hp - b.hp)[0];
       if (skadd) { skadd.hp = Math.min(1, skadd.hp + R.verkstedHp * vk * d); if (skadd.hp >= 1) H.push(`Verkstedet har reparert ${LB.BYGG[skadd.type].navn.toLowerCase()}.`); }
       else { const m = R.verkstedStål * vk * d; if (LB.leggInn) LB.leggInn(L, 'stål', m); else L.lager.stål = Math.min(LB.lagerplass(L), (L.lager.stål || 0) + m); } }
@@ -311,7 +314,7 @@
   function fjern(F, id) { if (!F || id === undefined || id === null) return null; const i = F.personer.findIndex(p => p.id === id); if (i < 0) return null; return F.personer.splice(i, 1)[0]; }
   // personId(m): mannens kobling til folket – Leirvakta har tallet (p.id), en tropp har hele personposten (som ikke står i folket)
   const personId = m => (m && (typeof m.person === 'number' || typeof m.person === 'string') ? m.person : null);
-  const api = { tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
+  const api = { døgnF: null, tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.FolkRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
