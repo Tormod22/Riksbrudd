@@ -210,7 +210,7 @@
   const tall = v => String(v).replace('.', ',');
   let sistHtml = '';
   function visVelger() {
-    const h = aktiv() ? hoved() : null;
+    const h = aktiv() && !(typeof på3d !== 'undefined' && på3d) ? hoved() : null;
     if (!h) { if (velger.classList.contains('på')) { velger.classList.remove('på'); sistHtml = ''; } return; }
     const n = etasjeFor(h), et = PT.etasje(h.m, n), valg = PT.etasjeValg(h.m);
     let html = `<div class="rad"><b>${esc(NAVN[h.info.kl] || 'Bygg')}</b>` + valg.map(v => `<button type="button" data-n="${v.n}" class="${v.n === n ? 'valgt' : ''}${v.stengt ? ' grå' : ''}" title="${esc(v.navn)}${v.stengt ? ' (stengt)' : ''}">${esc(v.kort)}</button>`).join('')
@@ -309,7 +309,12 @@
     const rad = document.createElement('div'); rad.id = 'plan2dhus'; rad.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;flex:1 0 100%;margin:4px 0 0';
     const kn = document.createElement('button'); kn.type = 'button'; kn.id = 'seinnknapp'; kn.textContent = 'Se inn (plantegning)'; kn.title = 'Vegger, dører, vinduer og møbler – etasje for etasje';
     kn.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); seInn({ Pv, e: b.o.e }); };
-    rad.append(kn); H.append(rad);
+    rad.append(kn);
+    // hvor mange av ytterdørene og vinduene i 1. etasje som er barrikadert (når modellen finnes)
+    const hh = HUS.get(b.o.e.i), F1 = hh && hh.m ? PT.figur(hh.m, 1) : null;
+    if (F1) { const ute = F1.åpninger.filter(o => o.ytter && o.tilstand !== 'revet'), sp = ute.filter(o => o.sperre).length;
+      if (sp) { const sm = document.createElement('small'); sm.style.cssText = 'flex:1 0 100%;color:#b9ab8a'; sm.textContent = `Barrikadert: ${sp} av ${ute.length} vinduer og ytterdører i 1. etasje.`; rad.append(sm); } }
+    H.append(rad);
   }
   const vb0 = typeof window.visByggVed === 'function' ? window.visByggVed : null;
   if (vb0) window.visByggVed = async function (X, Y) { const ok = await vb0.apply(this, arguments); if (ok) { try { await seInnKnapp(X, Y); } catch (e) { console.warn('se inn:', e); } } return ok; };
@@ -347,6 +352,8 @@
     mesh.instanceMatrix.needsUpdate = true; mesh.userData.kilde = 'plantegning-visning.js'; R3x.scene.add(mesh); PLANK = mesh; return stk.length;
   }
   if (typeof KROKER !== 'undefined' && KROKER.sett3d) KROKER.sett3d.push((u, R) => { try { planker3d(u, R); } catch (e) { console.warn('planker i 3D:', e); } });
+  // etasjevelgeren hører til kartet: skjult i 3D (tegnekroken kjøres ikke der)
+  setInterval(() => { if (velger.classList.contains('på') && typeof på3d !== 'undefined' && på3d) visVelger(); }, 1000);
 
   // nærmere zoom når en plantegning vises (zoom() i index.html leser window.MIN_ZOOM_M)
   try { Object.defineProperty(window, 'MIN_ZOOM_M', { configurable: true, get: () => (aktiv() && (S.fokus || S.nær.some(h => h.klar)) ? R.minZoom : .1) }); } catch (e) { /* finnes */ }

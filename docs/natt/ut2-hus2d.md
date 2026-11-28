@@ -19,6 +19,7 @@ Bygger på ut1-bygning (spill/bygning.js, se docs/natt/ut1-bygning.md).
   «Sikre huset»), og plankene tas fra leirens lager. Barrikaderte åpninger tegnes med planker i plantegningen, og «Fjern plankene»
   gir halvparten av treet tilbake. **I 3D** står plankene utenpå vinduet/døra (tre planker på skrå, ett instansnett, bare for hus
   med endringer – 3D blir ikke tregere ellers).
+- Huspanelet sier «Barrikadert: 2 av 11 vinduer og ytterdører i 1. etasje» når modellen er lastet og noe er barrikadert.
 - «Sikre huset» (OverlevSpill.sikre2d) står **igjen** i huspanelet: det er et annet system (tilflukt, hvile, dekning 8 %) som
   B3 kan koble til barrikadene (f.eks. «sikret» når alle vinduer og dører i 1. etasje er barrikadert).
 
@@ -30,7 +31,7 @@ Bygger på ut1-bygning (spill/bygning.js, se docs/natt/ut1-bygning.md).
 - `docs/natt/ut2-hus2d-hjelp.json` – hjelpeteksten.
 
 ## Fellesfiler endret
-- `site/dovre-fliser/index.html`, **tre linjer**:
+- `site/dovre-fliser/index.html`, **tre linjer** (etasjevelgeren skjules i 3D av et eget sekundur, ikke i index.html):
   1. to skript-tagger rett etter bygning.js: `spill/plantegning.js` og `spill/plantegning-visning.js` (+ versjon.py),
   2. `zoom()` (ca. linje 3553): `kam.m = Math.max(0.1, …)` -> `kam.m = Math.max(window.MIN_ZOOM_M || 0.1, …)`.
      plantegning-visning.js definerer `window.MIN_ZOOM_M` (en getter): 0,03 når en plantegning vises, ellers 0,1 – som før.
@@ -90,8 +91,8 @@ trykk på en åpning innen 16 punkter (0,5–1,2 m).
   Kjeller/1/2/Loft i et leilighetsbygg, trykk på vindu, «Barrikader» (karakteren gikk til huset), barrikaden lagret og vist igjen
   etter ny lasting av siden, 0 sidefeil. Vakta: ok på PC, telefon og med 3D på; selvtest (lesInn som glemmer loggen) ble fanget.
 - /rogaland med ekte husdata: plantegningene for fire hus ved siden av hverandre, «Se inn» fra huspanelet, 40 av 40 hus like i 3D;
-  tre barrikader -> ny lasting -> 3D: 9 planker 0,15 m utenfor veggen, 1,1–1,8 m over gulvet (målt; kameraet i testen ville ikke
-  se huset fra siden, så plankene er ikke sett på bilde).
+  tre barrikader -> ny lasting -> 3D: 9 planker 0,15 m utenfor veggen, 1,1–1,8 m over gulvet (målt), og sett på bilde når du
+  går (Gå) foran veggen: tre brune planker på skrå over vinduets plass.
 
 ## Ikke gjort (senere faser)
 - Riving, nye åpninger, bjelker og søyler fra plantegningen (B3 – modellen og tegningen tåler dem alt).
