@@ -100,7 +100,7 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
   P.innerHTML = '<button class="lukk" data-sp="lukk" aria-label="Lukk">×</button><div class="shode"></div><div class="sfaner" role="tablist"></div><div class="skropp"></div><div class="sinnleid"></div>';
   document.body.appendChild(P);
   const hode = P.querySelector('.shode'), faner = P.querySelector('.sfaner'), kropp = P.querySelector('.skropp'), innleid = P.querySelector('.sinnleid');
-  faner.innerHTML = B.REGLER.FANER.map(f => `<button type="button" role="tab" data-fane="${f.id}" class="${f.klar || (f.id === 'produksjon' && window.ProduksjonSpill) ? '' : 'kommer'}">${esc(f.navn)}</button>`).join('');
+  faner.innerHTML = B.REGLER.FANER.map(f => `<button type="button" role="tab" data-fane="${f.id}" class="${f.klar || (f.id === 'produksjon' && window.ProduksjonSpill) || (f.id === 'partnere' && window.FirmaSpill) ? '' : 'kommer'}">${esc(f.navn)}</button>`).join('');
   let åpen = false, fane = 'oversikt', sistKropp = '', sistHode = '';
 
   // ---------- fanene ----------
@@ -156,7 +156,9 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     const f = B.REGLER.FANER.find(q => q.id === fane) || B.REGLER.FANER[0];
     // (Ø1) fanen Produksjon: maskinene og grafene fra spill/produksjon-visning.js (ProduksjonSpill.html / etter)
     const PR = fane === 'produksjon' && window.ProduksjonSpill ? window.ProduksjonSpill : null;
-    const h = fane === 'oversikt' ? oversikt() : fane === 'byer' ? byer() : PR ? PR.html() : kommer(f);
+    // (Ø5, ut4-firmaer) fanen Partnere: firmaene og rivalene fra spill/firma-visning.js (FirmaSpill.fane / trykk)
+    const FS = fane === 'partnere' && window.FirmaSpill && FirmaSpill.fane ? window.FirmaSpill : null;
+    const h = fane === 'oversikt' ? oversikt() : fane === 'byer' ? byer() : PR ? PR.html() : FS ? FS.fane() : kommer(f);
     const ny = h !== sistKropp || tving;
     if (ny) { const topp = kropp.scrollTop; kropp.innerHTML = h; sistKropp = h; if (!tving) kropp.scrollTop = topp; }
     if (PR) PR.etter(kropp, ny);
@@ -181,6 +183,7 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     const f = e.target.closest('.sfaner button'); if (f) { e.stopPropagation(); velgFane(f.dataset.fane, true); return; }
     const b = e.target.closest('[data-sp]'); if (!b) return; e.stopPropagation(); const s = b.dataset.sp;
     if (s.startsWith('ba-') && window.ByavtaleSpill) { if (ByavtaleSpill.trykk(b)) { sistKropp = ''; tegn(); } return; }
+    if (s.startsWith('fi-') && window.FirmaSpill) { if (FirmaSpill.trykk(b)) { sistKropp = ''; tegn(); } return; }
     if (s === 'lukk') vis(false);
     else if (s === 'gå') { const k = viktigste()[+b.dataset.i]; if (!k) return; if (k.l0) { if (k.l0.pek === 'selskap') { velgFane('kontrakter'); return; } vis(false); if (window.SelskapSpill && SelskapSpill.følgLapp) SelskapSpill.følgLapp(); } else if (k.trykk) { vis(false); k.trykk(); } }
     else if (s === 'by') { const by = byListe().find(q => String(q.id) === b.dataset.id); if (by && Number.isFinite(by.x)) { if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false); kam.x = by.x; kam.y = by.y; if (kam.m > 20) kam.m = 12; skitten = true; if (smal()) vis(false); } }
