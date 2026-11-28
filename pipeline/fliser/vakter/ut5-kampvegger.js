@@ -77,7 +77,7 @@ module.exports = {
         ok(Leir.plasser(L) === p0 && Math.abs(Leir.lagerplass(L) - l0) < .01, 'senger/lager gikk ikke tilbake etter «Gi opp huset»');
         // plantegningen viser raden med vern og «Ta over huset» (bare i 2D)
         if (!(typeof på3d !== 'undefined' && på3d)) { P2.seInn({ Pv: Pv1, e: e1 }); for (let n = 0; n < 30; n++) { await vent(100); if (P2.S.nær.some(h => h.i === i1 && h.klar)) break; }
-          skitten = true; await vent(300); P2.visVelger(); const t = (document.getElementById('plan2d') || {}).innerText || ''; ut.rad = t.split('\n').slice(-3).join(' | ');
+          skitten = true; await vent(300); P2.visVelger(); const t = (document.getElementById('plan2d') || {}).textContent || ''; ut.rad = t.split('\n').slice(-3).join(' | ');
           ok(/Vern:/.test(t) && /Ta over huset som/.test(t) && /Kaserne/.test(t), 'plantegningen viser ikke vern og «Ta over huset»: ' + ut.rad); }
       } catch (e) { ut.feil.push('unntak: ' + (e && e.stack || e)); }
       finally {

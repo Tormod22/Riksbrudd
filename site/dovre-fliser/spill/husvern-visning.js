@@ -291,7 +291,7 @@
       + `<button type="button" data-et="hv:vis" id="hvvis">${S.visVern ? 'Skjul vern' : 'Vis vern'}</button></div>`;
     if (o) html += `<div class="rad"><b>Vårt: ${esc(OT.BRUK[o.bruk].navn)}</b><small>${o.senger || 0} senger · ${String(o.lager || 0).replace('.', ',')} m³ lager</small>`
       + Object.keys(OT.BRUK).filter(b => b !== o.bruk).map(b => `<button type="button" data-et="ot:${b}">${esc(OT.BRUK[b].navn)}</button>`).join('') + '<button type="button" data-et="ot:slipp">Gi opp huset</button></div>';
-    else if (avst <= OT.REGLER.maksAvstand) html += `<div class="rad"><small>Ta over huset som:</small>` + Object.keys(OT.BRUK).map(b => `<button type="button" data-et="ot:${b}" id="ot${b}" title="${esc(OT.BRUK[b].tekst)}">${esc(OT.BRUK[b].navn)}</button>`).join('') + '</div>';
+    else if (avst <= OT.REGLER.maksAvstand) html += `<div class="rad"><span>Ta over huset som:</span>` + Object.keys(OT.BRUK).map(b => `<button type="button" data-et="ot:${b}" id="ot${b}" title="${esc(OT.BRUK[b].tekst)}">${esc(OT.BRUK[b].navn)}</button>`).join('') + '</div>';
     return html;
   }
   function klikk(hva) {
