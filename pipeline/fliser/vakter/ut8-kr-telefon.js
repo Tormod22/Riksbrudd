@@ -13,7 +13,7 @@ module.exports = { navn: 'telefon (Jonas): trykk på høy fart, angrep som henge
     const vent = ms => new Promise(r => setTimeout(r, ms)), ut = { tid, tempo };
     if (!window.Trykkvakt || !window.RekrutteringSpill || !window.FolkSpill) return { mangler: true, ...ut };
     const F = FolkSpill.tilstand(), p = F.personer.find(q => !q.karakter), S = RekrutteringSpill.tilstand();
-    ut.lokkFør = S.lokk; ut.pid = p.id; ut.lønn = p.lønn; ut.lojal = p.lojal;
+    ut.lokkFør = S.lokk; ut.pid = p.id; ut.folkÅpen = !!(document.getElementById('folkmeny') && document.getElementById('folkmeny').classList.contains('på')); ut.leirÅpen = !!(document.getElementById('leirmeny') && document.getElementById('leirmeny').classList.contains('på')); ut.lønn = p.lønn; ut.lojal = p.lojal;
     S.lokk = { id: p.id, navn: 'Ravnsund', rival: 'rød', lønn: 35000, frist: tid + 720, person: p.navn };
     const fm = document.getElementById('folkmeny'); if (!(fm && fm.classList.contains('på'))) FolkSpill.åpne(); await vent(300); FolkSpill.vis(); await vent(450);
     const b = document.getElementById('lokktillegg'); if (!b) return { ...ut, ingenKnapp: true };
@@ -123,6 +123,6 @@ module.exports = { navn: 'telefon (Jonas): trykk på høy fart, angrep som henge
   if (!vis.mangler) { krev(vis.marsj, 'Marsjer: troppen og oppdraget står ikke begge i bildet'); krev(vis.knapp, 'fant ikke «Vis i kartet» i Leir → Mål'); krev(!vis.under, '«Vis i kartet» la målet under Leir-menyen'); }
   data.vis = vis;
   // tilbake
-  await pg.evaluate(f => { tid = f.tid; const S = RekrutteringSpill.tilstand(); S.lokk = f.lokkFør || null; const p = FolkSpill.tilstand().personer.find(q => q.id === f.pid); if (p) { p.lønn = f.lønn; p.lojal = f.lojal; } if (document.getElementById('lokktillegg') || FolkSpill.vis) { try { FolkSpill.vis(); } catch (e) { /* lukket */ } } skitten = true; }, før);
+  await pg.evaluate(f => { tid = f.tid; const S = RekrutteringSpill.tilstand(); S.lokk = f.lokkFør || null; const p = FolkSpill.tilstand().personer.find(q => q.id === f.pid); if (p) { p.lønn = f.lønn; p.lojal = f.lojal; } try { FolkSpill.åpne(!!f.folkÅpen); } catch (e) { /* lukket */ } const lm = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); if (lm && lk && lm.classList.contains('på') !== !!f.leirÅpen) lk.click(); skitten = true; }, før);
   return { ok: !feil.length, tekst: feil.length ? feil.join('; ') : `lønnstillegg levert, knappen beholdt, byttet knapp fikk klikket én gang, røverlaget ga opp etter ${ang.minutter} min, kort venter under angrep, navnene går unna, Vis i kartet og Marsjer viser målet`, data };
 } };
