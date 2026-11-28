@@ -708,7 +708,8 @@ body.kort #nestelapp small{ display:none; }
     return ut;
   }
   function landLager() { if (landJobb || !S || typeof lagVindu !== 'function' || typeof Terreng === 'undefined') return landJobb;
-    const k = [...S.tilbud, ...S.sider[ID].aktive].find(q => q && q.første && q.sted && q.sted.slag === 'lager' && q.sted.land !== 2 && !q.hentet); if (!k) return null;
+    // (ut8-kr-penger) også nødlageret i reserven (Selskap.lagerJobb): på fast mark troppen kan nå, nær en veg
+    const k = [...S.tilbud, ...S.sider[ID].aktive].find(q => q && (q.første || (q.lett && q.type === 'forsyning')) && q.sted && q.sted.slag === 'lager' && q.sted.land !== 2 && !q.hentet); if (!k) return null;
     landSist = performance.now();
     landJobb = (async () => { try {
       const L = S.leir || (Sp() || {}).leir; if (!L) return; const F = SK.REGLER.første, R = LAND.maks + 300;
