@@ -3,6 +3,8 @@
 28. november 2026. Brukeren: «vi spiller jo som en privatmilitær organisasjon, og prøver å få med byer på laget … selskaper kan
 investere i organisasjonen, vi blir børsnotert på en internasjonal svartebørs … vi kan investere i andre selskaper selv, samarbeide,
 lage kontrakter for tømmer, eksportere tømmer, maskiner som raffinerer tømmer til planker … Kan du lage en plan for dette?»
+Og samme dag: «byggene i hele spillet trenger et helt nytt system, hvor hvert eneste bygg består av vegger, tak og møbler … vegger en
+senere kan rive, eller bygge vinduer på … flere etasjer, loft … om en ønsker å bygge en stor fabrikk helt selv» (kapittel 5).
 
 Planen tar også med de seks forbedringene brukeren likte i svaret på «Hvordan kan spillet gjøres bedre?»: ro i skjermen, én tydelig
 vei med kontraktene som rød tråd, en økonomi som gir valg hele spillet, en fiende som er en ekte motstander, lyd og den første halvtimen.
@@ -25,6 +27,9 @@ Selskapet ditt starter som en liten gjeng med en leir og en kontrakt. Planen gir
 Grunntanken: **kontraktene er fortsatt den røde tråden.** Hvert nytt system kommer inn gjennom en kontrakt eller en avtale, ikke som
 en ny meny du må finne selv. Sagbruket låses opp av en tømmerkontrakt, den første byavtalen kommer etter at du har beskyttet byen,
 og den første investoren ringer når selskapet har levert nok.
+
+Under alt dette ligger et nytt **byggesystem** (kapittel 5): hvert bygg i spillet består av etasjer, vegger, gulv, tak og møbler,
+husene i kartet regnes ut fra høyden og typen, og du kan rive vegger, lage vinduer og bygge din egen fabrikk del for del.
 
 Og: **produksjon dekker driften, kontrakter og byer gir vekst, børsen gir de store sprangene – og den store risikoen.**
 
@@ -132,6 +137,10 @@ Regnestykket for sagbruket (forslag): tømmer 8 000 kr/m³, planker 20 000 kr/m�
 48 m³ tømmer: ca. 140 000 kr mer verdt enn tømmeret var, pluss flis. Det dekker lønna til ca. ti personer. **Produksjon holder
 selskapet i live – kontrakter og byer får det til å vokse.**
 
+Med byggesystemet i kapittel 5 blir maskinene etter hvert **ting du setter inn i et bygg** (en sagbenk i en hall du har bygget selv,
+eller i en gammel låve du har tatt over). Den første utgaven (fase Ø1) kan være vanlige bygg i leiren, som verkstedet i dag, og flyttes
+inn i byggene når B5 er klar.
+
 ### 4.3 Det som gjør det til valg
 
 - **Kjedene henger sammen:** flis fra sagbruket fyrer kjelen, kjelen gir strøm til sagbruket. Du kan bygge deg ut av dieselen – men
@@ -143,7 +152,138 @@ selskapet i live – kontrakter og byer får det til å vokse.**
 - **I 2D** er maskinene vanlige bygg med et lite tall over seg (som kW og senger i dag): «1,1 m³/t». I 3D kan sagbruket få en egen
   modell med tømmerstabler og flishaug (valgfritt, ikke nødvendig for å spille).
 
-## 5. Varekontrakter
+## 5. Byggene: vegger, etasjer og fri bygging
+
+Brukeren 28. nov: «hvert eneste bygg skal bestå av vegger, tak og møbler og ting inne i huset … vegger som en senere kan rive, eller
+bygge vinduer på … bygg på flere etasjer kan kalkuleres basert på høyde, med loft eller ekstra etasjer … om en ønsker å bygge en stor
+fabrikk helt selv, skal en kunne bygge vegger, gulv, maskinplassering, lys og så videre.»
+
+Dette er et stort system, og det henger sammen med nesten alt annet: leting, tilflukt, riving, kamp, leiren og fabrikkene i kapittel 4.
+Derfor får det egne faser (B0–B7 i kapittel 13).
+
+### 5.1 Slik er det i dag
+
+- **Husene i kartet** (fra OpenStreetMap) er et omriss, en høyde og en type. I 3D er de én kropp med tak (`hus3d`). Når du går nær,
+  lages et interiør for **første etasje** (`spill/interior.js` og `interior3d.js`): rom, døråpninger, vinduer og møbler, alltid likt for
+  samme hus. Det finnes ikke andre etasjer, og ingenting inne i huset kan endres – bare letes gjennom og «sikres».
+- **Riving** (`spill/ressurser.js`) tar hele huset på en gang.
+- **Leiren** har to slags bygg: ferdige modeller (brakke, verksted, kontrollrom …) og **byggesettet** (`spill/byggesett.js`) med gulv,
+  vegger, dører, vinduer og tak på et rutenett på 2,4 m, høyst to etasjer.
+
+Det betyr tre ulike måter å lage et bygg på. Planen gjør dem til **én**.
+
+### 5.2 Ett bygg = én modell
+
+Hvert bygg i spillet – et hus i kartet, en brakke i leiren eller en fabrikk du har bygget selv – beskrives på samme måte:
+
+| Del | Hva den er | Kan endres |
+|---|---|---|
+| **Etasjer** | kjeller (noen), 1., 2. … etasje, loft | legge til / fjerne øverste |
+| **Gulv og dekker** | ett felt per rute, med stoff (tre, betong, fliser) | rive, legge, hull til trapp |
+| **Vegger** | stykker mellom to punkter: yttervegg eller skillevegg, stoff, tykkelse, **bærende** eller ikke | rive, bygge, forsterke |
+| **Åpninger** | dør, port, vindu – en plass i en vegg | lage, tette, barrikadere |
+| **Trapper** | mellom to etasjer | bygge, rive |
+| **Tak** | saltak, valmtak, flatt tak – med loft under når det er plass | reparere, rive (gir hull) |
+| **Møbler og ting** | senger, benker, hyller, maskiner, lamper, kasser | flytte, ta med, ødelegge |
+| **Installasjoner** | lys, strøm, varme, vann (enkelt) | koble, slå av |
+
+Alt har **stoff** (tre, mur, betong, stål, glass, blikk) og **tilstand** (helt, skadet, ødelagt). Stoffet sier hva du får når du river,
+hvor godt veggen tar imot kuler og hvor lett den brenner.
+
+### 5.3 Husene i kartet: regnet ut, ikke lagret
+
+Norge har flere millioner bygg. De kan ikke lagres med vegger og møbler. Derfor **regnes** hvert hus ut fra det kartet vet – omriss,
+høyde, type og husets nummer – på samme måte som interiøret gjør i dag: samme hus gir alltid samme plan, på alle maskiner.
+
+- **Etasjer fra høyden** (forslag): etasjehøyde 2,7 m i boliger og hytter, 3,2 m i kontor og skoler, 4,5–8 m i haller og industri.
+  Saltak: veggene står opp til der taket begynner, og resten er tak. Antall etasjer = veggens høyde / etasjehøyden, avrundet ned,
+  minst én. Et hus på 9 m med saltak blir da to etasjer og loft; en bygård på 18 m med flatt tak blir seks etasjer.
+- **Loft** når mønet ligger minst 2,2 m over loftsgulvet: med skråtak, takvinduer i noen, og ofte lager og skrot (godt for leting).
+- **Kjeller** i noen boliger og bygårder (fast per hus): bod, fyrrom, tilfluktsrom i større bygg.
+- **Planløsningen per etasje** følger typen: bolig med stue og kjøkken nede og soverom oppe, bygård med trapperom i midten og
+  leiligheter rundt, kontor med korridor, butikk med salgslokale og lager, fabrikk med hall og kontorer i to etasjer i den ene enden.
+- **Bærende vegger:** ytterveggene og én eller to vegger i midten (langs mønet) er bærende. De andre er lette skillevegger.
+- **Bare det du har endret lagres.** Et hus du aldri rører, er bare et nummer. River du en vegg, lagres «hus 81234, etasje 1, vegg 7:
+  revet». Det holder lagringen liten, og det passer med flerspiller senere (tjeneren sender bare endringene).
+
+### 5.4 Hva du kan gjøre med et bygg
+
+- **Rive en vegg:** et byggelag (eller du selv med verktøy) river én vegg. Det gir materialer etter stoffet: en tømmervegg gir
+  planker, en murvegg gir stein, en betongvegg gir litt armering (stål). En lett skillevegg tar minutter, en bærende betongvegg timer.
+- **Bærende vegger betyr noe:** river du en bærende vegg uten å sette inn en **bjelke** eller **søyle** først, sier byggelaget fra – og
+  gjør du det likevel, raser taket eller etasjen over (enkelt: den delen av dekket som ikke har noe under seg innen 6 m faller ned).
+  Regelen er den samme som i byggesettet i dag: ingen deler som svever.
+- **Lage åpninger:** en ny dør eller et nytt vindu i en vegg (krever en bjelke over i bærende vegger). Glass blir et nytt materiale
+  (kjøpes, eller hentes fra andre hus).
+- **Tette og barrikadere:** planker over vinduer og dører. Dette erstatter «Sikre huset» i dag: i stedet for én knapp ser du hvert
+  vindu og hver dør, og vet hvor fienden kan komme inn.
+- **Ta over et hus:** et hus i kartet kan bli en del av leiren (utpost, lager, verksted, fabrikk). Da kan du bygge om innvendig, akkurat
+  som med egne bygg.
+- **Rive hele huset** som i dag – men nå etasje for etasje, ovenfra, og du kan stoppe når du har nok.
+
+### 5.5 Bygge selv – helt fra grunnen
+
+Byggesettet blir **versjon 3**, med de samme delene som husene i kartet:
+
+- **Rutenett** på 1,2 m (halvparten av i dag), så vegger kan stå tettere og rom bli mindre. Større ting (haller) kan bygges på et
+  grovere rutenett på 4,8 m med ett trykk.
+- **Flere etasjer:** opptil fire etasjer for egne bygg (forslag), med trapper, og loft under saltak.
+- **Stoff per del:** tre (billig, raskt, brenner), mur (sterk, tung), betong (sterkest, tregest), stål og blikk for haller.
+- **Store spenn:** et tak eller dekke over et rom bredere enn 6 m (tre) / 12 m (stål) / 9 m (betong) trenger søyler eller bjelker. Slik
+  får fabrikkhallen søylerader – fordi det må til, ikke bare for pynt.
+- **Rom regnes ut selv** (som i dag): lukket rom med tak og dør. Spillet ser hva rommet brukes til ut fra det som står i det: senger =
+  sovesal, komfyr og benk = kjøkken, maskiner = verksted eller fabrikk.
+- **Maler:** et ferdig hus (hytte, brakke, hall, fabrikk) er bare en mal av deler. Du kan legge den ut og bygge om etterpå, eller lagre
+  ditt eget bygg som mal.
+
+### 5.6 Fabrikken du bygger selv
+
+Med dette blir maskinene i kapittel 4 noe du **plasserer inne i et bygg**, ikke egne bygg:
+
+- **Maskinplassering:** sagbruket er en sagbenk, et innmatingsbord og en utmating med et fotavtrykk (f.eks. 3,6 × 9,6 m). Det må stå på
+  et gulv som tåler det (betong for de tyngste), med plass rundt (en ruteramme der folk går).
+- **Flyt:** tømmeret kommer inn en port, plankene går ut en annen. Står maskinene i riktig rekkefølge (inn → sag → høvel → ut), går det
+  raskere (forslag: +15 %). Står de hulter til bulter, går det saktere. Ingen transportbånd i første omgang – folkene bærer.
+- **Lys:** lamper (lysrør, lyskastere) bruker strøm og lyser opp et område. Uten lys arbeider folk 40 % saktere om natta. Vinduer og
+  takvinduer gir lys om dagen gratis.
+- **Strøm:** maskiner og lamper kobles til leirens strøm (som i dag, men per bygg: en kabel fra et aggregat, en fyrkjele eller nettet).
+  Strømmen per bygg vises i Leir-menyen.
+- **Tak og varme:** en maskin under åpen himmel slites dobbelt så fort, og om vinteren arbeider folk saktere uten varme. Et ordentlig
+  bygg lønner seg altså.
+- **Lager inni:** hyller og paller er lagerplass i bygget (i stedet for egne lagertelt).
+
+### 5.7 Kamp og ødeleggelse med vegger
+
+- **Dekning per vegg:** tre stopper lite, mur og betong mye. Et lag i et hus får vern etter veggene mellom seg og fienden, ikke en fast
+  faktor.
+- **Skudd og sprengning lager hull.** En granat river en lett vegg, sprengstoff en bærende. Et hus kan rase delvis.
+- **Inngang:** fienden går inn der det er dører og ødelagte vinduer. Barrikader holder dem ute en stund.
+- **Synsfelt:** fra et vindu i 3. etasje ser du lenger (høyden teller, som i terrenget i dag).
+
+### 5.8 Slik vises det
+
+- **I 2D:** når du zoomer inn på et hus (nærmere enn ca. 1 m per punkt), vises **plantegningen** – vegger, dører, vinduer, møbler – for
+  én etasje om gangen, med en etasjevelger (Kjeller, 1, 2, Loft). Riving, åpninger og barrikader gjøres her med trykk. Alt i dette
+  kapittelet kan altså spilles i 2D.
+- **I 3D:** langt unna er husene som i dag (én kropp, få trekanter). Nær (innen ca. 40 m) og for alle hus du har endret, bygges huset av
+  modellen: vegger med hull, gulv, trapper, møbler. Inne ser du bare din egen etasje; de over er skjult.
+- **Ytelse:** bare noen få hus er «nære» om gangen (som interiøret i dag: høyst 10), og de bygges litt om gangen mellom bildene (`pust`),
+  så det ikke hakker.
+
+### 5.9 Det vanskelige
+
+Dette er det mest krevende i hele planen, og det er greit å si det rett ut:
+
+- **Flere etasjer i 3D:** trapper, dekker og loft må passe med taket utenfra. Første versjon kan ha rette trapper i et trapperom og
+  enkle loft.
+- **Skjeve hus:** mange omriss i kartet er ikke rettvinklede. Veggene må følge omrisset, og rutenettet inne må tilpasses (slik
+  interiøret gjør i dag ved å klippe mot omrisset).
+- **Høyhus:** et bygg på 30 etasjer får ikke alle etasjene med innhold. Forslag: bare de seks nederste etasjene og den øverste kan gås
+  inn i; resten er stengt («trapperommet er sperret»).
+- **Testene:** reglene (etasjer fra høyde, planløsning, bærende vegger, ras, spenn) skrives uten DOM og testes i Node på tusenvis av
+  prøvehus, slik interiøret testes i dag (504 prøvebygg).
+
+## 6. Varekontrakter
 
 Kontraktene i dag er oppdrag (eskorte, hold, rydd, hent). Planen legger til **leveranser**, som binder produksjonen til kontraktene:
 
@@ -160,7 +300,7 @@ Du kan også sette en annen til å frakte (Gråfjell Frakt tar 15 % og risikoen)
 Fristen regnes med den ekte ruta, som kontraktene alt gjør i dag («marsj ca. 21 km, ca. 6 t»). Tilbudene sier hva du har på lager
 og hva maskinene rekker: «Du har 12 m³, sagbruket gir 26 m³ per døgn – rekker det.»
 
-## 6. Samarbeid med andre selskaper
+## 7. Samarbeid med andre selskaper
 
 Firmaene blir egne aktører med et **register** (ny fane i Selskapet):
 
@@ -180,7 +320,7 @@ Måter å samarbeide på:
 
 Svik er en del av spillet: å bryte en avtale gir en gevinst nå og koster rykte («pålitelig») hos alle som får vite det.
 
-## 7. Investere i andre selskaper
+## 8. Investere i andre selskaper
 
 Når selskapet har penger til overs (nivå 3, Etablert), kan du **kjøpe andeler** i firmaene:
 
@@ -193,17 +333,17 @@ Når selskapet har penger til overs (nivå 3, Etablert), kan du **kjøpe andeler
 - **Rivalene investerer også.** Kjøper Mosevakt seg opp i Storlia Tømmer, mister du tømmeret ditt. Et kappløp om andeler er en ny
   form for krig uten skudd.
 
-## 8. Investorer og svartebørsen
+## 9. Investorer og svartebørsen
 
 Det siste trinnet: selskapet får eiere utenfra. Det gir store penger – og noen å svare til.
 
-### 8.1 Private investorer først
+### 9.1 Private investorer først
 
 Fra nivå 3 kommer det **henvendelser**: en utenlandsk rederi-eier, et svensk sikkerhetsfirma, et anonymt fond. De tilbyr penger for en
 andel (f.eks. 8 mill. kr for 10 %), eller et **lån** med rente. Hver investor har et **ønske**: avkastning, ro i et område, at du
 holder deg unna en bestemt rival, eller at du tar en bestemt kontrakt. Ønskene blir oppdrag i Neste-lappen.
 
-### 8.2 Notering på svartebørsen
+### 9.2 Notering på svartebørsen
 
 Fra nivå 4 (Ettertraktet) kan selskapet **noteres** på en internasjonal svartebørs. Forslag til navn: **Gråbørsen** (etter Grålungen)
 – en oppdiktet handelsplass der private militærselskaper, smuglere og skyggefond kjøper og selger.
@@ -222,7 +362,7 @@ Fra nivå 4 (Ettertraktet) kan selskapet **noteres** på en internasjonal svarte
 Svartebørsen har også en mørk side: **innsidehandel** (kjøp før du gjør noe stort), **ryktespredning** om rivaler, og sjeldne varer
 (den gamle svartebørsen i `region.js` flyttes hit). Alt er valgfritt og har en pris i rykte.
 
-## 9. Eksport
+## 10. Eksport
 
 Kronen er nesten verdiløs etter Kronekrakket. Eksport gir **utenlandske penger** som holder verdien – det er den store gulroten.
 
@@ -238,7 +378,7 @@ Kronen er nesten verdiløs etter Kronekrakket. Eksport gir **utenlandske penger*
 
 Tømmer og planker er det første (det brukeren nevnte). Etter hvert: frossen fisk, pukk, stål og diesel.
 
-## 10. Andre mekanikker som passer inn
+## 11. Andre mekanikker som passer inn
 
 Kortere idéer som kan komme når grunnen over står. Hver av dem er et eget, lite valg:
 
@@ -251,7 +391,7 @@ Kortere idéer som kan komme når grunnen over står. Hver av dem er et eget, li
 - **Depoter:** små lager langs handelsruta, så du ikke må kjøre helt hjem.
 - **Sesonger:** hogst er best om vinteren (frossen mark), fiske om høsten, ved selges dyrt i kulda. Vær og årstider finnes alt.
 
-## 11. De seks forbedringene
+## 12. De seks forbedringene
 
 Dette må komme **først**, fordi alt det nye legger seg oppå det som er i dag:
 
@@ -269,7 +409,7 @@ Dette må komme **først**, fordi alt det nye legger seg oppå det som er i dag:
 6. **Den første halvtimen.** Startskjerm, leir, første kontrakt, ett angrep – og så det første glimtet av mer: «Storlia Tømmer har hørt
    om dere.» Spilleren skal vite hva neste mål er etter ti minutter, og se hele veien foran seg etter tretti.
 
-## 12. Rekkefølgen
+## 13. Rekkefølgen
 
 Hver fase kan spilles ferdig før den neste begynner, og hver har egne tester (regler uten DOM) og vakter, som resten av spillet.
 
@@ -284,14 +424,29 @@ Hver fase kan spilles ferdig før den neste begynner, og hver har egne tester (r
 | **Ø6 – Eksport** | havner og grense, eksportordre, eurokreditt | 2 runder | sjo.js, kaier.js, riksgrense.js |
 | **Ø7 – Investere og børsen** | andeler i firmaer, investorer, Gråbørsen, kurs, utbytte, oppkjøp | 2–3 runder | Ø5, dagbok.js |
 | **Ø8 – Rivalene gjør det samme** | punkt 4: AI-en bruker alt over | 2–3 runder | alt over |
-| **Ø9 – Flere kjeder** | steinknuser, fiskemottak, mølle, raffineri, og kapittel 10 | etter ønske | Ø1 |
+| **Ø9 – Flere kjeder** | steinknuser, fiskemottak, mølle, raffineri, og kapittel 11 | etter ønske | Ø1 |
 
 Ø8 bør ikke vente til slutt i praksis: hver fase gir rivalene den enkleste utgaven av det nye med en gang (de kan ta byavtaler fra Ø3),
 og Ø8 gjør dem smarte.
 
+**Byggesystemet** (kapittel 5) er et eget spor ved siden av, fordi det er stort og berører mye som finnes:
+
+| Fase | Innhold | Omfang (forslag) | Bygger på |
+|---|---|---|---|
+| **B0 – Modellen** | én beskrivelse av bygg (etasjer, vegger, åpninger, tak, møbler); husene i kartet regnes ut fra omriss, høyde og type; testes på tusenvis av prøvehus – ingenting endres på skjermen ennå | 2–3 runder | interior.js, byggesett.js |
+| **B1 – Husene fra modellen** | 3D nær og plantegning i 2D bygges fra modellen (erstatter dagens interiør), 1. etasje | 2 runder | B0, interior3d.js |
+| **B2 – Etasjer, loft og kjeller** | etasjer fra høyden, trapper, loft under saltak, kjeller, etasjevelger | 2–3 runder | B1 |
+| **B3 – Rive og åpne** | rive vegger, bærende vegger og ras, nye dører/vinduer, glass, barrikader (erstatter «Sikre huset»), lagre bare endringer | 2–3 runder | B2, ressurser.js |
+| **B4 – Byggesett 3** | egne bygg med samme deler: 1,2 m-rutenett, opptil fire etasjer, stoff per del, spenn og søyler, maler; leirens ferdige bygg blir maler | 3 runder | B0–B3, leir.js |
+| **B5 – Fabrikken** | maskiner, lys, strøm per bygg, flyt inn → ut, lager i hyller | 2 runder | B4, Ø1 |
+| **B6 – Kamp med vegger** | dekning per vegg, hull etter skudd og sprengning, inngang via dører og vinduer, sikt fra etasjene | 2 runder | B3, strid.js |
+| **B7 – Ta over hus** | et hus i kartet blir del av leiren (utpost, lager, fabrikk) og kan bygges om | 1–2 runder | B3, B4 |
+
+B0–B1 kan gå samtidig med Ø0–Ø2. Dagens interiør og byggesett virker hele veien til den nye utgaven er like god.
+
 En «runde» er én arbeidsøkt som i natt-løkkene (regler, visning, tester, kontroll). Tallene er grove anslag.
 
-## 13. Slik ser det ut
+## 14. Slik ser det ut
 
 - **2D først.** Alt i planen kan spilles i kartet og panelene. 3D gir bare utseende (maskinene, tømmerstabler, båter i havnen).
 - **Panelet Selskapet** (knappen «Selskap» i kommandolinja, tast S): Oversikt (verdi, kassa, kurs, ukas resultat, de tre viktigste
@@ -299,9 +454,11 @@ En «runde» er én arbeidsøkt som i natt-løkkene (regler, visning, tester, ko
   (hver by med tillit/frykt/behov og avtale), Partnere (firmaene og rivalene), Eiere (aksjer, investorer, børsen).
 - **Kartet:** byene får en ring i avtalefargen (kunde, partner, medlem), handelsrutene en tynn strek med varer som går, maskinene et
   lite ikon.
+- **Byggene:** zoomet inn i 2D vises plantegningen med etasjevelger (Kjeller, 1, 2, Loft); i 3D bygges husene nær deg av vegger,
+  gulv og møbler, og etasjene over deg er skjult når du står inne.
 - **Telefon:** panelet er et bunnark med fanene som rad øverst, ett tall per linje.
 
-## 14. Spørsmål til deg
+## 15. Spørsmål til deg
 
 Svarene bestemmer flere av detaljene over. Ingenting bygges før du har sagt ja til en fase.
 
@@ -316,3 +473,8 @@ Svarene bestemmer flere av detaljene over. Ingenting bygges før du har sagt ja 
 8. **Rekkefølgen:** er det greit å starte med Ø0 (ro og start) og Ø1 (sagbruk), eller vil du ha byene først?
 9. **Hvor mye økonomi?** Skal det være et spill der du kan «bare» drive industri en stund, eller skal krigen alltid presse på?
 10. **Avisa og byrådslederne:** vil du ha portretter og navn (som karakteren din), eller holde det enkelt?
+11. **Bærende vegger og ras:** skal det være ekte (river du feil vegg, raser taket), eller bare en advarsel?
+12. **Rutenettet for egne bygg:** 1,2 m (fint, flere trykk) eller beholde 2,4 m som i dag?
+13. **Etasjer:** hvor mange etasjer skal du kunne bygge selv (forslaget er fire)? Og skal høyhus i byene kunne gås inn i bare de
+    nederste etasjene?
+14. **Byggesystemet eller økonomien først?** Begge er store. Forslaget er å starte begge (B0 og Ø0/Ø1) og la dem møtes i fabrikken (B5).
