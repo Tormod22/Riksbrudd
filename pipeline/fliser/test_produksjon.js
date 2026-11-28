@@ -57,8 +57,8 @@ function leir(typer = ['sagbruk']) { const L = Leir.ny(); typer.forEach((t, i) =
 
 // fyrkjelen: flis først, så ved; gir 30 kW og varme
 { const L = leir(['fyrkjele']), P = P0.ny(); L.lager.flis = 1; L.lager.ved = 1;
-  let r = P0.steg(P, L, 60, { kraft: 1 }); ok(nær(r.kw, 30) && nær(r.varme, 3) && nær(L.lager.flis, .5) && nær(L.lager.ved, 1), 'kjelen brenner flis: 30 kW og varme til tre fyringssteder');
-  L.lager.flis = 0; r = P0.steg(P, L, 60, { kraft: 1 }); ok(nær(r.kw, 30) && nær(L.lager.ved, .65), 'tom for flis: brenner ved');
+  let r = P0.steg(P, L, 60, { kraft: 1 }); ok(nær(r.kw, 30) && nær(r.varme, 3) && nær(L.lager.flis, 1 - P0.REGLER.maskiner.fyrkjele.inn[0].flis) && nær(L.lager.ved, 1), 'kjelen brenner flis: 30 kW og varme til tre fyringssteder');
+  L.lager.flis = 0; r = P0.steg(P, L, 60, { kraft: 1 }); ok(nær(r.kw, 30) && nær(L.lager.ved, 1 - P0.REGLER.maskiner.fyrkjele.inn[1].ved), 'tom for flis: brenner ved');
   L.lager.ved = 0; r = P0.steg(P, L, 60, { kraft: 1 }); ok(r.kw === 0 && r.status[1].tekst === 'tom for brensel', 'tom for brensel');
   ok(nær(P0.varmeAndel(3, 2), 1) && nær(P0.varmeAndel(1.5, 3), .5) && P0.varmeAndel(3, 0) === 0, 'varmeAndel'); }
 
@@ -85,6 +85,16 @@ function leir(typer = ['sagbruk']) { const L = Leir.ny(); typer.forEach((t, i) =
 ok(P0.oppskrift('sagbruk') === '2 m³ tømmer → 1,1 m³ planker + 0,7 m³ flis per time', P0.oppskrift('sagbruk'));
 ok(P0.merke('sagbruk', { går: true, drift: 1 }) === '1,1 m³/t' && P0.merke('fyrkjele', { går: true, drift: 1 }) === '30 kW' && P0.merke('sagbruk', null) === '0 m³/t', 'merket i kartet');
 { const P = P0.ny(); P.laget.tre = 1; P.sto.tom = 2; const Q = P0.fraJSON(JSON.parse(JSON.stringify(P))); ok(Q.laget.tre === 1 && Q.sto.tom === 2 && P0.fraJSON({ versjon: 7 }).gikk === 0, 'lagring'); }
-ok(P0.verdi({ laget: { tre: 1.1, flis: .7 }, brukt: { tømmer: 2 } }, Leir.MATERIALER) === 22000 + 2100 - 16000, 'verdien av det som er laget');
+ok(P0.verdi({ laget: { tre: 1.1, flis: .7 }, brukt: { tømmer: 2 } }, Leir.MATERIALER) === Math.round(1.1 * Leir.MATERIALER.tre.pris + .7 * Leir.MATERIALER.flis.pris - 2 * Leir.MATERIALER.tømmer.pris), 'verdien av det som er laget');
+// (ut4-balanse2) varselet før kjøpet: saga med kjele første dag (ca. 17 mill. i kassa, leiren bruker ca. 0,5 mill. i døgnet) gir varsel med
+// teksten spilleren ser; med 40 mill. og en inntekt ikke; uten kjele når strømmen rekker blir det billigere; ukjent bygg gir null
+{ const V = P0.driftVarsel('sagbruk', { kasse: 17e6, kost: 7.7e6, kjeleKost: 4.8e6, perDøgn: 5e5, inntekt: 0 });
+  ok(V && V.varsel && V.kost === 12.5e6 && /fyrkjele/.test(V.tekst) && /Ta kontrakter først/.test(V.tekst) && /vent til dere har/.test(V.tekst), 'varsel: saga med kjele uten inntekt – ' + (V && V.tekst));
+  const U = P0.driftVarsel('sagbruk', { kasse: 40e6, kost: 7.7e6, kjeleKost: 4.8e6, perDøgn: 5e5, inntekt: 2e6 });
+  ok(U && !U.varsel && !/vent til/.test(U.tekst), 'ikke varsel med nok penger – ' + (U && U.tekst));
+  const K = P0.driftVarsel('sagbruk', { kasse: 17e6, kost: 7.7e6, kjeleKost: 0, perDøgn: 5e5, inntekt: 1e6 });
+  ok(K && K.kost === 7.7e6 && K.drift < V.drift && !/fyrkjele/.test(K.tekst), 'uten kjele: bare saga');
+  ok(V.trengs === P0.REGLER.varsel.døgn * (5e5 + V.drift) && V.etter === 17e6 - 12.5e6, 'varselet regner kassa etter kjøpet mot døgnene med drift');
+  ok(P0.driftVarsel('brakke', { kasse: 1 }) === null && P0.driftVarsel('vedkløyver', { kasse: 1e8, kost: 1e6, perDøgn: 1e5, inntekt: 1 }).varsel === false, 'bare maskinene, og vedkløyveren med mye penger uten varsel'); }
 
 console.log(feil ? `${feil} FEIL` : 'Alle testene for produksjon.js er ok'); process.exit(feil ? 1 : 0);
