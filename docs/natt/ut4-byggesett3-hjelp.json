@@ -1,0 +1,8 @@
+[
+  ["Byggesettet: rutenett og etasjer", "Byggesettet bruker ruter på 1,2 m. Vil du bygge en stor hall, trykk «Rutenett: hall 4,8 m» – da legger hvert trykk 4,8 m store deler. Du kan bygge opptil fire etasjer: «Etasje» velger hvilken (auto = neste ledige).", "Leiren"],
+  ["Stoff, pris og byggetid", "Hver del har sitt stoff. Tre er billig og raskt, men brenner. Mur er sterk og tung, betong sterkest og tregest, og blikk (stål) er raskt og godt for haller. Linja over knappene sier pris og tid per del og hvor langt taket kan spenne.", "Leiren"],
+  ["Spenn: søyler og bjelker", "Et tak eller gulv kan ikke være for langt fra en vegg: tre høyst 6 m, betong og mur 9 m, stål 12 m. Er rommet for bredt, sier byggesettet «Spennet er 8,4 m – sett inn en søylerad». Under «Bærende» setter du søyler (to trykk = en søylerad) eller bjelker som hviler på veggene.", "Leiren"],
+  ["Trapper", "Under «Trapp» setter du en trapp (1,2 × 3,6 m) på gulvet. Over trappa må det være åpent – gulvet i etasjen over får et hull der. Folkene går opp trappa, og rommene over regnes først som brukbare når en trapp går dit.", "Leiren"],
+  ["Ferdige hus og egne maler", "Under «Hus» ligger hytte, brakke, betongbu og en hall i stål med port og søylerad. «Lagre et bygg som mal» og to trykk rundt et bygg du har laget, gjør det til en egen mal du kan legge ut igjen (også snudd).", "Leiren"],
+  ["Plantegningen av egne bygg", "Fanen «Plan» i byggesettet viser byggene dine som plantegning, én etasje om gangen: rom, dører, vinduer, trapper, søyler og bjelker.", "Leiren"]
+]
