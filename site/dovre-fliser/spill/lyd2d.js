@@ -24,6 +24,8 @@
     radioEtterOrdre: 3,
     // høyst så mange radio-, ordre- og pengelyder til sammen per minutt (alarm og telefon telles ikke)
     perMinutt: 10,
+    // alarmen: høyst så mange ganger i et vindu (sekunder) – et langt angrep sender mange varsler, sirenen skal ikke gå hele tiden
+    alarmVindu: [3, 900],
     // penger: inn fra dette beløpet gir kassaapparat, ut fra dette beløpet gir et klunk (lønn og vedlikehold hver spilltime er mindre)
     kasseFra: 20000, klunkFra: 250000,
     // nivåtrinnene (lydstyrke) og standardvalget
@@ -64,6 +66,7 @@
     if (sist[navn] !== undefined && nå - sist[navn] < m) return { ok: false, grunn: 'for kort tid siden' };
     if ((navn === 'radio' || navn === 'stille') && sist.ordre !== undefined && nå - sist.ordre < R.radioEtterOrdre) return { ok: false, grunn: 'svar på ordren' };
     if (TELLES.includes(navn) && (hist || []).filter(t => nå - t < 60).length >= R.perMinutt) return { ok: false, grunn: 'for mange lyder siste minutt' };
+    if (navn === 'alarm' && (sist.alarmer || []).filter(t => nå - t < R.alarmVindu[1]).length >= R.alarmVindu[0]) return { ok: false, grunn: 'alarmen har gått nok' };
     return { ok: true, grunn: '' };
   }
   // Hvor tydelig maskinene i leiren høres (0–1): m = kam.m, d = avstanden fra skjermens midte til leiren i punkter, side = lengste skjermside
@@ -172,7 +175,8 @@
   function hør(navn, o = {}) {
     const nå = sek(), t = o.tving ? { ok: true, grunn: '' } : tillat(navn, nå, sist, hist);
     if (!t.ok) { siste.unshift({ navn, t: +nå.toFixed(2), spilt: false, grunn: t.grunn, hva: o.hva || '' }); siste.length = Math.min(siste.length, 30); return false; }
-    sist[navn] = nå; if (TELLES.includes(navn)) { hist.push(nå); while (hist.length && nå - hist[0] > 60) hist.shift(); }
+    sist[navn] = nå; if (navn === 'alarm') { sist.alarmer = (sist.alarmer || []).filter(t => nå - t < REGLER.alarmVindu[1]); sist.alarmer.push(nå); }
+    if (TELLES.includes(navn)) { hist.push(nå); while (hist.length && nå - hist[0] > 60) hist.shift(); }
     teller[navn] = (teller[navn] || 0) + 1;
     const m = motor(), kan = KANAL[navn] === 'kart' ? kanKart : kanMeld, dempet = !(m && Lyd.på() && REGLER.trinn[valg[KANAL[navn]]] > 0 && !document.hidden);
     if (m && LYDER[navn] && !dempet) { try { LYDER[navn](m.ac, kan, m.ac.currentTime + .02); } catch (e) { /* lyden skal aldri stoppe spillet */ } }
@@ -230,7 +234,7 @@
     const ac = m.ac, nå = ac.currentTime, sett = (k, v, tid) => vedv[k].g.gain.setTargetAtTime(v, nå, tid || .5);
     kanKart.gain.setTargetAtTime(REGLER.trinn[valg.kart], nå, .2); kanMeld.gain.setTargetAtTime(REGLER.trinn[valg.meld], nå, .2);
     const B = NV.bakgrunn, vf = V.vind && Number.isFinite(V.vind.fart) ? V.vind.fart : 3;
-    sett('vind', B.vind * .07, 1.2); vedv.vind.f.frequency.setTargetAtTime(260 + 380 * Math.min(1, vf / 16) + 60 * Math.sin(nå * .4), nå, 1.5); sett('regn', B.regn * .05, 1.2);
+    sett('vind', B.vind * .14, 1.2); vedv.vind.f.frequency.setTargetAtTime(260 + 380 * Math.min(1, vf / 16) + 60 * Math.sin(nå * .4), nå, 1.5); sett('regn', B.regn * .09, 1.2);
     // saga: lyden stiger og synker (en stokk om gangen, ca. 5 s), aggregatet durer jevnt, fyrkjelen rumler og spraker
     const sag = mk.sag ? nær * Math.min(1, .7 + .15 * mk.sag) : 0, kutt = .55 + .45 * Math.max(0, Math.sin(nå * 2 * Math.PI / 5));
     sett('sagBånd', sag * .045 * kutt, .25); sett('sagMotor', sag * .035, .4); vedv.sagMotor.o.frequency.setTargetAtTime(110 + 22 * kutt, nå, .3);

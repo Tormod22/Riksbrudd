@@ -34,7 +34,10 @@ ok(L.pengeLyd(0) === null && L.pengeLyd(NaN) === null, 'ingen endring, ingen lyd
   ok(!L.tillat('kasse', 420, {}, mange).ok, 'høyst ' + R.perMinutt + ' meldingslyder i minuttet');
   ok(L.tillat('alarm', 420, {}, mange).ok && L.tillat('telefon', 420, {}, mange).ok, 'alarm og telefon telles ikke med');
   ok(L.tillat('kasse', 470, {}, mange).ok, 'etter et minutt er det plass igjen');
-  ok(!L.tillat('sirene', 1, {}, []).ok, 'ukjent lyd spilles ikke'); }
+  ok(!L.tillat('sirene', 1, {}, []).ok, 'ukjent lyd spilles ikke');
+  const [n, vindu] = R.alarmVindu, alarmer = Array.from({ length: n }, (_, i) => 1000 + i * R.minst.alarm);
+  const nå = 1000 + n * R.minst.alarm; ok(!L.tillat('alarm', nå, { alarm: alarmer[n - 1], alarmer }, []).ok, `et langt angrep: alarmen går høyst ${n} ganger på ${vindu / 60} min`);
+  ok(L.tillat('alarm', 1000 + vindu + 1, { alarm: alarmer[n - 1], alarmer }, []).ok, 'et nytt angrep senere får alarm igjen'); }
 for (const n of Object.keys(R.minst)) ok(R.minst[n] >= 1, n + ': aldri oftere enn hvert ' + R.minst[n] + '. sekund');
 
 // maskinene
