@@ -22,7 +22,8 @@
     maksNærPC: 12, maksNærMobil: 6,
     // gangen (radianer): lårene, kneet, armene og albuen
     lår: .5, kne: .85, arm: .45, albue: .35,
-    // knele (sårede): kroppen senkes så høyre kne står i bakken
+    // knele (sårede): kroppen senkes så høyre kne står i bakken. (ut9-liv) kne < 0 = sitte: begge beina som høyre bein når den kneler
+  // (låret vannrett, leggen rett ned), kroppen like mye ned – hofta havner ca. 0,5 m over gulvet, som på en stol eller benk
     senk: .43,
     // geværet: grepet (der høyre hånd er) og vinklene, lavt på marsj og oppe ved skulderen når laget skyter; venstre hånd på forskjeftet
     // (kolben skal ligge i skulderen når laget sikter: grepet langt nok fram og litt til høyre, løpet litt inn mot midten)
@@ -79,11 +80,11 @@ void fG(inout vec3 p, inout vec3 n, vec3 o, vec2 cs) { vec3 q = p - o; p = vec3(
 float fBit(float m, float b) { return mod(floor(m / b + 0.001), 2.0); }
 vec3 fPakk(float v) { float r = floor(v / 65536.0 + 0.00001); float g = floor((v - r * 65536.0) / 256.0 + 0.00001); return vec3(r, g, v - r * 65536.0 - g * 256.0) / 255.0; }
 void figur(inout vec3 p, inout vec3 n) {
-  float lem = aLem.x, f = aGang.x, A = aGang.y, sikt = aGang.z, kne = aPose.y;
+  float lem = aLem.x, f = aGang.x, A = aGang.y, sikt = aGang.z, kne = abs(aPose.y), sitt = aPose.y < 0.0 ? 1.0 : 0.0;
   if (lem > 2.5 && lem < 6.5) {
     float side = mod(lem, 2.0) > 0.5 ? 1.0 : -1.0, fs = side > 0.0 ? f : f + 3.14159;
-    if (lem > 4.5) fR(p, n, vec3(0.0, side * ${f6(R.hofteY)}, ${f6(R.kneZ)}), fCS(mix(-max(0.0, cos(fs + 0.5)) * ${f6(R.kne)} * A, side > 0.0 ? -1.45 : -1.75, kne)));
-    fR(p, n, vec3(0.0, side * ${f6(R.hofteY)}, ${f6(R.hofteZ)}), fCS(mix(sin(fs) * ${f6(R.lår)} * A, side > 0.0 ? 1.45 : 0.22, kne)));
+    if (lem > 4.5) fR(p, n, vec3(0.0, side * ${f6(R.hofteY)}, ${f6(R.kneZ)}), fCS(mix(-max(0.0, cos(fs + 0.5)) * ${f6(R.kne)} * A, side + 2.0 * sitt > 0.0 ? -1.45 : -1.75, kne)));
+    fR(p, n, vec3(0.0, side * ${f6(R.hofteY)}, ${f6(R.hofteZ)}), fCS(mix(sin(fs) * ${f6(R.lår)} * A, side + 2.0 * sitt > 0.0 ? 1.45 : 0.22, kne)));
   } else if (lem > 0.5) {
     float krum = aPose.x;
     if (lem > 6.5 && lem < 10.5) {

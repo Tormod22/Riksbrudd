@@ -183,7 +183,7 @@
     const kø = VL.ryddbare(LB, L, V, R.rydd.maks * 2), tatt = new Set([...P.rydd.values()].map(r => r.enhet));
     for (const [pid, r] of [...P.rydd]) { const s = Gs.pers[pid]; if (!s || !s.ved || !s.mål) continue;
       if (r.fase === 'hent' && String(s.mål.k).startsWith('rydd:')) r.fase = 'bær';
-      else if (r.fase === 'bær') { const p = F.personer.find(q => q.id === pid), n = VS.rydd(OP.har(p, 'ryddig') ? R.rydd.ryddig : R.rydd.perTur); if (n && typeof skitten !== 'undefined') skitten = true; P.rydd.delete(pid); } }
+      else if (r.fase === 'bær') { const p = F.personer.find(q => q.id === pid), n = VS.rydd(OP.har(p, 'ryddig') ? R.rydd.ryddig : R.rydd.perTur, r.enhet); if (n && typeof skitten !== 'undefined') skitten = true; P.rydd.delete(pid); } }
     if (!dag) return;
     const ledige = F.personer.filter(p => p.oppgave === 'fri' && arbeidsfør(p) && !p.borte && !P.rydd.has(p.id) && !harPlanUtenRydd(p.id)).sort((a, b) => (OP.har(b, 'ryddig') - OP.har(a, 'ryddig')) || a.id - b.id);
     for (const p of ledige) { if (P.rydd.size >= R.rydd.maks) break; const u = kø.find(q => !tatt.has(q.id)); if (!u) break; tatt.add(u.id);
