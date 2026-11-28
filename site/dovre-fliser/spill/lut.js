@@ -127,6 +127,20 @@
     arbeidsbenk: { navn: 'verktøybenken', tittel: 'Verktøybenk', kg: 30, kat: { utstyr: 5, ammo: .4 }, n: [0, 3] },
     verktøyvogn: { navn: 'verktøyvogna', tittel: 'Verktøyvogn', kg: 20, kat: { utstyr: 5 }, n: [0, 2] },
     tønne: { navn: 'tønna', tittel: 'Tønne', kg: 25, kat: { drikke: 1, utstyr: 1 }, n: [0, 1] },
+    // (ut9-mobler, 28. nov) de nye møblene i spill/interior.js som det kan ligge noe i (Claudes forslag)
+    garderobe: { navn: 'garderobeskapet', tittel: 'Garderobeskap', kg: 50, kat: { utstyr: 3, sekk: 2, våpen: .4, ammo: 1, medisin: .6 }, n: [0, 3] },
+    kommode: { navn: 'kommoden', tittel: 'Kommode', kg: 12, kat: { utstyr: 3, medisin: 1.5, ammo: .4 }, n: [0, 2] },
+    overskap: { navn: 'overskapene', tittel: 'Overskap', kg: 15, kat: { mat: 5, drikke: 2, medisin: .6 }, n: [0, 3] },
+    skoskap: { navn: 'skoskapet', tittel: 'Skoskap', kg: 8, kat: { utstyr: 3, sekk: 1 }, n: [0, 2] },
+    stålreol: { navn: 'stålreolen', tittel: 'Stålreol', kg: 60, kat: { utstyr: 4, mat: 1.5, drikke: 1.5, ammo: .6 }, n: [0, 4] },
+    gondol: { navn: 'gondolen', tittel: 'Gondol', kg: 50, kat: { mat: 6, drikke: 3, utstyr: .6 }, n: [1, 5] },
+    drikkekjøler: { navn: 'drikkekjøleren', tittel: 'Drikkekjøler', kg: 30, kald: true, kat: { drikke: 8, fersk: 1 }, n: [1, 4] },
+    frysedisk: { navn: 'frysedisken', tittel: 'Frysedisk', kg: 60, kald: true, kat: { fersk: 5, mat: 2 }, n: [1, 5] },
+    speilskap: { navn: 'speilskapet', tittel: 'Speilskap', kg: 3, kat: { medisin: 6 }, n: [0, 2] },
+    verkstedbenk: { navn: 'verkstedbenken', tittel: 'Verkstedbenk', kg: 35, kat: { utstyr: 6, ammo: .4 }, n: [0, 3] },
+    vitrineskap: { navn: 'vitrineskapet', tittel: 'Vitrineskap', kg: 10, kat: { utstyr: 2, drikke: 1 }, n: [0, 2] },
+    skjenk: { navn: 'skjenken', tittel: 'Skjenk', kg: 15, kat: { drikke: 3, mat: 2, utstyr: 1 }, n: [0, 2] },
+    safe: { navn: 'safen', tittel: 'Safe', kg: 10, kat: { våpen: 1, ammo: 2, medisin: 1 }, n: [0, 2] },
     bil: { navn: 'bilen', tittel: 'Bil', kg: 40, kat: { utstyr: 3, sekk: 1, drikke: 1, mat: 1, ammo: 1, medisin: .6, våpen: .3 }, n: [0, 3] },
   };
   const TYPER = Object.keys(BEHOLDERE);

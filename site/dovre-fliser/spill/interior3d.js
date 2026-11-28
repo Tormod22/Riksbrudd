@@ -102,6 +102,9 @@
     const t = (x0, x1, y0, y1, z0, z1, c = TRE) => k(x0, x1, y0, y1, z0, z1, c, 'tre'), s = (x0, x1, y0, y1, z0, z1, c = f) => k(x0, x1, y0, y1, z0, z1, c, 'tøy');
     const bein = (z, c = MØRK, q = .05, st = 'glatt') => { for (const sx of [-1, 1]) for (const sy of [-1, 1]) k(sx * (b - q) - q / 2, sx * (b - q) + q / 2, sy * (d - q) - q / 2, sy * (d - q) + q / 2, 0, z, c, st); };
     const lys = v => f.map(x => Math.min(1, x * v));
+    // (ut9-mobler) tingene på hyllene (spill/hyller.js): fyllingen fast per møbel (m.fyll/m.kat kan settes utenfra), hva etter rommet
+    const HY = window.Hyller, husFyll = butikk => (m.fyll !== undefined ? m.fyll : HY ? HY.husFyll(m.f, butikk) : .6), husKatt = () => m.kat || (HY ? HY.husKat(m.type, m.rolle) : [{ kat: 'mat', andel: 1 }]);
+    const hylleVarer = o => { if (!HY) return; for (const q of HY.varer(Object.assign({ f: m.f, fyll: husFyll(o.butikk || m.rolle === 'butikk'), kat: husKatt(), maks: 16 }, o))) k(q[0], q[1], q[2], q[3], q[4], q[5], q[6]); };
     switch (m.type) {
       case 'sofa': case 'lenestol': { const arm = m.type === 'sofa' ? .2 : .15, n = m.type === 'sofa' ? Math.max(2, Math.round(m.b / .75)) : 1, w = (m.b - 2 * arm) / n;
         s(-b, b, -d, d, .1, .3); s(-b, b, -d, -d + .2, .3, h); s(-b, -b + arm, -d, d, .3, .6); s(b - arm, b, -d, d, .3, .6); bein(.1, MØRK, .06);
@@ -112,8 +115,10 @@
       case 'tvbenk': t(-b, b, -d, d, .08, h, LYST_TRE); bein(.08, MØRK, .05); k(-b * .78, b * .78, -.05, .0, h + .06, h + .78, [.05, .05, .07]); k(-b * .78 + .03, b * .78 - .03, .0, .012, h + .09, h + .75, [.1, .13, .18]);
         k(-.16, .16, -.1, .1, h, h + .06, MØRK); k(-b + .05, -b + .25, -d + .06, d - .06, h, h + .22, MØRK); break;
       case 'bokhylle': case 'hylle': { const c = m.type === 'hylle' ? LYST_TRE : TRE; t(-b, b, -d, -d + .03, 0, h, c); t(-b, -b + .03, -d, d, 0, h, c); t(b - .03, b, -d, d, 0, h, c); t(-b, b, -d, d, h - .03, h, c);
-        for (let z = .05, n = 0; z < h - .1; z += .38, n++) { t(-b, b, -d, d, z, z + .03, c);
-          for (let x = -b + .05, j = 0; x < b - .1; j++) { const w = .03 + hash(n * 31 + j, m.f * 1e6) * .05, hb = .2 + hash(j * 7 + n, m.f * 1e6 + 3) * .1; if (hash(j + n * 13, m.f * 1e6 + 9) > .18) k(x, x + w, -d + .06, d - .05, z + .03, z + .03 + hb, TØY[(j * 5 + n * 3) % TØY.length]); x += w + .004; } } break; }
+        const nv = []; for (let z = .05, n = 0; z < h - .1; z += .38, n++) { t(-b, b, -d, d, z, z + .03, c); nv.push(z + .03); if (m.type === 'hylle') continue;
+          for (let x = -b + .05, j = 0; x < b - .1; j++) { const w = .03 + hash(n * 31 + j, m.f * 1e6) * .05, hb = .2 + hash(j * 7 + n, m.f * 1e6 + 3) * .1; if (hash(j + n * 13, m.f * 1e6 + 9) > .18) k(x, x + w, -d + .06, d - .05, z + .03, z + .03 + hb, TØY[(j * 5 + n * 3) % TØY.length]); x += w + .004; } }
+        // (ut9-mobler) hyllene i boder, garasjer og lagre: ting fra rommet (spill/hyller.js) i stedet for bøker – noen er tomme
+        if (m.type === 'hylle') hylleVarer({ l: m.b - .1, d: m.d - .06, y0: -d + .04, nivåer: nv, hv: .32 }); break; }
       case 'spisebord': t(-b, b, -d, d, h - .05, h, LYST_TRE); bein(h - .05, LYST_TRE, .07, 'tre'); t(-b + .1, b - .1, -d + .1, d - .1, h - .13, h - .05, LYST_TRE);
         k(-.13, .13, -.13, .13, h, h + .14, [.7, .78, .8], 'glatt', true); k(-.1, .1, -.1, .1, h + .14, h + .36, [.3, .52, .28], 'glatt', true); break;
       case 'pult': t(-b, b, -d, d, h - .04, h, LYST_TRE); k(-b + .03, -b + .08, -d + .05, d - .05, 0, h - .04, STÅL); t(b - .5, b - .04, -d + .04, d - .04, .08, h - .04, LYST_TRE);
@@ -176,11 +181,12 @@
         for (const sx of [-1, 1]) for (const sy of [-1, 1]) k(sx * b - (sx > 0 ? .06 : 0), sx * b + (sx > 0 ? 0 : .06), sy * d - (sy > 0 ? .06 : 0), sy * d + (sy > 0 ? 0 : .06), 0, h, st);
         // (runde 15, sammenlignet med bilder fra norske butikker: tette hyller med sterke pakkefarger, hvit bakplate, prislist i hyllekanten)
         if (reol) k(-b + .06, b - .06, -.015, .015, 0, h, [.94, .94, .92]);
-        const dz = reol ? .33 : 1.3; for (let z = reol ? .12 : .1, n = 0; z < h - .2; z += dz, n++) { k(-b, b, -d, d, z, z + .04, c); if (reol) for (const sy of [-1, 1]) k(-b, b, sy * d - .012, sy * d + .012, z - .03, z + .04, [.18, .2, .24]);
+        // (ut9-mobler) plyndret: en del av varene er borte (fast per reol, spill/hyller.js)
+        const rf = Math.max(.05, husFyll(true)); const dz = reol ? .33 : 1.3; for (let z = reol ? .12 : .1, n = 0; z < h - .2; z += dz, n++) { k(-b, b, -d, d, z, z + .04, c); if (reol) for (const sy of [-1, 1]) k(-b, b, sy * d - .012, sy * d + .012, z - .03, z + .04, [.18, .2, .24]);
           // varene i grupper (en vare i 2–4 fjes side om side = én kloss), så en reol ikke blir mange tusen trekanter
           const hv = Math.min(dz - .1, reol ? .25 : .95), w0 = reol ? .145 : 1.1;
           for (let x = -b + .08, j = 0; x < b - .1; j++) { const w = reol ? w0 * (2 + (j * 5 + n * 3 + Math.floor(m.f * 7)) % 3) : w0, steg = reol ? w + .015 : 1.3; if (x + w > b - .05) break; const hh = hv * (.6 + ((j + n) % 3) * .2);
-            if (reol) { if ((j * 7 + n * 3 + Math.floor(m.f * 9)) % 9) for (const y of [-d + .04, .02]) k(x, x + w, y, y + d - .06, z + .04, z + .04 + hh, VARER[(j * 3 + n * 5 + Math.floor(m.f * 13) + (y > 0 ? 4 : 0)) % VARER.length]); }
+            if (reol) { if ((j * 7 + n * 3 + Math.floor(m.f * 9)) % 9 && hash(j * 13 + n * 5, m.f * 1e6 + 21) < rf) for (const y of [-d + .04, .02]) k(x, x + w, y, y + d - .06, z + .04, z + .04 + hh, VARER[(j * 3 + n * 5 + Math.floor(m.f * 13) + (y > 0 ? 4 : 0)) % VARER.length]); }
             else if ((j * 7 + n * 3 + Math.floor(m.f * 9)) % 6) { t(x, x + w, -d + .06, d - .06, z + .05, z + .17, LYST_TRE); k(x + .05, x + w - .05, -d + .1, d - .1, z + .17, z + .17 + hh, [.72, .58, .4], 'tøy'); }
             x += steg; } } break; }
       case 'kasse': k(-b, b, -d, d, 0, h - .1, [.34, .36, .4]); k(-b, b * .45, -d + .08, d - .08, h - .1, h - .08, MØRK); k(-b, b, -d - .01, d + .01, h - .1, h - .06, STÅL); k(b * .55, b * .95, -.16, .16, h - .06, h + .28, [.1, .1, .12]);
@@ -275,6 +281,81 @@
       case 'medisinskap': k(-b, b, -d, d, 0, h, HVIT); k(-.12, .12, d, d + .012, 1.38, 1.44, [.8, .12, .12]); k(-.03, .03, d, d + .012, 1.29, 1.53, [.8, .12, .12]); k(b - .12, b - .08, d, d + .03, .9, 1.1, STÅL); break;
       case 'døpefont': k(-.22, .22, -.22, .22, 0, .78, [.84, .82, .78], 'glatt', true); k(-b, b, -d, d, .78, h, [.84, .82, .78], 'glatt', true); k(-b * .75, b * .75, -d * .75, d * .75, h - .02, h + .005, [.5, .62, .7], 'glatt', true); break;
       case 'kopimaskin': k(-b, b, -d, d, 0, h, [.85, .85, .83]); k(-b + .05, b - .05, -d + .05, d - .05, h, h + .06, MØRK); k(-b * .6, b * .2, d - .02, d + .1, h - .3, h - .25, HVIT); break;
+      // ---------- (ut9-mobler, 28. nov) DE NYE MØBLENE (brukeren: «flere forskjellige hyller, flere forskjellige møbler») ----------
+      // Tingene på hyllene kommer fra spill/hyller.js (vare/hylleVarer under): fyllingen er fast per møbel, noen hyller er tomme.
+      case 'hjørnesofa': { const sd = Math.min(.92, m.d - .2); k(-b, b, -d, -d + sd, 0, .18, MØRK); k(b - sd, b, -d + sd, d, 0, .18, MØRK); s(-b, b, -d, -d + sd, .18, .44); s(b - sd, b, -d + sd, d, .18, .44);
+        s(-b, b, -d, -d + .2, .44, h); s(b - .2, b, -d + .2, d, .44, h); s(-b, -b + .18, -d + .2, -d + sd, .44, .62);
+        for (let i = 0; i < 3; i++) { const x0 = -b + .22 + i * (m.b - .5) / 3; s(x0, x0 + (m.b - .5) / 3 - .04, -d + .22, -d + .42, .44, .72, lys(1.12)); } break; }
+      case 'peis': { const ST = m.f > .5 ? [.56, .54, .52] : [.6, .4, .32]; k(-b - .1, b + .1, -d, d + .35, 0, .05, [.3, .3, .32], 'betong'); k(-b, b, -d, d, .05, h - .08, ST, 'betong');
+        k(-b * .55, b * .55, d - .01, d + .004, .3, .82, [.07, .06, .06]); k(-b * .42, b * .42, d - .15, d - .02, .31, .38, [.86, .42, .12]); t(-b - .06, b + .06, -d, d + .07, h - .08, h, TRE);
+        k(-b * .45, b * .45, -d, d - .12, h, 2.2, ST, 'betong'); if (m.f * 7 % 1 < .6) for (let i = 0; i < 3; i++) t(b + .12, b + .3, d + .05 + i * .1, d + .14 + i * .1, .05, .14 + (i % 2) * .05, [.5, .36, .22]); break; }
+      case 'vitrineskap': { const c = m.f > .55 ? HVIT : TRE; t(-b, b, -d, -d + .02, 0, h, c); t(-b, -b + .04, -d, d, 0, h, c); t(b - .04, b, -d, d, 0, h, c); t(-b, b, -d, d, h - .05, h, c); t(-b, b, -d, d, 0, .86, c);
+        k(-.006, .006, d, d + .01, .08, .8, MØRK); for (const x of [-.06, .03]) k(x, x + .03, d, d + .025, .7, .74, MESSING);
+        for (const z of [1.22, 1.56]) t(-b + .04, b - .04, -d + .02, d - .03, z - .02, z, c); k(-.012, .012, d - .025, d, .86, h - .05, c);
+        hylleVarer({ l: m.b - .1, d: m.d - .08, y0: -d + .03, nivåer: [.86, 1.22, 1.56], hv: .28 }); break; }
+      case 'gyngestol': { for (const sx of [-1, 1]) { t(sx * b - .03, sx * b + .03, -d, d, .02, .08, TRE); t(sx * b - .03, sx * b + .03, -d * .7, -d * .4, .08, .4, TRE); t(sx * b - .03, sx * b + .03, d * .4, d * .7, .08, .4, TRE); t(sx * b - .03, sx * b + .03, -d * .5, d * .6, .6, .64, TRE); }
+        s(-b + .04, b - .04, -d * .6, d * .6, .4, .48); t(-b + .04, b - .04, -d * .65, -d * .55, .48, h, TRE); s(-b + .08, b - .08, -d * .55, -d * .45, .5, h - .1, lys(1.1)); break; }
+      case 'piano': { const P2 = m.f > .7 ? [.36, .22, .14] : [.07, .06, .06]; k(-b, b, -d, d - .24, 0, h, P2); k(-b, b, d - .24, d, .68, .76, P2); k(-b + .05, b - .05, d - .22, d - .03, .76, .785, [.94, .93, .9]);
+        for (let i = 0; i < 7; i++) { const x = -b + .12 + i * (m.b - .24) / 7; k(x, x + .1, d - .22, d - .12, .785, .8, [.06, .06, .06]); }
+        for (const sx of [-1, 1]) k(sx * (b - .04) - .03, sx * (b - .04) + .03, d - .24, d - .02, 0, .68, P2); k(-b * .4, b * .4, d - .3, d - .24, .95, 1.15, P2); break; }
+      case 'skjenk': { const c = m.f > .5 ? TRE : LYST_TRE; t(-b, b, -d, d, .12, h, c); bein(.12, c, .04, 'tre'); const n = 3;
+        for (let i = 0; i < n; i++) { const x0 = -b + .02 + i * (m.b - .04) / n; t(x0 + .01, x0 + (m.b - .04) / n - .01, d, d + .012, .16, h - .05, lys(.9).map((v, q) => c[q] * 1.05)); k(x0 + .1, x0 + .13, d + .012, d + .03, h - .2, h - .14, MESSING); } break; }
+      case 'overskap': { const z0 = 1.42, n = Math.max(1, Math.round(m.b / .6)), w = m.b / n, c = m.f > .4 ? HVIT : [.62, .7, .66]; k(-b, b, -d, d - .015, z0, h, c);
+        for (let i = 0; i < n; i++) { const x0 = -b + i * w; k(x0 + .008, x0 + w - .008, d - .015, d, z0 + .01, h - .01, c.map(v => Math.min(1, v * 1.04))); } k(-b + .02, b - .02, d, d + .015, z0 + .03, z0 + .045, STÅL); break; }
+      case 'kjøkkenøy': { k(-b, b, -d + .05, d - .05, .1, h - .04, HVIT); k(-b + .04, b - .04, -d + .08, d - .08, 0, .1, MØRK); k(-b - .04, b + .04, -d - .04, d + .04, h - .04, h, [.3, .3, .32]);
+        for (let i = 0; i < 3; i++) { const x0 = -b + .03 + i * (m.b - .06) / 3; k(x0 + .01, x0 + (m.b - .06) / 3 - .01, d - .05, d - .04, .14, h - .1, [.96, .96, .94]); k(x0 + .15, x0 + .35, d - .04, d - .02, h - .16, h - .14, STÅL); } break; }
+      case 'vifte': { const z0 = 1.62; k(-b, b, -d, d, z0, z0 + .1, STÅL); k(-b + .02, b - .02, -d + .02, d - .02, z0 - .01, z0, [.3, .3, .32]); k(-.13, .13, -d, -d + .26, z0 + .1, h, STÅL); break; }
+      case 'oppvaskmaskin': k(-b, b, -d, d - .02, .08, h - .04, HVIT); k(-b + .04, b - .04, -d + .06, d - .06, 0, .08, MØRK); k(-b + .01, b - .01, d - .02, d, .1, h - .06, [.93, .93, .91]);
+        k(-b + .1, b - .1, d, d + .025, h - .16, h - .13, STÅL); k(-b, b, -d, d + .02, h - .04, h, [.3, .3, .32]); break;
+      case 'krydderhylle': { const z0 = 1.38, c = LYST_TRE; t(-b, b, -d, d, z0, z0 + .02, c); t(-b, b, -d, d, z0 + .24, z0 + .26, c); t(-b, -b + .02, -d, d, z0, z0 + .45, c); t(b - .02, b, -d, d, z0, z0 + .45, c);
+        k(-b + .02, b - .02, d - .02, d - .01, z0 + .05, z0 + .07, MØRK); hylleVarer({ l: m.b - .06, d: m.d - .02, nivåer: [z0 + .02, z0 + .26], hv: .18, maks: 9 }); break; }
+      case 'barneseng': { const c = m.f > .5 ? HVIT : LYST_TRE; for (const sx of [-1, 1]) for (const sy of [-1, 1]) t(sx * b - (sx > 0 ? .04 : 0), sx * b + (sx > 0 ? 0 : .04), sy * d - (sy > 0 ? .04 : 0), sy * d + (sy > 0 ? 0 : .04), 0, h, c);
+        for (const sx of [-1, 1]) { t(sx * b - .02, sx * b + .02, -d, d, h - .05, h, c); t(sx * b - .02, sx * b + .02, -d, d, .2, .24, c); for (let i = 1; i < 5; i++) t(sx * b - .012, sx * b + .012, -d + i * m.d / 5 - .012, -d + i * m.d / 5 + .012, .24, h - .05, c); }
+        for (const sy of [-1, 1]) t(-b, b, sy * d - .02, sy * d + .02, .2, h, c); s(-b + .04, b - .04, -d + .04, d - .04, .24, .36, [.9, .9, .86]); s(-b + .05, b - .05, -d * .1, d - .06, .36, .4, lys(1.2)); break; }
+      case 'kommode': { const c = m.f > .6 ? HVIT : m.f > .3 ? LYST_TRE : TRE; t(-b, b, -d, d, .08, h, c); k(-b + .04, b - .04, -d + .04, d - .04, 0, .08, MØRK);
+        for (let i = 0; i < 3; i++) { const z = .12 + i * (h - .16) / 3; t(-b + .03, b - .03, d, d + .012, z + .01, z + (h - .16) / 3 - .01, c); k(-.06, .06, d + .012, d + .025, z + (h - .16) / 6 - .012, z + (h - .16) / 6 + .012, MESSING); } break; }
+      case 'garderobe': { const c = m.f > .5 ? HVIT : LYST_TRE, n = Math.max(2, Math.round(m.b / .7)); k(-b, b, -d, d - .03, 0, h, c, 'tre');
+        for (let i = 0; i < n; i++) { const x0 = -b + i * m.b / n, sp = i === Math.floor(n / 2) && m.f * 9 % 1 < .5; k(x0 + .005, x0 + m.b / n - .005, d - .03 + (i % 2) * .012, d - .012 + (i % 2) * .012, .05, h - .05, sp ? [.72, .8, .86] : c.map(v => v * .97)); }
+        k(-b, b, -d, d + .01, h - .04, h, c); break; }
+      case 'sminkebord': { t(-b, b, -d, d, h - .04, h, HVIT); bein(h - .04, HVIT, .04, 'tre'); t(-b + .05, b - .05, d - .02, d, h - .16, h - .05, HVIT); k(-b * .55, b * .55, -d, -d + .03, h + .04, h + .72, HVIT);
+        k(-b * .5, b * .5, -d + .03, -d + .035, h + .08, h + .68, [.74, .84, .9]); for (let i = 0; i < 3; i++) k(b * .2 + i * .07, b * .2 + i * .07 + .04, -d + .1, -d + .14, h, h + .08 + i * .03, [[.86, .6, .7], [.9, .9, .86], [.5, .3, .5]][i]); break; }
+      case 'badekar': k(-b, b, -d, d, 0, h, HVIT); k(-b + .07, b - .07, -d + .07, d - .07, h - .012, h + .002, [.8, .86, .9]); k(-b + .08, -b + .14, -.03, .03, h, h + .22, STÅL); k(-b + .08, -b + .2, -.02, .02, h + .19, h + .22, STÅL); break;
+      case 'vaskemaskin': k(-b, b, -d, d - .02, 0, h, HVIT); k(-.19, .19, d - .02, d + .01, .2, .58, [.3, .33, .36]); k(-.13, .13, d + .01, d + .016, .26, .52, [.6, .66, .7]);
+        k(-b, b, d - .02, d + .004, h - .12, h - .02, [.86, .86, .84]); k(b - .16, b - .08, d + .004, d + .02, h - .1, h - .04, MØRK); break;
+      case 'speilskap': { const z0 = 1.3; k(-b, b, -d, d - .01, z0, h, HVIT); k(-b + .02, b - .02, d - .01, d, z0 + .03, h - .03, [.72, .82, .88]); k(-b + .04, b - .04, d - .03, d + .01, h, h + .03, [.98, .95, .8]); break; }
+      case 'skoskap': { const c = m.f > .5 ? HVIT : LYST_TRE; k(-b, b, -d, d, 0, .05, MØRK); t(-b, b, -d, d, .05, h, c); for (const x0 of [-b + .02, .01]) { t(x0, x0 + b - .03, d, d + .012, .1, h - .05, c); k(x0 + b * .4, x0 + b * .6, d + .012, d + .03, h - .12, h - .09, STÅL); } break; }
+      case 'permreol': case 'stålreol': { const st = m.type === 'stålreol', c = st ? [.72, .74, .76] : LYST_TRE, nv = st ? [.1, .52, .94, 1.36, 1.78] : [.05, .43, .81, 1.19, 1.57];
+        for (const sx of [-1, 1]) for (const sy of [-1, 1]) k(sx * b - (sx > 0 ? .04 : 0), sx * b + (sx > 0 ? 0 : .04), sy * d - (sy > 0 ? .04 : 0), sy * d + (sy > 0 ? 0 : .04), 0, h, st ? [.56, .58, .6] : c, st ? 'glatt' : 'tre');
+        if (!st) t(-b, b, -d, -d + .02, 0, h, c); for (const z of nv) k(-b, b, -d, d, z - .03, z, c, st ? 'glatt' : 'tre'); k(-b, b, -d, d, h - .03, h, c, st ? 'glatt' : 'tre');
+        hylleVarer({ l: m.b - .1, d: m.d - .06, nivåer: nv, hv: .34 }); break; }
+      case 'vannkjøler': k(-b, b, -d, d, 0, h - .38, [.88, .88, .86]); k(-.14, .14, -.14, .14, h - .38, h - .02, [.5, .7, .88], 'glatt', true); k(-.15, .15, -.15, .15, h - .4, h - .36, [.4, .55, .7]);
+        k(-.1, -.04, d, d + .04, .9, .96, [.2, .4, .8]); k(.04, .1, d, d + .04, .9, .96, [.8, .2, .15]); k(-b + .04, b - .04, d - .1, d + .02, .72, .74, MØRK); break;
+      case 'safe': k(-b, b, -d, d, 0, h, [.22, .24, .26]); k(-b + .04, b - .04, d, d + .015, .04, h - .04, [.28, .3, .32]); k(-.07, .07, d + .015, d + .03, h * .55, h * .55 + .14, STÅL);
+        k(.12, .2, d + .015, d + .04, h * .4, h * .4 + .03, STÅL); break;
+      case 'gondol': { const fyll = husFyll(true), kat = husKatt(); k(-b, b, -d, d, 0, .12, [.3, .32, .36]); k(-b, b, -.02, .02, .12, h, [.92, .92, .9]); for (const sx of [-1, 1]) k(sx * b - (sx > 0 ? .05 : 0), sx * b + (sx > 0 ? 0 : .05), -d, d, 0, h, GRÅ);
+        k(-b, b, -.04, .04, h - .04, h, GRÅ); const nv = [.12, .5, .88];
+        for (const sy of [-1, 1]) { for (const z of nv.slice(1)) { k(-b, b, sy > 0 ? .02 : -d, sy > 0 ? d : -.02, z - .03, z, [.9, .9, .88]); k(-b, b, sy * d - .012, sy * d + .012, z - .05, z, [.18, .2, .24]); }
+          if (window.Hyller) for (const q of Hyller.varer({ l: m.b - .12, d: d - .05, y0: .03, nivåer: nv, hv: .3, fyll, kat, f: (m.f + (sy > 0 ? .37 : .71)) % 1, maks: 24 })) k(q[0], q[1], sy > 0 ? q[2] : -q[3], sy > 0 ? q[3] : -q[2], q[4], q[5], q[6]); }
+        break; }
+      case 'frysedisk': { k(-b, b, -d, d, .05, h - .06, HVIT); k(-b + .04, b - .04, -d + .04, d - .04, 0, .05, MØRK); k(-b + .05, b - .05, -d + .05, d - .05, h - .36, h - .34, [.82, .9, .95]);
+        if (window.Hyller) for (const q of Hyller.varer({ l: m.b - .14, d: m.d - .14, nivåer: [h - .34], hv: .2, fyll: husFyll(true), kat: [{ kat: 'mat', andel: .8 }, { kat: 'drikke', andel: .2 }], f: m.f, maks: 14 })) k(q[0], q[1], q[2], q[3], q[4], q[5], q[6]);
+        for (const y of [-d, -.015, d - .03]) k(-b, b, y, y + .03, h - .06, h - .03, STÅL); for (const x of [-b, -.015, b - .03]) k(x, x + .03, -d, d, h - .06, h - .03, STÅL); break; }
+      case 'drikkekjøler': { const c = m.f > .5 ? [.78, .12, .1] : [.92, .92, .9]; k(-b, b, -d, -d + .05, 0, h, c); for (const sx of [-1, 1]) k(sx * b - (sx > 0 ? .05 : 0), sx * b + (sx > 0 ? 0 : .05), -d, d, 0, h, c);
+        k(-b, b, -d, d, 0, .1, c); k(-b, b, -d, d, h - .22, h, c); k(-b + .05, b - .05, -d + .05, -d + .06, .1, h - .22, [.9, .95, .97]); const nv = [.1, .48, .86, 1.24];
+        for (const z of nv.slice(1)) k(-b + .05, b - .05, -d + .05, d - .06, z - .02, z, [.7, .74, .76]); hylleVarer({ l: m.b - .14, d: m.d - .14, y0: -d + .06, nivåer: nv, hv: .3, butikk: true });
+        k(-b + .05, b - .05, d - .03, d, h - .25, h - .22, GRÅ); k(-b + .05, b - .05, d - .03, d, .1, .13, GRÅ); k(b - .1, b - .06, d, d + .04, .8, 1.3, STÅL); break; }
+      case 'vognrekke': { const n = 4; for (let i = 0; i < n; i++) { const x0 = -b + i * .14; k(x0, x0 + .62, -d + .04, d - .04, .42 + i * .01, .9 + i * .01, [.6, .62, .65]); k(x0 + .02, x0 + .6, -d + .07, d - .07, .9 + i * .01, .905 + i * .01, [.3, .32, .34]);
+          k(x0 + .58, x0 + .62, -d, d, .92, 1, [.78, .12, .1]); } k(-b, b, -d + .05, d - .05, .1, .13, STÅL); for (const x of [-b + .05, b - .1]) for (const y of [-d + .04, d - .1]) k(x, x + .06, y, y + .06, 0, .1, MØRK); break; }
+      case 'verktøyvegg': { const c = m.f > .5 ? [.72, .58, .4] : [.5, .52, .54]; k(-b, b, -d, d - .04, .9, h, c, 'tre'); k(-b, b, -d, d - .03, h - .04, h, MØRK);
+        const V = [[.72, .14, .12], STÅL, MØRK, [.86, .68, .14]]; for (let i = 0; i < 9; i++) { const x = -b + .15 + (i % 5) * (m.b - .3) / 4, z = 1.1 + Math.floor(i / 5) * .38 + (i % 2) * .06, w = .05 + (i % 3) * .05, hh = .12 + ((i * 7) % 4) * .06;
+          if (Math.sin((m.f + 1) * (i + 3) * 37) > -.6) k(x - w / 2, x + w / 2, d - .04, d, z, z + hh, V[(i + Math.floor(m.f * 5)) % 4]); } break; }
+      case 'verkstedbenk': { const R2 = [.72, .14, .12]; t(-b, b, -d, d, h - .06, h, [.62, .48, .32]); k(b - .62, b - .04, -d + .04, d - .04, .05, h - .06, R2); for (let i = 0; i < 4; i++) k(b - .6, b - .06, d - .04, d - .03, .1 + i * .2, .27 + i * .2, [.8, .2, .16]);
+        for (const sy of [-1, 1]) k(-b + .04, -b + .1, sy * d - (sy > 0 ? .06 : 0), sy * d + (sy > 0 ? 0 : .06), 0, h - .06, STÅL); t(-b + .05, b - .64, -d + .05, d - .05, .14, .17, [.62, .48, .32]);
+        k(-b + .15, -b + .38, d - .14, d + .04, h, h + .1, [.2, .32, .5]); k(-b + .15, -b + .38, d - .02, d + .04, h + .1, h + .16, [.2, .32, .5]); k(-b + .24, -b + .29, d + .04, d + .22, h + .05, h + .07, STÅL); break; }
+      case 'luftkompressor': k(-b, b, -d * .75, d * .75, .1, .44, [.82, .2, .14]); k(-b * .4, b * .3, -d * .5, d * .5, .44, .68, [.2, .2, .22]); k(b * .4, b * .7, -.04, .04, .44, .52, STÅL, 'glatt', true);
+        for (const x of [-b + .06, b - .14]) k(x, x + .08, -d, d, 0, .12, MØRK); k(-b - .02, -b + .04, -d * .6, d * .6, .44, .75, STÅL); break;
+      case 'dekkstativ': { for (const sx of [-1, 1]) k(sx * b - (sx > 0 ? .04 : 0), sx * b + (sx > 0 ? 0 : .04), -d, d, 0, h, [.4, .42, .46]); for (const z of [.03, .7]) { k(-b, b, -d, -d + .04, z, z + .03, [.4, .42, .46]); k(-b, b, d - .04, d, z, z + .03, [.4, .42, .46]);
+        const n = Math.floor(husFyll() * 5); for (let i = 0; i < n; i++) { const x = -b + .08 + i * .22; k(x, x + .19, -d + .03, d - .03, z + .03, z + .65, [.1, .1, .11]); k(x - .004, x + .194, -.1, .1, z + .24, z + .44, [.58, .6, .62]); } } break; }
       // (ut8-industri) industrimaskinene: kasse-modellene i spill/industri.js (Industri.MODELLER kan byttes ut)
       default: if (!(window.Industri && Industri.deler(m, k))) k(-b, b, -d, d, 0, h, GRÅ);
     }
@@ -303,6 +384,11 @@
         case 'skranke': k(-b * .3, -b * .3 + .32, -d * .3, d * .2, h, h + .2, MØRK); k(-b * .3 + .04, -b * .3 + .28, d * .2, d * .2 + .02, h + .2, h + .42, [.15, .2, .25]); if (r(1) < .7) ark(b * .4, 0); break;
         case 'vask': k(-b * .8, b * .8, -d - .005, -d + .015, 1.25, 1.85, [.72, .84, .9]); k(-b * .85, b * .85, -d - .006, -d + .01, 1.22, 1.88, hv); k(b * .5, b * .5 + .06, -d * .5, -d * .5 + .06, h, h + .12, [.3, .6, .5], 'glatt', true); break;
         case 'toalett': k(-b - .16, -b - .04, -d + .02, -d + .12, .6, .72, hv, 'glatt', true); break;
+        // (ut9-mobler) småting på de nye møblene
+        case 'skjenk': case 'kommode': if (r(1) < .6) lampe(b * .55, -d * .2); if (r(2) < .5) k(-b * .4 - .12, -b * .4 + .12, -.1, .1, h, h + .06, [.7, .5, .3], 'glatt', true); if (r(3) < .4) bok(0, d * .2, 2); break;
+        case 'kjøkkenøy': if (r(1) < .6) { k(-.15, .15, -.12, .12, h, h + .07, [.86, .84, .78], 'glatt', true); for (let q = 0; q < 3; q++) k(-.08 + q * .07, -.03 + q * .07, -.05, .0, h + .05, h + .1, [[.8, .2, .15], [.9, .7, .2], [.4, .6, .2]][q], 'glatt', true); } if (r(2) < .5) kopp(b * .6, 0); break;
+        case 'skoskap': if (r(1) < .5) k(-b * .3, -b * .3 + .14, -.06, .06, h, h + .03, MESSING); if (r(2) < .4) lampe(b * .5, 0); break;
+        case 'verkstedbenk': for (let q = 0; q < 3; q++) if (r(q + 5) < .7) k(-b * .1 + q * .3, -b * .1 + q * .3 + .22, d * .1 - q * .05, d * .1 - q * .05 + .035, h, h + .025, q % 2 ? STÅL : MØRK); break;
         case 'skohylle': for (let q = 0; q < 3; q++) if (r(q) < .8) for (const dy of [-.07, .07]) k(-b + .1 + q * .28, -b + .19 + q * .28, dy - .05 + d * .1, dy + .05 + d * .1, .19, .28, q % 2 ? [.3, .2, .14] : MØRK); break;
       } }
     return K;
@@ -554,7 +640,7 @@
     // (runde 12) høyballene og traktoren i låven tegnes avrundet av spill/lave3d.js (Lave3d.tegner) – her bare skyggen under dem
     const låvenTegner = !!(window.Lave3d && Lave3d.tegner && Lave3d.slag(pl) === 'låve');
     for (const m of pl.møbler) { yield 'møbel'; if (låvenTegner && Lave3d.tegner[m.type]) { blob(m.x, m.y, m.a, m.b / 2 + .22, m.d / 2 + .22); continue; } let nK = 0; for (const K of deler(m)) { kasse(m.x, m.y, m.a, K); if (++nK % 48 === 0) yield 'møbeldel'; }
-      if (m.h > .15 && m.type !== 'tavle' && m.type !== 'knagger') blob(m.x, m.y, m.a, m.b / 2 + .22, m.d / 2 + .22);
+      if (m.h > .15 && m.type !== 'tavle' && m.type !== 'knagger' && !(Interior.VEGGHENGT && Interior.VEGGHENGT[m.type])) blob(m.x, m.y, m.a, m.b / 2 + .22, m.d / 2 + .22);
       if (m.type === 'salongbord') { const tf = TØY[Math.floor(hash(pl.i, 41) * TØY.length)], tw = Math.min(1.1, m.b / 2 + .5), td2 = .8;
         kasse(m.x, m.y, m.a, [-tw, tw, -td2, td2, .004, .014, tf, 'tøy']); kasse(m.x, m.y, m.a, [-tw + .12, tw - .12, -td2 + .12, td2 - .12, .014, .017, mørk(tf, 1.25), 'tøy']); } }
     // FORLATT (17. nov): spor etter at folk dro – ark og esker på gulvet og en mørk flekk her og der. Fast per bygg og rom; ikke i leiren din.

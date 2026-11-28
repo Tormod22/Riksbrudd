@@ -47,6 +47,18 @@
     garderobe: { navn: 'Garderobeskap', liter: 400, klima: 'tørt', tar: { kat: ['klær'], lag: ['klær'] }, passer: ['klær'], tekst: 'Klær holder seg tørre' },
     kiste: { navn: 'Kiste', liter: 180, klima: 'tørt', tar: null, passer: ['tørt', 'klær'], tekst: 'Lukket kiste – tørt og klær' },
     tønne: { navn: 'Vanntønne', liter: 200, klima: 'tørt', tar: { lag: ['vann'] }, passer: ['vann'], tekst: 'Vann (flasker og dunker)' },
+    // (ut9-mobler, 28. nov, brukeren: «flere forskjellige hyller») TI HYLLETYPER TIL: hver med egen plass og det som passer der.
+    // passer kan nå også være en kategori (mat, kjøkken, drikke, kontor …) – ikke bare et lag. Liter og strøm er Claudes forslag.
+    trehylle: { navn: 'Trehylle', liter: 250, klima: 'tørt', tar: null, passer: ['tørt', 'mat', 'kjøkken', 'fritid'], tekst: 'Vanlig hylle – mat, kjøkkenting og bøker' },
+    stålreol: { navn: 'Stålreol', liter: 600, klima: 'tørt', tar: null, passer: ['tørt', 'verktøy', 'elektro'], tekst: 'Kraftig reol med fem hyller – tåler tunge ting' },
+    vitrine: { navn: 'Glassvitrine', liter: 120, klima: 'tørt', tar: { kat: ['kjøkken', 'fritid', 'drikke', 'kontor', 'hygiene'] }, passer: ['fritid', 'kjøkken'], tekst: 'Glass og fint porselen, bøker og spill' },
+    kjøkkenhylle: { navn: 'Kjøkkenhylle', liter: 80, klima: 'tørt', tar: { kat: ['mat', 'drikke', 'kjøkken'] }, passer: ['mat', 'kjøkken'], tekst: 'Krydder, glass og bokser nær kjøkkenet' },
+    kjølereol: { navn: 'Kjølereol', liter: 800, klima: 'kjøl', strøm: .5, tar: null, passer: ['kjøl'], tekst: 'Åpen kjølereol som i butikken (trenger strøm)' },
+    verktøyskap: { navn: 'Verktøyskap', liter: 250, klima: 'tørt', låst: true, tar: { kat: ['verktøy', 'elektro'] }, passer: ['verktøy', 'elektro'], tekst: 'Låst stålskap for verktøy og elektro' },
+    arkivskap: { navn: 'Arkivskap', liter: 150, klima: 'tørt', låst: true, tar: { kat: ['kontor', 'medisin', 'elektro'] }, passer: ['kontor'], tekst: 'Låste skuffer – papirer, kart og batterier' },
+    smalhylle: { navn: 'Smal hylle', liter: 120, klima: 'tørt', tar: null, passer: ['hygiene', 'tørt'], tekst: 'Smal hylle for småting – passer på badet' },
+    hjørnehylle: { navn: 'Hjørnehylle', liter: 90, klima: 'tørt', tar: null, passer: ['hygiene', 'fritid'], tekst: 'Liten hylle i hjørnet' },
+    tønnestativ: { navn: 'Tønnestativ', liter: 600, klima: 'tørt', tar: { lag: ['vann'], kat: ['drikke'] }, passer: ['vann', 'drikke'], tekst: 'Tre liggende tønner – vann og drikke' },
     // standardplassen i leirens egne bygg
     lagertelt: { navn: 'Lagerteltet', liter: 600, klima: 'tørt', tar: null, passer: ['tørt', 'vann', 'verktøy'], tekst: 'Kasser og hyller i teltet' },
     container: { navn: 'Containeren', liter: 1200, klima: 'tørt', tar: null, passer: ['tørt', 'vann', 'verktøy', 'klær'], tekst: 'Hyller i containeren' },
@@ -88,7 +100,7 @@
   const ledig = (T, P) => (P.liter === Infinity ? Infinity : Math.max(0, P.liter - brukt(T, P.id)));
   // hvor godt plassen passer tingen: lavere er bedre. Den som eldes saktest først, så den som passer, så tørre plasser for tørre ting
   // (kjøleplassen spares til ferskvarene), skap for ett slag (medisinskap, verktøytavle, tønne) foran hyllene, og «ute» alltid sist.
-  function rang(P, id) { const g = TI[id]; if (P.id === 'ute') return 1e9; const f = faktor(P, id), pass = P.passer.includes(g.lag) ? 0 : 1, spar = P.klima !== 'tørt' && kl(g) === 'tørt' ? 1 : 0;
+  function rang(P, id) { const g = TI[id]; if (P.id === 'ute') return 1e9; const f = faktor(P, id), pass = P.passer.includes(g.lag) || P.passer.includes(g.kat) ? 0 : 1, spar = P.klima !== 'tørt' && kl(g) === 'tørt' ? 1 : 0;
     return f * 100 + pass * 10 + spar * 3 + (P.tar ? -5 : 0) + (P.låst && g.kat !== 'medisin' ? 2 : 0); }
   const beste = (Ps, id) => Ps.filter(P => tar(P, id)).sort((a, b) => rang(a, id) - rang(b, id) || (a.bygg && b.bygg ? a.bygg.id - b.bygg.id : 0));
 
