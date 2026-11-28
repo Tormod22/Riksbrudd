@@ -632,7 +632,8 @@ function tegnInfraPå(g, vx0, vy1, m, W, H, valg = {}) {
       for (const [i, j] of [[0, 2], [n - 2, n - 4]]) { const px = sx(a[i]), py = sy(a[i + 1]), v = Math.atan2(sy(a[j + 1]) - py, sx(a[j]) - px), r = Math.max(3, Math.min(7, 9 / m));
         g.strokeStyle = 'rgba(20,16,10,.8)'; g.lineWidth = 3.5; g.beginPath(); g.arc(px, py, r, v + Math.PI / 2, v + 3 * Math.PI / 2); g.stroke();
         g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.6; g.stroke(); } }
-    if ((o.e.lengde || 0) >= 2000 && m < 300 || m < 15) { const a = o.deler[0], k = (a.length >> 2) << 1; etikett(a[k], a[k + 1], o.e.navn, 5, 'italic 12px "Cormorant Garamond",serif', '#d8cfb8', -8); }
+    // (ut8-kr-telefon, Jonas: krigskartet var fullt av tunnelnavn) – ikke når krigskartet er åpent: der er det tettstedene som teller
+    if (((o.e.lengde || 0) >= 2000 && m < 300 || m < 15) && !(window.StrategiSpill && StrategiSpill.erÅpen && StrategiSpill.erÅpen())) { const a = o.deler[0], k = (a.length >> 2) << 1; etikett(a[k], a[k + 1], o.e.navn, 5, 'italic 12px "Cormorant Garamond",serif', '#d8cfb8', -8); }
   }
   // dammer
   for (const o of synlige('dam')) { g.beginPath(); sti(o); g.strokeStyle = 'rgba(20,16,10,.85)'; g.lineWidth = Math.max(4, 10 / m) + 2; g.stroke();
@@ -3817,7 +3818,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/strid.js?v=76235e3a9c"></script>
 <script src="/dovre-fliser/spill/strid-visning.js?v=8312315358"></script>
 <script src="/dovre-fliser/spill/forsvar.js?v=bcc3f1e776"></script>
-<script src="/dovre-fliser/spill/forsvar-visning.js?v=bf28f829bc"></script>
+<script src="/dovre-fliser/spill/forsvar-visning.js?v=1070b5f725"></script>
 <script src="/dovre-fliser/spill/forsvar-kamp.js?v=d4fc8f777e"></script>
 <script src="/dovre-fliser/spill/trussel-lagring.js?v=094e646fc5"></script>
 <script src="/dovre-fliser/spill/forsvar-oppgjor.js?v=a333b33c2b"></script>
@@ -3838,7 +3839,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/byavtale-visning.js?v=3b26f01168"></script>
 <script src="/dovre-fliser/spill/grense3d.js?v=ff4307ef73"></script>
 <script src="/dovre-fliser/spill/omraade.js?v=3e83faf5fb"></script>
-<script src="/dovre-fliser/spill/samfunn.js?v=e932e1beb6"></script>
+<script src="/dovre-fliser/spill/samfunn.js?v=7dd20fe304"></script>
 <script src="/dovre-fliser/spill/samfunn-visning.js?v=95272c879f"></script>
 <script src="/dovre-fliser/spill/formasjon.js?v=2efb6ba6b7"></script>
 <script src="/dovre-fliser/spill/formasjon-visning.js?v=0139de1651"></script>
@@ -3888,7 +3889,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/scenario.js?v=710e187d82"></script>
 <script src="/dovre-fliser/spill/scenario-visning.js?v=f86aa5e946"></script>
 <script src="/dovre-fliser/spill/neste.js?v=ec62617b66"></script>
-<script src="/dovre-fliser/spill/telefonro.js?v=c3b506ca03"></script>
+<script src="/dovre-fliser/spill/telefonro.js?v=6b6e764319"></script>
 <script src="/dovre-fliser/spill/kompakt.js?v=dd00a6f624"></script>
 <script src="/dovre-fliser/spill/lys3d.js?v=9a7e1bb68e"></script>
 <script src="/dovre-fliser/spill/luft.js?v=98926811be"></script>
@@ -3902,7 +3903,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/kartlys.js?v=cc4dff1b0b"></script>
 <script src="/dovre-fliser/spill/tegninger.js?v=ac492cfb0d"></script>
 <script src="/dovre-fliser/spill/modeller-leir2.js?v=87982223b6"></script>
-<script src="/dovre-fliser/spill/leirvirkning.js?v=b0b7c50793"></script>
+<script src="/dovre-fliser/spill/leirvirkning.js?v=904aef5f81"></script>
 <script src="/dovre-fliser/spill/leirvirkning-visning.js?v=6420c8ec13"></script>
 <script src="/dovre-fliser/spill/flistips.js?v=313b3c74a5"></script>
 <script src="/dovre-fliser/spill/opplaering.js?v=6084ea8325"></script>

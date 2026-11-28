@@ -65,13 +65,27 @@
     return ut.map(q => ({ ...q, d: Math.hypot(q.x - s.x, q.y - s.y) })).filter(q => q.d > 30 && q.d <= REGLER.maksMål).sort((a, b) => a.d - b.d)[0] || null; }
   const påSkjerm = (p, F) => { const x = (p.x - kam.x) / kam.m + VW / 2, y = (kam.y - p.y) / kam.m + VH / 2; return x >= 20 && x <= VW - 20 && y >= F.y0 + 10 && y <= F.y1 - 10; };
   let forrige = null;
-  api.visMarsj = function (s) { const q = mål(s); if (!q) return null; const F = { y0: toppPx() + 30, y1: VH - (document.body.classList.contains('kort') ? 150 : 90) };
+  api.visMarsj = function (s) { const q = mål(s); if (!q) return null; let F = { y0: toppPx() + 30, y1: VH - (document.body.classList.contains('kort') ? 150 : 90) };
+    // står lagpanelet fortsatt over kartet (PC, eller før telefonen har skjult det), skal begge stå i feltet over det
+    const P = document.getElementById('panel'); if (P && P.classList.contains('på') && P.getClientRects().length) { const r = P.getBoundingClientRect(); if (r.right - r.left > VW * .6) { const f = friFelt(VH, F.y0, r); if (f && f.y1 - f.y0 >= REGLER.minFri) F = { y0: Math.max(F.y0, f.y0), y1: Math.min(F.y1, f.y1) }; } }
     if (påSkjerm(q, F) && påSkjerm(s, F)) return null;
     const k = passInn(s, q, VW, F, kam.m); kam.x = k.x; kam.m = k.m; kam.y = k.y + (k.midtY - VH / 2) * k.m; skitten = true; api.sist = { marsj: q }; return q; };
   setInterval(() => { try {
     const m = typeof modus !== 'undefined' ? modus : null, v = typeof valgt !== 'undefined' ? valgt : null, n = m === 'marsj' && v ? v : null;
     if (n && n !== forrige && på() && n.side === 'blå' && !(typeof på3d !== 'undefined' && på3d)) api.visMarsj(n);
     forrige = n; } catch (x) { /* neste runde */ } }, 150);
+
+  // ---------- 4: stedsnavn nær leiren (flyktninger og folkenes historie, spill/samfunn.js) ----------
+  // tettstedene 3–60 km fra leiren, nærmest først, høyst 12 (Claudes tall); finnes færre enn tre, brukes Samfunn sin gamle liste
+  api.STEDER = { min: 3000, maks: 60000, antall: 12 };
+  function nærSteder() { const O = window.OppstartSpill && OppstartSpill.tilstand(), B = typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted; if (!O || !O.leir || !B || !B.length) return null;
+    const ut = [], sett = new Set(); for (const o of B) { const n = o.e && o.e.navn; if (!n || sett.has(n)) continue; const bb = o.bb, p = typeof navnP === 'function' ? navnP(o) : bb ? [(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2] : null; if (!p) continue;
+      const d = Math.hypot(p[0] - O.leir.x, p[1] - O.leir.y); if (d >= api.STEDER.min && d <= api.STEDER.maks) { ut.push([d, n]); sett.add(n); } }
+    return ut.sort((a, b) => a[0] - b[0]).slice(0, api.STEDER.antall).map(q => q[1]); }
+  let stedNøkkel = '';
+  setInterval(() => { try { if (!window.Samfunn) return; const O = window.OppstartSpill && OppstartSpill.tilstand(), k = O && O.leir ? Math.round(O.leir.x) + ',' + Math.round(O.leir.y) + ':' + (typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted ? INFRA.tettsted.length : 0) : '';
+    if (k === stedNøkkel) return; stedNøkkel = k; const L = nærSteder(); Samfunn.nærSteder = L && L.length >= 3 ? L : null; } catch (x) { /* neste runde */ } }, 4000);
+  api.nærSteder = nærSteder;
 
   // ---------- 3: kortene venter til angrepet er over ----------
   const angrepNå = () => { try { return !!(window.ForsvarSpill && ForsvarSpill.angrep && ForsvarSpill.angrep()); } catch (x) { return false; } };

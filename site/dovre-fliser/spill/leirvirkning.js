@@ -182,7 +182,9 @@
     // (ut4-balanse2) maskinene sto som «bare utseende» i byggelista
     sagbruk: 'planker og flis', vedkløyver: 'ved av flis', fyrkjele: 'strøm og varme av flis',
     steinbrudd: 'stein fra fjellet', steinknuser: 'pukk av stein', betongblander: 'betong av pukk', fiskemottak: 'frossen fisk', mølle: 'mel av korn',
-    raffineri: 'diesel av olje', smie: 'stål og deler av skrap' };
+    raffineri: 'diesel av olje', smie: 'stål og deler av skrap',
+    // (ut8-kr-telefon, Jonas: «Øvingsfelt – bare utseende» og «Minnesmerke – bare utseende», mens Folk og Samfunn sier noe annet)
+    øvingsfelt: 'opplæring av folk', minnesmerke: 'moral +2–5' };
   const pst = f => Math.round(Math.abs(1 - f) * 100);
   function kort(id, B) {
     const v = VIRKNING[id] || {}, d = [];

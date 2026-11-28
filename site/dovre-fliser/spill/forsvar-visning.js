@@ -316,7 +316,9 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     const LS = window.LeirSpill && LeirSpill.tilstand(), sk = LS && window.Leir ? FO.skadet(repListe(LS)) : { n: 0 }, ventende = LS ? repListe(LS).filter(q => !q.opptatt && q.hp < FO.R.rep.varsel) : [];
     const SL = stoppNå(), nøkkel = ['rapport', r.tittel, ventende.length, SL ? SL.tekst : ''].join('|'); alarm.classList.add('på'); alarm.classList.add('satt'); alarm.classList.toggle('god', !!r.god); if (nøkkel === sistAlarm || (window.pekerNede && pekerNede(alarm))) return true; sistAlarm = nøkkel;
     // (skadevarselet etter angrepet står i rapporten når rapporten ikke alt sier det)
-    alarm.replaceChildren(el('span', { klasse: 'rapport' }, el('b', {}, r.tittel + '.'), ' ', el('small', {}, r.tekst + (sk.n && !/bygg skadet|ødelagt/.test(r.tekst) ? ' ' + sk.tekst + '.' : ''))));
+    // (ut8-kr-telefon, Jonas: «Brakke, Kjøkken og Sagbruk skadet. 2 bygg er skadet.») – nevner rapporten alt skadde bygg (med navn), kommer ikke
+    // et nytt tall i tillegg (det telte bare byggene under 98 % nå)
+    alarm.replaceChildren(el('span', { klasse: 'rapport' }, el('b', {}, r.tittel + '.'), ' ', el('small', {}, r.tekst + (sk.n && !/skadet|ødelagt/.test(r.tekst) ? ' ' + sk.tekst + '.' : ''))));
     if (sk.n && ventende.length) alarm.append(kn(`Reparer alle (${Leir.kroner(ventende.reduce((t, q) => t + q.pris, 0))})`, () => { reparerAlle(); rapportNå = null; vis(); }, { id: 'reparerknapp' }));
     // (runde 12) knapper dit det gjelder: det skadde bygget, og Folk (de sårede)
     { const LS2 = window.LeirSpill && LeirSpill.tilstand(), bb = LS2 && r.bygg ? r.bygg.map(i => LS2.bygg.find(q => q.id === i)).filter(Boolean) : [];
