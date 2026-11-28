@@ -51,6 +51,8 @@ module.exports = {
       // ---------- 3) SMUGLING OVER GRENSA ----------
       const G = ES.grenser(); krev(G.length > 0, 'ingen grensestasjon innen ' + E.REGLER.grense.maks + ' m');
       if (G.length) {
+        // (28. nov, fiks c) vaktbilen kjøres hjem fra havna igjen: ellers tar turen leirens første lastebil, som en vakt før kan ha flyttet bort
+        if (b) { b.sti = null; b.x = leir.x + 30; b.y = leir.y + 20; }
         E.REGLER.grense.beslag = 1; S.grensevakt = false; const r0 = S.rykte;
         const kg = E.lagOrdre(S, tid, { vei: 'grense', vare: 'tre', rand: E.lagRand(7) }); S.tilbud.push(kg); L.lager.tre = 12;
         ES.kommando('eksportTa', { id: kg.id, ut: G[0].id }); krev(kg.status === 'aktiv' && kg.ut.slag === 'grense', 'grenseordren ble ikke tatt');
