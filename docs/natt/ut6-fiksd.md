@@ -70,7 +70,7 @@ Begge går nå. Koordinatoren bør vurdere å skrive K2-sjekken om (den prøver 
   lagret spill glemte børsen altså ukas angrep (tryggheten og ønsket «ro»). Rettet i `spill/bors.js` (fraJSON leser `angrep`, høyst 40),
   sjekk i `test_bors.js`; vakta skriver nå feltene som er ulike. Gjenskapt med `angrep.js`: feil før, ok etter.
 
-## Står igjen
+## Står igjen (rask PC-kjøring 6, 06:35: 123 ok, 1 FEIL)
 - `terreng` («huset i den bratte lia ble ikke avvist: undefined») – feiler også ALENE (ikke en langkjøringsfeil). Byggesettets brakke
   er nå 106 deler (byggesett 3, 1,2 m), og ingen del i bratt terreng får «For bratt for huset» (byggesett-visning.js oppdater, hus-fanen).
   Ikke undersøkt videre – hører til byggesett 3.
