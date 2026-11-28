@@ -403,7 +403,9 @@
     transportbånd: [{ del: 'bånd' }], tømmerbord: [{ del: 'bånd' }], sløyelinje: [{ del: 'bånd' }], tappelinje: [{ del: 'bånd' }], sorteringsbånd: [{ del: 'bånd' }],
     esse: [{ del: 'røyk', x: 0, y: 0, z: 3 }], fakkel: [{ del: 'røyk', x: 0, y: 0, z: 5.2 }],
     // maskinene i leiren (produksjon.js): sagbruket, vedkløyveren, fyrkjelen, steinknuseren, fiskemottaket, smia, raffineriet
-    sagbruk: [{ del: 'blad', x: 0, y: 0, z: 1.45, r: .6, akse: 'y' }], bs_sagbenk: [{ del: 'blad', x: 0, y: 0, z: 1.45, r: .55, akse: 'y' }],
+    // sagbenken i byggesettet (fabrikk-visning.js): bladet står i bordet foran motorhuset og stikker ca. 0,6 m opp over bordplata (0,85 m).
+    // Sagbruket som eget bygg er et lukket hus (modellen «verksted») – der synes ikke bladet, så det får ingen deler.
+    bs_sagbenk: [{ del: 'blad', x: 2.2, y: 0, z: .95, r: .55, akse: 'y' }],
     bs_høvel: [{ del: 'blad', x: 0, y: 0, z: 1.25, r: .2, akse: 'x' }], vedkløyver: [{ del: 'stempel', x: 0, y: 0, z: 1, slag: .5 }], bs_vedkløyver: [{ del: 'stempel', x: 0, y: 0, z: 1, slag: .5 }],
     fyrkjele: [{ del: 'røyk', x: 0, y: 0, z: 4.5 }], bs_fyrkjele: [{ del: 'røyk', x: .9, y: 0, z: 4.2 }], smie: [{ del: 'røyk', x: 0, y: 0, z: 4 }], raffineri: [{ del: 'røyk', x: 0, y: 0, z: 8 }],
     steinknuser: [{ del: 'stempel', x: 0, y: 0, z: 2.5, slag: .15 }], fiskemottak: [{ del: 'bånd' }],

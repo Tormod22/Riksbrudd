@@ -40,10 +40,10 @@ module.exports = {
       { const pl = plan(1, 4101), m = linje(pl)[0]; if (m) { const k = Object.assign({}, m, { x: pl.inngang.inn[0], y: pl.inngang.inn[1] }); ut.selvtest = iÅpning(pl, k); ok(ut.selvtest, 'selvtest: maskinen i døråpningen ble ikke sett'); } }
       // (2) kildene til maskinlivet: bare maskiner som går
       { const gL = window.LeirSpill && LeirSpill.tilstand, gS = window.ProduksjonSpill && ProduksjonSpill.status;
-        if (gL && gS) { let går = true; const b = { id: 99881, type: 'bs_sagbenk', x: 1000, y: 2000, ret: 0, bs: { n: 0 } };
+        if (gL && gS) { let går = true; const b = { id: 99881, type: 'bs_sagbenk_1', x: 1000, y: 2000, ret: 0, bs: { n: 0 } };
           try { LeirSpill.tilstand = () => ({ bygg: [b] }); ProduksjonSpill.status = () => ({ 99881: { går } }); MS.prøve(null);
             const a = MS.kilder(); går = false; const c = MS.kilder(); ut.kilder = [a.length, c.length];
-            ok(a.length === 1 && a[0].liv.some(d => d.del === 'blad') && c.length === 0, 'maskinlivet følger ikke om maskinen går: ' + JSON.stringify(ut.kilder));
+            ok(a.length === 1 && a[0].liv.some(d => d.del === 'blad' && d.x > 1) && c.length === 0, 'maskinlivet følger ikke om maskinen går: ' + JSON.stringify(ut.kilder));
           } finally { LeirSpill.tilstand = gL; ProduksjonSpill.status = gS; } } else ut.kilder = 'ikke prøvd (LeirSpill/ProduksjonSpill mangler)'; }
       // (3) plantegningen
       const P2 = window.Plantegning2D, i3d = typeof på3d !== 'undefined' && på3d;

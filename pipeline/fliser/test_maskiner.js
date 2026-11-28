@@ -105,5 +105,5 @@ ok(Industri.innredning(6).some(x => x.type === 'sløyelinje' && x.plass === 'lin
 // 4) symbolene og de bevegelige delene
 { const uten = []; for (const ind of Industri.ALLE) for (const x of Industri.innredning(ind)) if (x.rom === 'hall' && !M.SYMBOL[x.type] && !['arbeidsbenk', 'pall', 'tønne', 'hylle', 'verktøyvogn', 'traverskran', 'sveisebås', 'ventil', 'gassflasker', 'ambolt', 'høvelbenk', 'stålbenk', 'pakkebord', 'sløyebenk', 'kjemikalieskap', 'tørkestativ', 'sagbenk'].includes(x.type)) uten.push(x.type);
   ok(!uten.length, 'alle maskinene i hallene har et 2D-symbol' + (uten.length ? ': mangler ' + [...new Set(uten)].join(', ') : '')); }
-ok(['sagbruk', 'fyrkjele', 'vedkløyver', 'transportbånd', 'sagbenk'].every(t => M.LIV[t] && M.LIV[t].length), 'bevegelige deler for saga, fyrkjelen, vedkløyveren og båndene');
+ok(['bs_sagbenk', 'fyrkjele', 'vedkløyver', 'transportbånd', 'sagbenk'].every(t => M.LIV[t] && M.LIV[t].length), 'bevegelige deler for saga, fyrkjelen, vedkløyveren og båndene');
 console.log(feil ? feil + ' FEIL' : 'alle maskintestene ok'); process.exit(feil ? 1 : 0);

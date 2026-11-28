@@ -57,15 +57,25 @@
   const L = () => { try { return window.LeirSpill && LeirSpill.tilstand ? LeirSpill.tilstand() : null; } catch (e) { return null; } };
   const LB = () => window.Leir || null;
   // maskintypen for bygget: egen LIV-oppføring (bs_sagbenk …), ellers maskintypen i produksjon.js (sagbruk …)
-  const livFor = type => M.LIV[type] || (LB() && LB().BYGG[type] && M.LIV[LB().BYGG[type].maskinType]) || null;
+  // (byggesettets deler heter «bs_sagbenk_1» – størrelsen står bakerst)
+  const livFor = type => M.LIV[type] || M.LIV[String(type).replace(/_\d+$/, '')] || (LB() && LB().BYGG[type] && M.LIV[LB().BYGG[type].maskinType]) || null;
   // maskinene som går nå: [{ type, X, Y, a, n, liv }] (kartets meter, retning, etasje)
   function kilder() {
     if (T.prøve) return T.prøve;
     const l = L(), st = window.ProduksjonSpill && ProduksjonSpill.status ? ProduksjonSpill.status() : null; if (!l || !st) return [];
     const ut = [];
     for (const b of l.bygg || []) { const s = st[b.id]; if (!s || !s.går) continue; const liv = livFor(b.type); if (!liv) continue;
-      ut.push({ id: b.id, type: b.type, X: b.x, Y: b.y, a: b.ret || 0, n: b.bs ? b.bs.n || 0 : 0, liv }); if (ut.length >= LIVR.maks) break; }
+      ut.push({ id: b.id, type: b.type, X: b.x, Y: b.y, a: b.ret || 0, n: b.bs ? b.bs.n || 0 : 0, liv, moh: b.bs ? gulv(l, b.id) : null }); if (ut.length >= LIVR.maks) break; }
     return ut;
+  }
+  // gulvet under en del i byggesettet (moh.): samme grunnhøyde som byggesett-visning.js tegner huset med (ByggesettRegler.høyder);
+  // regnes på nytt bare når delene eller utsnittet endres
+  const GULV = { nøkkel: '', hz: null };
+  function gulv(l, id) {
+    const BS = window.ByggesettRegler, R = r3(), u = R && R.ut, o = l.byggesett; if (!BS || !BS.høyder || !BS.fraBygg || !u || !o || typeof hoyde3d !== 'function') return null;
+    const nøkkel = l.bygg.length + ':' + u.cx + ':' + u.cy;
+    if (GULV.nøkkel !== nøkkel) { GULV.nøkkel = nøkkel; try { const liste = l.bygg.filter(b => b.bs).map(b => BS.fraBygg(b, LB())).filter(Boolean); GULV.hz = BS.høyder(o, liste, (x, y) => hoyde3d(x, y, u)); } catch (e) { GULV.hz = null; } }
+    const v = GULV.hz && GULV.hz.get(id); return v && Number.isFinite(v.z0) ? v.z0 : null;
   }
   function nett(R, geo, farge, n) { const m = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: farge }), n); m.count = 0; m.frustumCulled = false; m.userData.maskinLiv = true; R.scene.add(m); return m; }
   function lag(R) {
@@ -92,7 +102,7 @@
     let nb = 0, ns = 0, nk = 0, røyk = nå - T.røykSist > LIVR.røyk && fart; if (røyk) T.røykSist = nå;
     for (const k of T.kilder) {
       const x0 = k.X - u.cx, y0 = k.Y - u.cy; if (Math.abs(x0) > u.S || Math.abs(y0) > u.S) continue;
-      let z0; try { z0 = (hoyde3d(k.X, k.Y, u) - u.h0) * (R.EX || 1) + .25 + k.n * 3; } catch (e) { continue; }
+      let z0; try { z0 = k.moh !== null && k.moh !== undefined ? (k.moh + k.n * 3 - u.h0) * (R.EX || 1) : (hoyde3d(k.X, k.Y, u) - u.h0) * (R.EX || 1) + .25 + k.n * 3; } catch (e) { continue; }
       const c = Math.cos(k.a), s = Math.sin(k.a), pos = (lx, ly) => [x0 + lx * c - ly * s, y0 + lx * s + ly * c];
       for (const d of k.liv) {
         const [x, y] = pos(d.x || 0, d.y || 0);
