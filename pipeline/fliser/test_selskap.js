@@ -267,4 +267,11 @@ console.log('ut2-balanse: påfyll og eskortebetaling ok');
   ok(nei === 30 && ja === 0, `o.klarbar styrer: lett tilbud ${nei} av 30 når ingenting passer, ${ja} når alt passer`);
   const C = S0.ny({ x: 0, y: 0 }); C.sider.blå.aktive.push({ id: 'x', type: 'hent', frist: 9e9 }); S0.lagTilbud(C, 'blå', 1440, st, S0.lagRand(3), { styrke: 4, klarbar: () => false });
   ok(!C.tilbud.some(k => k.lett), 'ingen lett tilbud mens en kontrakt er i gang'); }
+// reserven: ingen tettsteder passer (alle holdt av andre) – da et nødlager på land nær leiren (o.lager), høyst ett om gangen
+{ const st = [{ navn: 'Ulvik', x: 1300, y: 0, slag: 'tettsted', id: 1, eier: 'grønn' }, { navn: 'Granvin', x: 14000, y: 0, slag: 'tettsted', id: 2, fiender: 9 }];
+  const A = S0.ny({ x: 0, y: 0 }); S0.lagTilbud(A, 'blå', 1440, st, S0.lagRand(4), { styrke: 4, klarbar: () => false, lager: () => ({ x: 600, y: 700 }) });
+  const k = A.tilbud.find(q => q.lett); ok(k && k.type === 'forsyning' && k.sted.slag === 'lager' && k.betaling > 3e5 && k.betaling < S0.REGLER.første.betaling && /Hent nødlageret nordøst for leiren/.test(k.tittel) && !k.første, 'reserven: et nødlager ' + (k && k.tittel + ' ' + k.betaling));
+  ok(S0.kanTa(k, { størsteLag: 4, kjøretøy: 0 }, A.sider.blå).ok && S0.kravTekst(k).length > 20, 'reserven: kan tas, og har en kravtekst');
+  S0.lagTilbud(A, 'blå', 2880, st, S0.lagRand(5), { styrke: 4, klarbar: () => false, lager: () => ({ x: 600, y: 700 }) }); ok(A.tilbud.filter(q => q.lett).length === 1, 'reserven: høyst ett nødlager om gangen');
+  const B = S0.ny({ x: 0, y: 0 }); S0.lagTilbud(B, 'blå', 1440, st, S0.lagRand(4), { styrke: 4, klarbar: () => false }); ok(!B.tilbud.some(q => q.lett), 'uten o.lager (modellen) ingen reserve'); }
 console.log('ut8-kr-penger: et tilbud én tropp klarer ok');

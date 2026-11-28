@@ -171,7 +171,8 @@
     const iNærheten = (steder || []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y) && q.navn)
       .map(q => ({ ...q, d: Math.hypot(q.x - L.x, q.y - L.y) })).filter(q => q.d >= REGLER.avstand.min && q.d <= REGLER.avstand.maks);
     const nye = [];
-    if (!iNærheten.length) return nye;
+    // (ut8-kr-penger) uten steder for vanlige tilbud kan det likevel bli et lett tilbud (et tettsted like ved, eller et nødlager)
+    if (!iNærheten.length) { if (!o.giver && tall(o.styrke) > 0) { const k = sikreLett(S, id, nå, steder, r, o); if (k) nye.push(k); } return nye; }
     const byer = iNærheten.filter(q => q.slag !== 'bru'), bruer = iNærheten.filter(q => q.slag === 'bru');
     // (ut4-firmaer, Ø5) o.antall = så mange tilbud (fast kunde: ett fra firmaet), o.giver = oppdragsgiveren (fast kunde), o.faktor på betalingen
     const ant = Number.isFinite(o.antall) ? o.antall : antallTilbud(R);
@@ -237,8 +238,9 @@
   // steder kan ha: vern (bygdevernets mann), fiender (mann dere ser eller nylig så ved stedet), garnison (anslått, når et annet selskap holder det)
   // betaling = som et vanlig tilbud × betaling (en trygg jobb nær leiren betaler litt mindre enn en der troppen må slåss seg fram);
   // maksNivå: bare så lenge selskapet er på nivå 1–2 (starten, trinn 1–2) – senere skal lagene være sterke nok til de vanlige tilbudene;
-  // rykte: andelen av det vanlige ryktet («pålitelig») en levert lett jobb gir; kmt/omveg: anslaget for marsjen når fristen sjekkes
-  REGLER.lett = { styrke: 4, min: 800, maksMeter: 9000, nærmeste: 3, holdSjanse: .5, ekstraPerKm: 1, garnison: 8, betaling: .85, maksNivå: 2, rykte: .5, kmt: 3, omveg: 1.3 };
+  // rykte: andelen av det vanlige ryktet («pålitelig») en levert lett jobb gir; kmt/omveg: anslaget for marsjen når fristen sjekkes;
+  // lager/lagerTimer: betalingen (× en vanlig hentejobb) og fristen for et nødlager når ingen tettsteder passer (lagerJobb)
+  REGLER.lett = { styrke: 4, min: 800, maksMeter: 9000, nærmeste: 3, holdSjanse: .5, ekstraPerKm: 1, garnison: 8, betaling: .85, maksNivå: 2, rykte: .5, kmt: 3, omveg: 1.3, lager: .7, lagerTimer: 24 };
   // det kjente forsvaret ved stedet for en jobb (mann), samme regel som visningens forsvarVed: bygdevernet teller ikke når jobben er for
   // bygdelaget eller kommunen der (de vet om jobben); en garnison teller når et annet selskap holder stedet
   function forsvarFor(k, sted, id) {
@@ -260,6 +262,21 @@
     if (k.fare) return false;
     return forsvarFor(k, sted || k.sted, sd ? sd.id : k.for) < tall(styrke);
   }
+  // RESERVEN (gjennomspillingen 28. nov: Mosevakt og Ravnsund tok Ulvik dag 4, og de to andre tettstedene innen 22 km lå over fjorden – da
+  // fantes ingen jobb én tropp klarte): et nødlager som skal hentes på land nær leiren, som den første kontrakten. o.lager() gir punktet
+  // (visningen: på land, utenfor tettstedene). Betaler lett.lager × en vanlig hentejobb; fristen lett.lagerTimer. Ikke uten o.lager (Node).
+  function lagerJobb(S, id, nå, steder, o, sd, nv) {
+    const LT = REGLER.lett, L = S.leir || { x: 0, y: 0 }; let p = null; try { p = typeof o.lager === 'function' ? o.lager() : null; } catch (e) { p = null; }
+    if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y) || [...S.tilbud, ...sd.aktive].some(k => k.lett && k.type === 'forsyning')) return null;
+    const by = (steder || []).filter(q => q && q.slag !== 'bru' && Number.isFinite(q.x)).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0] || null;
+    const d = Math.hypot(p.x - L.x, p.y - L.y), kr = avrund(betaling('hent', sd.rykte, sd.pris, d, 0, nv.faktor, o.infl) * LT.lager);
+    const k = { id: 'k' + (++S.nr), type: 'forsyning', giver: { slag: 'bygd', navn: by ? `Bygdelaget i ${by.navn}` : 'Bygdelaget', by: null }, status: 'tilbud', tilbudt: Math.round(nå), utløper: Math.round(nå + REGLER.tilbudVarer),
+      timer: LT.lagerTimer, hold: 0, betaling: kr, bot: avrund(kr * REGLER.bot), sted: { navn: `${['låven', 'uthuset', 'fjøset', 'stabburet'][S.nr % 4]} ${retningOrd(p.x - L.x, p.y - L.y)} for leiren`, x: Math.round(p.x), y: Math.round(p.y), slag: 'lager', id: null, retning: retningOrd(p.x - L.x, p.y - L.y), d: Math.round(d) },
+      fra: null, last: null, person: null, sperre: null, konkurrent: null, side: null, for: id, nivå: nv.nr, lett: true };
+    k.tittel = tittel(k); S.tilbud.push(k);
+    while (S.tilbud.length > REGLER.maksTilbud) { const i = S.tilbud.findIndex(q => !q.første && !q.fast && !q.lett); if (i < 0) break; S.tilbud.splice(i, 1); }
+    return k;
+  }
   // stedet i lista som hører til tilbudet (samme id eller navn), med vern og fiender fra visningen
   const stedFor = (steder, k) => (steder || []).find(q => q && sammeSted(q, k.sted)) || k.sted;
   function sikreLett(S, id, nå, steder, r, o) {
@@ -276,7 +293,7 @@
       .filter(q => tall(q.fiender) < styrke && (q.slag === 'bru' || !q.eier || q.eier === id)).sort((a, b) => a.d - b.d);
     const kand = alle.some(q => q.d <= LT.maksMeter) ? alle.filter(q => q.d <= LT.maksMeter) : alle;
     const ledige = kand.filter(q => !opptatt(S, sd, 'hent', q) || (!opptatt(S, sd, 'hold', q) && nv.menn <= styrke)).slice(0, LT.nærmeste);
-    if (!ledige.length) return null;
+    if (!ledige.length) return lagerJobb(S, id, nå, steder, o, sd, nv);
     const sted = velg(ledige, r), byer = (steder || []).filter(q => q && q.slag !== 'bru' && Number.isFinite(q.x));
     const kanHold = nv.menn <= styrke && !opptatt(S, sd, 'hold', sted), kanHent = !opptatt(S, sd, 'hent', sted);
     const typ = kanHold && (!kanHent || r() < LT.holdSjanse) ? 'hold' : 'hent', T = REGLER.TYPER[typ];

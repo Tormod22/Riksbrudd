@@ -104,7 +104,7 @@
   }
   // spillerens styrke til det lette tilbudet: det største laget, men minst en tropp på fire (folkene kan alltid lage en)
   const styrkeNå = () => Math.max(SK.REGLER.lett ? SK.REGLER.lett.styrke : 4, har().størsteLag || 0);
-  function nyeTilbud(liste) { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, medForsvar(medEier(liste || steder())), null, { infl: infl(), styrke: styrkeNå(), kjøretøy: har().kjøretøy, klarbar: kanKlare }); lagre(); return n; }
+  function nyeTilbud(liste) { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, medForsvar(medEier(liste || steder())), null, { infl: infl(), styrke: styrkeNå(), kjøretøy: har().kjøretøy, klarbar: q => kanKlare(q, true), lager: () => { const s = Sp(); return s && s.leir ? lagerPlass(s.leir, (S.nr % 8) * Math.PI / 4 + .4) : null; } }); lagre(); return n; }
 
   // ---------- det som legges ut i verden når en kontrakt tas ----------
   const egneLag = () => ENHETER.filter(s => s.side === ID && levende(s) && !s.karakter);
@@ -233,9 +233,11 @@
   // tilbudene leiren har det som trengs til, uten advarsel (ikke for svakt, fristen holder) – de lette (Selskap.sikreLett) først, så best betalt
   // klarer leiren tilbudet nå? Kravene og forsvaret (kanTa uten advarsel), og marsjen: regnet ut (MARSJ) når den finnes, ellers et anslag
   // (luftlinje × omveg til fots, samme som reglene). En eskorte uten regnet marsj teller ikke (bilen kan stå på andre siden av en fjord).
-  function kanKlare(q) {
+  // streng (når reglene spør om et lett tilbud trengs): uten regnet marsj teller tilbudet ikke – anslaget i luftlinje bommet på fjordene i
+  // Hardanger (Eidfjord: 10 km i luftlinje, 31 km på vegen)
+  function kanKlare(q, streng) {
     if (!S || !q || q.første || erVare(q)) return false; const kt = SK.kanTa(q, har(q), S.sider[ID]); if (!kt.ok || (kt.advarsel && kt.advarsel.length)) return false;
-    const m = marsj(q); if (m && !m.venter && !m.feil) return !SK.marsjVurdering(q, m).advarsel; if (q.type === 'eskorte') return false;
+    const m = marsj(q); if (m && !m.venter && !m.feil) return !SK.marsjVurdering(q, m).advarsel; if (q.type === 'eskorte' || streng) return false;
     const L = Sp() && Sp().leir, LT = SK.REGLER.lett; if (!L || !LT) return true; const km = Math.hypot(q.sted.x - L.x, q.sted.y - L.y) / 1000 * LT.omveg;
     return !SK.marsjVurdering(q, { km, timer: km / LT.kmt }).advarsel;
   }
@@ -670,10 +672,11 @@ body.kort #nestelapp small{ display:none; }
   // (R1-løkka 26. nov, kritikken: «den første kontrakten er en felle») nødlageret ligger i en låve F.avstand fra leiren – så nær at
   // radioen aldri mister kontakten (se REGLER.første) – i retning bygda som gir jobben, på land, i spillkartet og minst F.utenfor
   // meter utenfor alle tettsteder (der står bygdevernet). Retningene prøves fra bygdas retning og utover til begge sider.
-  function lagerPlass(L) {
+  // vri (ut8-kr-penger): dreier retningen, så et nytt nødlager (Selskap.lagerJobb) ikke ligger der det forrige lå
+  function lagerPlass(L, vri = 0) {
     const F = SK.REGLER.første, byer = (typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || [], G = window.Garnison;
     const bygd = steder().filter(q => q.slag === 'tettsted').map(q => ({ q, d: Math.hypot(q.x - L.x, q.y - L.y) })).filter(o => o.d >= F.min && o.d <= F.maks).sort((a, b) => Math.abs(a.d - F.ønsket) - Math.abs(b.d - F.ønsket))[0];
-    const v0 = bygd ? Math.atan2(bygd.q.y - L.y, bygd.q.x - L.x) : .3;
+    const v0 = (bygd ? Math.atan2(bygd.q.y - L.y, bygd.q.x - L.x) : .3) + vri;
     const fri = (x, y) => { const hh = typeof hoydeVed === 'function' ? hoydeVed(x, y) : null; if (hh !== null && hh <= 1) return false;
       if (typeof OMRÅDE_OK === 'function' && !OMRÅDE_OK(x, y)) return false;
       if (G && G.avstand) for (const by of byer) { if (!by.bb || x < by.bb[0] - F.utenfor || x > by.bb[2] + F.utenfor || y < by.bb[1] - F.utenfor || y > by.bb[3] + F.utenfor) continue; if (G.avstand(by, x, y) < F.utenfor) return false; }
