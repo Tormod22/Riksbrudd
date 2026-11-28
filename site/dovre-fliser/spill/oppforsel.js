@@ -171,14 +171,14 @@
     return ut;
   }
   // Fordel folket på tilfluktsstedene. ctx: { F, steder, avh (antall barn og gamle), alarm: 'nær' | 'fjern', plass(p) -> { x, y }, leir }
-  // Barn og gamle (avh) får plass først i det tryggeste stedet, så de gamle voksne og de redde, så resten. Vaktene går til stillingene (ikke her).
+  // Barn og gamle (avh) får plass først i det tryggeste stedet, så de gamle voksne, så de redde, så resten. Vaktene går til stillingene (ikke her).
   // Ved alarm 'fjern' går bare de redde. Gir { mål: Map(id -> sted), avh: { n, sted }, trangt: antall uten plass, vakter: [id] }
   function tilflukt(ctx) {
     const steder = (ctx.steder || []).map(s => ({ ...s, ledig: s.plass })).sort((a, b) => b.rang - a.rang || a.plass - b.plass), ut = { mål: new Map(), avh: { n: 0, sted: null }, trangt: 0, vakter: [] };
     const F = ctx.F; if (!F) return ut;
     const avh = Math.max(0, ctx.avh || 0);
     if (avh && ctx.alarm === 'nær') { const s = steder.find(q => q.ledig > 0) || steder[0]; if (s) { s.ledig -= Math.min(avh, s.ledig); ut.avh = { n: avh, sted: s.navn }; } else ut.avh = { n: avh, sted: null }; }
-    const pri = p => (har(p, 'redd') ? 0 : (p.alder || 30) >= REGLER.alarm.gammel ? 1 : 2);
+    const pri = p => ((p.alder || 30) >= REGLER.alarm.gammel ? 0 : har(p, 'redd') ? 1 : 2);
     const kø = F.personer.filter(p => !p.borte).filter(p => { if (p.oppgave === 'vakt' && !har(p, 'redd')) { ut.vakter.push(p.id); return false; } return ctx.alarm === 'nær' || har(p, 'redd'); })
       .sort((a, b) => pri(a) - pri(b) || a.id - b.id);
     for (const p of kø) {
