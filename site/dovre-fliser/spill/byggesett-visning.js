@@ -447,6 +447,8 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     const dekke = (i, j, n) => M.get(`c:${i}:${j}:${n}`) || null, gulvHer = (i, j, n) => { const q = dekke(i, j, n); return q && D[q.type].kat === 'gulv'; };
     const tak = (i, j, n) => { const q = dekke(i, j, n); return q && D[q.type].kat === 'tak' ? q : null; };
     const fr = d => (d.ferdig === false ? Math.max(.05, Math.min(1, d.f || 0)) : 1);
+    // (B4) står det en hjørnestolpe i hjørnet (vi, vj)? Når veggene møtes på tvers, eller én vegg slutter der – ikke mellom to vegger på rad
+    const stolpe = (vi, vj, n) => { const x = [vegg('x', vi, vj, n), vegg('x', vi - 1, vj, n)].filter(Boolean).length, y = [vegg('y', vi, vj, n), vegg('y', vi, vj - 1, n)].filter(Boolean).length; return (x && y) || x + y === 1; };
     const hjørner = new Map();   // hjørnestolpene: per hjørne og etasje
     const saltak = [];
     for (const d of liste) {
@@ -493,7 +495,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
       // sokkel under veggen når den ikke står på et gulv
       if (d.n === 0 && hv.ned < z0 - .05) { const k0 = BS.kanter(d)[0], [[r1i, r1j], [r2i, r2j]] = k0.a === 'x' ? [[k0.i, k0.j - 1], [k0.i, k0.j]] : [[k0.i - 1, k0.j], [k0.i, k0.j]];
         if (!gulvHer(r1i, r1j, 0) && !gulvHer(r2i, r2j, 0)) boks('betong', F.betongM, cx, cy, ux, uy, L + t, t + .06, z3(hv.ned), zb, z3(hv.ned), zb, 'b'); }
-      const pc = (Math.max(t, .2) + .06) / 2, s0 = -L / 2 + pc - .01, s1 = L / 2 - pc + .01, v = d.ferdig === false ? 'hel' : Dd.v, dh = L <= 1.3 ? .42 : .5, vh = Math.min(.6, L / 2 - pc - .1);
+      const pc = (Math.max(t, .2) + .06) / 2, [ea, eb] = d.a === 'x' ? [[d.i, d.j], [d.i + ds, d.j]] : [[d.i, d.j], [d.i, d.j + ds]], s0 = -L / 2 + (stolpe(ea[0], ea[1], d.n) ? pc - .01 : 0), s1 = L / 2 - (stolpe(eb[0], eb[1], d.n) ? pc - .01 : 0), v = d.ferdig === false ? 'hel' : Dd.v, dh = L <= 1.3 ? .42 : .5, vh = Math.min(.6, L / 2 - pc - .1);
       const ÅPN = { dør: [-dh, dh, 0, 2.1], vindu: [-vh, vh, .95, 2.15], port: [-(L / 2 - pc - .06), L / 2 - pc - .06, 0, ds >= 4 ? 2.85 : 2.45] }[v];
       const bit = (a0, a1, b0, b1, gg = gr, c = col, tt = t) => { if (a1 - a0 < .005 || b1 - b0 < .005) return; boks(gg, c, cx + ux * (a0 + a1) / 2, cy + uy * (a0 + a1) / 2, ux, uy, a1 - a0, tt, zb + b0, zb + b1); };
       if (!ÅPN) { bit(s0, s1, 0, zt - zb); continue; }
@@ -511,7 +513,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     }
     // hjørnestolpene: hvite hjørnekasser på trehus, ellers i veggens stoff
     // (B4) bare i ekte hjørner og i enden av en vegg – ikke der to vegger på 1,2 m står i forlengelse av hverandre
-    for (const [k, h0] of hjørner) { if (h0.ak.size < 2 && h0.n > 1) continue; const [vi, vj] = k.split(',').map(Number), s = h0.t + .06;
+    for (const [k, h0] of hjørner) { const [vi, vj, vn] = k.split(',').map(Number), s = h0.t + .06; if (!stolpe(vi, vj, vn)) continue;
       boks(h0.tre ? 'farge' : gruppe(h0.st), h0.tre ? F.hvit : farge(h0.st), gx + vi * G, gy + vj * G, 1, 0, s, s, h0.zb, h0.zt); }
     saltak3d(Bg, saltak, M, hz, gx, gy, vegg);
   }
