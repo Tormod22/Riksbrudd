@@ -45,6 +45,8 @@ module.exports = { navn: 'ut1-selskap: panelet Selskapet, trinnene og Storlia-ko
       SP.nullstillHusk({ storlia: false }); const S = SelskapSpill.tilstand(), sd = S && S.sider.blå, levFør = sd ? sd.sum.levert : 0, ventFør = Selskapsbilde.REGLER.storlia.vent;
       if (sd) { sd.sum.levert = Math.max(1, levFør); window.dispatchEvent(new CustomEvent('riksbrudd-kontrakt', { detail: { type: 'levert' } })); await vent(1800);
         krev(!$('storliakort'), 'Storlia-kortet kom av seg selv i testene');
+        // (et leveringskort fra en vakt før denne står i 14 s og holder kortet tilbake – det tas bort her)
+        { const lk = $('levertkort'); if (lk) lk.remove(); }
         SP.test = true; Selskapsbilde.REGLER.storlia.vent = 0; window.dispatchEvent(new CustomEvent('riksbrudd-kontrakt', { detail: { type: 'levert' } }));
         for (let i = 0; i < 30 && !$('storliakort'); i++) await vent(200);
         const k = $('storliakort'); krev(k && /Storlia Tømmer har hørt om dere/.test(k.textContent) && /Leverandør|leverandør/.test(k.textContent), 'Storlia-kortet kom ikke etter første levering');

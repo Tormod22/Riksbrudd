@@ -49,7 +49,7 @@
 
   // ---------- panelet ----------
   const css = document.createElement('style');
-  css.textContent = `#selskapet{ display:none; position:fixed; left:10px; top:calc(var(--topp,58px) + 6px); z-index:11; width:min(460px, calc(100vw - 20px)); max-height:calc(100% - var(--topp,58px) - 100px);
+  css.textContent = `#selskapet{ display:none; position:fixed; left:10px; top:calc(var(--topp,58px) + 6px); z-index:11; width:min(460px, calc(100vw - 20px)); max-height:calc(100% - var(--topp,58px) - 150px);
   box-sizing:border-box; flex-direction:column; color:var(--ink,#e7dcc3); background:linear-gradient(180deg,#241c10 0,#17120a 150px); border:1px solid #8a7440; border-radius:4px;
   box-shadow:0 0 0 1px #0d0a06, inset 0 1px 0 rgba(255,230,160,.06), 0 12px 34px rgba(0,0,0,.65); }
 #selskapet.på{ display:flex; }
@@ -150,7 +150,8 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     const h = fane === 'oversikt' ? oversikt() : fane === 'byer' ? byer() : kommer(f);
     if (h !== sistKropp || tving) { const topp = kropp.scrollTop; kropp.innerHTML = h; sistKropp = h; if (!tving) kropp.scrollTop = topp; }
   }
-  function velgFane(id) { if (!B.REGLER.FANER.some(f => f.id === id)) id = 'oversikt'; const ny = id !== fane; fane = id; les(); if (H.fane !== id) { H.fane = id; lagre(); } if (ny) kropp.scrollTop = 0; sistKropp = ''; tegn(true); }
+  // husk = spilleren valgte fanen selv (den åpnes neste gang); fanen et kort eller Neste-lappen åpner, huskes ikke
+  function velgFane(id, husk) { if (!B.REGLER.FANER.some(f => f.id === id)) id = 'oversikt'; const ny = id !== fane; fane = id; les(); if (husk && H.fane !== id) { H.fane = id; lagre(); } if (ny) kropp.scrollTop = 0; sistKropp = ''; tegn(true); }
 
   // ett panel om gangen: det som står på samme plass (venstre, eller alt på telefon) lukkes – som spill/paneler.js gjør
   let førÅpne = new Set();
@@ -166,7 +167,7 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
   }
   P.addEventListener('click', e => {
     if (e.target.closest('#selskap')) return;
-    const f = e.target.closest('.sfaner button'); if (f) { e.stopPropagation(); velgFane(f.dataset.fane); return; }
+    const f = e.target.closest('.sfaner button'); if (f) { e.stopPropagation(); velgFane(f.dataset.fane, true); return; }
     const b = e.target.closest('[data-sp]'); if (!b) return; e.stopPropagation(); const s = b.dataset.sp;
     if (s === 'lukk') vis(false);
     else if (s === 'gå') { const k = viktigste()[+b.dataset.i]; if (!k) return; if (k.l0) { vis(false); if (window.SelskapSpill && SelskapSpill.følgLapp) SelskapSpill.følgLapp(); } else if (k.trykk) { vis(false); k.trykk(); } }
