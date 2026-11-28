@@ -62,6 +62,9 @@
   const planer = new WeakMap(), tårnZ = new Map();
   // en fri plass på gulvet inne i leirbygget b til figur nr. i: { x, y (kartets meter), z (3D), a, uteX, uteY (like utenfor døra), u }
   function innePlass(b, i, R, u, hva) {
+    // (ut9-liv) kjøkkenet i leiren er for lite til et langbord inne: de tre første som spiser, sitter på benken under markisen (modellen
+    // i modeller-leir2.js: bordet ved x 3,6, benken ved x 4,2, langs y 0,4–2,8); resten spiser inne
+    if (hva === 'bord' && b.type === 'kjøkken' && i < 3) return uteBord(b, i, R, u);
     if (!window.Interior3d || !Interior3d.egne || !window.Interior) return null;
     const e = Interior3d.egne().find(q => q.P.bygg && q.P.bygg.i === 9000000 + b.id); if (!e) return null; const P = e.P;
     let c = planer.get(P);
@@ -92,6 +95,11 @@
     const lx = langs, ly = side * (m.d / 2 + .32), x = m.x + lx * Math.cos(a) - ly * Math.sin(a), y = m.y + lx * Math.sin(a) + ly * Math.cos(a);
     return { x: u.cx + x, y: u.cy + y, z: gulv, a: a - side * Math.PI / 2, sitter: true, ...ute };
   }
+  function uteBord(b, i, R, u) {
+    const k = 1 + ((b.nivå || 1) - 1) * .08, c = Math.cos(b.ret || 0), sn = Math.sin(b.ret || 0), lx = 4.24 * k, ly = (.8 + i * .8) * k, x = b.x + lx * c - ly * sn, y = b.y + lx * sn + ly * c;
+    const G = window.LeirSpill && LeirSpill.grunn3d ? LeirSpill.grunn3d(b, u, R) : null, z = (G ? G.topp : (hoyde3d(b.x, b.y, u) - u.h0) * R.EX) - .05;
+    return { x, y, z, a: (b.ret || 0) + Math.PI, sitter: true, uteX: x + c * .8, uteY: y + sn * .8, u, b: b.id, hva: 'bord' };
+  }
   // vakta oppe på plattformen i vakttårnet (modeller.js: plattformen ligger 5,65 m over grunnen, ganget med nivået)
   function tårnPlass(b, i, R, u) {
     const k = 1 + ((b.nivå || 1) - 1) * .08, c = Math.cos(b.ret || 0), s = Math.sin(b.ret || 0), pk = (lx, ly) => [b.x + (lx * c - ly * s) * k, b.y + (lx * s + ly * c) * k];
@@ -107,7 +115,7 @@
   const HUD = [[.86, .69, .56], [.8, .62, .49], [.66, .48, .36], [.92, .79, .68], [.47, .33, .25]];
   // Claudes forslag: hvor mange som har langt hår, lue og sekk
   const ANDEL = { langt: .3, lue: .2, sekk: .15 };
-  let flokk = null, obj = null;
+  let flokk = null, obj = null; const RANG = new Map();
   function lag(R) { if (flokk) flokk.kast(); const D = Figur3d.DEL; flokk = Figur3d.flokk(R, { maks: ALLE, kilde: 'folk3d.js', deler: D.hår | D.langt | D.lue | D.sekk | D.kasse | D.gevær }); obj = new THREE.Object3D(); figurer = null; nøkkel = ''; }
   KROKER.ramme3d.push(R => { if (!R.ut || typeof THREE === 'undefined' || !window.Figur3d || !window.FolkSpill || !window.OppstartSpill) return; const F = FolkSpill.tilstand(), S = OppstartSpill.tilstand(), leir = S && S.leir, u = R.ut; if (!F || !leir) return;
     if (!flokk || flokk.scene !== R.scene || !flokk.nær.parent) lag(R);
@@ -132,6 +140,9 @@
     if (!meg) fotFra = 0; else if (!fotFra) fotFra = nåMs;
     const regel = meg && nåMs - fotFra < UNNA.startTid ? STARTREGEL : UNNA;
     const brakker = bygg.filter(b => b.type === 'brakke' && !(b.igjen > 0));
+    // (ut9-liv) plass nr. i køya / ved bordet: rekkefølgen blant dem som sover eller spiser i samme bygg (ikke figurens nummer – da kunne to få samme seng)
+    RANG.clear(); if (gang) { const grp = new Map(); for (let i = 0; i < nV; i++) { const g = gang.plass(VO[i]); if (!g || !g.inne || g.bygg === null || g.bygg === undefined) continue;
+      const k = g.bygg + (g.sover || g.hva === 'søvn' ? 's' : g.hva === 'mat' ? 'm' : ''), n = grp.get(k) || 0; grp.set(k, n + 1); RANG.set(i, n); } }
     flokk.start();
     figurer.forEach((p, i) => { let går = 0; const q = pers(i), G = SLAG[p.slag] || SLAG.voksen, syk = !!(q && q.syk);
       const gq = gang && i < nV && q ? gang.plass(q) : null;
@@ -184,8 +195,9 @@
     if (gq.inne && gq.bygg !== null && gq.bygg !== undefined) {
       // (ut9-liv) hva personen gjør der inne (spill/leirliv.js): sover i køya eller spiser ved bordet
       const b = bygg.find(q => q.id === gq.bygg), st = b && window.Leirliv ? Leirliv.stilling(gq, q ? q.oppgave : '', b.type) : '', hva = st === 'ligger' ? 'seng' : st === 'sitter' ? 'bord' : '';
-      if (p.inne && p.inne.b === gq.bygg && (p.inne.hva || '') === hva) return 0;
-      const pl = b ? plassVed(b, i, R, u, hva) : null;
+      const nr = hva && RANG.has(i) ? RANG.get(i) : i;
+      if (p.inne && p.inne.b === gq.bygg && (p.inne.hva || '') === hva && (!hva || p.inne.nr === nr)) return 0;
+      const pl = b ? plassVed(b, nr, R, u, hva) : null; if (pl) pl.nr = nr;
       if (pl) { p.inne = pl; p.x = pl.x; p.y = pl.y; p.a = pl.a; return 0; }
     } else if (p.inne) { p.x = p.inne.uteX; p.y = p.inne.uteY; p.inne = null; }
     let tx = gq.x, ty = gq.y;
