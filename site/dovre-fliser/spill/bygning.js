@@ -272,13 +272,12 @@
   const trappP = t => { const c = Math.cos(t.a), s = Math.sin(t.a), hl = t.l / 2, hb = t.b / 2; return [[-hl, -hb], [hl, -hb], [hl, hb], [-hl, hb]].map(([u, v]) => [t.x + u * c - v * s, t.y + u * s + v * c]); };
   const sperrerPå = (m, et) => m.trapper.filter(t => står(t) && (t.fra === et.n || t.til === et.n)).map(trappP);
   // Kan alle rom nås? Gir per etasje { n, rom, nådd, uten: [rom-id] }. Etasjer uten noen vei inn (ingen dør, ingen trapp) regnes som utenfor.
-  function nås(m) {
-    const ut = [];
-    for (const et of m.etasjer) { if (et.tilstand === 'revet') continue; const g = rutenett(m, et, sperrerPå(m, et)), K = kilder(m, et), nådd = fyll(g, K), uten = [];
-      let rom = 0; for (const r of et.rom) { if (r.andel < .5) continue; rom++; if (!romNådd(g, nådd, r, m.P)) uten.push(r.id); }
-      ut.push({ n: et.n, rom, nådd: rom - uten.length, uten, kilder: K.length }); }
-    return ut;
+  function nåsEtasje(m, et) {
+    const g = rutenett(m, et, sperrerPå(m, et)), K = kilder(m, et), nådd = fyll(g, K), uten = [];
+    let rom = 0; for (const r of et.rom) { if (r.andel < .5) continue; rom++; if (!romNådd(g, nådd, r, m.P)) uten.push(r.id); }
+    return { n: et.n, rom, nådd: rom - uten.length, uten, kilder: K.length };
   }
+  function nås(m) { return m.etasjer.filter(et => et.tilstand !== 'revet').map(et => nåsEtasje(m, et)); }
 
   // ---------- trappene ----------
   // et linjestykke krysser et rektangel (trappa: midt, retning, halve mål + luft)?
@@ -294,7 +293,8 @@
   const dørPkt = et => et.åpninger.filter(o => o.type === 'dør' || o.type === 'port').map(o => { const w = et.vegger[o.vegg], L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); return [w.a[0] + (w.b[0] - w.a[0]) * o.t / L, w.a[1] + (w.b[1] - w.a[1]) * o.t / L, o.b]; });
   // Legger en trapp mellom etasjene lo og hi (hi rett over lo) der den passer: inne i omrisset, ikke gjennom vegger, ikke foran dører, og slik
   // at alle rom fortsatt nås i begge etasjene. Møbler som står i veien, tas bort. Gir trappa eller null.
-  function leggTrapp(m, lo, hi, o) {
+  // (generator: yield mellom bitene av søket, så et hus kan lages litt om gangen mellom bildene)
+  function* leggTrappG(m, lo, hi, o) {
     const P = m.P, A = m.akse, retn = [Math.atan2(A.uy, A.ux), Math.atan2(A.uy, A.ux) + Math.PI, Math.atan2(A.vy, A.vx), Math.atan2(A.vy, A.vx) + Math.PI];
     const høyde = hi.z - lo.z, gr = bolig(m.kl) ? 'bolig' : 'annet', former = [];
     if (!o.trang) former.push({ form: 'rett', b: hi.loft ? REGLER.trapp.loft : REGLER.trapp[gr], l: Math.max(2, høyde * REGLER.trapp.lengde[gr] * (hi.loft ? .85 : 1)) });
@@ -310,10 +310,11 @@
     const luft = o.trang ? .04 : .1, endeLuft = o.trang ? .15 : .22, dørLuft = o.trang ? .05 : .45;
     const steg = o.trang || (A.u1 - A.u0) * (A.v1 - A.v0) < 250 ? .25 : .5;
     const VB = [lo, hi].flatMap(et => et.vegger.filter(står)).map(w => [w, Math.min(w.a[0], w.b[0]), Math.min(w.a[1], w.b[1]), Math.max(w.a[0], w.b[0]), Math.max(w.a[1], w.b[1])]);
+    const iVeien = (et, t) => et.møbler.filter(q => q.tilstand !== 'revet' && Math.abs(q.x - t.x) < t.l / 2 + 2.2 && Math.abs(q.y - t.y) < t.l / 2 + 2.2 && (krysserRekt({ x: t.x, y: t.y, a: t.a, b: t.b + .5, l: t.l + 1.6 }, { a: [q.x, q.y], b: [q.x, q.y] }, Math.max(q.b, q.d) / 2)));
     let førLo = null, førHi = null;
     for (const F of former) {
       const kand = [];
-      for (let u = A.u0 + .3; u <= A.u1 - .3; u += steg) for (let v = A.v0 + .3; v <= A.v1 - .3; v += steg) for (const a of retn) {
+      for (let u = A.u0 + .3; u <= A.u1 - .3; u += steg) { yield 'trapp'; for (let v = A.v0 + .3; v <= A.v1 - .3; v += steg) for (const a of retn) {
         // (avrundet straks: trappa som lagres, er den som ble prøvd)
         const t = { x: r2(u * A.ux + v * A.vx), y: r2(u * A.uy + v * A.vy), a: r2(a), b: r2(F.b), l: r2(F.l) }, c = Math.cos(t.a), s = Math.sin(t.a), Q = trappP(t);
         if (!Q.every(p => inni(P, p[0], p[1]) && avstKant(P, p[0], p[1]) > .13) || !inni(P, t.x, t.y)) continue;
@@ -328,22 +329,21 @@
         if (!o.trang && [...dLo, ...dHi].some(([x, y, b]) => krysserRekt(t, { a: [x, y], b: [x, y] }, dørLuft + b / 2))) continue;
         if (andre.some(q => { const T2 = { x: q.x, y: q.y, a: q.a, b: q.b + .6, l: q.l + 1.6 }; return Q.some(p => krysserRekt(T2, { a: p, b: p }, 0)) || krysserRekt(T2, { a: Q[0], b: Q[2] }, 0) || krysserRekt(T2, { a: Q[1], b: Q[3] }, 0) || krysserRekt(T2, { a: nede, b: nede }, .2) || krysserRekt(T2, { a: oppe, b: oppe }, .2); })) continue;
         // møbler i veien (trappa + der du går på og av)
-        const iVeien = et => et.møbler.filter(q => q.tilstand !== 'revet' && Math.abs(q.x - t.x) < R + 1.5 && Math.abs(q.y - t.y) < R + 1.5 && (krysserRekt({ x: t.x, y: t.y, a: t.a, b: t.b + .5, l: t.l + 1.6 }, { a: [q.x, q.y], b: [q.x, q.y] }, Math.max(q.b, q.d) / 2)));
-        const fLo = iVeien(lo), fHi = iVeien(hi), rLo = iRom(lo, nede[0], nede[1]), rHi = iRom(hi, oppe[0], oppe[1]), rM = iRom(lo, t.x, t.y);
+        const fLo = iVeien(lo, t).length, fHi = iVeien(hi, t).length, rLo = iRom(lo, nede[0], nede[1]), rHi = iRom(hi, oppe[0], oppe[1]), rM = iRom(lo, t.x, t.y);
         const poeng = (rLo && STIGE.includes(rLo.rolle) ? 3 : 0) + (rHi && STIGE.includes(rHi.rolle) ? 3 : 0) + (rM && STIGE.includes(rM.rolle) ? 1 : 0)
-          - .6 * (fLo.length + fHi.length) - Math.hypot(nede[0] - inn[0], nede[1] - inn[1]) / 25 + (avstKant(P, (Q[0][0] + Q[1][0]) / 2, (Q[0][1] + Q[1][1]) / 2) < .4 || avstKant(P, (Q[2][0] + Q[3][0]) / 2, (Q[2][1] + Q[3][1]) / 2) < .4 ? .8 : 0) + hash(m.hus, kand.length) * .05;
-        kand.push({ t, nede, oppe, fLo, fHi, poeng });
-      }
+          - .6 * (fLo + fHi) - Math.hypot(nede[0] - inn[0], nede[1] - inn[1]) / 25 + (avstKant(P, (Q[0][0] + Q[1][0]) / 2, (Q[0][1] + Q[1][1]) / 2) < .4 || avstKant(P, (Q[2][0] + Q[3][0]) / 2, (Q[2][1] + Q[3][1]) / 2) < .4 ? .8 : 0) + hash(m.hus, kand.length) * .05;
+        kand.push({ t, nede, oppe, poeng });
+      } }
       kand.sort((p, q) => q.poeng - p.poeng);
       // rommene som alt nås (fra dørene eller en trapp), skal fortsatt nås; i en ny etasje skal alle rom nås fra trappa
       if (!førLo) { const før = (et, K) => { const g = rutenett(m, et, sperrerPå(m, et)), n = fyll(g, K); return new Set(et.rom.filter(r => romNådd(g, n, r, P)).map(r => r.id)); };
         førLo = Klo.length ? før(lo, Klo) : new Set(lo.rom.map(r => r.id)); førHi = Khi.length ? før(hi, Khi) : new Set(hi.rom.map(r => r.id)); }
       // de beste forslagene, men ikke mange nesten like (de faller som regel av samme grunn)
       const prøvd = []; let forsøk = 0;
-      for (const k of kand) { if (forsøk >= 40) break; if (prøvd.some(q => q.a === k.t.a && Math.hypot(q.x - k.t.x, q.y - k.t.y) < .8)) continue; prøvd.push(k.t); forsøk++;
+      for (const k of kand) { if (forsøk >= 40) break; if (prøvd.some(q => q.a === k.t.a && Math.hypot(q.x - k.t.x, q.y - k.t.y) < .8)) continue; prøvd.push(k.t); forsøk++; yield 'trapp';
         const t = Object.assign({}, k.t, { nede: pkt(k.nede), oppe: pkt(k.oppe) }), Q = trappP(t); k.nede = t.nede; k.oppe = t.oppe;
         const prøv = (et, uten) => { const sp = sperrerPå(m, et); sp.push(Q); const lagret = et.møbler; et.møbler = et.møbler.filter(q => !uten.includes(q)); const g = rutenett(m, et, sp); et.møbler = lagret; return g; };
-        const gLo = prøv(lo, k.fLo), gHi = prøv(hi, k.fHi);
+        k.fLo = iVeien(lo, k.t); k.fHi = iVeien(hi, k.t); const gLo = prøv(lo, k.fLo), gHi = prøv(hi, k.fHi);
         const sLo = Klo.length ? Klo : [k.nede], sHi = Khi.length ? Khi : [k.oppe], nLo = fyll(gLo, sLo), nHi = fyll(gHi, sHi);
         const c1 = celle(gLo, k.nede[0], k.nede[1]), c2 = celle(gHi, k.oppe[0], k.oppe[1]);
         if (c1 < 0 || c2 < 0 || !nLo[c1] || !nHi[c2]) continue;
@@ -490,33 +490,33 @@
       // stengte etasjer i høyhus: annenhver trapp på samme plass som to etasjer under (etasjene er åpne, trappene krysser ikke hverandre)
       const toUnder = lo.stengt && hi.stengt ? m.trapper.find(q => q.fra === a - 2 && q.til === a - 1 && q.form === 'rett') : null;
       if (toUnder && fin(a - 1).stengt) t = { x: toUnder.x, y: toUnder.y, a: toUnder.a, b: toUnder.b, l: toUnder.l, nede: toUnder.nede, oppe: toUnder.oppe, form: 'rett' };
-      if (!t && hi.stengt) t = leggTrapp(m, lo, hi, {});
+      if (!t && hi.stengt) t = (yield* leggTrappG(m, lo, hi, {}));
       else if (!t && b > 1 && !hi.loft && hi.frø !== undefined) { const f0 = hi.frø;
-        for (let f = 0; f < 3 && !t; f++) { if (f) fyll(hi, b, (Math.imul(i, 131) + b * 104729 + f * 7) | 0); t = leggTrapp(m, lo, hi, { kunRett: true }); }
-        if (!t) { fyll(hi, b, f0); t = leggTrapp(m, lo, hi, {}) || leggTrapp(m, lo, hi, { trang: true }); }
+        for (let f = 0; f < 3 && !t; f++) { if (f) fyll(hi, b, (Math.imul(i, 131) + b * 104729 + f * 7) | 0); t = (yield* leggTrappG(m, lo, hi, { kunRett: true })); }
+        if (!t) { fyll(hi, b, f0); t = (yield* leggTrappG(m, lo, hi, {})) || (yield* leggTrappG(m, lo, hi, { trang: true })); }
         // siste utvei: etasjen over blir ett åpent rom (uten skillevegger), så trappa bare må passe i etasjen under
         if (!t) { hi.vegger = hi.vegger.filter(w => w.type === 'ytter'); hi.vegger.forEach((w, k) => { for (const o of hi.åpninger) if (o.vegg === w.id) o.vegg = k; w.id = k; });
           hi.åpninger = hi.åpninger.filter(o => o.vegg < hi.vegger.length); hi.åpninger.forEach((o, k) => { o.id = k; }); hi.møbler = [];
           hi.rom = [{ id: 0, rolle: bolig(kl) ? 'allrom' : 'lager', P: m.P, areal: r2(A0), andel: 1 }]; hi.åpen = true;
-          t = leggTrapp(m, lo, hi, {}) || leggTrapp(m, lo, hi, { trang: true }); } }
-      else if (!t) t = leggTrapp(m, lo, hi, {}) || leggTrapp(m, lo, hi, { trang: true });
+          t = (yield* leggTrappG(m, lo, hi, {})) || (yield* leggTrappG(m, lo, hi, { trang: true })); } }
+      else if (!t) t = (yield* leggTrappG(m, lo, hi, {})) || (yield* leggTrappG(m, lo, hi, { trang: true }));
       if (t) { const s = st.dekke === 'betong' && !hi.loft ? 'betong' : 'tre'; m.trapper.push(Object.assign({ id: m.trapper.length, fra: a, til: b }, t, { stoff: s, tilstand: 'hel' })); hi.dekke.hull.push(trappP(t).map(pkt)); }
       else if (hi.loft) { ets.splice(ets.indexOf(hi), 1); m.tak.vinduer = []; }
       else if (lo.kjeller) { ets.splice(ets.indexOf(lo), 1); }
       else { m.trapper.push({ id: m.trapper.length, fra: a, til: b, x: r2(dør.x), y: r2(dør.y), a: 0, b: .8, l: 1, nede: pkt([dør.x, dør.y]), oppe: pkt([dør.x, dør.y]), form: 'stige', stoff: 'tre', tilstand: 'hel', usikker: true }); }
       yield 'trapp'; }
     // kjelleren: skillevegg mellom fyrrom/bod og hovedrommet når det går (alle rom nås fortsatt)
-    const kj = fin(-1); if (kj) kjellerRom(m, kj);
+    const kj = fin(-1); if (kj) { kjellerRom(m, kj); yield 'kjeller'; }
     // ting på loftet og i kjelleren
-    const lo = ets.find(e => e.loft); if (lo) loftTing(m, lo);
-    if (kj) kjellerTing(m, kj);
+    const lo = ets.find(e => e.loft); if (lo) { loftTing(m, lo); yield 'loft'; }
+    if (kj) { kjellerTing(m, kj); yield 'kjeller'; }
     // vinduer (etter trappene og skilleveggene)
     for (const e of ets) if (!e.stengt && !e.loft && !e.kjeller) vinduer(e, kl, e.vindu ? { vindu: e.vindu.b, vinduNed: e.vindu.ned } : null);
     for (const e of ets) { delete e.vindu; delete e.frø; delete e.takhøyde0; }
     // dekkefeltene (ett per rom) og bærende vegger: hvert dekke har støtte under seg innen halve spennet
     for (const e of ets) { if (e.n === 1 && !kj) continue; e.dekke.felt = e.rom.map(r => ({ id: r.id, rom: r.id, tilstand: 'hel' })); }
-    for (let k = 0; k < ets.length - 1; k++) velgBærende(m, ets[k], ets[k + 1].dekke.stoff);
-    for (let k = 0; k < ets.length; k++) { const e = ets[k]; if (!e.dekke.felt.length) continue; const under = ets[k - 1]; e.dekke.spenn = under ? byggSpenn(m, under, e.dekke.stoff) : 99; }
+    for (let k = 0; k < ets.length - 1; k++) { velgBærende(m, ets[k], ets[k + 1].dekke.stoff); yield 'bærende'; }
+    for (let k = 0; k < ets.length; k++) { const e = ets[k]; if (!e.dekke.felt.length) continue; const under = ets[k - 1]; e.dekke.spenn = under ? byggSpenn(m, under, e.dekke.stoff) : 99; yield 'spenn'; }
     // taket: felt på 4 m langs mønet; hviler på ytterveggene (og de bærende veggene) i øverste etasje
     const øverst = ets.filter(e => !e.loft).slice(-1)[0];
     for (let k = 0, u = u0; u < u1 - .01; k++, u += 4) m.tak.felt.push({ id: k, u0: r2(u), u1: r2(Math.min(u1, u + 4)), tilstand: 'hel' });
@@ -539,7 +539,7 @@
       e.åpninger.push({ id: e.åpninger.length, vegg: id, t: r2((b - a) * (.3 + .4 * hash(m.hus, 931))), b: .9, h: 2, ned: 0, type: 'dør', sperre: null, tilstand: 'hel' });
       const liten = f < .5 ? [A.u0, s] : [s, A.u1], stor = f < .5 ? [s, A.u1] : [A.u0, s], rP = ([p, q]) => [[p, A.v0], [q, A.v0], [q, A.v1], [p, A.v1]].map(([u, v]) => pkt([u * A.ux + v * A.vx, u * A.uy + v * A.vy]));
       const r0 = e.rom[0]; e.rom = [{ id: 0, rolle: r0.rolle, P: rP(stor), areal: r2((stor[1] - stor[0]) * (A.v1 - A.v0)), andel: 1 }, { id: 1, rolle: hash(m.hus, 932) < .5 ? 'fyrrom' : 'bod', P: rP(liten), areal: r2((liten[1] - liten[0]) * (A.v1 - A.v0)), andel: 1 }];
-      const sjekk = nås(m).find(q => q.n === -1);
+      const sjekk = nåsEtasje(m, e);
       if (sjekk && sjekk.uten.length === 0) return;
       e.vegger.length = vegg0; e.åpninger.length = åp0; e.rom = rom0;
     }
@@ -561,7 +561,7 @@
         e.møbler.push({ id: e.møbler.length, type, x: r2(x), y: r2(y), a: r2(a), b: M[0], d: M[1], h: M[2], sperrer: !!M[3], stoff: type === 'fyrkjele' ? 'stål' : 'tre', tilstand: 'hel' }); lagt++; n++;
       } }
     // sperrer møblene veien? Ta dem ut igjen til alle rom nås
-    for (let g = 0; g < 8; g++) { const s = nås(m).find(q => q.n === e.n); if (!s || !s.uten.length) break; const k = e.møbler.map(q => q.sperrer).lastIndexOf(true); if (k < 0) break; e.møbler.splice(k, 1); e.møbler.forEach((q, j) => { q.id = j; }); }
+    for (let g = 0; g < 8; g++) { const s = nåsEtasje(m, e); if (!s || !s.uten.length) break; const k = e.møbler.map(q => q.sperrer).lastIndexOf(true); if (k < 0) break; e.møbler.splice(k, 1); e.møbler.forEach((q, j) => { q.id = j; }); }
   }
   function loftTing(m, e) {
     const A = m.akse, lv = A.v1 - A.v0, fri = Math.max(.2, lv / 2 * (1.25 / Math.max(m.tak.møne, 1.3)) - .1), f = hash(m.hus, 951);
@@ -755,7 +755,7 @@
       t.vinduer += e.åpninger.filter(o => o.type === 'vindu').length; t.dører += e.åpninger.filter(o => o.type !== 'vindu').length; t.rom += e.rom.length; t.møbler += e.møbler.length; }
     t.loft = m.etasjer.some(e => e.loft); t.kjeller = m.etasjer.some(e => e.kjeller); return t; };
 
-  const api = { REGLER, EGNE_MØBLER, hash, klasse, høyder, fraKart, fraKartG, finnDør, endre, vurder, medEndringer, tekst, ras, fraByggesett, nås, rutenett, støtter, telle, står, inni, avstSeg, trappP, kopi };
+  const api = { REGLER, EGNE_MØBLER, hash, klasse, høyder, fraKart, fraKartG, finnDør, endre, vurder, medEndringer, tekst, ras, fraByggesett, nås, nåsEtasje, rutenett, støtter, telle, står, inni, avstSeg, trappP, kopi };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Bygning = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
