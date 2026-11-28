@@ -11,6 +11,8 @@
 //  - I TESTENE (navigator.webdriver) skjer ingenting av dette før OppforselSpill.test = true – alt er som før.
 //  - Lagres per leir i «riksbrudd-oppforsel» ({ leir: 'x,y', S }): venner/uvenner, ulykkene, verneutstyret og de skadde.
 (function () {
+  // felles tilfeldighet (spill/tilfeldig.js): samme frø gir samme svar på alle maskiner
+  const tilf = (typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random;
   const OP = window.Oppforsel, FR = window.FolkRegler, LB = window.Leir, FG = window.Folkgang;
   if (!OP || !FR || !LB || !FG || typeof KROKER === 'undefined' || !window.FolkgangSpill) return;
   const FS = window.FolkgangSpill, R = OP.REGLER, NØKKEL = 'riksbrudd-oppforsel';
@@ -166,7 +168,7 @@
     const V = window.VerdenSpill && VerdenSpill.tilstand ? VerdenSpill.tilstand() : null, W = window.Verden; if (!V || !V.brann || !W) return;
     let ute = 0;
     for (const j of P.jobber) { let n = 0; for (const [pid, jj] of P.slukk) if (jj.k === j.k && Gs.pers[pid] && Gs.pers[pid].ved) n++;
-      if (n && Math.random() < OP.slukkSjanse(n, dtMin)) { const [i, jx] = W.rute(j.x, j.y), k = i + ',' + jx; if (V.brann.celler[k]) { delete V.brann.celler[k]; V.brann.brent[k] = Math.round(nåTid()); ute++; } } }
+      if (n && tilf() < OP.slukkSjanse(n, dtMin)) { const [i, jx] = W.rute(j.x, j.y), k = i + ',' + jx; if (V.brann.celler[k]) { delete V.brann.celler[k]; V.brann.brent[k] = Math.round(nåTid()); ute++; } } }
     if (ute) { P.slukket = (P.slukket || 0) + ute; oppdaterBranner(V, W); }
   }
   function oppdaterBranner(V, W) { const Lb = W.brannListe(V.brann), B = window.BRANNER, BR = window.BRENT; if (B) { B.length = 0; for (const c of Lb.brenner) B.push(c); } if (BR) { BR.length = 0; for (const c of Lb.brent) BR.push(c); }
@@ -197,7 +199,7 @@
     let natt = h >= 22 || h < 6; try { if (JR && J && J.døgn !== false) natt = natt || JR.planFor(J, F, p).slot === 'natt'; } catch (e) { /* uten tavle */ }
     return OP.tretthet({ natt, seng: !!p.seng, mørke: mørktNå() && !lysNå(), helse: p.helse }); }
   function ulykker(Gs, F, L, dtMin) {
-    const H = OP.ulykkeSteg(S, { F, tid: nåTid(), dt: dtMin, arbeider: p => { const s = Gs.pers[p.id]; return !!(s && s.hva === 'arbeid' && s.framme && s.mål && !/^bål:/.test(s.mål.k) && !harPlan(p.id)); }, tretthet: trøtt, r: Math.random });
+    const H = OP.ulykkeSteg(S, { F, tid: nåTid(), dt: dtMin, arbeider: p => { const s = Gs.pers[p.id]; return !!(s && s.hva === 'arbeid' && s.framme && s.mål && !/^bål:/.test(s.mål.k) && !harPlan(p.id)); }, tretthet: trøtt, r: tilf });
     for (const u of H) { const jobb = u.jobb === 'maskin' ? 'ved maskinene' : u.jobb === 'bygg' ? 'på byggeplassen' : u.jobb === 'hogst' ? 'i hogsten' : u.jobb === 'riving' ? 'under rivingen' : 'i verkstedet';
       const hvorfor = u.t > .6 ? ' – sliten' + (mørktNå() && !lysNå() ? ', og det var mørkt uten lys' : '') : '';
       S.skadet[u.p.id] = { fra: Math.round(nåTid()), grunn: 'ulykke', x: (Gs.pers[u.p.id] || {}).x || 0, y: (Gs.pers[u.p.id] || {}).y || 0 };
