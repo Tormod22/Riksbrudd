@@ -123,11 +123,15 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     const kort = document.body.classList.contains('kort'), mg = mangler(B);
     panel.append(el('div', { klasse: 'status brikker' }, ...linjer.flatMap(t => String(t).split(' · ')).map(t => el('span', {}, t))));
     const matN = 50, kjøp = knapp(`Kjøp ${matN} rasjoner (${LB.kroner(Math.round(matN * FR.R.matPris * matF()))})`, () => { const r = kom({ type: 'kjøpMat', rasjoner: matN }); logg(r.feil || `Kjøpte ${r.rasjoner} rasjoner mat for ${LB.kroner(r.pris)}.`); lagre(); vis(); }, { id: 'kjøpmat' });
-    const rek = knapp(`Rekrutter (${LB.kroner(FR.R.rekruttPris)})`, () => { const r = kom({ type: 'rekrutter' });
+    // (28. nov, rekruttering 14.1) søkerlista (spill/rekruttering-visning.js) erstatter «Rekrutter 500 000 kr»: knappen går ned til søkerne.
+    // Nød-rekrutteringen (færre enn tre i gjengen) er som før.
+    const RS = window.RekrutteringSpill && RekrutteringSpill.tilstand() ? RekrutteringSpill : null, søkerliste = RS && !FR.nød(F);
+    const rek = søkerliste ? knapp(`Søkere (${RS.tilstand().søkere.length}) ↓`, () => { const h = document.getElementById('sokere'); if (h) h.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, { id: 'rekrutter' })
+      : knapp(`Rekrutter (${LB.kroner(FR.R.rekruttPris)})`, () => { const r = kom({ type: 'rekrutter' });
       logg(r.feil || `${r.person.navn} (${r.person.yrke}) er med i gjengen` + (r.nød ? ` og går på «${FR.OPPGAVE[r.person.oppgave].navn.toLowerCase()}»` + (r.pris ? '.' : ' (gratis: kassa er tom).') : '.')); lagre(); vis(); visStatus(); }, { id: 'rekrutter' });
     // færre enn tre i gjengen: rekruttering er alltid mulig (FR.kanRekruttere), så spillet ikke låser seg
     // (runde 6, kritikken: «Rekrutter» var grå uten forklaring) – grunnen står nå som tekst under knappene, ikke bare i verktøytipset
-    const penger = OppstartSpill.tilstand().penger, hvorfor = FR.kanRekruttere(F, Lr, valg()) || (FR.nød(F) || penger >= FR.R.rekruttPris ? null : `Ikke nok penger i kassa (${LB.kroner(FR.R.rekruttPris)}).`);
+    const penger = OppstartSpill.tilstand().penger, hvorfor = søkerliste ? RS.hvorfor() : FR.kanRekruttere(F, Lr, valg()) || (FR.nød(F) || penger >= FR.R.rekruttPris ? null : `Ikke nok penger i kassa (${LB.kroner(FR.R.rekruttPris)}).`);
     rek.disabled = !!hvorfor; if (hvorfor) rek.title = hvorfor;
     panel.append(el('div', { klasse: 'rad' }, kjøp, rek, window.SamfunnSpill && SamfunnSpill.tilstand() ? knapp('Samfunn ›', () => SamfunnSpill.åpne(true), { id: 'samfunn-fra-folk' }) : ''));
     if (hvorfor) panel.append(el('div', { klasse: 'mangler', id: 'rekrutthvorfor' }, 'Kan ikke rekruttere nå – ' + hvorfor.charAt(0).toLowerCase() + hvorfor.slice(1)));
@@ -149,7 +153,9 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
       const minus = knapp('−', () => flytt(o, FR.minus), { 'aria-label': `Færre på ${O.navn.toLowerCase()}`, 'data-o': o, klasse: 'minus', title: minusHjelp(o) });
       const pluss = knapp('+', () => flytt(o, FR.pluss), { 'aria-label': `Flere på ${O.navn.toLowerCase()}`, 'data-o': o, klasse: 'pluss', title: plussHjelp(o) });
       minus.disabled = !antall; pluss.disabled = o === 'fri' ? n - antall === 0 : antall === n;
-      panel.append(el('div', { klasse: 'opp' }, el('div', {}, el('b', {}, O.navn), el('small', {}, info + (antall > a ? ` · ${antall - a} syke` : ''))), minus, el('span', { klasse: 'n' }, String(antall)), pluss));
+      // (28. nov) de på øvingsfeltet (p.skole) står for seg, ikke som syke
+      const skole = F.personer.filter(p => p.oppgave === o && p.skole).length, syke = antall - a - skole;
+      panel.append(el('div', { klasse: 'opp' }, el('div', {}, el('b', {}, O.navn), el('small', {}, info + (syke > 0 ? ` · ${syke} syke` : '') + (skole ? ` · ${skole} på opplæring` : ''))), minus, el('span', { klasse: 'n' }, String(antall)), pluss));
     }
     if (tavle) panel.append(...tavle.noder); }
     // folkene
@@ -165,9 +171,11 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
       const merke = (p.syk ? ' · Grålungen' : '') + (p.karantene ? ' · karantene' : '') + (p.trener ? ' · i opplæring' : '') + (p.borte ? ' · borte' : '');
       const bilde = ansikt(p); if (bilde) bilde.onclick = navn.onclick;
       panel.append(el('div', { klasse: 'person' + (p.helse < FR.R.arbeidsfør || p.syk ? ' syk' : '') }, ...(bilde ? [bilde] : []), navn, velg,
-        el('small', {}, ` · ${p.yrke}, best på ${FR.OPPGAVE[best[0]].navn.toLowerCase()} · helse ${Math.round(p.helse * 100)} %${p.seng ? '' : ' · telt'}${merke}`,
+        el('small', {}, ` · ${p.yrke}, best på ${FR.OPPGAVE[best[0]].navn.toLowerCase()} · helse ${Math.round(p.helse * 100)} %${p.seng ? '' : ' · telt'}${merke}${window.RekrutteringSpill ? RekrutteringSpill.personDel(p) : ''}`,
           ...(window.JobberSpill ? JobberSpill.personDel(p, { el, knapp }) : []))));
     }
+    // SØKERE OG OPPLÆRING (28. nov, spill/rekruttering-visning.js): nederst, så oppgavene står høyt på telefonen
+    if (window.RekrutteringSpill) panel.append(el('div', { klasse: 'søkere' }, ...RekrutteringSpill.del({ el, knapp })));
   }
   function endret() { lagre(); vis(); visStatus(); skitten = true; }
   // ---------- RUNDE 13: hvem − / + flytter, og byggelagene sagt likt overalt ----------
@@ -206,7 +214,8 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
   const lønnAuto = () => !navigator.webdriver || window.FolkSpill.lønnTest;
   const iTropper = () => (typeof ENHETER === 'undefined' ? 0 : ENHETER.filter(s => s.side === 'blå' && s.fraFolk && Array.isArray(s.menn)).reduce((a, s) => a + s.menn.filter(m => m.hp > 0).length, 0));
   const infl = () => { try { const M = window.SpilletSpill && SpilletSpill.M && SpilletSpill.M(); return M && M.infl > 0 ? M.infl : 1; } catch (e) { return 1; } };
-  const lønnNå = () => FR.lønnPerDøgn(F.personer.length + iTropper(), infl());
+  // (28. nov) lønna per person (p.lønn, spill/rekruttering.js) – uten egen lønn 15 000 kr som før
+  const lønnNå = () => FR.lønnSum(F, iTropper(), infl());
   function lønn(dt) {
     if (!F || !lønnAuto() || !window.OppstartSpill) return null;
     const r = FR.lønnSteg(F, dt, kr => OppstartSpill.betal(kr), { ekstra: iTropper(), infl: infl() });

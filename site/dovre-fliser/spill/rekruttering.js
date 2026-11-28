@@ -161,7 +161,7 @@
   }
   // ---------- opplæring ----------
   if (LB && !LB.BYGG.øvingsfelt) {
-    LB.BYGG.øvingsfelt = { navn: 'Øvingsfelt', pris: 2.5e6, tid: 2, kw: -1, modell: 'lagertelt', fot: [-4.3, 4.3, -3.8, 3.8], mat: { tre: 10, betong: 4, stål: 1 },
+    LB.BYGG.øvingsfelt = { navn: 'Øvingsfelt', pris: 2.5e6, tid: 2, kw: 0, modell: 'lagertelt', fot: [-4.3, 4.3, -3.8, 3.8], mat: { tre: 10, betong: 4, stål: 1 },
       nivå: { elever: REGLER.skole.elever.slice() }, tekst: 'Skole og øvingsfelt: folk på opplæring lærer en ferdighet (4, 6, 8 elever per nivå)' };
   }
   // elevplasser i leiren: ferdige øvingsfelt som virker (og har strøm: mangler = Set av bygg uten strøm)
