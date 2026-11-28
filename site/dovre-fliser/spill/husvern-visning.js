@@ -240,8 +240,8 @@
   const betaltFor = o => (o ? o.betalt || { senger: o.senger || 0, lager: o.lager || 0 } : null);
   function istandFor(i, bruk) { if (!OT.istandsetting) return null; const H = husFor(i); if (!H) return null; return OT.istandsetting(kap(H, bruk), betaltFor(OL.hus[i])); }
   const kroner = v => (window.Oppstart && Oppstart.kroner ? Oppstart.kroner(v) : Math.round(v).toLocaleString('nb-NO') + ' kr');
-  // tiden går bare av seg selv i spillet (i testene står huset klart straks, som før)
-  const istandTid = () => !navigator.webdriver || api.test === true;
+  // tiden går bare av seg selv i spillet (i testene står huset klart straks, som før – HusvernSpill.istandTest = true slår den på)
+  const istandTid = () => !navigator.webdriver || api.istandTest === true;
   function taOver(k) {
     if (k.slipp) { const o = OL.hus[k.hus]; delete OL.hus[k.hus]; lagre(); oppdaterKap(); tegnPå(); visRad(); return `Huset er ikke lenger en del av leiren${o ? ' (' + OT.BRUK[o.bruk].navn.toLowerCase() + ')' : ''}.`; }
     const H = husFor(k.hus), c = PT.ramme(H.Pv), K = kap(H, k.bruk), før = OL.hus[k.hus];

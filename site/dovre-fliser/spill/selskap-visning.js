@@ -239,8 +239,9 @@
   }
   // de små oppdragene (Leir → Mål, spill/spillet-visning.js): { liste, tatt } – samles nå også i Kontrakter
   const småOppdrag = () => { try { const O = window.SpilletSpill && SpilletSpill.O && SpilletSpill.O(); return O && Array.isArray(O.liste) ? O.liste : []; } catch (e) { return []; } };
-  const oppdragNavn = o => (window.Oppdrag && Oppdrag.TYPER && Oppdrag.TYPER[o.type] ? Oppdrag.TYPER[o.type].navn : 'Oppdrag');
-  const oppdragGir = o => (window.Oppdrag && Oppdrag.belønning ? Oppdrag.belønning(o.gir || {}) : '');
+  const OPD = () => (window.Spillet && Spillet.Oppdrag) || null;
+  const oppdragNavn = o => (OPD() && OPD().TYPER[o.type] ? OPD().TYPER[o.type].navn : 'Oppdrag');
+  const oppdragGir = o => (OPD() && OPD().belønning ? OPD().belønning(o.gir || {}) : '');
   // det Neste-lappen sier når ingen kontrakt er i gang: et tilbud dere klarer, et lite oppdrag som er tatt, eller et lite oppdrag å ta
   function veienVidere() {
     const k = klarbare()[0];
@@ -508,7 +509,7 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     const tidT = m => (m >= 60 ? `${Math.round(m / 60)} t` : `${Math.max(0, Math.round(m))} min`);
     return `<h3 data-smaa="1">Små oppdrag <small>korte jobber nær leiren – ingen bot</small></h3>` + (L.length ? L.map(o => `<div class="kort smaa${o.tatt ? ' aktiv' : ''}" data-oppdrag="${esc(o.id)}"><b>${esc(oppdragNavn(o))}</b>`
       + `<div class="fra">${esc(meter(o.meter || 0))} mot ${esc(o.retning || '')} · gir <span class="kr">${esc(oppdragGir(o))}</span> · frist om ${esc(tidT((o.frist || 0) - tid))}</div>`
-      + `<p>${esc(window.Oppdrag && Oppdrag.TYPER[o.type] ? Oppdrag.TYPER[o.type].tekst : '')}${o.tatt ? ' Oppdraget er tatt – send en tropp dit (eller gå selv).' : ''}</p>`
+      + `<p>${esc(OPD() && OPD().TYPER[o.type] ? OPD().TYPER[o.type].tekst : '')}${o.tatt ? ' Oppdraget er tatt – send en tropp dit (eller gå selv).' : ''}</p>`
       + `<div class="knapper">${o.tatt ? '' : `<button class="hoved" data-s="oppdragTa" data-id="${esc(o.id)}">Ta oppdraget</button>`}<button data-s="oppdragVis" data-id="${esc(o.id)}">Vis i kartet</button></div></div>`).join('')
       : '<p class="tom">Ingen små oppdrag akkurat nå – nye kommer i løpet av dagen.</p>');
   }
