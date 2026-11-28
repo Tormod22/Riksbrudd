@@ -46,7 +46,7 @@ function nås(pl, x0, y0, mål) {
   return mål.map(([x, y]) => { for (let dj = -4; dj <= 4; dj++) for (let di = -4; di <= 4; di++) { const i = ci(x) + di, j = cj(y) + dj; if (i >= 0 && j >= 0 && i < W && j < H && sett[j * W + i] && Math.hypot(di, dj) * st <= 1.2) return true; } return false; });
 }
 const FORMER = [[32, 18], [24, 14], [44, 26], [20, 30], [60, 22]];
-const harLinje = {}, iVegg = [], iDør = [], stengt = [], baklengs = [];
+const harLinje = {}, iVegg = [], iDør = [], stengt = [], baklengs = [], motFlyt = [];
 let planer = 0, maskiner = 0;
 for (const ind of Industri.ALLE) for (let f = 0; f < FORMER.length; f++) for (const k of [0, 1]) {
   const [w, h] = FORMER[f], P = rekt(w, h), pl = plan(ind, P, 3000 + ind * 31 + f * 7 + k, k); planer++;
@@ -70,7 +70,10 @@ for (const ind of Industri.ALLE) for (let f = 0; f < FORMER.length; f++) for (co
   // linja går én vei per felt: avstanden fra porten øker (eller snur én gang)
   if (L.length >= 3) { const q = (pl.innganger || []).find(z => z.type === 'vare') || pl.inngang; let snu = 0, forrige = null, ret = 0;
     for (const m of L) { const d = Math.hypot(m.x - q.inn[0], m.y - q.inn[1]); if (forrige !== null) { const r = Math.sign(d - forrige); if (ret && r && r !== ret) snu++; if (r) ret = r; } forrige = d; }
-    if (snu > 2) baklengs.push(`${ind}/${w}x${h}`); }
+    if (snu > 2) baklengs.push(`${ind}/${w}x${h}`);
+    // maskinens x-akse (båndets pil) peker mot neste maskin i linja
+    for (let j = 0; j + 1 < L.length; j++) { const a = L[j], b = L[j + 1], dx = b.x - a.x, dy = b.y - a.y, langs = dx * Math.cos(a.a) + dy * Math.sin(a.a), tvers = Math.abs(-dx * Math.sin(a.a) + dy * Math.cos(a.a));
+      if (Interior.MØBLER[a.type][1] <= Interior.MØBLER[a.type][0] * 1.5 && tvers < 1 && langs < 0) motFlyt.push(`${ind}/${w}x${h} ${a.type}`); } }
 }
 const mangler = Industri.ALLE.filter(t => t !== 11 && !(harLinje[t] >= 2));
 ok(!mangler.length, 'alle bransjene har en produksjonslinje med minst to maskiner (' + Object.entries(harLinje).map(([t, n]) => t + ':' + n).join(' ') + ')' + (mangler.length ? ' – mangler ' + mangler : ''));
@@ -78,6 +81,7 @@ ok(maskiner > planer * 2.5, `maskinene står i linjene (${maskiner} i ${planer} 
 ok(!iVegg.length, 'ingen maskin står i en yttervegg' + (iVegg.length ? ': ' + iVegg.slice(0, 5).join(', ') : ''));
 ok(!iDør.length, 'ingen maskin står i en døråpning' + (iDør.length ? ': ' + iDør.slice(0, 5).join(', ') : ''));
 ok(!stengt.length, 'gangveiene er frie: fra hver dør til midten av hvert rom og fram til hver maskin' + (stengt.length ? ': ' + stengt.slice(0, 6).join('; ') : ''));
+ok(!motFlyt.length, 'maskinene vender i flytretningen (pila på båndene)' + (motFlyt.length ? ': ' + motFlyt.slice(0, 5).join(', ') : ''));
 ok(!baklengs.length, 'linja går fra porten og innover (snur høyst i U)' + (baklengs.length ? ': ' + baklengs.join(', ') : ''));
 // selvtest av gangveitesten: en sperrende vegg tvers over hallen skal stenge
 { const P = rekt(30, 16), pl = plan(8, P, 77, 0); pl.vegger.push({ ax: 15, ay: 0, bx: 15, by: 16, t: .2 }); const q = pl.inngang, r = nås(pl, q.inn[0], q.inn[1], [[3, 8], [27, 8]]);

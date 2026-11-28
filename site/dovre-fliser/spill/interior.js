@@ -611,7 +611,9 @@
         let ok = null;
         for (let k = 0; k < 2 && !ok; k++) { const [t2, d2] = felt[f];
           for (let s = 0; s < 14; s++) { const c = p + d2 * (b / 2 + s * .6); if (d2 > 0 ? c + b / 2 > L1 - kant : c - b / 2 < L0 + kant) break;
-            const cu = lu ? c : t2, cv = lu ? t2 : c, lU = snudd ? !lu : lu; ok = prøv(r, type, cu, cv, lU, lU ? t2 > mt : t2 < mt, Object.assign({ fri: 1.2 }, o)); if (ok) { p = c + d2 * (b / 2 + gap); break; } }
+            const cu = lu ? c : t2, cv = lu ? t2 : c, lU = snudd ? !lu : lu;
+            // maskinens x-akse peker i flytretningen (båndenes pil i 2D og knastene i 3D går riktig vei); den lange båten vender inn mot midten
+            ok = prøv(r, type, cu, cv, lU, snudd ? (lU ? t2 > mt : t2 < mt) : d2 < 0, Object.assign({ fri: 1.2 }, o)); if (ok) { p = c + d2 * (b / 2 + gap); break; } }
           // feltet er fullt: snu i det andre feltet (fra enden der dette sluttet)
           if (!ok && f === 0) { f = 1; p = felt[1][1] > 0 ? L0 + kant : L1 - kant; } else if (!ok) break; }
         if (ok) { ok.linje = satt.length; satt.push(ok); } }
