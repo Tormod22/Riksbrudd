@@ -188,6 +188,10 @@
     if (f.holdning < S.holdning) m.push(`holdning ${S.holdning} (nå ${Math.round(f.holdning)})`);
     if (S.levert && f.levert < S.levert) m.push(`${S.levert - f.levert} levert${S.levert - f.levert === 1 ? '' : 'e'} kontrakt${S.levert - f.levert === 1 ? '' : 'er'} til for dem (${f.levert} av ${S.levert})`);
     if (type === 'felles' && økonomi(f) === 'konkurstruet') m.push('et firma som ikke er konkurstruet');
+    // (ut5-rivaler) en rival som er fast kunde eller eier halve anlegget, stenger for dere til det er over
+    const rv = f.rival || {};
+    if (type === 'fast' && rv.kunde && RIVALER[rv.kunde.side]) m.push(`${RIVALER[rv.kunde.side]} er fast kunde der nå`);
+    if (type === 'felles' && rv.anlegg && RIVALER[rv.anlegg.side]) m.push(`${RIVALER[rv.anlegg.side]} eier halve ${bestemt(f)}`);
     return { ok: !m.length, mangler: m };
   }
   // hva samarbeidet koster/gir, som tall: felles = det dere betaler, vern = betaling per døgn
@@ -362,6 +366,33 @@
     return ut;
   }
 
+  // ---------- (ut5-rivaler, Ø8) RIVALENES KJØP: fast kunde og felles anlegg ----------
+  // f.rival = { levert: { rød, grønn }, kunde: { side, fra, til } | null, anlegg: { side, fra, betalt } | null } – rivalene i firmaet.
+  // Tallene er Claudes forslag (Rival.REGLER.firma i spill/rival.js gir kravene; her bare reserven).
+  const BESTEMT = { sagbruk: 'sagbruket', mølle: 'mølla', knuseverk: 'knuseverket', fiskemottak: 'fiskemottaket' };
+  const bestemt = f => { const A = anleggFor(f); return A ? BESTEMT[A.navn] || A.navn : 'anlegget'; };
+  const rivalDel = f => (f.rival = f.rival && typeof f.rival === 'object' ? f.rival : { levert: { rød: 0, grønn: 0 }, kunde: null, anlegg: null });
+  // en rival har levert en kontrakt for firmaet. o = { nå, kundeEtter, kundeDøgn }. Gir 'kunde' når rivalen nå blir fast kunde.
+  function rivalLevert(f, side, o = {}) {
+    if (!f || f.konkurs || !RIVALER[side]) return null; const R = rivalDel(f); R.levert[side] = tall(R.levert[side]) + 1;
+    if (f.fast || (R.kunde && tall(R.kunde.til) > tall(o.nå))) return null;
+    if (R.levert[side] < tall(o.kundeEtter, 2)) return null;
+    R.kunde = { side, fra: Math.round(tall(o.nå)), til: Math.round(tall(o.nå) + tall(o.kundeDøgn, 10) * 1440) }; return 'kunde';
+  }
+  // er rivalen fast kunde nå? (når tida er ute, slettes det)
+  function rivalKunde(f, nå) { const R = f && f.rival; if (!R || !R.kunde) return null; if (tall(R.kunde.til) <= tall(nå)) { R.kunde = null; return null; } return R.kunde.side; }
+  // kan rivalen kjøpe halve anlegget? (ikke når dere eier det sammen med firmaet, ikke konkurs/konkurstruet; én rival om gangen)
+  function rivalKanAnlegg(f) { const A = anleggFor(f); return !!(A && f && !f.konkurs && !f.felles && !(f.rival && f.rival.anlegg) && økonomi(f) !== 'konkurstruet'); }
+  // rivalen kjøper halve anlegget. Gir prisen (kr) eller 0
+  function rivalAnlegg(f, side, nå) { if (!RIVALER[side] || !rivalKanAnlegg(f)) return 0; const V = vilkår(f, 'felles'); rivalDel(f).anlegg = { side, fra: Math.round(tall(nå)), betalt: V.pris }; return V.pris; }
+  // overskuddet rivalen får av anlegget for ett døgn (samme regel som for dere)
+  function rivalAnleggDøgn(f) { const R = f && f.rival, A = anleggFor(f); if (!R || !R.anlegg || !A || f.konkurs) return 0; const S = REGLER.samarbeid.felles; return avrund(A.overskudd * S.andel * (S.økonomi[økonomi(f)] || 0), 1000); }
+  // det rivalene har i firmaet, i ord (fanen Partnere)
+  function rivalTekst(f, nå) { const R = f && f.rival; if (!R) return ''; const d = [], k = rivalKunde(f, nå);
+    if (k) d.push(`${RIVALER[k]} er fast kunde (tar tilbudene deres)`); if (R.anlegg && RIVALER[R.anlegg.side]) d.push(`${RIVALER[R.anlegg.side]} eier halve ${bestemt(f)}`);
+    if (R.andel) for (const [sd, a] of Object.entries(R.andel)) if (RIVALER[sd] && tall(a) > 0) d.push(`${RIVALER[sd]} eier ${Math.round(tall(a))} % av firmaet`);
+    return d.join(' · '); }
+
   // ---------- tekster ----------
   function økonomiTekst(f) { const ø = økonomi(f); return ø === 'konkurs' ? 'gått konkurs' : ø === 'frisk' ? 'går godt' : ø === 'presset' ? 'presset av krigen' : 'nær konkurs'; }
   function samarbeidTekst(f) {
@@ -383,7 +414,7 @@
     try { if (!d || typeof d !== 'object' || d.versjon !== 1 || !Array.isArray(d.firmaer)) return null;
       const F = ny(d.leir); F.firmaer = [];
       for (const q of d.firmaer) { if (!q || !q.navn) continue; const f = nyttFirma(String(q.navn), { ny: !!q.ny });
-        for (const k of ['bransje', 'hjem', 'konkurs', 'fast', 'felles', 'vern', 'eier']) if (q[k] !== undefined) f[k] = q[k];
+        for (const k of ['bransje', 'hjem', 'konkurs', 'fast', 'felles', 'vern', 'eier', 'rival']) if (q[k] !== undefined) f[k] = q[k];
         for (const k of ['helse', 'holdning', 'levert', 'brutt', 'handel', 'handelDøgn', 'vernDøgn', 'fra']) f[k] = tall(q[k], f[k]);
         if (Array.isArray(q.behov)) f.behov = q.behov.map(String); if (q.tilbudt && typeof q.tilbudt === 'object') f.tilbudt = { ...q.tilbudt };
         f.helse = klem(f.helse, 0, 100); f.holdning = klem(f.holdning, 0, 100); F.firmaer.push(f); }
@@ -401,7 +432,8 @@
 
   const api = { rabatt: null, eierSkifte, REGLER, RIVALER, KJENTE, NYE, BRANSJER, ØKONOMIORD, SAMARBEID, hash, lagRand, kroner, ny, nyttFirma, finn, aktive, reserveHjem, hjemsted, sikreHjem, økonomi, økonomiTekst,
     endreHoldning, holdningOrd, registrerKontrakt, anleggFor, kanSamarbeid, vilkår, inngå, fastTilbud, fastSvar, vernTime, avslutt, svik, tekno, låsOpp, brukTekno,
-    annen, gjelder, aktivePakter, paktPris, kanPakt, inngåPakt, brytPakt, iPakt, alliert, paktDøgn, døgn, samarbeidTekst, paktTekst, tilJSON, fraJSON };
+    annen, gjelder, aktivePakter, paktPris, kanPakt, inngåPakt, brytPakt, iPakt, alliert, paktDøgn, døgn, samarbeidTekst, paktTekst, tilJSON, fraJSON,
+    rivalLevert, rivalKunde, rivalKanAnlegg, rivalAnlegg, rivalAnleggDøgn, rivalTekst, anleggBestemt: f => bestemt(f) };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Firma = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

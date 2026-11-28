@@ -240,6 +240,7 @@
   function rivalHtml(side) {
     const nå = nåMin(), A = Fi.aktivePakter(F, nå).filter(p => p.side === side), annen = Fi.annen(side);
     let h = `<div class="fi-boks" data-rival="${side}"><h4>${merke(side)}${esc(sidenavn(side))}<small>${side === 'rød' ? 'pågående – tar sjanser, bryter lettere' : 'forsiktig – holder oftere ord'}</small></h4>`;
+    { const rv = window.RivalSpill && RivalSpill.partnerTekst ? RivalSpill.partnerTekst(side) : ''; if (rv) h += `<div class="fi-linje fi-rival">${esc(rv)}</div>`; }   // (ut5-rivaler, Ø8)
     if (A.length) for (const p of A) h += `<div class="fi-linje"><b>${esc(Fi.paktTekst(p, nå))}</b></div><div class="fi-knapper">${knapp(p.type === 'allianse' ? 'Bryt alliansen (svik)' : 'Bryt våpenhvilen (svik)', 'fi-bryt', { id: p.id }, 'svik')}</div>`
       + `<p class="fi-mangler">Å bryte gir overraskelse (treff × ${String(R.pakt.svik.ild).replace('.', ',')} mot dem i ${Math.round(R.pakt.svik.minutter / 60)} timer), men koster «pålitelig» ${R.pakt.svik.pålitelig} og holdningen hos alle firmaene.</p>`;
     else h += `<div class="fi-linje">Ingen avtale – dere er fiender.${F.brudd[side] ? ` Dere har brutt med dem ${F.brudd[side]} ${F.brudd[side] === 1 ? 'gang' : 'ganger'}: prisen er ${2 ** F.brudd[side]} ganger så høy.` : ''}</div>`;
@@ -260,6 +261,7 @@
     h += `<div class="fi-linje">Økonomi: <b class="fi-${ø}">${esc(Fi.økonomiTekst(f))}</b> · holdning <b>${H}</b> (${esc(Fi.holdningOrd(H))}) · ${f.levert} levert${f.brutt ? `, ${f.brutt} brutt` : ''}</div><div class="fi-maal" title="Holdning ${H} av 100"><i style="width:${H}%"></i></div>`;
     if (f.behov.length) h += `<div class="fi-linje">Trenger: ${esc(f.behov.join(', '))}</div>`;
     const sam = Fi.samarbeidTekst(f); if (sam) h += `<div class="fi-linje">Har sammen med dere: <b>${esc(sam)}</b></div>`;
+    { const rv = Fi.rivalTekst ? Fi.rivalTekst(f, nåMin()) : ''; if (rv) h += `<div class="fi-linje fi-rival">Rivalene: <b>${esc(rv)}</b></div>`; }   // (ut5-rivaler, Ø8)
     for (const t of Object.keys(f.tilbudt || {})) if (!f[t]) h += `<div class="fi-ringer">☎ ${esc(f.navn)} har ringt om ${esc(SAMORD[t].toLowerCase())}.</div>`;
     const tk = Fi.tekno(F, { harSag: harSag() }).filter(t => t.firma === f.navn);
     for (const t of tk) h += `<div class="fi-linje">Kan låse opp: <b>${esc(t.navn)}</b> – ${t.låstOpp ? (t.iBruk ? 'i bruk' : t.bare ? 'låst opp (kan bygges senere)' : 'låst opp') : 'mangler ' + esc(t.mangler.join(', '))}</div>`;
