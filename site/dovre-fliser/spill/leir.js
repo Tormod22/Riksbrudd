@@ -194,13 +194,13 @@
   // lagerplass.ekstra: tillegg utenfra (egenbygde rom brukt som lager, spill/byggesett.js)
   const lagerplass = L => GRUNNLAGER + L.bygg.reduce((s, b) => s + effekt(b).lager, 0) + (lagerplass.ekstra ? lagerplass.ekstra(L) || 0 : 0);
   const harMat = (L, mat) => Object.entries(mat).every(([k, v]) => (L.lager[k] || 0) + 1e-9 >= v);
-  const trekk = (L, mat) => { for (const [k, v] of Object.entries(mat)) L.lager[k] = Math.max(0, (L.lager[k] || 0) - v); };
+  const trekk = (L, mat) => { for (const [k, v] of Object.entries(mat)) { L.lager[k] = Math.max(0, (L.lager[k] || 0) - v); varer(L, k, 'brukt'); } };
   const manglerTekst = (L, mat) => Object.entries(mat).filter(([k, v]) => (L.lager[k] || 0) < v).map(([k, v]) => `${Math.ceil((v - (L.lager[k] || 0)) * 10) / 10} ${MATERIALER[k].enhet} ${MATERIALER[k].navn.toLowerCase()}`).join(', ');
   function kjøpMateriale(L, type, mengde, betal) {
     const plass = Math.max(0, lagerplass(L) - (L.lager[type] || 0)), m = Math.min(mengde, Math.floor(plass * 10) / 10);
     if (m <= 0) return { feil: 'Lageret er fullt: bygg lagertelt eller containere.' };
     const pris = Math.round(m * MATERIALER[type].pris); if (!betal(pris)) return { feil: `Ikke nok penger (${kroner(pris)}).` };
-    L.lager[type] = (L.lager[type] || 0) + m; return { mengde: m, pris };
+    L.lager[type] = (L.lager[type] || 0) + m; varer(L, type, 'kjøpt'); return { mengde: m, pris };
   }
   // ---------- utposter: byggelaget må reise ----------
   // Brukeren 12. nov: «Utposter er lov» – du kan bygge hvor som helst, men byggelaget må reise dit først, så det tar lengre tid jo
@@ -286,7 +286,7 @@
     if (b.hp > 0) return { hp: b.hp, ødelagt: false, byggeplass: b.igjen > 0, mat: {} };
     const ut = { hp: 0, ødelagt: true, byggeplass: b.igjen > 0, mat: {} };
     const gi = (mat, andel) => { for (const [k, v] of Object.entries(mat || {})) { const m = Math.round(v * Math.max(0, Math.min(1, andel)) * 10) / 10; if (!(m > 0) || !MATERIALER[k]) continue;
-      L.lager[k] = Math.round(((L.lager[k] || 0) + m) * 10) / 10; ut.mat[k] = Math.round(((ut.mat[k] || 0) + m) * 10) / 10; } };
+      L.lager[k] = Math.round(((L.lager[k] || 0) + m) * 10) / 10; ut.mat[k] = Math.round(((ut.mat[k] || 0) + m) * 10) / 10; varer(L, k, 'tilbake'); } };
     if (b.igjen > 0) gi(b.mat, b.totalt > 0 ? b.igjen / b.totalt : 1);
     else if (b.arbeid && b.arbeid.mat) gi(b.arbeid.mat, b.arbeid.totalt > 0 ? b.arbeid.igjen / b.arbeid.totalt : 1);
     L.bygg = L.bygg.filter(q => q !== b); return ut;
@@ -457,12 +457,12 @@
   function selgMateriale(L, type, mengde, gi) {
     if (!MATERIALER[type]) return { feil: 'Ukjent materiale.' };
     const m = Math.min(mengde, Math.floor((L.lager[type] || 0) * 10) / 10); if (!(m > 0)) return { feil: `Ingen ${MATERIALER[type].navn.toLowerCase()} å selge.` };
-    const pris = Math.round(m * MATERIALER[type].pris * REGLER.salg); L.lager[type] = Math.max(0, (L.lager[type] || 0) - m); if (gi) gi(pris); return { mengde: m, pris };
+    const pris = Math.round(m * MATERIALER[type].pris * REGLER.salg); L.lager[type] = Math.max(0, (L.lager[type] || 0) - m); varer(L, type, 'solgt'); if (gi) gi(pris); return { mengde: m, pris };
   }
   function kjøpDrivstoff(L, liter, betal) {
     const plass = Math.max(0, kapasitet(L) - L.drivstoff), l = Math.min(liter, Math.floor(plass)); if (l <= 0) return { feil: 'Ingen plass til mer diesel: bygg en dieseltank (eller et aggregat).' };
     const pris = l * DRIVSTOFF.prisPerLiter; if (!betal(pris)) return { feil: `Ikke nok penger (${kroner(pris)}).` };
-    L.drivstoff += l; return { liter: l, pris };
+    L.drivstoff += l; varer(L, 'diesel', 'kjøpt'); return { liter: l, pris };
   }
   const plasser = L => L.bygg.reduce((s, b) => s + effekt(b).plasser, 0);
   const mastRekkevidde = L => L.bygg.filter(b => b.type === 'radiomast').reduce((m, b) => Math.max(m, effekt(b).rekkevidde), 0);
@@ -513,7 +513,16 @@
   // Legger materialer fra verden (hogst, riving) i lageret, så langt lagerplassen rekker. Gir det som ble lagt inn.
   function leggInn(L, type, mengde) {
     if (!MATERIALER[type] || !(mengde > 0)) return 0;
-    const m = Math.max(0, Math.min(mengde, lagerplass(L) - (L.lager[type] || 0))); L.lager[type] = (L.lager[type] || 0) + m; return m;
+    const m = Math.max(0, Math.min(mengde, lagerplass(L) - (L.lager[type] || 0))); L.lager[type] = (L.lager[type] || 0) + m; if (m > 0) varer(L, type, 'lagt inn'); return m;
+  }
+  // VARER MED PLASS (G4, 28. nov, docs/plan-selskap-okonomi.md 13.2 – spill/varelager.js): hver vare ligger i enheter med plass (hauger,
+  // paller, fat) i lagerbyggene eller ute. Tallet i L.lager er fortsatt fasiten; hver endring her meldes til varelageret (api.varer, satt av
+  // Varelager.koble), som legger til eller tar bort enheter så summen alltid stemmer. Uten varelageret (testene for leir.js) som før.
+  function varer(L, type, grunn) { if (api.varer) try { api.varer(L, type, grunn); } catch (e) { /* varelageret skal aldri stoppe leiren */ } }
+  // Tar ut inntil mengde av en vare (bruk, salg, frakt): gir det som ble tatt ut. Går gjennom varelageret som leggInn.
+  function uttak(L, type, mengde, grunn) {
+    if (!MATERIALER[type] || !(mengde > 0)) return 0;
+    const m = Math.min(mengde, L.lager[type] || 0); if (!(m > 0)) return 0; L.lager[type] = Math.max(0, (L.lager[type] || 0) - m); varer(L, type, grunn || 'brukt'); return m;
   }
   // (R3-løkka 26. nov, kritikken: «Bålplassen fikk ‹skrå grunn: 4 m grunnmur›, og i 3D står bålet oppå en svart blokk høyere enn en mann»)
   // Små og åpne ting har ingen grunnmur – de FØLGER BAKKEN: de står i bakkens høyde midt under seg (som før grunnmuren kom), og
@@ -529,7 +538,7 @@
   // det kjøpMateriale tar for hvert av dem. Prisen flytter seg da bare når lageret får (eller mister) en hel tidel.
   function manglerMat(L, mat) { const ut = {}; for (const [k, v] of Object.entries(mat || {})) { const m = Math.ceil(Math.max(0, (+v || 0) - ((L && L.lager && L.lager[k]) || 0)) * 10 - 1e-6) / 10; if (m > 0 && MATERIALER[k]) ut[k] = m; } return ut; }
   function manglerPris(L, mat) { return Object.entries(manglerMat(L, mat)).reduce((s, [k, m]) => s + Math.round(m * MATERIALER[k].pris), 0); }
-  const api = { hviler: null, maskinKW: null, vedlikehold, manglerMat, manglerPris, grunn, følgerBakken, FØLGER_BAKKEN, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, påKartveg, VEGBREDDE, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
+  const api = { hviler: null, maskinKW: null, varer: null, uttak, vedlikehold, manglerMat, manglerPris, grunn, følgerBakken, FØLGER_BAKKEN, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, påKartveg, VEGBREDDE, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
     skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, selgMateriale, lagerplass,
     PRISDEL, harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, bratt, brattGrense, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
