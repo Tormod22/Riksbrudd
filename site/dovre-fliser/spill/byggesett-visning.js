@@ -41,14 +41,14 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   const knapp = (t, f, eg = {}) => { const b = el('button', { type: 'button', ...eg }, t); b.onclick = f; return b; };
   const linje = el('div', { id: 'byggesett', role: 'dialog', 'aria-label': 'Byggesett' }); document.body.appendChild(linje);
   // B4 (byggesett 3): rutenett 1,2 m (eller «Hall 4,8 m» med ett trykk), fire etasjer, Bærende (søyler og bjelker), Trapp, Plan (plantegningen)
-  const FANER = [['gulv', 'Gulv'], ['vegg', 'Vegg'], ['tak', 'Tak'], ['bærende', 'Bærende'], ['trapp', 'Trapp'], ['forsvar', 'Forsvar'], ['hus', 'Hus'], ['plan', 'Plan'], ['riv', 'Riv']];
+  const FANER = [['gulv', 'Gulv'], ['vegg', 'Vegg'], ['tak', 'Tak'], ['bærende', 'Bærende'], ['trapp', 'Trapp'], ['forsvar', 'Forsvar'], ['maskin', 'Maskiner'], ['hus', 'Hus'], ['plan', 'Plan'], ['riv', 'Riv']];
   const STOFF = [['tre', 'Tre'], ['stein', 'Mur'], ['betong', 'Betong'], ['blikk', 'Blikk']], VARIANT = [['hel', 'Hel'], ['dør', 'Dør'], ['vindu', 'Vindu'], ['port', 'Port']];
-  const V = { åpen: false, fane: 'vegg', stoff: 'tre', variant: 'hel', gulv: 'bs_fundament', tak: 'bs_tak_sal', forsvar: 'bs_palisade', bærende: 'bs_søyle_tre', trapp: 'bs_trapp', hus: 'hytte', rot: 0, nivå: 'auto', nett: 1, planE: 1, malValg: false };
+  const V = { åpen: false, fane: 'vegg', stoff: 'tre', variant: 'hel', gulv: 'bs_fundament', tak: 'bs_tak_sal', forsvar: 'bs_palisade', bærende: 'bs_søyle_tre', trapp: 'bs_trapp', maskin: 'bs_sagbenk', hus: 'hytte', rot: 0, nivå: 'auto', nett: 1, planE: 1, malValg: false };
   let A = null, B = null, forslag = [], kart = null, teller = 0, tekst = '', ekstra = '', advarsel = '';
   // grunntypen for fanen (de gamle 2,4 m-navnene er de samme grunnene) og størrelsen etter rutenettet
   const grunn = t => (t ? String(t).replace(/_[124]$/, '') : t);
   function typeNå() {
-    let g = V.fane === 'vegg' ? `bs_vegg_${V.stoff}${V.variant === 'hel' ? '' : '_' + V.variant}` : V.fane === 'gulv' ? V.gulv : V.fane === 'tak' ? V.tak : V.fane === 'forsvar' ? V.forsvar : V.fane === 'bærende' ? V.bærende : V.fane === 'trapp' ? V.trapp : null;
+    let g = V.fane === 'vegg' ? `bs_vegg_${V.stoff}${V.variant === 'hel' ? '' : '_' + V.variant}` : V.fane === 'gulv' ? V.gulv : V.fane === 'tak' ? V.tak : V.fane === 'forsvar' ? V.forsvar : V.fane === 'bærende' ? V.bærende : V.fane === 'trapp' ? V.trapp : V.fane === 'maskin' ? V.maskin : null;
     g = grunn(g); if (!g) return null; const N = BS.NYE[g]; if (!N) return D[g] ? g : null;
     const s = N.str.includes(V.nett) ? V.nett : N.str[0];
     return BS.typeFor(g, s);
@@ -59,6 +59,8 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   function egneMaler() { try { const v = JSON.parse(localStorage.getItem(MALNØKKEL) || '[]'); return Array.isArray(v) ? v.filter(BS.malGyldig) : []; } catch (e) { return []; } }
   function lagreMal(deler, navn) { const m = BS.tilMal(deler, navn); if (!m) return null; const L0 = egneMaler(); L0.push(m); while (L0.length > 12) L0.shift(); try { localStorage.setItem(MALNØKKEL, JSON.stringify(L0)); } catch (e) { /* sperret */ } return L0.length - 1; }
   const prisTekst = t => { const d = D[t]; if (!d) return ''; const L = d.s * G, k = d.kat === 'gulv' || d.kat === 'tak' ? `${String(Math.round(L * L * 10) / 10).replace('.', ',')} m²` : d.kat === 'søyle' ? 'søyle' : d.kat === 'trapp' ? 'trapp' : `${String(L).replace('.', ',')} m`;
+    // (B5) maskiner, lamper og hyller: prisen per stykk, målene og strømmen
+    if (['maskin', 'lampe', 'lager'].includes(d.kat)) return `${LB.kroner(d.pris)} og ${tidTekst(d.tid * 60)} arbeid` + (d.l ? ` · ${String(Math.round(d.b * G * 10) / 10).replace('.', ',')} × ${String(Math.round(d.l * G * 10) / 10).replace('.', ',')} m` : '') + (d.kw ? ` · ${String(-d.kw).replace('.', ',')} kW` : '') + (d.tung ? ' · betonggulv' : '');
     return `${LB.kroner(d.pris)} og ${tidTekst(d.tid * 60)} per ${k}`; };
   const stoffTekst = st => { const S = BS.STOFF[st]; return S ? `${S.navn}: spenn ${S.spenn} m${S.brenner ? ', brenner' : ''}` : ''; };
   const velg = (k, v) => () => { V[k] = v; if (k === 'fane') { V.rot = 0; V.malValg = false; } A = null; B = null; forslag = []; if (k === 'fane' && v === 'plan') sentrerPlan(); oppdater(); };
@@ -75,17 +77,20 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     if (V.fane === 'tak') linje.append(gv('tak', ['bs_tak_sal', 'bs_tak_flatt', 'bs_tak_betong', 'bs_tak_blikk']));
     if (V.fane === 'bærende') linje.append(gv('bærende', ['bs_søyle_tre', 'bs_søyle_betong', 'bs_søyle_stål', 'bs_bjelke_tre', 'bs_bjelke_stål']));
     if (V.fane === 'trapp') linje.append(gv('trapp', ['bs_trapp', 'bs_trapp_betong']));
+    // (B5) maskiner, lys og lager inni (spill/fabrikk.js / fabrikk-visning.js)
+    if (V.fane === 'maskin') linje.append(gv('maskin', ['bs_sagbenk', 'bs_høvel', 'bs_vedkløyver', 'bs_fyrkjele', 'bs_lysrør', 'bs_lyskaster', 'bs_hylle', 'bs_pall']));
     if (V.fane === 'forsvar') linje.append(rad(...['bs_palisade', 'bs_mur', 'bs_voll', 'bs_piggtråd'].map(t => knapp(D[t].kort, velg('forsvar', t), grunn(V.forsvar) === t ? { klasse: 'på' } : {}))));
     if (V.fane === 'hus') { linje.append(rad(...Object.entries(BS.HUS).map(([k, M]) => valg('hus', k, M.navn)), ...egneMaler().map((M, k) => valg('hus', 'egen:' + k, M.navn))));
       linje.append(rad(knapp(V.malValg ? 'Trykk to hjørner rundt bygget …' : 'Lagre et bygg som mal', () => { V.malValg = !V.malValg; A = null; B = null; forslag = []; oppdater(); }, { id: 'bs-lagremal', ...(V.malValg ? { klasse: 'på' } : {}) }))); }
     if (V.fane === 'plan') { const m = planModell(); linje.append(rad(...(m ? m.etasjer : []).map(e => knapp(e.loft ? 'Loft' : e.n + '. etasje', () => { V.planE = e.n; visLinje(); skitten = true; }, V.planE === e.n ? { klasse: 'på', 'data-etg': e.n } : { 'data-etg': e.n }))));
       if (!m) linje.append(el('small', {}, 'Ingen egne bygg med gulv ennå.')); }
     // stoffet og prisen for delen som er valgt (pris og tid etter stoffet, Claudes tall)
-    const tn = typeNå(); if (tn && V.fane !== 'riv' && V.fane !== 'hus' && V.fane !== 'plan') linje.append(el('small', { klasse: 'pris' }, `${D[tn].navn}: ${prisTekst(tn)}` + (D[tn].kat !== 'forsvar' && D[tn].kat !== 'trapp' ? ' · ' + stoffTekst(D[tn].stoff === 'tak' ? 'tre' : D[tn].stoff) : '')));
+    const tn = typeNå(); if (tn && V.fane !== 'riv' && V.fane !== 'hus' && V.fane !== 'plan') linje.append(el('small', { klasse: 'pris' }, `${D[tn].navn}: ${prisTekst(tn)}` + (!['forsvar', 'trapp', 'maskin', 'lampe', 'lager'].includes(D[tn].kat) ? ' · ' + stoffTekst(D[tn].stoff === 'tak' ? 'tre' : D[tn].stoff) : '')));
     linje.append(el('div', { klasse: 'tekst' }, tekst || hjelp()), advarsel ? el('small', { klasse: 'advarsel' }, advarsel) : '', ekstra ? el('small', {}, ekstra) : '');
     const ok = forslag.filter(q => !q.feil), mangler = matMangler(), knp = [];
+    if (V.fane === 'maskin' && BS.TING({ type: typeNå() })) knp.push(knapp(`Flyt mot ${['øst', 'nord', 'vest', 'sør'][V.rot % 4]}`, () => { V.rot = (V.rot + 1) % 4; oppdater(); }, { title: 'Retningen tømmeret går gjennom maskinen: innmating → utmating (R)' }));
     if (V.fane === 'tak' && grunn(V.tak) === 'bs_tak_sal' || V.fane === 'hus' || V.fane === 'trapp') knp.push(knapp(V.fane === 'hus' ? '⟳ Snu' : V.fane === 'trapp' ? `Opp mot ${['øst', 'nord', 'vest', 'sør'][V.rot % 4]}` : `Møne: ${['auto', 'langs x', 'langs y'][V.rot]}`, () => { V.rot = (V.rot + 1) % (V.fane === 'tak' ? 3 : 4); oppdater(); }));
-    if (['vegg', 'gulv', 'tak', 'bærende', 'trapp'].includes(V.fane)) knp.push(knapp(`${V.fane === 'tak' ? 'Over etasje' : 'Etasje'}: ${V.nivå === 'auto' ? 'auto' : V.nivå + 1}`, () => { V.nivå = V.nivå === 'auto' ? 0 : V.nivå >= BS.ETASJER - 1 ? 'auto' : V.nivå + 1; oppdater(); }, { title: 'Auto: delen legger seg i neste ledige etasje (høyst fire)' }));
+    if (['vegg', 'gulv', 'tak', 'bærende', 'trapp', 'maskin'].includes(V.fane)) knp.push(knapp(`${V.fane === 'tak' ? 'Over etasje' : 'Etasje'}: ${V.nivå === 'auto' ? 'auto' : V.nivå + 1}`, () => { V.nivå = V.nivå === 'auto' ? 0 : V.nivå >= BS.ETASJER - 1 ? 'auto' : V.nivå + 1; oppdater(); }, { title: 'Auto: delen legger seg i neste ledige etasje (høyst fire)' }));
     if (['vegg', 'gulv', 'tak', 'forsvar'].includes(V.fane) || (V.fane === 'bærende' && /bjelke/.test(V.bærende))) knp.push(knapp(V.nett === 4 ? 'Rutenett: hall 4,8 m' : 'Rutenett: 1,2 m', () => { V.nett = V.nett === 4 ? 1 : 4; A = null; B = null; forslag = []; oppdater(); }, { id: 'bs-nett', title: 'Hallrutenettet (4,8 m) legger store deler med ett trykk' }));
     if (V.fane === 'riv') { if (ok.length) knp.push(knapp(`Riv ${ok.length} (+${LB.kroner(rivPenger())})`, () => riv(), { id: 'bs-riv' })); }
     else if (ok.length) { knp.push(knapp(`Bygg ${ok.length > 1 ? ok.length + ' deler' : ''} (${LB.kroner(sum().pris)})`.replace('  ', ' '), () => bekreft(false), { id: 'bs-bygg', ...(mangler ? { disabled: '' } : {}) }));
@@ -99,6 +104,8 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     if (V.fane === 'plan') return 'Plantegningen av byggene dine: velg etasje. Rommene, dørene, trappene og søylene vises.';
     if (V.fane === 'hus') return V.malValg ? 'Trykk to hjørner rundt bygget du vil lagre som mal.' : `Trykk der ${malNå().navn.toLowerCase()} skal stå (nederste venstre hjørne). «Snu» flytter døra.`;
     const t = typeNå(), K = D[t].kat;
+    if (K === 'maskin' || K === 'lager') return `${D[t].navn}: trykk der den skal stå – på gulvet i et rom eller en hall${D[t].tung ? ' (betonggulv)' : ''}. «Flyt mot» snur den (R).`;
+    if (K === 'lampe') return `${D[t].navn}: trykk en rute i rommet, og et punkt til for en lampe hver 4,8 m.`;
     if (K === 'søyle') return `${D[t].navn}: trykk et hjørne i rutenettet, og et punkt til for en søylerad (hver 4,8 m).`;
     if (K === 'trapp') return `${D[t].navn}: trykk der foten skal stå (på gulvet). Den går 3,6 m opp mot ${['øst', 'nord', 'vest', 'sør'][V.rot % 4]}.`;
     return K === 'gulv' || K === 'tak' ? `${D[t].navn}: trykk en rute, og et punkt til for et rektangel.` : `${D[t].navn}: trykk ved en kant, og et punkt til for en rad (to hjørner: rundt).`;
@@ -158,13 +165,15 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
       visLinje(); skitten = true; return; }
     if (V.fane === 'riv') forslag = rivValg(alle, o).map(d => ({ d }));
     else if (V.fane === 'hus') { const [i, j] = BS.celle(o, A[0], A[1]); forslag = BS.husForslag(alle, malNå(), i, j, V.rot).map(q => ({ ...q, d: q.d || { ...q.slot, type: q.type, n: q.slot.n || 0 } })); }
-    else { const t = typeNå(), r = V.fane === 'tak' && V.rot ? V.rot - 1 : V.fane === 'trapp' ? V.rot % 4 : undefined;
+    else { const t = typeNå(), r = V.fane === 'tak' && V.rot ? V.rot - 1 : V.fane === 'trapp' || V.fane === 'maskin' ? V.rot % 4 : undefined;
       forslag = BS.forslag(alle, t, BS.rad(o, t, A, B, { r }), { nivå: V.nivå, r: V.fane === 'tak' ? r : undefined }).map(q => ({ ...q, d: q.d || { ...q.slot, type: t, n: 0, s: D[t].s } })); }
     visLinje(); skisse3d(); skitten = true;
     if (V.fane !== 'riv') {
       const ok = forslag.filter(q => !q.feil), pkt = ok.flatMap(q => [...LB.hjørner(somBygg(o, q.d)), [BS.midt(o, q.d).x, BS.midt(o, q.d).y]]);
       const v = await kartFor(pkt); if (nr !== teller) return; kart = v;
       for (const q of ok) { const f = LB.kanBygge(l, somBygg(o, q.d), v); if (f) q.feil = f; }
+      // (B5) en maskin: veien til bruksplassen (feil) og «ikke under tak» (advarsel) – spill/fabrikk-visning.js
+      if (window.FabrikkSpill && V.fane === 'maskin') FabrikkSpill.sjekkForslag(alle, forslag, o, l);
       // (runde 8) et ferdig hus står på én felles grunnmur: hele huset sjekkes som ett bygg (samme regel som leirens bygg, Leir.BRATT eller
       // 35 % av diagonalen) – før kunne hver del godtas for seg, og en hytte i en bratt li fikk en mange meter høy sokkel
       const hel = forslag.filter(q => !q.feil);
@@ -184,9 +193,10 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
         + (ok.some(q => q.bytt) ? ` – bytter ut ${ok.filter(q => q.bytt).length}` : '') + '.';
       // utpost: byggelaget må reise dit først (Leir.reise, brukeren 12. nov) – si det før du bekrefter
       const sted = BS.midt(o, ok[0].d), rs = LB.reise ? LB.reise(l, sted.x, sted.y) : null;
-      const m = matMangler(); ekstra = [rs && rs.full > 0 ? LB.reiseTekst(rs) : null, matTekst(s.mat) ? `Materialer: ${matTekst(s.mat)}` + (m ? ` – mangler for ${LB.kroner(m)}` : '') : 'Ingen materialer', feil.length ? `${feil.length} får ikke plass (rødt): ${feil[0].feil}` : null, B ? null : 'Trykk et punkt til for en rad.'].filter(Boolean).join(' · '); }
+      const m = matMangler(); ekstra = [rs && rs.full > 0 ? LB.reiseTekst(rs) : null, matTekst(s.mat) ? `Materialer: ${matTekst(s.mat)}` + (m ? ` – mangler for ${LB.kroner(m)}` : '') : 'Ingen materialer', feil.length ? `${feil.length} får ikke plass (rødt): ${feil[0].feil}` : null, B || (V.fane === 'maskin' && BS.TING({ type: ok[0].d.type })) ? null : 'Trykk et punkt til for en rad.'].filter(Boolean).join(' · '); }
     // F1 (veien, spill/vei.js): et rom som blir lukket uten dør, eller som ingen vei går inn til, sies fra om (som de andre grunnene)
     if (V.fane !== 'riv' && ok.length && window.Vei) advarsel = veiTekst(alle, ok, o, l) || '';
+    if (V.fane === 'maskin' && ok.some(q => q.advarsel)) advarsel = [advarsel, ok.find(q => q.advarsel).advarsel].filter(Boolean).join(' ');
     visLinje(); skisse3d(); skitten = true;
   }
   // F1: rommene som ikke nås (Vei.romUtenVei) før og etter forslaget; de nye gir teksten «Rommet på 23 m² har ingen dør …».
@@ -209,7 +219,10 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   // Delene som rives: den øverste nær trykket, eller alt i rektangelet mellom to trykk
   function rivValg(alle, o) {
     if (!B) { let best = null, bd = 1.6;
-      for (const d of alle) { const m = BS.midt(o, d), h = (d.s || 1) * G / 2, inne = BS.RUTE(d) && Math.abs(m.x - A[0]) < h && Math.abs(m.y - A[1]) < h;
+      for (const d of alle) { const m = BS.midt(o, d), h = (d.s || 1) * G / 2, ting = BS.TING && BS.TING(d), [fw, fh] = ting ? BS.fotRuter(d) : [0, 0];
+        // (B5) en maskin eller hylle: trykket et sted på fotavtrykket velger den (foran gulvet og taket)
+        if (ting && Math.abs(m.x - A[0]) < fw * G / 2 && Math.abs(m.y - A[1]) < fh * G / 2) { if (.2 < bd) { bd = .2; best = d; } continue; }
+        const inne = BS.RUTE(d) && Math.abs(m.x - A[0]) < h && Math.abs(m.y - A[1]) < h;
         const dd = (inne ? .5 : Math.hypot(m.x - A[0], m.y - A[1]) - (BS.KANT(d) ? .3 + (d.s - 1) * G / 2 : 0)) - d.n * .01 - (BS.kat(d) === 'søyle' || BS.kat(d) === 'bjelke' ? .2 : 0); if (dd < bd) { bd = dd; best = d; } }
       return best ? [best] : []; }
     const x0 = Math.min(A[0], B[0]) - .3, x1 = Math.max(A[0], B[0]) + .3, y0 = Math.min(A[1], B[1]) - .3, y1 = Math.max(A[1], B[1]) + .3;
@@ -218,7 +231,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   function trykk(X, Y) {
     if (!V.åpen || !L()) return false;
     if (V.fane === 'plan') return false;
-    if (!A || B || (V.fane === 'hus' && !V.malValg) || V.fane === 'trapp') { A = [X, Y]; B = null; } else B = [X, Y];
+    if (!A || B || (V.fane === 'hus' && !V.malValg) || V.fane === 'trapp' || (V.fane === 'maskin' && BS.TING({ type: typeNå() }))) { A = [X, Y]; B = null; } else B = [X, Y];
     oppdater(); return true;
   }
   // KOMMANDOLAGET (R17-4): byggingen, rivingen og kjøpet går gjennom window.KOMMANDO (spill/kommandoer.js); svaret er det regelfunksjonen
@@ -268,7 +281,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   // med mus: etter første trykk følger raden pekeren (som å dra en linje) til du trykker igjen
   let svev = 0;
   window.addEventListener('pointermove', e => {
-    if (!V.åpen || !A || B || V.fane === 'hus' || V.fane === 'trapp' || V.fane === 'plan' || e.pointerType !== 'mouse' || e.buttons || performance.now() - svev < 150) return;
+    if (!V.åpen || !A || B || V.fane === 'hus' || V.fane === 'trapp' || V.fane === 'plan' || V.fane === 'maskin' || e.pointerType !== 'mouse' || e.buttons || performance.now() - svev < 150) return;
     const p3 = typeof på3d !== 'undefined' && på3d, mål = e.target && e.target.id; if (mål !== (p3 ? 'c3' : 'c') && !(p3 && mål === 'c3o')) return;
     let P = null; if (p3) P = pek3d([e.clientX, e.clientY], true); else { const r = cv.getBoundingClientRect(), cx = e.clientX - r.left, cy = e.clientY - r.top; P = [kam.x + (cx - VW / 2) * kam.m, kam.y - (cy - VH / 2) * kam.m]; }
     // oppdater() leser B før den venter på kartet: B settes bare så lenge forslaget regnes ut
@@ -333,10 +346,15 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     if (V.åpen && o && GS / m >= 6) { g.save(); g.lineWidth = 1; const x0 = vx0, x1 = vx0 + VW * m, y1 = vy1, y0 = vy1 - VH * m;
       for (let i = Math.ceil((x0 - o.ox) / GS); o.ox + i * GS < x1; i++) { const x = sx(o.ox + i * GS); g.strokeStyle = (V.nett === 4 || i % 4 === 0) ? 'rgba(240,215,154,.24)' : 'rgba(240,215,154,.11)'; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, VH); g.stroke(); }
       for (let j = Math.ceil((y0 - o.oy) / GS); o.oy + j * GS < y1; j++) { const y = sy(o.oy + j * GS); g.strokeStyle = (V.nett === 4 || j % 4 === 0) ? 'rgba(240,215,154,.24)' : 'rgba(240,215,154,.11)'; g.beginPath(); g.moveTo(0, y); g.lineTo(VW, y); g.stroke(); } g.restore(); }
-    if (V.åpen && V.fane === 'plan') { tegnPlan(g, sx, sy, m); return; }
+    if (V.åpen && V.fane === 'plan') { tegnPlan(g, sx, sy, m);
+      // (B5) maskinene, hyllene og lampene i etasjen som vises (plantegningen har dem ikke)
+      if (window.FabrikkSpill) for (const d of alle) if (['maskin', 'lager', 'lampe'].includes(D[d.type].kat) && (d.n || 0) === (V.planE || 1) - 1) { g.save(); FabrikkSpill.tegnDel(g, d, o, sx, sy, m, null); g.restore(); }
+      return; }
     const tegnDel = (d, skisse) => {
       if (!syn(d)) return; const K = D[d.type].kat, st = D[d.type].stoff, alfa = skisse ? 1 : d.ferdig ? 1 : .45, ds = d.s || D[d.type].s;
       g.save(); g.globalAlpha = alfa;
+      // (B5) maskiner, lamper og hyller tegnes av spill/fabrikk-visning.js
+      if (K === 'maskin' || K === 'lampe' || K === 'lager') { if (window.FabrikkSpill) FabrikkSpill.tegnDel(g, d, o, sx, sy, m, skisse); g.restore(); return; }
       if (K === 'trapp') { const R = BS.ruter(d), i0 = Math.min(...R.map(c => c[0])), j0 = Math.min(...R.map(c => c[1])), i1 = Math.max(...R.map(c => c[0])) + 1, j1 = Math.max(...R.map(c => c[1])) + 1;
         const x = sx(o.ox + i0 * G), y = sy(o.oy + j1 * G), w = (i1 - i0) * G / m, h = (j1 - j0) * G / m; g.fillStyle = skisse || (st === 'betong' ? '#a19f98' : '#9a7a52'); g.fillRect(x, y, w, h);
         if (!skisse) { g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 1; const lx = w > h; for (let k = 1; k < 12; k++) { g.beginPath(); if (lx) { g.moveTo(x + w * k / 12, y); g.lineTo(x + w * k / 12, y + h); } else { g.moveTo(x, y + h * k / 12); g.lineTo(x + w, y + h * k / 12); } g.stroke(); }
@@ -458,6 +476,8 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     const saltak = [];
     for (const d of liste) {
       const Dd = D[d.type], hv = hz.get(d.id); if (!hv) continue; const f = fr(d), z0 = hv.z0, ds = d.s || Dd.s, K = Dd.kat;
+      // (B5) maskiner, lamper og hyller: enkle kasser (spill/fabrikk-visning.js)
+      if (K === 'maskin' || K === 'lampe' || K === 'lager') { if (window.FabrikkSpill) FabrikkSpill.bygg3d(Bg, d, Dd, z0, f, o); continue; }
       if (K === 'gulv') {
         for (const [ci, cj] of BS.ruter(d)) {
           const x0 = gx + ci * G, y0 = gy + cj * G, ut = (di, dj) => (gulvHer(ci + di, cj + dj, d.n) ? 0 : d.n ? .1 : .12);
@@ -618,6 +638,11 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
         const nøkler = new Set(P.map(([x, y]) => Math.floor(x / 20) + ',' + Math.floor(y / 20))); nøkler.add(k);
         for (const n of nøkler) { if (!R.hindre.has(n)) R.hindre.set(n, []); R.hindre.get(n).push({ P, bs: true }); } }
     }
+    // (B5) maskiner og hyller i 1. etasje stopper deg når du går (fotavtrykket litt mindre enn rutene)
+    for (const d of liste) { if (!BS.TING || !BS.TING(d) || d.n !== 0 || d.ferdig === false) continue; const R0 = BS.ruter(d), i0 = Math.min(...R0.map(c => c[0])), j0 = Math.min(...R0.map(c => c[1])), i1 = Math.max(...R0.map(c => c[0])) + 1, j1 = Math.max(...R0.map(c => c[1])) + 1;
+      const a0 = o.ox + i0 * G + .15 - u.cx, b0 = o.oy + j0 * G + .15 - u.cy, a1 = o.ox + i1 * G - .15 - u.cx, b1 = o.oy + j1 * G - .15 - u.cy, P = [[a0, b0], [a1, b0], [a1, b1], [a0, b1]];
+      const nøkler = new Set(); for (let x = Math.floor(a0 / 20); x <= Math.floor(a1 / 20); x++) for (let y = Math.floor(b0 / 20); y <= Math.floor(b1 / 20); y++) nøkler.add(x + ',' + y);
+      for (const n of nøkler) { if (!R.hindre.has(n)) R.hindre.set(n, []); R.hindre.get(n).push({ P, bs: true }); } }
   }
   // Forslaget i 3D: gjennomsiktig grønt (kan bygges) og rødt (får ikke plass), riv: rødt
   function skisse3d(u, R) {

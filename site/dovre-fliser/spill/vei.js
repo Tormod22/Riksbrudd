@@ -207,13 +207,17 @@
     const g0 = golvSett(0), e1 = bs ? bs.etasjer.find(e => e.n === 1) : null;
     const hindreB = [...LBYGG.map(q => ({ P: Leir.hjørner(q), luft: REGLER.hindreLuft })), ...hus.map(h => ({ P: h.m.P, luft: REGLER.hindreLuft }))];
     if (e1) hindreB.push(...etasjeHindre(bs, e1));
+    // (B5) maskiner og hyller i byggesettet sperrer rutene under fotavtrykket (plassene ved dem er rutene rett utenfor)
+    const tingH = n => (BS && BS.TING ? deler.filter(q => BS.DELER[q.type] && BS.TING(q) && (q.n || 0) === n) : []).map(q => { const R = BS.ruter(q), i0 = Math.min(...R.map(c => c[0])), j0 = Math.min(...R.map(c => c[1])), i1 = Math.max(...R.map(c => c[0])) + 1, j1 = Math.max(...R.map(c => c[1])) + 1;
+      const a0 = opphav.ox + i0 * G + .05, b0 = opphav.oy + j0 * G + .05, a1 = opphav.ox + i1 * G - .05, b1 = opphav.oy + j1 * G - .05; return [[a0, b0], [a1, b0], [a1, b1], [a0, b1]]; });
+    hindreB.push(...tingH(0));
     const bakke = lagLag({ id: 'bakke', hus: 'leir', e: 1, bakke: true, x0, y0, s: sB, W, H, golv: () => true, inne: (x, y) => iGolv(g0, x, y), hindre: hindreB,
       bruks: e1 ? etasjeBruks(e1, (x, y) => iGolv(g0, x, y)) : [], vegger: [...(e1 ? etasjeVegger(e1) : []), ...stengsler] });
     lagene.push(bakke);
     // etasjene over i byggesettet
     if (bs) for (const et of bs.etasjer) { if (et.n === 1) continue; const S = golvSett(et.n - 1), golv = (x, y) => iGolv(S, x, y);
       const [p, q, u, v] = boks(bs.P), lx0 = opphav.ox + Math.floor((p - opphav.ox) / s) * s - s, ly0 = opphav.oy + Math.floor((q - opphav.oy) / s) * s - s;
-      const L = lagLag({ id: 'leir:' + et.n, hus: 'leir', e: et.n, x0: lx0, y0: ly0, s, W: Math.ceil((u - lx0) / s) + 2, H: Math.ceil((v - ly0) / s) + 2, golv, inne: () => true, hindre: etasjeHindre(bs, et), bruks: etasjeBruks(et, golv), vegger: etasjeVegger(et) });
+      const L = lagLag({ id: 'leir:' + et.n, hus: 'leir', e: et.n, x0: lx0, y0: ly0, s, W: Math.ceil((u - lx0) / s) + 2, H: Math.ceil((v - ly0) / s) + 2, golv, inne: () => true, hindre: [...etasjeHindre(bs, et), ...tingH(et.n - 1)], bruks: etasjeBruks(et, golv), vegger: etasjeVegger(et) });
       L.modell = bs; L.etasje = et; lagene.push(L); }
     if (bs && e1) { bakke.modell = bs; bakke.etasje = e1; }
     for (const h of hus) lagene.push(...husLag(h.m, h.nøkkel, (o.ruter && o.ruter[h.nøkkel]) || (o.prøve ? 0 : husRute(h.m, h.nøkkel))));

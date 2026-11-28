@@ -76,6 +76,23 @@
     bs_mur: { navn: 'Mur', kort: 'Mur', kat: 'forsvar', stoff: 'betong', pris: 20000, tid: .3, mat: { betong: .6 }, str: [1, 4], tekst: 'Betongmur, 2,2 m' },
     bs_voll: { navn: 'Jordvoll', kort: 'Voll', kat: 'forsvar', stoff: 'jord', pris: 5000, tid: .4, mat: {}, str: [1, 4], tekst: 'Gravd voll, 1,3 m (gratis materialer)' },
     bs_piggtråd: { navn: 'Piggtråd', kort: 'Piggtråd', kat: 'forsvar', stoff: 'stål', pris: 4000, tid: .08, mat: {}, str: [1, 4], tekst: 'Stolper med piggtråd, 1,3 m' },
+    // (B5 fabrikken, kapittel 5.6) MASKINER som settes inn på gulvet i et rom eller en hall du har bygget. l × b ruter (l langs flyten: innmating -> utmating,
+    // r = retningen flyten går: 0 +x, 1 +y, 2 −x, 3 −y). maskin = maskintypen i Produksjon.REGLER.maskiner (samme regler som maskin-byggene).
+    // tung: krever betonggulv (fundament eller betongdekke). Pris og kW som dagens maskin-bygg; materialene er mindre (bygget er hallen) – Claudes forslag.
+    bs_sagbenk: { navn: 'Sagbenk', kort: 'Sagbenk', kat: 'maskin', stoff: 'stål', maskin: 'sagbruk', l: 8, b: 3, tung: true, kw: -15, pris: 6e6, tid: 2, mat: { stål: 6, tre: 2 }, str: [1],
+      tekst: 'Sagbenk med innmatingsbord og utmating, 3,6 × 9,6 m (betonggulv, 3 folk, 15 kW)' },
+    bs_høvel: { navn: 'Høvel', kort: 'Høvel', kat: 'maskin', stoff: 'stål', maskin: 'høvel', l: 4, b: 2, kw: -5, pris: 3e6, tid: 1, mat: { stål: 3 }, str: [1],
+      tekst: 'Høvler plankene fra sagbenken i samme rom: planker × 1,4 (1 folk, 5 kW)' },
+    bs_vedkløyver: { navn: 'Vedkløyver', kort: 'Vedkløyver', kat: 'maskin', stoff: 'stål', maskin: 'vedkløyver', l: 3, b: 2, kw: -3, pris: 8e5, tid: .6, mat: { stål: 2 }, str: [1],
+      tekst: 'Kløyver flis til ved, 2,4 × 3,6 m (1 folk, 3 kW)' },
+    bs_fyrkjele: { navn: 'Fyrkjele', kort: 'Fyrkjele', kat: 'maskin', stoff: 'stål', maskin: 'fyrkjele', l: 3, b: 2, tung: true, kw: 0, pris: 4e6, tid: 1.5, mat: { betong: 3, stål: 5 }, str: [1],
+      tekst: 'Brenner flis eller ved: 30 kW og varme i rommet (betonggulv, 1 folk)' },
+    // LYS: lamper på gulvet/i taket i en rute; lyser opp så mange meter rundt seg (lys) og bruker strøm (kW). Claudes tall.
+    bs_lysrør: { navn: 'Lysrør', kort: 'Lysrør', kat: 'lampe', stoff: 'stål', lys: 6, kw: -.3, pris: 4000, tid: .05, mat: { stål: .02 }, str: [1], tekst: 'Lyser opp 6 m rundt seg (0,3 kW)' },
+    bs_lyskaster: { navn: 'Lyskaster', kort: 'Lyskaster', kat: 'lampe', stoff: 'stål', lys: 14, kw: -1.2, pris: 9000, tid: .08, mat: { stål: .05 }, str: [1], tekst: 'Lyser opp 14 m rundt seg (1,2 kW)' },
+    // LAGER INNI: en hyllerekke (1 × 4 ruter) eller pallplass (2 × 2) i et lukket rom gir lagerplass (m³ av hver vare) – Claudes tall
+    bs_hylle: { navn: 'Hyllerekke', kort: 'Hylle', kat: 'lager', stoff: 'stål', l: 4, b: 1, lager: 6, pris: 30000, tid: .15, mat: { stål: .3 }, str: [1], tekst: 'Lagerplass 6 m³ av hver vare i rommet' },
+    bs_pall: { navn: 'Pallplass', kort: 'Paller', kat: 'lager', stoff: 'tre', l: 2, b: 2, lager: 4, pris: 8000, tid: .05, mat: { tre: .2 }, str: [1], tekst: 'Lagerplass 4 m³ av hver vare i rommet' },
   };
   // veggene: fire stoff × hel/dør/vindu/port (dør og vindu i 1,2 m, porten 2,4 m i det fine rutenettet; alt 4,8 m i hallrutenettet)
   for (const [st, V] of Object.entries(VEGG)) for (const v of ['hel', 'dør', 'vindu', 'port']) {
@@ -88,12 +105,16 @@
   for (const [id, D] of Object.entries(GAMLE)) DELER[id] = { ...D, s: 2, grunn: id, gammel: true };
   const typeFor = (grunn, s) => `${grunn}_${s}`;
   for (const [id, D] of Object.entries(NYE)) for (const s of D.str) {
-    const f = D.kat === 'gulv' || D.kat === 'tak' ? s * s : D.kat === 'søyle' || D.kat === 'trapp' ? 1 : s;
+    const f = D.kat === 'gulv' || D.kat === 'tak' ? s * s : ['søyle', 'trapp', 'maskin', 'lampe', 'lager'].includes(D.kat) ? 1 : s;
     const mat = {}; for (const [k, v] of Object.entries(D.mat)) mat[k] = Math.round(v * f * 10) / 10;
     DELER[typeFor(id, s)] = { ...D, str: undefined, s, grunn: id, pris: Math.round(D.pris * f), tid: Math.round(D.tid * f * 100) / 100, mat,
-      navn: D.navn + (s === 1 || D.kat === 'søyle' || D.kat === 'trapp' ? '' : ` ${String(s * U).replace('.', ',')} m`) };
+      navn: D.navn + (s === 1 || D.kat === 'søyle' || D.kat === 'trapp' || D.kat === 'maskin' ? '' : ` ${String(s * U).replace('.', ',')} m`) };
   }
   const kat = d => (DELER[d.type] ? DELER[d.type].kat : null);
+  // (B5) ting som står på gulvet med et fotavtrykk (maskiner, hyller/paller) og lamper
+  const TING = d => ['maskin', 'lager'].includes(kat(d));
+  // fotavtrykket i ruter: [bredde langs x, langs y] etter retningen r (l langs flyten)
+  const fotRuter = d => { const T = DELER[d.type], l = T.l || 1, b = T.b || 1; return (d.r || 0) % 2 ? [b, l] : [l, b]; };
   // Plassen i 1,2 m-ruter: en gammel type uten u (fra eldre kode/tester) har i, j i 2,4 m-ruter og gjøres om; alt annet er alt i 1,2 m-ruter.
   // (fraBygg og plassering gir alltid u: true.)
   const nrm = d => (d && DELER[d.type] && DELER[d.type].gammel && !d.u ? { ...d, i: d.i * 2, j: d.j * 2, s: 2, u: true } : d && DELER[d.type] && !d.s ? { ...d, s: DELER[d.type].s } : d);
@@ -109,7 +130,10 @@
       const L = D.s * U, K = D.kat;
       const fot = K === 'gulv' || K === 'tak' ? [-L / 2, L / 2, -L / 2, L / 2] : K === 'søyle' ? [-.15, .15, -.15, .15] : K === 'trapp' ? [-1.5 * U, 1.5 * U, -U / 2, U / 2]
         : [-L / 2, L / 2, D.grunn === 'bs_voll' ? -.8 : -.15, D.grunn === 'bs_voll' ? .8 : .15];
-      LB.BYGG[id] = { navn: D.navn, pris: D.pris, tid: D.tid, kw: 0, del: true, fot, mat: D.mat, tekst: D.tekst || 'Del i byggesettet' };
+      if (K === 'maskin' || K === 'lager') { const l = (D.l || 1) * U, b = (D.b || 1) * U; fot.splice(0, 4, -l / 2, l / 2, -b / 2, b / 2); }
+      if (K === 'lampe') fot.splice(0, 4, -.2, .2, -.2, .2);
+      LB.BYGG[id] = { navn: D.navn, pris: D.pris, tid: D.tid, kw: D.kw || 0, del: true, fot, mat: D.mat, tekst: D.tekst || 'Del i byggesettet',
+        ...(K === 'maskin' ? { maskin: true, maskinType: D.maskin, maskinDel: { l: D.l, b: D.b, tung: !!D.tung } } : {}), ...(K === 'lampe' ? { lampe: D.lys } : {}), ...(K === 'lager' ? { hylle: D.lager } : {}) };
     }
   }
   registrer(Leir);
@@ -122,6 +146,8 @@
   function ruter(d) {
     d = nrm(d); const K = kat(d), s = d.s || størrelse(d.type), ut = [];
     if (K === 'trapp') { const [di, dj] = DIR[(d.r || 0) & 3]; for (let k = 0; k < 3; k++) ut.push([d.i + di * k, d.j + dj * k]); return ut; }
+    if (TING(d)) { const [w, h] = fotRuter(d); for (let a = 0; a < w; a++) for (let b = 0; b < h; b++) ut.push([d.i + a, d.j + b]); return ut; }
+    if (K === 'lampe') return [[d.i, d.j]];
     for (let a = 0; a < s; a++) for (let b = 0; b < s; b++) ut.push([d.i + a, d.j + b]);
     return ut;
   }
@@ -131,6 +157,7 @@
   function midt(o, d) {
     d = nrm(d); const K = kat(d), s = d.s || størrelse(d.type);
     if (K === 'søyle') return { x: o.ox + d.i * U, y: o.oy + d.j * U, ret: 0 };
+    if (TING(d)) { const [w, h] = fotRuter(d); return { x: o.ox + (d.i + w / 2) * U, y: o.oy + (d.j + h / 2) * U, ret: ((d.r || 0) & 3) * Math.PI / 2 }; }
     if (K === 'trapp') { const R = ruter(d), x = R.reduce((t, c) => t + c[0] + .5, 0) / 3, y = R.reduce((t, c) => t + c[1] + .5, 0) / 3; return { x: o.ox + x * U, y: o.oy + y * U, ret: (d.r || 0) % 2 ? Math.PI / 2 : 0 }; }
     if (!KANT(d)) return { x: o.ox + (d.i + s / 2) * U, y: o.oy + (d.j + s / 2) * U, ret: 0 };
     return d.a === 'x' ? { x: o.ox + (d.i + s / 2) * U, y: o.oy + d.j * U, ret: 0 } : { x: o.ox + d.i * U, y: o.oy + (d.j + s / 2) * U, ret: Math.PI / 2 };
@@ -156,6 +183,10 @@
   function radU(o, type, A, B, o2) {
     const D = DELER[type], s = D.s, K = D.kat;
     if (K === 'trapp') { const [i, j] = celle(o, A[0], A[1]); return [{ i, j, a: null, r: o2.r || 0 }]; }
+    // (B5) en maskin/hylle med midten der du trykker; lamper: én, eller en rad/et rutenett hver 4. rute (4,8 m) mellom to trykk
+    if (K === 'maskin' || K === 'lager') { const r = (o2.r || 0) & 3, [w, h] = fotRuter({ type, r }), [i, j] = celle(o, A[0], A[1]); return [{ i: i - Math.floor((w - 1) / 2), j: j - Math.floor((h - 1) / 2), a: null, r }]; }
+    if (K === 'lampe') { const [i0, j0] = celle(o, A[0], A[1]), [i1, j1] = B ? celle(o, B[0], B[1]) : [i0, j0], st = Math.max(1, o2.avstand || GROV), ut = [];
+      for (let i = Math.min(i0, i1); i <= Math.max(i0, i1); i += st) for (let j = Math.min(j0, j1); j <= Math.max(j0, j1); j += st) if (ut.length < MAKS) ut.push({ i, j, a: null }); return ut; }
     if (K === 'søyle') {
       const [a0, b0] = hjørneVed(o, A[0], A[1]); if (!B) return [{ i: a0, j: b0, a: null }];
       const [a1, b1] = hjørneVed(o, B[0], B[1]), st = Math.max(1, o2.avstand || GROV), ut = [], lx = Math.abs(a1 - a0) >= Math.abs(b1 - b0);
@@ -188,6 +219,8 @@
     if (K === 'gulv' || K === 'tak') return ruter(d).map(([i, j]) => `c:${i}:${j}:${d.n}`);
     if (K === 'trapp') return ruter(d).map(([i, j]) => `t:${i}:${j}:${d.n}`);
     if (K === 'søyle') return [`p:${d.i}:${d.j}:${d.n}`];
+    if (TING(d)) return ruter(d).map(([i, j]) => `m:${i}:${j}:${d.n}`);
+    if (K === 'lampe') return [`l:${d.i}:${d.j}:${d.n}`];
     return kanter(d).map(k => `${K === 'bjelke' ? 'b' : 'k'}:${k.a}:${k.i}:${k.j}:${d.n}`);
   }
   const nøkkel = d => biter(d)[0];
@@ -213,7 +246,7 @@
     if (K === 'forsvar') return d.n === 0;
     if (K === 'vegg') { if (d.n === 0) return true; return kanter(d).every(k => !!vegg(M, k, d.n - 1) || ruterVed(k).some(([i, j]) => dekke(M, i, j, d.n))); }
     if (K === 'søyle') { if (d.n === 0) return true; if (søyle(M, d.i, d.j, d.n - 1)) return true; return [[d.i, d.j], [d.i - 1, d.j], [d.i, d.j - 1], [d.i - 1, d.j - 1]].some(([i, j]) => gulv(M, i, j, d.n)); }
-    if (K === 'trapp') return ruter(d).every(([i, j]) => gulv(M, i, j, d.n));
+    if (K === 'trapp' || TING(d) || K === 'lampe') return ruter(d).every(([i, j]) => gulv(M, i, j, d.n));
     if (K === 'bjelke') {
       // bjelkestykkene på samme linje regnes som én bjelke: begge endene av den må hvile på en vegg eller søyle
       const hviler = (i, j) => !!søyle(M, i, j, d.n) || kanterVed(i, j).some(k => vegg(M, k, d.n));
@@ -238,7 +271,7 @@
     const D = DELER[type]; if (!D) return { feil: 'Ukjent del.' }; if (!o.M) deler = norm(deler); slot = D.gammel && !slot.u ? { ...slot, i: slot.i * 2, j: slot.j * 2 } : slot;
     const M = o.M || indeks(deler), auto = o.nivå === undefined || o.nivå === 'auto' || o.nivå === null, K = D.kat;
     const ny = n => ({ type, i: slot.i, j: slot.j, a: ['vegg', 'forsvar', 'bjelke'].includes(K) ? slot.a : null, n, s: D.s, u: true,
-      ...(K === 'tak' && (o.r ?? slot.r) !== undefined && (o.r ?? slot.r) !== null ? { r: o.r ?? slot.r } : {}), ...(K === 'trapp' ? { r: (slot.r ?? o.r ?? 0) & 3 } : {}) });
+      ...(K === 'tak' && (o.r ?? slot.r) !== undefined && (o.r ?? slot.r) !== null ? { r: o.r ?? slot.r } : {}), ...(K === 'trapp' || K === 'maskin' || K === 'lager' ? { r: (slot.r ?? o.r ?? 0) & 3 } : {}) });
     const stFeil = K === 'tak' ? 'Taket må ligge på vegger, søyler eller bjelker (eller inntil et annet tak).' : K === 'gulv' ? 'Gulvet i etasjene over må ligge på vegger, søyler eller bjelker.'
       : K === 'søyle' ? 'Søylen må stå på bakken, et gulv eller en søyle under.' : K === 'bjelke' ? 'Bjelken må hvile på en vegg eller søyle i begge ender.' : K === 'trapp' ? 'Trappa må stå på gulv.'
       : 'Veggen må stå på en vegg eller et gulv.';
@@ -273,6 +306,7 @@
       if (n > ETASJER) return { feil: `Høyst ${ETASJER} etasjer.` };
       return ledig(ny(n), q => kat(q) === 'tak');
     }
+    if (TING({ type }) || K === 'lampe') return plasserTing(M, D, ny, auto ? null : o.nivå, ledig);
     if (K === 'søyle' || K === 'bjelke' || K === 'trapp') {
       if (!auto) return ledig(ny(o.nivå), q => kat(q) === K);
       let første = null;
@@ -291,6 +325,26 @@
     for (let e = 0; e < ETASJER; e++) if (!her[e].length) return ok(ny(e));
     if (her.some(h => h.some(q => (q.s || størrelse(q.type)) > D.s))) return { feil: 'Her står det en større del (2,4 m) – riv den først.' };
     return { feil: `Høyst ${ETASJER} etasjer.` };
+  }
+  // (B5) maskiner, hyller og lamper: på gulv (tunge maskiner på betong), ikke over en vegg, søyle eller trapp, ikke oppå en annen maskin.
+  // Etasjen: den laveste der det er gulv under hele fotavtrykket (eller den valgte).
+  const BETONG = new Set(['bs_fundament', 'bs_betongdekke']);
+  function tingFeil(M, D, d) {
+    const R = ruter(d), K = D.kat, navn = D.navn;
+    if (!R.every(([i, j]) => gulv(M, i, j, d.n))) return K === 'lampe' ? 'Lampen må stå i et rom med gulv.' : `${navn} må stå på gulv – legg gulv under hele fotavtrykket først.`;
+    if (D.tung && !R.every(([i, j]) => BETONG.has(DELER[gulv(M, i, j, d.n).type].grunn))) return `${navn} er tung og trenger betonggulv (fundament eller betongdekke).`;
+    if (K === 'lampe') return null;
+    if (R.some(([i, j]) => trappHer(M, i, j, d.n))) return 'Her går det en trapp.';
+    const inne = new Set(R.map(c => c.join(',')));
+    for (const [i, j] of R) { if (inne.has((i + 1) + ',' + j) && vegg(M, { a: 'y', i: i + 1, j }, d.n)) return `${navn} står over en vegg.`; if (inne.has(i + ',' + (j + 1)) && vegg(M, { a: 'x', i, j: j + 1 }, d.n)) return `${navn} står over en vegg.`; }
+    const [w, h] = fotRuter(d); for (let a = 1; a < w; a++) for (let b = 1; b < h; b++) if (søyle(M, d.i + a, d.j + b, d.n)) return `Det står en søyle der ${navn.toLowerCase()} skal stå.`;
+    return null;
+  }
+  function plasserTing(M, D, ny, nivå, ledig) {
+    const nivåer = nivå === null ? [...Array(ETASJER).keys()] : [nivå]; let første = null;
+    for (const n of nivåer) { const d = ny(n), f = tingFeil(M, D, d); if (f) { if (!første) første = { feil: f }; continue; }
+      const r = ledig(d, () => false); if (!r.feil) return { d, bytt: null }; if (!første || /gulv/.test(første.feil)) første = r.feil === 'Plassen er opptatt.' ? { feil: D.kat === 'lampe' ? 'Her henger det alt en lampe.' : 'Her står det alt en maskin eller hylle.' } : r; }
+    return første || { feil: 'Her er det ikke plass.' };
   }
   // Mange plasser på én gang: hver ny del regnes med for de neste (en ring med vegger og så tak). Gir [{ slot, d, bytt, feil }].
   // Til slutt: spennet (Bygning.ras) – raser et nytt dekke eller tak, får hele raden feilen («Spennet er 8,4 m …»).
@@ -408,12 +462,17 @@
   // ROMTYPER (B4-rammeverket): hva rommet ER ut fra det som står i det. ting = { seng, maskin, … } (antall). Første som passer vinner;
   // B5 legger maskinene inn (fabrikk) med ROMTYPER.unshift(...). Uten noe som passer: bruken (soverom, lager …).
   const ROMTYPER = [
+    // (B5) maskiner gjør rommet til et verksted (én) eller en fabrikk (flere, eller en sagbenk); hyller/paller uten maskiner = lagerrom
+    { id: 'fabrikk', navn: 'Fabrikk', passer: (r, t) => (t.maskin || 0) >= 2 || (t.sag || 0) >= 1 },
+    { id: 'verksted', navn: 'Verksted', passer: (r, t) => (t.maskin || 0) >= 1 },
+    { id: 'lagerrom', navn: 'Lagerrom', passer: (r, t) => (t.hylle || 0) >= 1 && !(t.seng || 0) },
     { id: 'sovesal', navn: 'Sovesal', passer: (r, t) => (t.seng || 0) >= 4 },
     { id: 'soverom', navn: 'Soverom', passer: (r, t) => (t.seng || 0) >= 1 },
   ];
   function romType(r, ting) { const t = ting || { seng: r.senger || 0 }; for (const T of ROMTYPER) if (T.passer(r, t)) return { id: T.id, navn: T.navn };
     const B = ROMBRUK[r.bruk]; return B ? { id: r.bruk, navn: B.navn } : { id: 'rom', navn: 'Rom' }; }
-  function romSum(R) { const u = { senger: 0, kjøkken: 0, verksted: 0, lager: 0 }; for (const r of R) { u.senger += r.senger; if (r.bruk === 'kjøkken' && r.virker) u.kjøkken++; if (r.bruk === 'verksted' && r.virker) u.verksted++; if (r.bruk === 'lager') u.lager += r.lager; } return u; }
+  function romSum(R) { const u = { senger: 0, kjøkken: 0, verksted: 0, lager: 0, hyller: 0 }; for (const r of R) { u.senger += r.senger; if (r.bruk === 'kjøkken' && r.virker) u.kjøkken++; if (r.bruk === 'verksted' && r.virker) u.verksted++; if (r.bruk === 'lager') u.lager += r.lager;
+    if (r.brukbart && r.hylleplass) u.hyller += r.hylleplass; } return u; }
   function rom(deler, typer) {
     const D0 = norm(deler).filter(d => d.ferdig !== false && DELER[d.type]), M = indeks(D0), ut = [], sett = new Set();
     // gulvruter per etasje (og hullene over trappene)
@@ -442,7 +501,13 @@
         lager: bruk === 'lager' ? Math.round(areal * B.m3 * 10) / 10 : 0,
         senger: brukbart && sov ? Math.floor(areal / SENG_M2) : 0,
         navn: !brukbart ? (e > 0 ? 'Rom uten trapp' : 'Rom uten dør') : !sov ? `Egenbygd ${B.navn.toLowerCase()}` + (virker ? '' : ' (for lite)') : areal >= 2 * SENG_M2 ? 'Egenbygd brakke' : 'Bod' };
-      r.type = romType(r); ut.push(r);
+      // (B5) det som står i rommet: maskiner, hyller/paller og lamper (fotavtrykket i rommets ruter i samme etasje)
+      const iRom = new Set(celler.map(c => c.join(','))), her = q => q.n === e && ruter(q).some(([a, b]) => iRom.has(a + ',' + b));
+      r.maskiner = D0.filter(q => kat(q) === 'maskin' && her(q)).map(q => q.id); r.hyller = D0.filter(q => kat(q) === 'lager' && her(q)).map(q => q.id); r.lamper = D0.filter(q => kat(q) === 'lampe' && her(q)).map(q => q.id);
+      r.hylleplass = D0.filter(q => kat(q) === 'lager' && her(q)).reduce((s, q) => s + (DELER[q.type].lager || 0), 0);
+      r.type = romType(r, { seng: r.senger, maskin: r.maskiner.length, sag: D0.filter(q => kat(q) === 'maskin' && her(q) && DELER[q.type].maskin === 'sagbruk').length, hylle: r.hyller.length });
+      if (r.maskiner.length || r.hyller.length) r.navn = r.type.navn + (r.hylleplass ? ` · lager ${r.hylleplass} m³` : '');
+      ut.push(r);
     }
     return ut;
   }
@@ -457,10 +522,11 @@
     deler = norm(deler); const hus = deler.filter(d => kat(d) !== 'forsvar'), harRute = new Set(), forelder = new Map();
     const finn = k => { while (forelder.get(k) !== k) { forelder.set(k, forelder.get(forelder.get(k))); k = forelder.get(k); } return k; };
     const node = k => { if (!forelder.has(k)) forelder.set(k, k); return k; }, slå = (a, b) => { const x = finn(node(a)), y = finn(node(b)); if (x !== y) forelder.set(x, y); };
-    for (const d of hus) if (RUTE(d) || kat(d) === 'trapp') for (const [i, j] of ruter(d)) harRute.add(`${i},${j}`);
+    const flate = d => RUTE(d) || kat(d) === 'trapp' || TING(d) || kat(d) === 'lampe';
+    for (const d of hus) if (flate(d)) for (const [i, j] of ruter(d)) harRute.add(`${i},${j}`);
     for (const d of hus) {
       const id = 'd' + d.id;
-      if (RUTE(d) || kat(d) === 'trapp') { for (const [i, j] of ruter(d)) { slå(id, `R${i},${j}`); for (const [di, dj] of [[1, 0], [0, 1]]) if (harRute.has(`${i + di},${j + dj}`)) slå(`R${i},${j}`, `R${i + di},${j + dj}`); } continue; }
+      if (flate(d)) { for (const [i, j] of ruter(d)) { slå(id, `R${i},${j}`); for (const [di, dj] of [[1, 0], [0, 1]]) if (harRute.has(`${i + di},${j + dj}`)) slå(`R${i},${j}`, `R${i + di},${j + dj}`); } continue; }
       if (kat(d) === 'søyle') { slå(id, `V${d.i},${d.j}`); for (const [i, j] of [[d.i, d.j], [d.i - 1, d.j], [d.i, d.j - 1], [d.i - 1, d.j - 1]]) if (harRute.has(`${i},${j}`)) slå(id, `R${i},${j}`); continue; }
       for (const k of kanter(d)) { const [[ax, ay], [bx, by]] = k.a === 'x' ? [[k.i, k.j], [k.i + 1, k.j]] : [[k.i, k.j], [k.i, k.j + 1]];
         slå(id, `V${ax},${ay}`); slå(id, `V${bx},${by}`); for (const [i, j] of ruterVed(k)) if (harRute.has(`${i},${j}`)) slå(id, `R${i},${j}`); }
@@ -484,11 +550,14 @@
   // Sengeplassene i leiren får med de egenbygde brakkene (Leir.plasser leser byggene; rommene legges til)
   if (Leir && !Leir.plasser.byggesett) { const før = Leir.plasser; Leir.plasser = L => før(L) + rom(fraLeir(L, Leir), L.romBruk).reduce((s, r) => s + r.senger, 0); Leir.plasser.byggesett = true; }
   // rom brukt som lager gir lagerplass
-  if (Leir && Leir.lagerplass && !Leir.lagerplass.ekstra) Leir.lagerplass.ekstra = L => (L && L.romBruk && Object.keys(L.romBruk).length ? romSum(rom(fraLeir(L, Leir), L.romBruk)).lager : 0);
+  // (B5) hyller og paller i et lukket rom med dør gir lagerplass (lagerHylle: har leiren noen ferdige hyller? – sjekkes først, så det går raskt)
+  const harHyller = L => !!(L && Array.isArray(L.bygg) && L.bygg.some(b => DELER[b.type] && DELER[b.type].kat === 'lager' && !(b.igjen > 0)));
+  if (Leir && Leir.lagerplass && !Leir.lagerplass.ekstra) Leir.lagerplass.ekstra = L => { const rb = L && L.romBruk && Object.keys(L.romBruk).length, hy = harHyller(L); if (!rb && !hy) return 0;
+    const S = romSum(rom(fraLeir(L, Leir), L.romBruk)); return (rb ? S.lager : 0) + S.hyller; };
 
   const api = { U, G, H, ETASJER, GROV, SOKKEL, DELER, GAMLE, NYE, STOFF, HUS, erDel, registrer, størrelse, typeFor, celle, ruter, kanter, biter, midt, kantEnder, kantVed, hjørneVed, rad,
     nøkkel, indeks, norm, punkter, støttet, plassering, forslag, spenn, rasVedRiving, lagHus, husDeler, husForslag, dreiDel, tilMal, malGyldig, rom, ROMBRUK, ROMTYPER, romType, romSum, høyder, fraBygg, fraLeir, plassFor,
-    KANT, RUTE, kat };
+    KANT, RUTE, kat, TING, fotRuter, tingFeil, BETONG, harHyller };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.ByggesettRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
