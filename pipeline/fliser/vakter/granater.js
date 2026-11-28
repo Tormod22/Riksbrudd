@@ -66,7 +66,7 @@ module.exports = {
           // (28. nov, ut9-kontroll) i full kontroll kan et ekte utsnitt være under bygging (vaktene før flyttet kameraet): det settes da inn mens
           // granaten flyr, og vakta satte etterpå tilbake det GAMLE utsnittet oppå det nye. Vent til byggingen er ferdig først; blir et ekte utsnitt
           // likevel satt inn underveis, skal granaten være flyttet dit (samme regel), og det nye utsnittet beholdes.
-          for (let i = 0; i < 300 && R.bygger; i++) await vent(100);
+          for (let i = 0; i < 100 && R.bygger; i++) await vent(100);
           { const sm1 = BK.smellTall(); e.sistGranat = -99; e.granater = Math.max(1, e.granater || 0); const g2 = BK.fiendeKast(e), u0 = R.ut, u1 = Object.assign(Object.create(Object.getPrototypeOf(u0)), u0, { cx: u0.cx + 100 });
             let ekte = null;
             if (g2) { R.ut = u1; R.bane.x -= 100; for (let i = 0; i < 60 && BK.flyr().some(q => q.fiende); i++) await vent(100);
