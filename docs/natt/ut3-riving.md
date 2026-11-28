@@ -93,7 +93,10 @@ Bjelke 0,06 t stål per m (minst 0,12 t), søyle 0,08 t, bjelke over ny åpning 
   «Riv hele huset» → loftet forsvant ved ⅓ → «Stopp rivingen» → resten står; ny lasting av siden: døra, tettingen og det revne loftet er der,
   `rivInfo` gir andel 0,8. 0 sidefeil.
 - 3D på testsiden (ingen husdata – et prøveomriss lagt inn i utsnittet): hull og hauger lages (1 hull, 18 hauger), 0 sidefeil.
-- 3D med ekte husdata (/rogaland via dev.py, Ryfylke): se rapporten (ekte3d-*.png i scratchpad natt/ut3-riving).
+- 3D med ekte husdata (/rogaland via dev.py, leir i Ryfylke 15607 6622779): en låve nær leiren fikk en ny dør i den lengste ytterveggen og
+  den nest lengste ytterveggen revet (lagt rett i loggen) – i 3D: 2 hull, 4 hauger, 0 sidefeil. På bildet synes den nye døra som en svart
+  åpning ved siden av låveporten. Den revne veggen (et mørkt felt over hele veggen) ble ikke sett tydelig på bildene (kameraet sto bratt og
+  trær dekket den siden) – ikke kontrollert på bilde. Bildene: scratchpad natt/ut3-riving/ekte3d-*.png.
 - Vakta `ut3-riving`: ok på PC (1,6 s), telefon (1,8 s) og med 3D på (10 s); alt tilbake som før (lager, kasse, logg, jobber).
   Selvtest: med en feil lagt inn med vilje (føre() hoppet over den første endringen) feilet vakta på «den lette veggen er ikke revet» m.fl.
 
