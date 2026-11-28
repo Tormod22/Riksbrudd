@@ -1,6 +1,6 @@
 'use strict';
 /* Riksbrudd – REKRUTTERING OG OPPLÆRING, visningen (28. nov, pakke «rekruttering»; reglene i spill/rekruttering.js).
- *  - Hver morgen (kl. 00 i spillet, ny dag) kommer søkere: Folk-panelet viser dem som kort (navn, alder, yrke, ferdigheter, egenskaper,
+ *  - Hver morgen (kl. 06 i spillet, ny dag, samtidig med morgenmøtet) kommer søkere: Folk-panelet viser dem som kort (navn, alder, yrke, ferdigheter, egenskaper,
  *    lønnskrav, «Ansett» / «By over»). Morgenmøtet nevner dem i én linje (window.MORGEN_LINJER), og loggen sier det.
  *  - Tilbud fra rivalene til misfornøyde folk står øverst i søkerdelen med «Gi lønnstillegg» / «La gå».
  *  - Opplæring: øvingsfeltet (nytt bygg) – velg person og ferdighet. Mester og lærling går av seg selv.
@@ -18,7 +18,8 @@
   const Lr = () => (window.LeirSpill ? LeirSpill.tilstand() : null);
   const kr = n => (window.Leir ? Leir.kroner(n) : Math.round(n) + ' kr');
   const tNå = () => (typeof tid !== 'undefined' ? tid : 0);
-  const klokke = () => (((tNå() % 1440) + 1440) % 1440) / 60;
+  // klokka i spillet: tid 0 er kl. 06 (som klokke() i index.html); en ny dag (og morgenmøtet) begynner kl. 06
+  const klokke = () => (((6 + tNå() / 60) % 24) + 24) % 24;
   const dagNå = () => Math.floor(tNå() / 1440) + 1;
   const des = v => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',');
   const mangler = () => (window.LeirSpill && LeirSpill.siste ? LeirSpill.siste().mangler : null);
