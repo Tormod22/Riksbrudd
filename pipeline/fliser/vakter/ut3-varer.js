@@ -9,6 +9,9 @@ module.exports = {
     const d = await pg.evaluate(async () => {
       const ut = {}, L = window.LeirSpill && LeirSpill.tilstand(), S = window.OppstartSpill && OppstartSpill.tilstand(), VS = window.VarelagerSpill, VL = window.Varelager;
       if (!L || !S || !VS || !VL || !VS.V() || !window.KOMMANDO) return { mangler: true, L: !!L, VS: !!VS, V: !!(VS && VS.V()) };
+      // (ut4-fiksa) en vakt før denne kan ha skrevet rett i lageret uten at spillets egen avstemming (hvert sekund i sim) har gått ennå:
+      // start fra et avstemt varelager, ellers står den gamle forskjellen igjen i alle sjekkene under
+      VS.avstem(); ut.avvikFør = (VS.avvik() || []).length;
       const V = VS.V(), V0 = JSON.stringify(VL.tilJSON(V)), bygg0 = L.bygg.slice(), lager0 = { ...L.lager }, d0 = L.drivstoff, penger0 = S.penger, neste0 = L.neste;
       const kam0 = { x: kam.x, y: kam.y, m: kam.m }, lagret0 = localStorage.getItem('riksbrudd-varer'), meny0 = document.getElementById('leirmeny') && document.getElementById('leirmeny').classList.contains('på');
       const vent = ms => new Promise(r => setTimeout(r, ms)), stemmer = () => !VS.avvik().length;

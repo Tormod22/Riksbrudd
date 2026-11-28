@@ -207,6 +207,8 @@
     if (b.avtale && b.avtale.oppsagt) h += '<span class="t rival">oppsagt</span>'; if (b.rival) h += `<span class="t rival">${esc(sidenavn(b.rival.side))}</span>`; else if (b.forhandler) h += `<span class="t rival">${esc(sidenavn(b.forhandler.side))} frir</span>`;
     if (b.hjelp) h += '<span class="t hjelp">ber om hjelp</span>'; return h; };
   function liste(L) {
+    // (ut4-fiksa) uten tettsteder (kartet laster fortsatt, eller området har ingen) sier fanen det, i stedet for bare innledningen
+    if (!L.length) return '<p class="rolig">Ingen tettsteder i området ennå. Kartet laster kanskje fortsatt.</p>';
     let h = '<p class="rolig" style="margin:6px 0">Vinn byene med avtaler: kunde (kontrakter) → beskyttelse → handel → medlem. Holder dere det dere lover, stiger tilliten. Dere kan fortsatt ta en by med makt, men da er den redd dere og stoler ikke på dere.</p>';
     for (const q of L.slice(0, 40)) { const i = info(q.id); if (!i) { h += `<div class="ba"><span><b>${esc(q.navn)}</b><small>${q.folk ? q.folk.toLocaleString('nb-NO') + ' innbyggere' : 'tettsted'} · ${esc(q.eierNavn || '')}</small></span><button type="button" data-sp="by" data-id="${esc(q.id)}">Vis</button></div>`; continue; }
       const b = i.b, eierT = i.eier && i.eier !== 'blå' ? ` · holdes av ${esc(sidenavn(i.eier))}` : i.eier === 'blå' && !(b.avtale && b.avtale.trinn === 'medlem') ? ' · holdes av dere' : '';

@@ -34,7 +34,7 @@ module.exports = { navn: 'ut1-selskap: panelet Selskapet, trinnene og Storlia-ko
       krev(sel && sel.closest('#selskapet') && sel.classList.contains('på') && sel.getBoundingClientRect().height > 80, 'Kontrakter viser ikke kontraktpanelet inne i Selskapet');
       SP.velgFane('byer'); await vent(80);
       krev(sel.parentNode === document.body && !sel.classList.contains('på'), 'kontraktpanelet ble ikke satt tilbake');
-      krev(P.querySelectorAll('.by').length > 0 || /Ingen tettsteder/.test(P.textContent), 'Byer viser ingenting');
+      krev(P.querySelectorAll('.by, .ba').length > 0 || /Ingen tettsteder/.test(P.textContent), 'Byer viser ingenting');
       SP.velgFane('produksjon'); await vent(60); krev(/Sagbruk og maskiner kommer her|Maskinene gjør tømmer om/.test(P.textContent), 'Produksjon sier ikke hva som kommer (eller viser maskinene, Ø1)');
       // ett panel om gangen: Leir lukker Selskapet
       const lk = $('leirknapp'); if (lk) { lk.click(); await vent(700); krev(!SP.erÅpen(), 'Selskapet sto åpent sammen med Leir-menyen'); if ($('leirmeny') && $('leirmeny').classList.contains('på')) lk.click(); await vent(100); }
@@ -49,8 +49,11 @@ module.exports = { navn: 'ut1-selskap: panelet Selskapet, trinnene og Storlia-ko
         { const lk = $('levertkort'); if (lk) lk.remove(); }
         SP.test = true; Selskapsbilde.REGLER.storlia.vent = 0; window.dispatchEvent(new CustomEvent('riksbrudd-kontrakt', { detail: { type: 'levert' } }));
         for (let i = 0; i < 30 && !$('storliakort'); i++) await vent(200);
-        const k = $('storliakort'); krev(k && /Storlia Tømmer har hørt om dere/.test(k.textContent) && /Leverandør|leverandør/.test(k.textContent), 'Storlia-kortet kom ikke etter første levering');
-        if (k) { k.querySelector('[data-k="åpne"]').click(); await vent(100); krev(SP.erÅpen() && SP.fane() === 'oversikt', '«Åpne Selskapet» på kortet åpnet ikke Oversikt'); }
+        // (ut4-fiksa, etter ut3-varekontrakt) før trinn 2 peker kortet mot Leverandør og åpner Oversikt; på trinn 2 eller høyere (vakter før
+        // denne har levert og bygd) har Storlia en tømmerkontrakt, og kortet åpner Kontrakter
+        const k = $('storliakort'), tr2 = TrinnSpill.regn().nr >= 2; ut.trinnKort = TrinnSpill.regn().nr;
+        krev(k && /Storlia Tømmer har hørt om dere/.test(k.textContent) && (tr2 ? /tømmerkontrakt/ : /Leverandør|leverandør/).test(k.textContent), 'Storlia-kortet kom ikke etter første levering');
+        if (k) { k.querySelector('[data-k="åpne"]').click(); await vent(100); krev(SP.erÅpen() && SP.fane() === (tr2 ? 'kontrakter' : 'oversikt'), `«Åpne Selskapet» på kortet åpnet ikke ${tr2 ? 'Kontrakter' : 'Oversikt'}`); }
         krev(SP.husk().storlia === true, 'kortet huskes ikke');
         sd.sum.levert = levFør; Selskapsbilde.REGLER.storlia.vent = ventFør; SP.test = testFør; }
       ut.trinn = Trinn.tekst(TrinnSpill.regn());

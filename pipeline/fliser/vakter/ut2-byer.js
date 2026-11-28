@@ -15,6 +15,10 @@ module.exports = {
     const A = nyBy('ut2a', 7000, 0, 3000), N = nyBy('ut2b', 14000, 3000, 1200); INFRA.tettsted.push(A, N);
     const ider = ['ut2a', 'ut2b'], eierFør = ider.map(id => TETTSTEDER.get(id));
     let lytt = 0; const ber = () => { lytt++; }; window.addEventListener('riksbrudd-by-ber', ber);
+    // (ut4-fiksa) egne lag som en vakt før denne (eller spillet) har latt stå nær prøvebyene, holder løftet og svarer på bønnen om hjelp
+    // for oss – de flyttes langt unna mens vakta går, og settes tilbake etterpå
+    const nærBy = s => [A, N].some(t => Math.hypot(s.x - (t.bb[0] + t.bb[2]) / 2, s.y - (t.bb[1] + t.bb[3]) / 2) < 6000);
+    const flyttet = ENHETER.filter(s => s.side === 'blå' && nærBy(s)).map(s => [s, s.x, s.y, s.sti]); for (const [s] of flyttet) { s.x = L.x - 20000; s.y = L.y; s.sti = null; }
     const lag = []; const nytt = (n, x, y, side) => { const s = nyttLag(n, x, y, side); ENHETER.push(s); lag.push(s); return s; };
     try {
       BS.nullstill(); const omr = BS.område(); krev(omr.some(b => b.id === 'ut2a'), 'prøvebyen er ikke med i området');
@@ -57,6 +61,7 @@ module.exports = {
     finally {
       window.removeEventListener('riksbrudd-by-ber', ber);
       for (const s of lag) { const i = ENHETER.indexOf(s); if (i >= 0) ENHETER.splice(i, 1); }
+      for (const [s, x, y, sti] of flyttet) { s.x = x; s.y = y; s.sti = sti; }
       ider.forEach((id, i) => { if (eierFør[i] === undefined) TETTSTEDER.delete(id); else TETTSTEDER.set(id, eierFør[i]); });
       INFRA.tettsted = INFRA.tettsted.filter(t => t !== A && t !== N); if (lagetInfra) INFRA = null;
       BS.sett(SB0); RS.sett(SR0);

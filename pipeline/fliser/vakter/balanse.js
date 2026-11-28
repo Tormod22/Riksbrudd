@@ -117,9 +117,12 @@ async function runde4(pg) {
       // PUNKT 1: et røverlag som har vært 45 min inne i leiren, tar byttet og trekker seg ut; bølgen er over uten belønning
       LS.lager.tre = 10; LS.drivstoff = Math.max(LS.drivstoff, 100); if (F) F.mat = Math.max(F.mat, 20);
       const p0 = Sx.penger, nr = 9001, rv = nyttLag('Røvere vakt', L.x + 40, L.y + 10, 'rød'); rv.raid = nr; ENHETER.push(rv); T0.aktiv = nr; rv.inne = Tr.HERJ.min + 1;
+      // (ut4-fiksa) varelageret (G4): røverne tar bare det som ligger ute – står treet i et lagerbygg fra en vakt før, tas mindre (eller ingenting)
+      const VS = window.VarelagerSpill, uteTre = VS && VS.ute() ? (VS.avstem(), (VS.ute() || {}).tre || 0) : 10;
+      d.treVentet = Math.floor(Math.min(10, uteTre) * Tr.HERJ.lager * 10) / 10;
       Sp.angrepSteg();
       d.trekker = !!rv.trekker; d.bytte = rv.bytte ? Tr.bytteTekst(rv.bytte) : null; d.tatt = p0 - OppstartSpill.tilstand().penger; d.over = T0.aktiv === 0; d.raidEtter = rv.raid; d.iEnheter = ENHETER.includes(rv);
-      if (!d.trekker) feil.push('røverlaget trakk seg ikke ut etter 45 min i leiren'); if (!(d.tatt > 0 && rv.bytte && rv.bytte.lager.tre === 2)) feil.push('byttet ble ikke tatt fra kassa og lageret');
+      if (!d.trekker) feil.push('røverlaget trakk seg ikke ut etter 45 min i leiren'); if (!(d.tatt > 0 && rv.bytte && Math.abs((rv.bytte.lager.tre || 0) - d.treVentet) < .05)) feil.push('byttet ble ikke tatt fra kassa og lageret');
       if (!d.over || d.raidEtter !== -nr || !d.iEnheter) feil.push('bølgen ble ikke over som «herjet» (laget skal gå videre bort)');
       rv.trekkerFra = tid - Tr.HERJ.maksMin - 1; Sp.utSteg(); if (ENHETER.includes(rv)) feil.push('røverlaget som trakk seg ut, ble ikke fjernet');
       // … og et røverlag der halvparten er falt eller såret, gir opp og flykter: bølgen er slått tilbake
