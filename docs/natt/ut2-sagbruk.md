@@ -119,6 +119,7 @@ Resultat (60 frø, sommer, kassa i mill. kr, median [10–90 %]):
   (test_leir2d, test_merker og test_leirvirkning krever det).
 - `spill/flistips.js`, `spill/maal.js`, `spill/overlev.js`: «tre» -> «planker» i teksten.
 - `index.html`: to skript-tagger rett etter `ressurser-visning.js` (`produksjon.js`, `produksjon-visning.js`) + `versjon.py`.
+- `pipeline/fliser/vakter/ut1-selskap.js`: én linje – fanen Produksjon kan nå vise maskinene i stedet for «… kommer her».
 - Tester: `test_folk.js` (oppgavelista), `test_ressurser.js` (hogst gir tømmer + tømmerbil), `test_okonomitest.js` (KJENT),
   `okosim.js` (slutt-kroken), `okosim-hogst.js` (tømmer), `okonomitest-band.json` (nytt bånd).
 
@@ -134,6 +135,11 @@ Resultat (60 frø, sommer, kassa i mill. kr, median [10–90 %]):
   maskinene, kjøp av tømmerbil (2,5 mill.), hogstfeltet viser «46,2 m³ tømmer». Ingen sidefeil.
 - Vakt `pipeline/fliser/vakter/ut2-sagbruk.js`: ok på PC (0,2 s) og mobil (0,4 s). Med en feil lagt inn med vilje (feil tekst for
   «tom for tømmer») feilet den på «tom».
+
+- Andre vakter etter endringen (PC; noen også mobil): ut1-jobber, ut1-selskap, ut1-tid, folk, leir2d, leirvirkning, lonn, regnskap,
+  morgen, balanse, lokke-r3-okonomi, spill2d, ui, start, nybegynner, kontrakter, lagring, verden, karakter, selskap, spillform – ok.
+  `okonomi` feiler («prognose … lik false») også på utgangspunktet (a60ba85) uten mine endringer. `ui` feilet én gang når den gikk
+  etter mange andre vakter i samme side, men er ok alene (og ok på utgangspunktet) – trolig rekkefølge, ikke denne pakka.
 
 ## IKKE gjort
 - Tømmerbilen er ikke kjørt en tur i nettleseren (bare Node-testen med falsk Kjoretoy).
