@@ -14,6 +14,9 @@
  */
 (function (rot) {
   'use strict';
+  // felles tilfeldighet (spill/tilfeldig.js) som i vare.js: samme frø gir samme svar
+  const TILFELDIG = (typeof globalThis !== 'undefined' && globalThis.Tilfeldig) || (typeof require === 'function' ? require('./tilfeldig') : null);
+  const tilf = TILFELDIG ? TILFELDIG.verden : () => .5;
   // ---------- tallene (alle er Claudes forslag) ----------
   const REGLER = {
     // varene som kan eksporteres: pris i eurokreditt per enhet (1 eurokreditt ≈ 1000 kr ved start, så planker gir ca. 36 000 kr mot
@@ -163,7 +166,7 @@
   const turPris = infl => Math.round(REGLER.grense.perTur * Math.max(1, tall(infl, 1)) / 1000) * 1000;
   // en tur kommer fram til grensestasjonen. smugling = uten avtale. Gir { levert, beslag }
   function overGrensa(S, k, m, smugling, r) {
-    const rr = r || Math.random; m = Math.max(0, Math.min(tall(m), k.mengde - tall(k.levert)));
+    const rr = r || tilf; m = Math.max(0, Math.min(tall(m), k.mengde - tall(k.levert)));
     if (smugling && rr() < REGLER.grense.beslag) { S.rykte = klem(tall(S.rykte, 50) + REGLER.rykte.beslag, 0, 100); S.sum.beslag++; return { levert: 0, beslag: m }; }
     k.levert = Math.round((tall(k.levert) + m) * 10) / 10; return { levert: m, beslag: 0 };
   }
