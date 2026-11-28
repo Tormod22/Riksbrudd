@@ -10,7 +10,7 @@
     // hver = sekunder mellom hver gang [minst, mest], timer = klokka [fra, til], maks = hørbar ut til så mange meter, styrke = topp (0–1)
     bjeff: { hver: [25, 70], timer: [6, 23], maks: 90, styrke: .07, ganger: [1, 3] },
     hammer: { hver: [5, 12], timer: [7, 17.5], maks: 110, styrke: .05, slag: [3, 6], takt: .9 },
-    prat: { hver: [3, 8], timer: [17, 21.5], maks: 45, styrke: .035, lengde: [1.2, 2.8] },
+    prat: { hver: [3, 8], timer: [17, 21.5], maks: 70, styrke: .035, lengde: [1.2, 2.8] },
   };
   const iTid = (h, [a, b]) => (a <= b ? h >= a && h < b : h >= a || h < b);
   // frø-basert rekke (mulberry32), samme som spill/tilfeldig.js
@@ -67,7 +67,7 @@
     const nå = ac.currentTime, h = ((((6 + (typeof tid !== 'undefined' ? tid : 0) / 60) % 24) + 24) % 24), u = R.ut, cx = R.cam.position.x + u.cx, cy = R.cam.position.y + u.cy, cz = R.cam.position.z;
     let St = null;
     for (const k of ['bjeff', 'hammer', 'prat']) { if (nå < når[k]) continue; når[k] = neste(k, nå, r); if (!aktiv(k, h) || (typeof tempo !== 'undefined' && tempo <= 0)) continue;
-      St = St || steder(); const p = St && St[k]; if (!p) continue; const d = Math.hypot(p[0] - cx, p[1] - cy, Math.max(0, cz - ((typeof hoyde3d === 'function' ? hoyde3d(p[0], p[1], u) : u.h0) - u.h0) * (R.EX || 1))), s = styrke(k, d); if (s < .002) continue;
+      St = St || steder(); const p = St && St[k]; if (!p) continue; const d = Math.hypot(p[0] - cx, p[1] - cy, Math.max(0, cz - ((typeof hoyde3d === 'function' ? hoyde3d(p[0], p[1], u) : u.h0) - u.h0) * (R.EX || 1))), s = styrke(k, d); if (s < .0005) continue;
       SPILL[k](M, nå + .02, s); antall[k]++; sist[k] = d; }
   });
   window.LeirlydSpill = { antall: () => ({ ...antall }), sist: () => ({ ...sist }), steder, nullstill: () => { if (ac) når = { bjeff: ac.currentTime, hammer: ac.currentTime, prat: ac.currentTime }; } };
