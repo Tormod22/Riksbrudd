@@ -51,15 +51,25 @@
     drivhus: { navn: 'Drivhus', pris: 2.5e6, tid: 2, kw: -1, modell: 'drivhus', fot: [-3, 3, -5, 5], mat: { tre: 6, stål: 2 }, tekst: 'Dyrker mat' },
     helikopterplass: { navn: 'Helikopterplass', pris: 4e6, tid: 2, kw: 0, modell: 'helikopterplass', fot: [-10.9, 15.6, -10.9, 10.9], mat: { betong: 60 }, tekst: 'Landingsplass' },
     sandsekkvoll: { navn: 'Sandsekkvoll', pris: 2e5, tid: .5, kw: 0, modell: 'sandsekkvoll', fot: [-.3, .2, -4, 4], mat: {}, tekst: 'Dekning' },
+    // MASKINENE (Ø1, 28. nov – pris, folk og strøm fra planen, kapittel 4.2; tid og materialer er Claudes forslag). De går bare med folk
+    // på «maskin», strøm og råvare – reglene står i spill/produksjon.js (maskin: true). Fyrkjelen bruker ikke strøm, den GIR 30 kW.
+    sagbruk: { navn: 'Sagbruk', pris: 6e6, tid: 3, kw: -15, modell: 'verksted', fot: [-6.3, 12, -7.3, 7.3], mat: { tre: 12, betong: 15, stål: 6 }, maskin: true, tekst: 'Sager tømmer til planker og flis (3 folk, 15 kW)' },
+    vedkløyver: { navn: 'Vedkløyver', pris: 8e5, tid: 1, kw: -3, modell: 'container', fot: [-3, 3.1, -1.2, 1.2], mat: { tre: 2, stål: 2 }, maskin: true, tekst: 'Kløyver flis og avkapp til ved (1 folk, 3 kW)' },
+    fyrkjele: { navn: 'Fyrkjele', pris: 4e6, tid: 2, kw: 0, modell: 'aggregat', fot: [-1.6, 1.6, -1, 1], mat: { tre: 4, betong: 6, stål: 5 }, maskin: true, tekst: 'Brenner flis eller ved: gir 30 kW og varme i stedet for diesel (1 folk)' },
   };
   // RUNDE 13 (kritiker H: «arbeid 8 mill. kr» av 8,4 mill. kr for et aggregat – «men arbeidet gjøres av mine egne folk»): grunnprisen
   // (BYGG[t].pris) betaler utstyret og de ferdige delene (aggregatet, lyskasteren, vinduer, beslag) – arbeidet gjør byggelagene dine uten
   // lønn, det koster bare tid. PRISDEL er navnet og forklaringen visningen bruker. Reglene er uendret.
   const PRISDEL = { navn: 'utstyr og deler', forklaring: 'Prisen kjøper utstyret og de ferdige delene. Arbeidet gjør byggelagene dine uten lønn – det koster bare tid.', arbeid: 'byggelagene dine' };
-  const MATERIALER = { tre: { navn: 'Tre', enhet: 'm³', pris: 20000 }, betong: { navn: 'Betong', enhet: 'm³', pris: 30000 }, stål: { navn: 'Stål', enhet: 't', pris: 60000 } };
+  // VARER OG SAGBRUK (28. nov, fase Ø1 i docs/plan-selskap-okonomi.md, kapittel 4; spørsmål 1 i kapittel 18 – brukt forslaget):
+  // det leiren kalte «tre», heter nå PLANKER for spilleren. Nøkkelen er fortsatt `tre`, så gamle lagringer, bygg og kontrakter virker som før.
+  // Nye varer med egen lagerplass (som de andre): TØMMER (hogst, kjøpes billig), FLIS og VED (fra sagbruket og vedkløyveren, spill/produksjon.js).
+  // Prisene på tømmer, flis og ved er Claudes forslag (tømmer 8 000 kr/m³ fra planen; flis og ved: Claudes eget anslag).
+  const MATERIALER = { tre: { navn: 'Planker', enhet: 'm³', pris: 20000 }, betong: { navn: 'Betong', enhet: 'm³', pris: 30000 }, stål: { navn: 'Stål', enhet: 't', pris: 60000 },
+    tømmer: { navn: 'Tømmer', enhet: 'm³', pris: 8000 }, flis: { navn: 'Flis', enhet: 'm³', pris: 3000 }, ved: { navn: 'Ved', enhet: 'm³', pris: 9000 } };
   const GRUNNLAGER = 60;   // så mye av hvert materiale leiren kan ha uten lagertelt og containere
   // hvem får strøm først når det er for lite
-  const PRIORITET = ['kontrollrom', 'radiomast', 'kameramast', 'sykestue', 'verksted', 'drivhus', 'brakke'];
+  const PRIORITET = ['kontrollrom', 'radiomast', 'kameramast', 'sykestue', 'verksted', 'drivhus', 'brakke', 'vedkløyver', 'sagbruk'];
   // Leirens diesel (liter, kjøpes for kroner): driver aggregatene og fyrer om vinteren. Kjøretøyene bruker IKKE denne – de fylles med
   // olje (tonn) på basen (spill/forsyning.js). Brukeren 12. nov: to systemer, men spillet skal si tydelig hva som er hva.
   // PRISEN (runde 6, kritikken 19. nov: «diesel til 8 000 kr literen, blakk på dag 2–3»): plan-kollaps.md hadde 8 000 kr literen da
@@ -84,7 +94,7 @@
     ut.perDøgn = Math.round(ut.perDøgn); ut.bygg.sort((a, b) => b.kr - a.kr); return ut;
   }
 
-  function ny() { return { versjon: 2, bygg: [], neste: 1, nesteJobb: 1, drivstoff: 0, lager: { tre: 0, betong: 0, stål: 0 }, plan: [], nestePlan: 1 }; }
+  function ny() { return { versjon: 2, bygg: [], neste: 1, nesteJobb: 1, drivstoff: 0, lager: { tre: 0, betong: 0, stål: 0, tømmer: 0, flis: 0, ved: 0 }, plan: [], nestePlan: 1 }; }
   const lengde = (P, lukket) => { let l = 0; const Q = lukket ? [...P, P[0]] : P; for (let i = 1; i < Q.length; i++) l += Math.hypot(Q[i][0] - Q[i - 1][0], Q[i][1] - Q[i - 1][1]); return l; };
   // Pris, tid og materialer for et bygg (gjerdet etter lengden). bonus.bygg (ingeniør) gjør byggingen raskere.
   function kostnad(type, l = 0, bonus = {}) {
@@ -419,12 +429,14 @@
     const solKW = sc.reduce((s, b) => s + effekt(b).kw, 0) * Math.max(0, Math.min(1, sol));
     // BRYTERE: et bygg som er slått av (b.av), bruker ikke strøm og virker ikke (det står i «mangler» som de uten strøm)
     const avslått = klare.filter(b => BYGG[b.type].kw < 0 && b.av);
-    const brukere = klare.filter(b => BYGG[b.type].kw < 0 && !b.av).sort((a, b) => PRIORITET.indexOf(a.type) - PRIORITET.indexOf(b.type));
+    // (Ø1) en maskin som står (tom for råvare, ingen folk, fullt lager – api.hviler fra spill/produksjon.js), bruker ikke strøm
+    const brukere = klare.filter(b => BYGG[b.type].kw < 0 && !b.av && !(api.hviler && api.hviler(L, b))).sort((a, b) => PRIORITET.indexOf(a.type) - PRIORITET.indexOf(b.type));
     const behov = brukere.reduce((s, b) => s - BYGG[b.type].kw, 0), tank = kapasitet(L);
     L.drivstoff = Math.min(L.drivstoff, tank);
     // aggregatene dekker det sola ikke klarer, så lenge det er drivstoff
     // strømnettet (spill/overlev.js: virker de første døgnene) dekker litt før aggregatene må gå
-    const nett = (api.nettKW ? api.nettKW(L) : 0) * (api.nettFaktor ? api.nettFaktor(L) || 1 : 1);
+    // (Ø1) fyrkjelene gir strøm som nettet (api.maskinKW: kW fra kjelene som brenner nå, spill/produksjon.js)
+    const nett = (api.nettKW ? api.nettKW(L) : 0) * (api.nettFaktor ? api.nettFaktor(L) || 1 : 1) + (api.maskinKW ? Math.max(0, api.maskinKW(L) || 0) : 0);
     // BATTERIET: overskudd fra sol og nett lader det, underskudd tappes derfra før aggregatene må gå (dt i spillminutter -> kWt)
     const batKap = klare.reduce((s, b) => s + effekt(b).kwt, 0); L.batteri = Math.max(0, Math.min(batKap, L.batteri || 0));
     const fritt = solKW + nett - behov; let batKW = 0;
@@ -517,7 +529,7 @@
   // det kjøpMateriale tar for hvert av dem. Prisen flytter seg da bare når lageret får (eller mister) en hel tidel.
   function manglerMat(L, mat) { const ut = {}; for (const [k, v] of Object.entries(mat || {})) { const m = Math.ceil(Math.max(0, (+v || 0) - ((L && L.lager && L.lager[k]) || 0)) * 10 - 1e-6) / 10; if (m > 0 && MATERIALER[k]) ut[k] = m; } return ut; }
   function manglerPris(L, mat) { return Object.entries(manglerMat(L, mat)).reduce((s, [k, m]) => s + Math.round(m * MATERIALER[k].pris), 0); }
-  const api = { vedlikehold, manglerMat, manglerPris, grunn, følgerBakken, FØLGER_BAKKEN, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, påKartveg, VEGBREDDE, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
+  const api = { hviler: null, maskinKW: null, vedlikehold, manglerMat, manglerPris, grunn, følgerBakken, FØLGER_BAKKEN, hjørner, bryter, dieselTimer, dieselMål, dieselRekker, prioriter, vegAvstand, påVeg, påKartveg, VEGBREDDE, leggInn, BYGG, MATERIALER, GRUNNLAGER, PRIORITET, DRIVSTOFF, REGLER, ny, kostnad, hjørner, overlapper, kanBygge, bygg, riv, flytt, oppgrader, oppgraderKostnad, maksNivå,
     skade, skad, reise, reiseFor, reiseTekst, tidTekst, kmTekst, reparer, reparerKostnad, festTilGjerde, gjerdeLedd, gjerdePunkter, ferdig, virker, effekt, framdrift, steg, jobber, byggelag, kapasitet, kjøpDrivstoff, kjøpMateriale, selgMateriale, lagerplass,
     PRISDEL, harMat, manglerTekst, plasser, mastRekkevidde, lengde, finn, kroner, tilJSON, fraJSON, BRATT, bratt, brattGrense, snapp, planFinn, planLegg, planFlytt, planFjern, planKostnad, byggPlan, tilMal, fraMal, planMal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

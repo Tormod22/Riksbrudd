@@ -17,13 +17,16 @@
     riving: { perArbeider: 2.5, grunn: 1, maksAreal: 3000 },   // m³ (eller t) materialer per arbeidstime, + en time å komme i gang
     bæring: { last: .15, fart: 1.1 },                          // m³ per tur (trillebår/kjelke) og m/s i snitt for folk på 'frakt'
     lastebil: { last: 12, lastetid: 1200, lossetid: 900 },     // m³/t per kjøretøy i kolonnen; sekunder for lasting og lossing
+    tømmerbil: { last: 20 },                                    // (Ø1) m³ tømmer per bil (planen 4.3: tømmerbil 20 m³); lasting som lastebilen
     reserve: 2,          // så mange arbeidere per oppgave når Folk-delen mangler
   };
-  const MAT = ['tre', 'betong', 'stål'];
+  // (Ø1, 28. nov) hogst gir TØMMER (m³), som må sages til planker («tre») på sagbruket – eller selges billig som det er.
+  // Riving gir fortsatt planker, betong og stål. Gamle hogstfelt i en lagring gir det de ga før (j.mat står i lagringen).
+  const MAT = ['tre', 'betong', 'stål', 'tømmer'];
   const ny = () => ({ versjon: 1, jobber: [], hogd: [], revet: [], neste: 1 });
   const r1 = v => Math.round(v * 10) / 10;
   const sum = m => MAT.reduce((s, k) => s + (m[k] || 0), 0);
-  const tom = () => ({ tre: 0, betong: 0, stål: 0 });
+  const tom = () => ({ tre: 0, betong: 0, stål: 0, tømmer: 0 });
 
   // Arealet av et omriss [[x, y], …] i m²
   function areal(P) { let a = 0; for (let i = 0; i < P.length; i++) { const [ax, ay] = P[i], [bx, by] = P[(i + 1) % P.length]; a += ax * by - bx * ay; } return Math.abs(a) / 2; }
@@ -47,9 +50,10 @@
     return { mat, gruppe: g, timer: r1(REGLER.riving.grunn + sum(mat) / REGLER.riving.perArbeider) };
   }
   // Det et hogstfelt gir: r = radius (m), skog = andelen av feltet som er skog (og ikke hogd fra før), 0–1
+  // (Ø1) mengden er nå tømmer (samme m³ per m² og per arbeidstime som før, Claudes forslag): mat.tømmer
   function hogstUtbytte(r, skog) {
-    const tre = r1(Math.PI * r * r * Math.max(0, Math.min(1, skog)) * REGLER.hogst.treM2);
-    return { mat: { tre, betong: 0, stål: 0 }, timer: r1(tre / REGLER.hogst.perArbeider) };
+    const tømmer = r1(Math.PI * r * r * Math.max(0, Math.min(1, skog)) * REGLER.hogst.treM2);
+    return { mat: { tre: 0, betong: 0, stål: 0, tømmer }, timer: r1(tømmer / REGLER.hogst.perArbeider) };
   }
   const avstand = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   function nyJobb(R, type, x, y, ut, leir, ekstra) {
@@ -61,7 +65,7 @@
     if (!leir) return { feil: 'Sett opp leiren først.' };
     if (avstand(o, leir) > REGLER.maksAvstand) return { feil: `For langt fra leiren (høyst ${REGLER.maksAvstand / 1000} km).` };
     if (!(o.skog >= REGLER.hogst.minSkog)) return { feil: o.skog > 0 ? 'For lite skog igjen her.' : 'Det er ikke skog her.' };
-    const ut = hogstUtbytte(o.r, o.skog); if (ut.mat.tre < .5) return { feil: 'For lite skog igjen her.' };
+    const ut = hogstUtbytte(o.r, o.skog); if (ut.mat.tømmer < .5) return { feil: 'For lite skog igjen her.' };
     return { jobb: nyJobb(R, 'hogst', o.x, o.y, ut, leir, { r: o.r }) };
   }
   // Start riving: hus = { i (husets nummer i kartet), P (omrisset i meter), t (type), h (høyde) }. Gir { jobb } eller { feil }.
@@ -130,12 +134,13 @@
   // K = Kjoretoy (reglene), graf = vegnettet. Gir { meter, sekunder } eller { feil }.
   function lastebil(R, kj, jobbId, graf, K, leir) {
     const j = finn(R, jobbId); if (!j) return { feil: 'Jobben finnes ikke.' };
-    if (kj.type !== 'lastebil' || !kj.antall) return { feil: 'Bare lastebiler kan frakte materialer.' };
+    if (!kj.antall || (kj.type !== 'lastebil' && kj.type !== 'tømmerbil')) return { feil: 'Bare lastebiler og tømmerbiler kan frakte materialer.' };
+    if (kj.type === 'tømmerbil' && j.type !== 'hogst') return { feil: 'Tømmerbilen frakter bare tømmer fra hogstfelt.' };
     if (kj.oppdrag) return { feil: `${kj.navn} er opptatt.` };
     const r = K.planlegg(kj, graf, [j.x, j.y]); if (r.feil) return r;
     kj.oppdrag = { type: 'ressurs', jobb: j.id, fase: 'til haug', igjen: 0, last: tom() }; j.frakt = 'lastebil'; j.bil = kj.navn; return r;
   }
-  const kapasitet = kj => REGLER.lastebil.last * (kj.antall || 1);
+  const kapasitet = kj => (kj.type === 'tømmerbil' ? REGLER.tømmerbil.last : REGLER.lastebil.last) * (kj.antall || 1);
   // Ett steg for et frakteoppdrag (sek spillsekunder). Gir hendelser som steg() (levert, fullt, tømt) og { hva: 'feil', melding }, { hva: 'slutt' }.
   function bilSteg(R, kj, graf, sek, K, leir, leggInn) {
     const o = kj.oppdrag, hend = []; if (!o || o.type !== 'ressurs') return hend;

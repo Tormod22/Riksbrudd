@@ -13,10 +13,11 @@
 (function (rot) {
   'use strict';
   const LB = typeof module !== 'undefined' && module.exports ? require('./leir.js') : rot.Leir;
-  const OPPGAVER = ['bygg', 'hogst', 'riving', 'frakt', 'vakt', 'overvåking', 'kjøkken', 'stell', 'verksted', 'fri'];
+  // (Ø1, 28. nov) «maskin»: driver sagbruket, vedkløyveren og fyrkjelen (spill/produksjon.js) – står foran «fri»
+  const OPPGAVER = ['bygg', 'hogst', 'riving', 'frakt', 'vakt', 'overvåking', 'kjøkken', 'stell', 'verksted', 'maskin', 'fri'];
   const OPPGAVE = {
     bygg: { navn: 'Bygg', tekst: 'Byggelag: to personer = ett lag' },
-    hogst: { navn: 'Hogst', tekst: 'Feller trær og gir tre' },
+    hogst: { navn: 'Hogst', tekst: 'Feller trær og gir tømmer' },
     riving: { navn: 'Riving', tekst: 'River forlatte hus for materialer' },
     frakt: { navn: 'Frakt', tekst: 'Bærer materialer til leiren' },
     vakt: { navn: 'Vakt', tekst: 'Bemanner vakttårnene og melder fiender' },
@@ -24,6 +25,7 @@
     kjøkken: { navn: 'Kjøkken', tekst: 'Lager mat: mindre svinn, bedre moral' },
     stell: { navn: 'Stell', tekst: 'Pleier syke og sårede (best med sykestue)' },
     verksted: { navn: 'Verksted', tekst: 'Reparerer bygg og lager stål (trenger verksted)' },
+    maskin: { navn: 'Maskiner', tekst: 'Driver sagbruket, vedkløyveren og fyrkjelen (trenger maskiner)' },
     fri: { navn: 'Fri', tekst: 'Hviler: bedre moral' },
   };
   // Yrket før kollapsen gir en sterk ferdighet (og litt i en annen)
@@ -83,7 +85,9 @@
       for (let i = 2; tatt.has(navn); i++) navn = navn.split(' ')[0] + ' ' + FORNAVN[(i * 7) % FORNAVN.length] + ' ' + navn.split(' ').slice(-1)[0]; }
     (F.navnBrukt = F.navnBrukt || []).push(navn);
     const y = YRKER.find(q => q.navn === yrke) || YRKER[Math.floor(r() * YRKER.length)], ferd = {};
-    for (const o of OPPGAVER) if (o !== 'fri') ferd[o] = Math.round((y.f[o] || (.75 + r() * .3)) * 100) / 100;
+    for (const o of OPPGAVER) if (o !== 'fri' && o !== 'maskin') ferd[o] = Math.round((y.f[o] || (.75 + r() * .3)) * 100) / 100;
+    // (Ø1) maskinferdigheten trekker ikke et nytt tilfeldig tall (da ville alle gjenger blitt annerledes): snittet av bygg og verksted
+    ferd.maskin = Math.round((y.f.maskin || (ferd.bygg + ferd.verksted) / 2) * 100) / 100;
     const p = { id: F.neste++, navn, alder: 19 + Math.floor(r() * 44), yrke: y.navn, ferd, oppgave, helse: 1, lojal: Math.round((.3 + r() * .7) * 100) / 100, seng: false };
     F.personer.push(p); return p;
   }
@@ -166,7 +170,11 @@
     F.mat = Math.max(0, F.mat + (B.drivhus - B.spiser) * d); const sult = F.mat <= 0 && B.drivhus < B.spiser;
     // varme: ved fra lageret først, så drivstoff
     let kald = 0;
-    if (B.fyring > 0) { const vb = B.ved * d, har = Math.min(L.lager.tre || 0, vb); L.lager.tre = (L.lager.tre || 0) - har; let mangel = vb > 0 ? 1 - har / vb : 0;
+    // (Ø1, 28. nov) fyrkjelene dekker først det de kan (api.varmeAndel, spill/produksjon-visning.js), så ved fra lageret, så planker
+    // (det gamle «tre»), så diesel. Uten kjele og ved er alt som før.
+    if (B.fyring > 0) { const kjele = api.varmeAndel ? Math.max(0, Math.min(1, api.varmeAndel(L, B) || 0)) : 0, vb = B.ved * d * (1 - kjele);
+      const vedHar = Math.min(L.lager.ved || 0, vb); if (vedHar > 0) L.lager.ved = (L.lager.ved || 0) - vedHar;
+      const har = Math.min(L.lager.tre || 0, vb - vedHar); L.lager.tre = (L.lager.tre || 0) - har; let mangel = B.ved * d > 0 ? (vb - vedHar - har) / (B.ved * d) : 0;
       if (mangel > 1e-9) { const lb = B.drivstoff * d * mangel, l = Math.min(L.drivstoff || 0, lb); L.drivstoff = (L.drivstoff || 0) - l; mangel *= lb > 0 ? 1 - l / lb : 0; }
       // i telt (uten seng) holder fyringen bare halvveis om vinteren
       kald = Math.min(1, mangel + (o.årstid === 'vinter' ? .5 * B.utenSeng / n : 0)); }
@@ -314,7 +322,7 @@
   function fjern(F, id) { if (!F || id === undefined || id === null) return null; const i = F.personer.findIndex(p => p.id === id); if (i < 0) return null; return F.personer.splice(i, 1)[0]; }
   // personId(m): mannens kobling til folket – Leirvakta har tallet (p.id), en tropp har hele personposten (som ikke står i folket)
   const personId = m => (m && (typeof m.person === 'number' || typeof m.person === 'string') ? m.person : null);
-  const api = { døgnF: null, tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
+  const api = { varmeAndel: null, døgnF: null, tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.FolkRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

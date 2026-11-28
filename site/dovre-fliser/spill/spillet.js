@@ -114,26 +114,30 @@
   };
 
   // ---------- MARKED: prisene flytter seg hver dag, og alt blir sakte dyrere ----------
-  const VARER = ['tre', 'betong', 'stål', 'diesel', 'mat'];
+  // (Ø1, 28. nov) tømmer, flis og ved er varer i markedet som de andre (spill/produksjon.js). Et lagret marked uten dem får faktor 1.
+  const VARER = ['tre', 'betong', 'stål', 'diesel', 'mat', 'tømmer', 'flis', 'ved'];
+  const en = () => Object.fromEntries(VARER.map(v => [v, 1]));
   const Marked = {
     VARER, SALG: .8,
-    ny: () => ({ f: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, før: { tre: 1, betong: 1, stål: 1, diesel: 1, mat: 1 }, infl: 1, dag: 0 }),
+    ny: () => ({ f: en(), før: en(), infl: 1, dag: 0 }),
     // ett døgn: hver vare flytter seg opptil ±12 % og trekkes litt tilbake mot det vanlige; inflasjonen er INFL per døgn (høyst × 3).
     // (R18, balansen – Claudes forslag) 0,4 % → 1 % per døgn: plan-kollaps.md sier at kronen taper 1–2 % hver dag etter Kronekrakket,
     // og 0,4 % merktes ikke (4 % på ti døgn). Nå 10 % på ti døgn og ca. 35 % på en måned – det lønner seg å bruke pengene.
     INFL: 1.01,
-    steg(M, rng) { M.før = { ...M.f }; M.solgt = {}; for (const v of VARER) M.f[v] = klem(M.f[v] * (1 + (rng() - .5) * .24) + (1 - M.f[v]) * .1, .55, 1.8); M.infl = Math.min(3, M.infl * Marked.INFL); M.dag++; Marked.fyll(M, 1); return M; },
-    pris: (M, vare, grunnpris) => Math.max(100, Math.round(grunnpris * M.f[vare] * M.infl / 100) * 100),
+    steg(M, rng) { for (const v of VARER) if (!(M.f[v] > 0)) M.f[v] = 1; M.før = { ...M.f }; M.solgt = {}; for (const v of VARER) M.f[v] = klem(M.f[v] * (1 + (rng() - .5) * .24) + (1 - M.f[v]) * .1, .55, 1.8); M.infl = Math.min(3, M.infl * Marked.INFL); M.dag++; Marked.fyll(M, 1); return M; },
+    pris: (M, vare, grunnpris) => Math.max(100, Math.round(grunnpris * (M.f[vare] > 0 ? M.f[vare] : 1) * M.infl / 100) * 100),
     // endringen siden i går i prosent (med inflasjonen)
-    endring: (M, vare) => Math.round((M.f[vare] * Marked.INFL / M.før[vare] - 1) * 100),
+    endring: (M, vare) => (M.f[vare] > 0 && M.før[vare] > 0 ? Math.round((M.f[vare] * Marked.INFL / M.før[vare] - 1) * 100) : 0),
     // HYLLENE (natt til 18. nov, Claudes forslag): markedet har ikke alt hver dag. maks = fulle hyller, fyll = det som kommer per døgn.
     // Kjøper du hyllene tomme, må du vente – eller hogge, rive og holde tettsteder.
-    LAGER: { tre: { maks: 60, fyll: 15 }, betong: { maks: 60, fyll: 12 }, stål: { maks: 20, fyll: 5 }, diesel: { maks: 2500, fyll: 600 }, mat: { maks: 300, fyll: 80 } },
-    ENHET: { tre: 'm³', betong: 'm³', stål: 't', diesel: 'l', mat: 'rasjoner' },
+    // (Ø1) tømmer, flis og ved: Claudes forslag
+    LAGER: { tre: { maks: 60, fyll: 15 }, betong: { maks: 60, fyll: 12 }, stål: { maks: 20, fyll: 5 }, diesel: { maks: 2500, fyll: 600 }, mat: { maks: 300, fyll: 80 },
+      tømmer: { maks: 80, fyll: 30 }, flis: { maks: 40, fyll: 15 }, ved: { maks: 40, fyll: 12 } },
+    ENHET: { tre: 'm³', betong: 'm³', stål: 't', diesel: 'l', mat: 'rasjoner', tømmer: 'm³', flis: 'm³', ved: 'm³' },
     // kjøpsprisen på tre, betong og stål er 1,5 × markedsprisen (frakt og mellommenn), så hogst og riving lønner seg klart
     PÅSLAG: 1.5,
     kjøpspris: (M, vare, grunnpris, dyrt) => Math.round(Marked.pris(M, vare, grunnpris) * (dyrt && Marked.erMateriale(vare) ? Marked.PÅSLAG : 1) / 100) * 100,
-    erMateriale: vare => vare === 'tre' || vare === 'betong' || vare === 'stål',
+    erMateriale: vare => vare === 'tre' || vare === 'betong' || vare === 'stål' || vare === 'tømmer' || vare === 'flis' || vare === 'ved',
     // hyllene i et marked (gamle lagrede markeder får fulle hyller)
     hyller(M) { if (!M.lager) M.lager = {}; for (const v of VARER) if (!(M.lager[v] >= 0)) M.lager[v] = Marked.LAGER[v].maks; return M.lager; },
     // nye varer: døgn = hvor mange døgn som er gått
@@ -143,7 +147,8 @@
     ta(M, vare, mengde) { const H = Marked.hyller(M); H[vare] = Math.max(0, (H[vare] || 0) - mengde); return H[vare]; },
     // KJØPERNE (runde 6, gjennomspillingen 19. nov: én på hogst og salg av alt treet ga ca. 0,8 mill. kr det første døgnet, uten noen
     // grense): markedet kjøper høyst så mye av hvert materiale per døgn (tømmes når markedet går et døgn videre). Claudes forslag.
-    KJØPER: { tre: 25, betong: 15, stål: 6 },
+    // (Ø1) tømmer 40, flis 30, ved 20 m³ per døgn – Claudes forslag
+    KJØPER: { tre: 25, betong: 15, stål: 6, tømmer: 40, flis: 30, ved: 20 },
     // hvor mye av `mengde` markedet tar imot i dag (tideler)
     kanSelge(M, vare, mengde) { const s = (M.solgt && M.solgt[vare]) || 0, tak = Marked.KJØPER[vare]; const igjen = tak === undefined ? mengde : Math.max(0, tak - s); return Math.floor(Math.min(mengde, igjen) * 10 + 1e-6) / 10; },
     selg(M, vare, mengde) { if (!M.solgt) M.solgt = {}; M.solgt[vare] = Math.round(((M.solgt[vare] || 0) + mengde) * 10) / 10; return M.solgt[vare]; },
