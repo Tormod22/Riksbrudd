@@ -29,12 +29,14 @@
   function last() {
     const L = leir(), m = midt(); if (!L || !m) { V = null; Lnå = null; return; }
     leirId = Math.round(m.x) + ',' + Math.round(m.y); Lnå = L; V = null;
-    try { const d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); if (d && d.leir === leirId) V = VL.fraJSON(d.v); } catch (e) { V = null; }
+    // som gjest i flerspiller (LeirSpill.erSpeil) er leiren vertens: enhetene regnes ut av tallene og lagres ikke her
+    try { const d = speil() ? null : JSON.parse(localStorage.getItem(NØKKEL) || 'null'); if (d && d.leir === leirId) V = VL.fraJSON(d.v); } catch (e) { V = null; }
     // gammelt spill (eller ny leir): det som står i L.lager, fordeles på plassene nå (omgjøringen)
     if (!V) V = VL.ny();
     velgUte(true); VL.avstem(LB, L, V, { grunn: 'brukt' }); sistLagret = ''; lagre();
   }
-  function lagre() { if (!V || !leirId) return; try { const t = JSON.stringify({ leir: leirId, v: VL.tilJSON(V) }); if (t !== sistLagret) { localStorage.setItem(NØKKEL, t); sistLagret = t; } } catch (e) { /* privat vindu */ } }
+  const speil = () => !!(window.LeirSpill && LeirSpill.erSpeil && LeirSpill.erSpeil());
+  function lagre() { if (!V || !leirId || speil()) return; try { const t = JSON.stringify({ leir: leirId, v: VL.tilJSON(V) }); if (t !== sistLagret) { localStorage.setItem(NØKKEL, t); sistLagret = t; } } catch (e) { /* privat vindu */ } }
   // V for leiren som vises nå; byttes leiren ut (nytt spill, lasting), lastes varelageret på nytt
   function hentV(L) { if (L && L !== Lnå && L === leir()) last(); return L && L === Lnå ? V : null; }
   VL.koble(LB, hentV);

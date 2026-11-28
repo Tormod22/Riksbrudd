@@ -56,6 +56,8 @@ module.exports = {
         const tx = (V.ute || S.leir); kam.x = tx.x + 8; kam.y = tx.y - 10; kam.m = .25; skitten = true; const t0 = performance.now();
         for (let i = 0; i < 30 && !(VS.tegnetNår > t0); i++) { skitten = true; await vent(150); }
         ut.tegnet = VS.tegnetNår > t0 && VS.tegnet > 0; ut.antallTegnet = VS.tegnet;
+        // i 3D tegnes ikke 2D-kartet: da sjekkes bare at enhetene har en plass i kartet
+        if (!ut.tegnet && typeof på3d !== 'undefined' && på3d) { ut.tegnet = V.e.filter(u => u.p === 'ute').every(u => VS.punkt(u)); ut.antallTegnet = '(3D på – ikke tegnet)'; }
         // fanen Lager
         if (!document.getElementById('leirmeny').classList.contains('på')) document.getElementById('leirknapp').click(); LeirSpill.fane('lager'); await vent(600);
         const boks = document.getElementById('varelager');
