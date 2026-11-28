@@ -222,13 +222,16 @@
         + (o.sperre === 'planker' ? '<button type="button" data-h="åpne" id="plan2dåpne">Fjern plankene</button>' : o.sperre ? '' : `<button type="button" data-h="barrikader" id="plan2dbarr">Barrikader (${tall(tre)} m³ tre)</button>`)
         + (window.HusEndring ? HusEndring.knapper(h, n, o) : '') + '<button type="button" data-h="avbryt">Avbryt</button></div>';
     } else html += (window.HusEndring && HusEndring.rad(h, n, et)) || `<div class="rad"><small>${esc(et ? et.navn : '')}${et && et.stengt ? ' (stengt)' : ''} · trykk på et vindu eller en dør for å barrikadere</small></div>`;
+    // (B2, ut3-etasjer) flere linjer fra andre moduler: window.PLAN2D_RAD = [(h, n) => html], knapper med data-et går til PLAN2D_KLIKK
+    for (const f of window.PLAN2D_RAD || []) { try { html += f(h, n) || ''; } catch (e) { console.warn('plantegning:', e); } }
     velger.classList.add('på');
     if (html === sistHtml || (typeof pekerNede === 'function' && pekerNede(velger))) return;
     sistHtml = html; velger.innerHTML = html;
   }
   velger.addEventListener('click', ev => {
     const b = ev.target.closest('button'); if (!b) return; ev.preventDefault(); ev.stopPropagation();
-    if (b.dataset.n !== undefined) { S.etasje = +b.dataset.n; S.valgt = null; }
+    if (b.dataset.et !== undefined) { for (const f of window.PLAN2D_KLIKK || []) try { f(b.dataset.et); } catch (e) { console.warn('plantegning:', e); } }
+    else if (b.dataset.n !== undefined) { S.etasje = +b.dataset.n; S.valgt = null; }
     else if (b.dataset.h === 'lukk') { S.fokus = null; S.valgt = null; S.sist = null; }
     else if (b.dataset.h === 'avbryt') S.valgt = null;
     else if (b.dataset.h === 'barrikader' || b.dataset.h === 'åpne') { const v = S.valgt; if (v) handling({ hus: v.i, e: v.e, del: 'åpning', id: v.id, gjør: b.dataset.h }); }

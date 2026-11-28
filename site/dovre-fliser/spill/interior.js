@@ -635,6 +635,8 @@
 
   // Kollisjon: sant når (x, y) er i en vegg eller et stort møbel. Utenfor omrisset sperrer bare selve ytterveggen.
   function blokkert(pl, x, y) {
+    // (B2) en annen etasje enn 1. (spill/etasjer3d.js setter pl.over mens du er i huset): undefined = som før
+    if (pl.over) { const v = pl.over(x, y); if (v !== undefined) return v; }
     const b = pl.bb; if (x < b[0] - .5 || x > b[2] + .5 || y < b[1] - .5 || y > b[3] + .5) return false;
     for (const s of pl.ytre) if (avstSeg(x, y, s.ax, s.ay, s.bx, s.by) < VEGG) return true;
     if (!inni(pl.P, x, y)) return false;

@@ -264,6 +264,8 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
   function dørNå() {
     if (!r3() || !R3.fot || !kropp || fører || !window.Gaavalg) return null; const D = Gaavalg.REGLER.dør, x = kropp.x, y = kropp.y;
     const inne = window.Interior3d && Interior3d.inne ? Interior3d.inne(x, y) : null;
+    // (B2) i en annen etasje enn 1. er det ingen dør ut (spill/etasjer3d.js)
+    if (inne && window.Etasjer3d && Etasjer3d.etasje(inne) !== 1) return null;
     if (inne && inne.inne && inne.inne.inngang) { const I = inne.inne.inngang; return { P: inne, I, inn: false, d: Math.hypot(I.x - x, I.y - y) }; }
     let best = null; for (const [P, I] of dører()) { const d = Math.hypot(I.x - x, I.y - y); if (d < D.nær && (!best || d < best.d)) best = { P, I, inn: true, d }; }
     return best;
