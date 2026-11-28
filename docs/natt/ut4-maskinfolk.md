@@ -110,7 +110,8 @@ vedkløyver 1, fyrkjele 0; opplæring 0,004 per driftstime, rampe 8 t, høyst 1,
 - Tømmerbil/lastebil til bæring mellom lager og maskin: ikke koblet til (tømmerbilen frakter fortsatt hogst -> lager som før). Det naturlige er en
   bærejobb med last 20 m³ for et kjøretøy når vegen er lang – ikke laget.
 - Maskiner i byggesettets haller (B5) og bruksplasser inne i bygg: plassene er punkter utenfor leirens maskinbygg.
-- 3D ikke sett på bilde (ingen egen 3D-kode; figurene følger gangen). Ingen tømmerstabler ved innmatingen i 3D.
+- 3D: åpnet med saga i drift (Dovre-testsiden): ingen feil, Folk3d viser 10 figurer – men sett bare fra lufta, ikke figurene ved maskinen på nært hold
+  (ingen egen 3D-kode; figurene følger gangen). Ingen tømmerstabler ved innmatingen i 3D.
 - Ved 60× tar hver fase (gå, ta opp, gå, legge ned) minst ett steg i gangen (4 i sekundet), så bæringen blir litt tregere i spilltid ved høy fart.
 - Ingen kø ved innmatingen; flere bærere kan stå på samme punkt.
 - Lasten som bæres teller ikke i lageret eller i statuslinja (den er «underveis»).
