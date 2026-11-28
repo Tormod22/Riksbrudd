@@ -11,11 +11,11 @@ Alle tall er Claudes forslag (samlet i `Rekruttering.REGLER`).
 - `pipeline/fliser/vakter/ut3-rekruttering.js` – NY vakt. `docs/natt/ut3-rekruttering-hjelp.json` – fire hjelpeemner (gruppe «Leiren»).
 - Endret (små, samlede endringer):
   - `spill/folk.js`: (1) `arbeidsfør` er usann for `p.skole` (på opplæring); (2) `personTempo` ganges med den nye kroken `api.personF(p, o)`
-    (null som standard); (3) `lønnSats(p)` og `lønnSum(F, ekstra, infl)` – hver person kan ha `p.lønn`, ellers `R.lønn`; `lønnSteg` bruker
+    (null som standard); (3) `lønnSats(p)` og `lønnSum(F, ekstra, infl)` – hver person kan ha `p.lønn`, ellers `R.lønn` (`ekstra` = antall eller en liste med personposter); `lønnSteg` bruker
     `lønnSum`. Uten egen lønn er tallene nøyaktig som før (`lønnPerDøgn` finnes fortsatt; test_folk og økonomitesten uendret).
   - `spill/folk-visning.js`: (1) knappen `#rekrutter` er «Søkere (n) ↓» (ruller ned til søkerne) når søkerlista finnes og gjengen ikke er i nød;
     i nød (under tre) er det den gamle rekrutteringen; grunnen (`#rekrutthvorfor`) står som før (fra `RekrutteringSpill.hvorfor()`);
-    (2) `lønnNå` = `FR.lønnSum`; (3) oppgaveradene sier «n på opplæring» i stedet for å regne dem som syke; (4) ved hver person
+    (2) `lønnNå` = `FR.lønnSum`, og lønna for mennene i egne tropper regnes fra personpostene deres (`m.person.lønn`, ellers 15 000); (3) oppgaveradene sier «n på opplæring» i stedet for å regne dem som syke; (4) ved hver person
     `RekrutteringSpill.personDel(p)` (lønn, egenskaper, opplæring); (5) nederst i panelet `RekrutteringSpill.del(...)` (søkere og opplæring).
   - `spill/morgen-visning.js`: én løkke etter rapportlinjene – `window.MORGEN_LINJER` (liste av `d => tekst | null`) legges til i rapporten.
   - `index.html`: to skript-tagger rett etter `jobber-visning.js` (`rekruttering.js`, `rekruttering-visning.js`), versjonsmerkene satt med `versjon.py`.
@@ -66,7 +66,6 @@ Alle tall er Claudes forslag (samlet i `Rekruttering.REGLER`).
   rekke etter andre vakter – «kortet setter ikke spillet på pause med lapp»); okonomi feiler på «prognose lik» også på grenen før denne pakken.
 
 ## IKKE gjort (senere / åpent)
-- Mennene i egne tropper får fortsatt standardlønn (15 000), også om personen hadde egen lønn før hen ble soldat.
 - «Venner i leiren holder på dem» (14.1) er ikke med – bare moral, lønn og lojalitet.
 - Varselet om lokking står i loggen og øverst i søkerdelen av Folk, ikke som brikke i #varsler (narhud.js er ikke endret).
 - Spioner blant søkerne (14.3) er ikke laget, men en søker har allerede alt som trengs for å få et skjult `spion`-merke senere.

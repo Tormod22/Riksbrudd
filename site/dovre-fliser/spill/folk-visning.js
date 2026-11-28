@@ -215,10 +215,12 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
   const iTropper = () => (typeof ENHETER === 'undefined' ? 0 : ENHETER.filter(s => s.side === 'blå' && s.fraFolk && Array.isArray(s.menn)).reduce((a, s) => a + s.menn.filter(m => m.hp > 0).length, 0));
   const infl = () => { try { const M = window.SpilletSpill && SpilletSpill.M && SpilletSpill.M(); return M && M.infl > 0 ? M.infl : 1; } catch (e) { return 1; } };
   // (28. nov) lønna per person (p.lønn, spill/rekruttering.js) – uten egen lønn 15 000 kr som før
-  const lønnNå = () => FR.lønnSum(F, iTropper(), infl());
+  // mennene i egne tropper: personposten (m.person) har egen lønn hvis personen ble ansatt fra søkerlista
+  const troppLønn = () => (typeof ENHETER === 'undefined' ? [] : ENHETER.filter(s => s.side === 'blå' && s.fraFolk && Array.isArray(s.menn)).flatMap(s => s.menn.filter(m => m.hp > 0).map(m => (m.person && typeof m.person === 'object' ? m.person : {}))));
+  const lønnNå = () => FR.lønnSum(F, troppLønn(), infl());
   function lønn(dt) {
     if (!F || !lønnAuto() || !window.OppstartSpill) return null;
-    const r = FR.lønnSteg(F, dt, kr => OppstartSpill.betal(kr), { ekstra: iTropper(), infl: infl() });
+    const r = FR.lønnSteg(F, dt, kr => OppstartSpill.betal(kr), { ekstra: troppLønn(), infl: infl() });
     for (const h of r.hendelser) logg(h); if (r.betalt || r.hendelser.length) lagre();
     return r;
   }

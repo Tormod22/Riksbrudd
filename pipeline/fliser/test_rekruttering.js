@@ -45,6 +45,7 @@ const leir = () => { const L = LB.ny(); L.bygg.push(bygg('brakke', { nivå: 2 })
   let k2 = 1e7; const G = FR.fraJSON(JSON.parse(JSON.stringify(F))); G.lønnAkk = 0; G.lønnTid = 0; FR.lønnSteg(G, 60, kr => { k2 -= kr; return true; });
   ok(1e7 - k2 === Math.round(standard / 24), 'lønnSteg trekker lønna per person (en time): ' + (1e7 - k2));
   ok(G.personer.find(p => p.navn === 'Per Dyktig').lønn === 24000, 'egen lønn lagres med folket (fraJSON)');
+  ok(FR.lønnSum(FR.ny(1), [{ lønn: 20000 }, {}]) === 150000 + 20000 + 15000, 'menn i egne tropper: egen lønn fra personposten, ellers 15 000');
   ok(FR.lønnSum(FR.ny(1)) === 150000 && FR.lønnSum(FR.ny(1), 2, 1.1) === Math.round(12 * 15000 * 1.1), 'uten egen lønn: 15 000 kr som før (også troppene og inflasjonen)');
   // uten seng: ingen ansettelse; i nød: alltid
   const S4 = RK.ny(2), F4 = FR.ny(3), L4 = LB.ny(); S4.søkere.push({ id: 5, navn: 'Liv Uten', ferd: { bygg: 1 }, egen: [], lønn: 14000, går: 1e9 });

@@ -237,10 +237,12 @@
   // Lønn per døgn for n personer (infl = markedets inflasjon, 1 = som ved start)
   const lønnPerDøgn = (n, infl = 1) => Math.round(n * R.lønn * (infl > 0 ? infl : 1));
   // (28. nov, rekruttering) hver person kan ha egen lønn (p.lønn, fra lønnskravet da hen ble ansatt); uten den R.lønn som før.
-  // lønnSum(F, ekstra, infl): lønna per døgn for gjengen + ekstra menn i egne tropper (standardlønn)
+  // lønnSum(F, ekstra, infl): lønna per døgn for gjengen + menn i egne tropper – ekstra er et antall (standardlønn) eller en liste
+  // med personpostene deres (m.person: egen lønn hvis de har)
   const lønnSats = p => (p && p.lønn > 0 ? p.lønn : R.lønn);
-  const lønnSum = (F, ekstra = 0, infl = 1) => Math.round((F.personer.reduce((s, p) => s + lønnSats(p), 0) + Math.max(0, ekstra || 0) * R.lønn) * (infl > 0 ? infl : 1));
-  // lønnSteg(F, dt, betal, o): lønnen samles opp og betales én gang per spilltime. o.ekstra = menn i egne tropper (utenfor folket),
+  const lønnSum = (F, ekstra = 0, infl = 1) => Math.round((F.personer.reduce((s, p) => s + lønnSats(p), 0)
+    + (Array.isArray(ekstra) ? ekstra.reduce((s, p) => s + lønnSats(p), 0) : Math.max(0, ekstra || 0) * R.lønn)) * (infl > 0 ? infl : 1));
+  // lønnSteg(F, dt, betal, o): lønnen samles opp og betales én gang per spilltime. o.ekstra = menn i egne tropper (utenfor folket; antall eller personposter),
   // o.infl = inflasjonen. betal(kr) -> true/false. Får de ikke betalt, blir det som skyldes stående i F.ubetalt (moralen synker)
   // og prøves betalt sammen med neste lønn. Gir { betalt, ubetalt, hendelser }.
   function lønnSteg(F, dt, betal, o = {}) {
