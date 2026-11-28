@@ -17,7 +17,7 @@
   function ekstraSenger() { if (LB.plasser && LB.plasser.byggesett) return 0; try { const r = window.Byggesett && Byggesett.rom ? Byggesett.rom() : null; return Array.isArray(r) ? r.reduce((s, q) => s + (+q.senger || 0), 0) : 0; } catch (e) { return 0; } }
   // egenbygde rom brukt som kjøkken eller verksted (spill/byggesett-visning.js: Byggesett.romBruk)
   function romBruk() { try { return window.Byggesett && Byggesett.romBruk ? Byggesett.romBruk() : null; } catch (e) { return null; } }
-  const grunn = () => { const rb = romBruk(); return { årstid: årstid(), mangler: window.LeirSpill ? LeirSpill.siste().mangler : new Set(), ekstraSenger: ekstraSenger(), moralTillegg: window.OverlevSpill ? OverlevSpill.moralTillegg() : 0,
+  const grunn = () => { const rb = romBruk(); return { årstid: årstid(), mangler: window.LeirSpill ? LeirSpill.siste().mangler : new Set(), ekstraSenger: ekstraSenger(), moralTillegg: (window.OverlevSpill ? OverlevSpill.moralTillegg() : 0) + (window.JobberSpill ? JobberSpill.moralTillegg() : 0),
     ekstraKjøkken: rb ? rb.kjøkken : 0, ekstraVerksted: rb ? rb.verksted : 0 }; };
   // samfunnet (spill/samfunn-visning.js) legger til lover, barn og gamle, ønsker, sykdom og hendelser som varer
   const valg = () => (window.SamfunnSpill && SamfunnSpill.valg ? SamfunnSpill.valg(grunn()) : grunn());
@@ -136,6 +136,9 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     for (const t of kort && !alleMangler ? mg.slice(0, 2) : mg) panel.append(el('div', { klasse: 'mangler' }, t));
     if (kort && !alleMangler && mg.length > 2) { const m = el('div', { klasse: 'mangler', style: 'cursor:pointer;text-decoration:underline' }, `… og ${mg.length - 2} til`); m.onclick = () => { alleMangler = true; vis(); }; panel.append(m); }
     if (B.avh) panel.append(el('div', { klasse: 'status' }, `Barn og gamle: ${B.avh} (arbeider ikke, men spiser og trenger seng)`));
+    // JOBBTAVLA (F0, spill/jobber-visning.js): når tavla fordeler, står den i stedet for − / + per oppgave; ellers under oppgavene
+    const tavle = window.JobberSpill ? JobberSpill.del({ el, knapp }) : null;
+    if (tavle && tavle.erstatter) panel.append(...tavle.noder); else {
     // oppgavene: − antall +
     panel.append(el('h3', {}, 'Oppgaver'));
     // RUNDE 13 (kritiker H: «+ på Vakt tok en fra Bygg uten å si det»): siste flytting står her til neste endring
@@ -148,20 +151,22 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
       minus.disabled = !antall; pluss.disabled = o === 'fri' ? n - antall === 0 : antall === n;
       panel.append(el('div', { klasse: 'opp' }, el('div', {}, el('b', {}, O.navn), el('small', {}, info + (antall > a ? ` · ${antall - a} syke` : ''))), minus, el('span', { klasse: 'n' }, String(antall)), pluss));
     }
+    if (tavle) panel.append(...tavle.noder); }
     // folkene
     panel.append(el('div', { klasse: 'rad' }, knapp(visFolk ? `Skjul folkene` : `Vis folkene (${n})`, () => { visFolk = !visFolk; vis(); }, { id: 'visfolk' })));
     if (visFolk) for (const p of F.personer) {
       const best = Object.entries(p.ferd).sort((a, b) => b[1] - a[1])[0];
       // DELEGERE (brukeren 16. nov): velg oppgaven for hver enkelt; ★ står ved det personen er best på
       const velg = el('select', { 'aria-label': `Oppgave for ${p.navn}`, 'data-id': String(p.id) }); for (const o of FR.OPPGAVER) { const v = el('option', { value: o }, FR.OPPGAVE[o].navn + (o === best[0] ? ' ★' : '')); if (o === p.oppgave) v.setAttribute('selected', ''); velg.appendChild(v); }
-      velg.onchange = () => { KOMMANDO({ type: 'folk', person: p.id, oppgave: velg.value }); endret(); };
+      velg.onchange = () => { if (!(window.JobberSpill && JobberSpill.velg(p, velg.value))) KOMMANDO({ type: 'folk', person: p.id, oppgave: velg.value }); endret(); };
       // trykk på navnet åpner personkortet (ansikt, historie, ønske – spill/samfunn-visning.js)
       const navn = el('span', { klasse: 'pnavn', 'data-person': String(p.id), style: 'cursor:pointer;text-decoration:underline dotted' }, `${p.spes ? '★ ' : ''}${p.navn}, ${p.alder} `);
       navn.onclick = () => { if (window.SamfunnSpill) SamfunnSpill.visPerson(p.id); };
       const merke = (p.syk ? ' · Grålungen' : '') + (p.karantene ? ' · karantene' : '') + (p.trener ? ' · i opplæring' : '') + (p.borte ? ' · borte' : '');
       const bilde = ansikt(p); if (bilde) bilde.onclick = navn.onclick;
       panel.append(el('div', { klasse: 'person' + (p.helse < FR.R.arbeidsfør || p.syk ? ' syk' : '') }, ...(bilde ? [bilde] : []), navn, velg,
-        el('small', {}, ` · ${p.yrke}, best på ${FR.OPPGAVE[best[0]].navn.toLowerCase()} · helse ${Math.round(p.helse * 100)} %${p.seng ? '' : ' · telt'}${merke}`)));
+        el('small', {}, ` · ${p.yrke}, best på ${FR.OPPGAVE[best[0]].navn.toLowerCase()} · helse ${Math.round(p.helse * 100)} %${p.seng ? '' : ' · telt'}${merke}`,
+          ...(window.JobberSpill ? JobberSpill.personDel(p, { el, knapp }) : []))));
     }
   }
   function endret() { lagre(); vis(); visStatus(); skitten = true; }
