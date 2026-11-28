@@ -97,7 +97,7 @@
 
   // ---------- møblene: kasser [x0, x1, y0, y1, z0, z1, farge, stoff, rund] i meter i møbelets akser (y fra ryggen −d/2 til fronten +d/2) ----------
   // (ut9-mobler3) TINGENE I LEIRENS BYGG: hyllene i kjøkkenet, brakka, sykestua, kontrollrommet og verkstedet viser det leiren har av det rommet
-  // bruker (alle plassene i tinglageret); lagerteltet og containeren det som ligger på deres egen plass. Claudes forslag: 300 l = full hylle.
+  // bruker (alle plassene i tinglageret); lagerteltet og containeren det som ligger på deres egen plass. Claudes forslag: 120 l = full hylle.
   const LEIR_KAT = { kjøkken: ['mat', 'drikke', 'kjøkken'], brakke: ['klær', 'hygiene', 'fritid'], sykestue: ['medisin', 'hygiene'], kontrollrom: ['kontor', 'elektro'], verksted: ['verktøy', 'elektro'] };
   function leirVarer(P) {
     const HY = window.Hyller, TS = window.TinglagerSpill, T = TS && TS.T && TS.T(), Ti = window.Ting; if (!HY || !T || !Ti || !P || !P.leir || !P.bygg) return null;
@@ -105,7 +105,7 @@
     if (!K) { const egen = TS.plasser ? TS.plasser().find(q => q.id === id) : null; if (egen) { const v = HY.innhold(T, id, egen.liter, Ti.TING); if (v.fyll > 0) return v; } }
     const sum = {}; let tot = 0; for (const q of T.s) { const g = Ti.TING[q.t]; if (!g || (K && !K.includes(g.kat))) continue; const v = g.vol * q.n; sum[g.kat] = (sum[g.kat] || 0) + v; tot += v; }
     if (!(tot > 0)) return { fyll: 0, kat: [] };
-    return { fyll: Math.max(HY.REGLER.minstSynlig, Math.min(1, tot / 300)), kat: Object.entries(sum).map(([kat, v]) => ({ kat, andel: v / tot })).sort((a, b) => b.andel - a.andel) };
+    return { fyll: Math.max(HY.REGLER.minstSynlig, Math.min(1, tot / 120)), kat: Object.entries(sum).map(([kat, v]) => ({ kat, andel: v / tot })).sort((a, b) => b.andel - a.andel) };
   }
   function deler(m) {
     const b = m.b / 2, d = m.d / 2, h = m.h, f = TØY[Math.floor(m.f * TØY.length) % TØY.length], f2 = TØY[Math.floor(m.f * 31) % TØY.length], K = [];
@@ -415,8 +415,7 @@
         case 'toalett': k(-b - .16, -b - .04, -d + .02, -d + .12, .6, .72, hv, 'glatt', true); break;
         // (ut9-mobler) småting på de nye møblene
         case 'skjenk': case 'kommode': if (r(4) < .5) { k(-b * .75, -b * .75 + .14, -d * .3, -d * .3 + .02, h, h + .18, MØRK); k(-b * .75 + .015, -b * .75 + .125, -d * .3 + .02, -d * .3 + .025, h + .02, h + .16, [.75, .7, .6]); } if (r(1) < .6) lampe(b * .55, -d * .2); if (r(2) < .5) k(-b * .4 - .12, -b * .4 + .12, -.1, .1, h, h + .06, [.7, .5, .3], 'glatt', true); if (r(3) < .4) bok(0, d * .2, 2); break;
-        // (ut9-mobler3) hverdagsting: jakker på knaggene, bamse og leker ved barnesenga, vaskemiddel på vaskemaskinen, avis på salongbordet
-        case 'knagger': for (let q = 0; q < 3; q++) if (r(q + 1) < .6) k(-b + .12 + q * .32, -b + .38 + q * .32, -d + .03, -d + .15, .95 + r(q + 4) * .15, 1.6, TØY[Math.floor(r(q + 9) * TØY.length)], 'tøy'); break;
+        // (ut9-mobler3) hverdagsting: bamse og leker ved barnesenga, vaskemiddel på vaskemaskinen, avis på salongbordet
         case 'barneseng': k(-.08, .08, d - .38, d - .24, .4, .54, [.62, .44, .26], 'tøy'); k(-.06, .06, d - .36, d - .26, .54, .65, [.62, .44, .26], 'tøy');
           for (let q = 0; q < 3; q++) if (r(q + 2) < .7) k(-b + .1 + q * .22, -b + .2 + q * .22, d + .12 + (q % 2) * .1, d + .22 + (q % 2) * .1, 0, .09, [[.8, .2, .15], [.92, .76, .2], [.2, .4, .75]][q]); break;
         case 'vaskemaskin': if (r(1) < .6) k(-b * .6, -b * .6 + .12, -d * .5, -d * .5 + .08, h, h + .2, [.25, .45, .75]); break;

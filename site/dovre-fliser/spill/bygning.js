@@ -216,7 +216,7 @@
     const A = pl.akse;
     for (const r of pl.rom) { if (!(r.andel > .15)) continue; et.rom.push({ id: et.rom.length, rolle: r.rolle || 'rom', P: romP(r, A), areal: r2(r.areal || 0), andel: r2(r.andel) }); }
     skillevegger(pl, et, st.skille, REGLER.tykk.skille);
-    for (const m of pl.møbler) et.møbler.push({ id: et.møbler.length, type: m.type, x: r2(m.x), y: r2(m.y), a: r2(m.a || 0), b: r2(m.b), d: r2(m.d), h: r2(m.h || 1), sperrer: !!m.sperrer, stoff: 'tre', tilstand: 'hel' });
+    for (const m of pl.møbler) et.møbler.push({ id: et.møbler.length, type: m.type, x: r2(m.x), y: r2(m.y), a: r2(m.a || 0), b: r2(m.b), d: r2(m.d), h: r2(m.h || 1), sperrer: !!m.sperrer, stoff: 'tre', tilstand: 'hel', ...(m.rolle ? { rolle: m.rolle } : {}) });
   }
 
   // ---------- rutenettet: hvor du kan gå (kapittel 6.5 bruker det senere) ----------

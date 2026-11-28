@@ -148,8 +148,9 @@
   // og interiøret i det bygget lages på nytt (Interior3d.bygOm) med døra åpen og tingene synlige (spill/interior3d.js). Lukkes panelet, lukkes døra.
   const LUKKET = { kjøleskap: 1, skap: 1, garderobe: 1, tønne: 1, fryseboks: 1 };
   let sistÅpen = '', sistLeir = '';
-  function åpentNå() { const LS = window.LutSpill; if (!LS || !LS.erÅpen || !LS.erÅpen() || !LS.aktiv) return null; const c = LS.aktiv(); if (!c || !LUKKET[c.type] || c.k < 0 || !c.nk) return null;
-    const i = +String(c.nk).split(':')[0]; if (!isFinite(i)) return null; const n = c.B && typeof c.B === 'object' ? Object.keys(c.B.t || c.B).length : 2; return { i, type: c.type, k: c.k, fyll: Math.min(1, .15 + n * .15) }; }
+  function åpentNå() { const LS = window.LutSpill; if (!LS || !LS.erÅpen || !LS.erÅpen() || !LS.aktiv) return null; const c = LS.aktiv(); if (!c || !LUKKET[c.type] || !c.nk) return null;
+    // nøkkelen er «bygg:type:nr» (spill/mobler.js) – nr er nummeret blant like møbler i planen
+    const [si, , sk] = String(c.nk).split(':'), i = +si, k = +sk; if (!isFinite(i) || !isFinite(k)) return null; const n = c.B && typeof c.B === 'object' ? Object.keys(c.B.t || c.B).length : 2; return { i, type: c.type, k, fyll: Math.min(1, .15 + n * .15) }; }
   setInterval(() => { try { const I3 = window.Interior3d; if (!I3 || !I3.bygOm) return;
     const å = åpentNå(), n = å ? `${å.i}:${å.type}:${å.k}:${å.fyll}` : ''; if (n !== sistÅpen) { const før = window.MØBEL_ÅPEN; window.MØBEL_ÅPEN = å; sistÅpen = n; if (før && (!å || før.i !== å.i)) I3.bygOm(før.i); if (å) I3.bygOm(å.i); }
     // leirens bygg med interiør: lag det på nytt når tingene i leiren har endret seg et trinn
