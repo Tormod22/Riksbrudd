@@ -78,7 +78,11 @@
   function fraJSON(o) {
     const P = ny(); if (!o || typeof o !== 'object' || o.versjon !== 1) return P;
     for (const k of ['laget', 'brukt', 'sto']) if (o[k] && typeof o[k] === 'object') for (const [v, n] of Object.entries(o[k])) if (Number.isFinite(+n) && +n >= 0) P[k][v] = +n;
-    P.gikk = Number.isFinite(+o.gikk) ? +o.gikk : 0; return P;
+    P.gikk = Number.isFinite(+o.gikk) ? +o.gikk : 0;
+    // (ut8-kr-saga) det som ble laget per døgn (døgnTell): { d, fra, start: { vare: m³ }, iGår: { vare: m³ per døgn } | null }
+    const tallene = q => { const u = {}; if (q && typeof q === 'object') for (const [v, n] of Object.entries(q)) if (Number.isFinite(+n) && +n >= 0) u[v] = +n; return u; };
+    if (o.døgn && typeof o.døgn === 'object' && Number.isFinite(+o.døgn.d)) P.døgn = { d: +o.døgn.d, fra: +o.døgn.fra || 0, start: tallene(o.døgn.start), iGår: o.døgn.iGår ? tallene(o.døgn.iGår) : null };
+    return P;
   }
 
   // ---------- hjelpere ----------
@@ -175,6 +179,20 @@
     P.status = status;
     return { status, kw, varme };
   }
+  // (ut8-kr-saga) DET SOM FAKTISK BLE LAGET SISTE DØGN – leveransetilbudene regner med det, ikke med full drift (kritikeren: «sagbruket gir
+  // 26,4 m³ per døgn – rekker det» mens saga hadde laget 0). Kalles hvert steg med spilltida (minutter). Ved døgnskiftet blir det som ble
+  // laget i døgnet til P.døgn.iGår (per døgn: et døgn som var kortere enn minTimer – maskinen kom midt på dagen – regnes opp; under minTimer
+  // er det ukjent, null). Claudes forslag: minTimer 6.
+  const DØGN = { minTimer: 6 };
+  function døgnTell(P, tid) {
+    const d = Math.floor(tid / 1440), D = P.døgn;
+    if (!D || tid < D.fra) { P.døgn = { d, fra: tid, start: { ...P.laget }, iGår: null }; return P.døgn; }
+    if (D.d === d) return D;
+    const timer = (d * 1440 - D.fra) / 60, iGår = {};
+    if (D.d === d - 1 && timer >= DØGN.minTimer) for (const [v, m] of Object.entries(P.laget)) iGår[v] = Math.max(0, m - (D.start[v] || 0)) * 24 / Math.min(24, timer);
+    P.døgn = { d, fra: d * 1440, start: { ...P.laget }, iGår: D.d === d - 1 && timer >= DØGN.minTimer ? iGår : null };
+    return P.døgn;
+  }
   // Står maskinen (så den ikke skal ha strøm)? Regnes uten folk/strøm-sjekk når kraft mangler: da spør vi bare om råvare og plass.
   function hviler(L, b, kraft, Bf) { if (!erMaskin(b.type)) return false; const v = vil(L, b, kraft, Bf); return !!v.grunn; }
 
@@ -232,7 +250,7 @@
     return Math.round((Number.isFinite(o.lønn) ? o.lønn : (+o.personer || 0) * V.lønn * infl) + vedl + diesel);
   }
 
-  const api = { base, alias, utFor, driftVarsel, leirDøgn, REGLER, GRUNNER, GRUNNTEKST, VARENAVN, erMaskin, ny, fraJSON, maskinene, råvare, vil, steg, hviler, oppskrift, merke, grunnTekst, varmeAndel, verdi, nf, MATETEKST, utSum };
+  const api = { døgnTell, DØGN, base, alias, utFor, driftVarsel, leirDøgn, REGLER, GRUNNER, GRUNNTEKST, VARENAVN, erMaskin, ny, fraJSON, maskinene, råvare, vil, steg, hviler, oppskrift, merke, grunnTekst, varmeAndel, verdi, nf, MATETEKST, utSum };
   if (NODE) module.exports = api; else rot.Produksjon = api;
 
   // (ut4-balanse2) VARSELET I BYGGELISTA (bare i nettleseren): leir-visning.js spør window.BYGG_VARSEL for hvert bygg i lista og viser

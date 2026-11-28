@@ -40,10 +40,17 @@
     return Math.max(0, LB.lagerplass(l) - (l.lager[v] || 0)); }
   function ta(v, m) { const l = L(); if (!l || !(m > 0)) return 0; const t = Math.min(m, har(v)); if (v === 'diesel') l.drivstoff -= t; else if (v === 'mat') FolkSpill.tilstand().mat -= t; else l.lager[v] = Math.round((l.lager[v] - t) * 10) / 10; lagreLeir(); return t; }
   function legg(v, m) { const l = L(); if (!l || !(m > 0)) return 0; const g = Math.min(m, plass(v)); if (v === 'diesel') l.drivstoff = (l.drivstoff || 0) + g; else if (v === 'mat') FolkSpill.tilstand().mat += g; else l.lager[v] = Math.round(((l.lager[v] || 0) + g) * 10) / 10; lagreLeir(); return g; }
-  // det maskinene lager i døgnet (full fart, døgnet rundt): sagbruk og vedkløyver fra spill/produksjon.js
-  function perDøgn() { const l = L(), PR = window.Produksjon, ut = {}; if (!l || !PR) return ut;
-    for (const b of PR.maskinene(l)) { const M = PR.REGLER.maskiner[b.type]; if (!M || !M.ut || b.av) continue; for (const [v, m] of Object.entries(M.ut)) ut[v] = (ut[v] || 0) + m * 24; }
-    for (const v of Object.keys(ut)) ut[v] = Math.round(ut[v] * 10) / 10; return ut; }
+  // det maskinene lager i døgnet: sagbruk og vedkløyver fra spill/produksjon.js
+  // (ut8-kr-saga, kritikeren: «sagbruket gir 26,4 m³ per døgn – rekker det» mens saga hadde laget 0) – det maskinene FAKTISK laget siste
+  // døgn (ProduksjonSpill.laget().iGår). Finnes ikke det ennå (maskinen er ny, eller siden er lastet på nytt), regnes full drift bare for
+  // maskinene som går nå (× hvor fort de går); står de, regnes 0. perDøgnKilde() sier hvilket tall det er (målt / nå / sto).
+  function perDøgnRå() { const l = L(), PR = window.Produksjon, ut = {}, kilde = {}; if (!l || !PR) return { ut, kilde };
+    const lag = window.ProduksjonSpill && ProduksjonSpill.laget ? ProduksjonSpill.laget() : null, iGår = lag && lag.iGår, st = (lag && lag.status) || {};
+    for (const b of PR.maskinene(l)) { const M = PR.REGLER.maskiner[b.type]; if (!M || !M.ut || b.av) continue;
+      for (const [v, m] of Object.entries(M.ut)) { if (iGår) { ut[v] = iGår[v] || 0; kilde[v] = ut[v] > .05 ? 'målt' : 'sto'; continue; }
+        const s = st[b.id], d = s && s.går ? s.drift || 0 : 0; ut[v] = (ut[v] || 0) + m * 24 * d; kilde[v] = (ut[v] || 0) > .05 ? 'nå' : 'står'; } }
+    for (const v of Object.keys(ut)) ut[v] = Math.round(ut[v] * 10) / 10; return { ut, kilde }; }
+  const perDøgn = () => perDøgnRå().ut, perDøgnKilde = () => perDøgnRå().kilde;
 
   // ---------- kjøretøy og lag ved leiren ----------
   const leir = () => (Sp() && Sp().leir) || (S() && S().leir) || null;
@@ -148,6 +155,8 @@
     return `${meter(Math.hypot(k.sted.x - p.x, k.sted.y - p.y))} i luftlinje` + (marsj && marsj.venter ? ' (regner ut ruta …)' : ''); };
   // døgnene som ruter: grønt = levert/kjøpt, rødt = mistet (rekkefølgen er ikke lagret – de leverte står først)
   const døgnRuter = k => `<div class="doegn" title="levert ${k.levertDøgn || 0} av ${k.døgn} døgn">${Array.from({ length: k.døgn }, (_, i) => `<i class="${i < (k.levertDøgn || 0) ? 'ja' : i < (k.døgnGjort || 0) ? 'nei' : ''}"></i>`).join('')}</div>`;
+  // finnes det en maskin som lager varen (så «sto siste døgn» kan sies)
+  const maskinFor = v => { const l = L(), PR = window.Produksjon; return !!(l && PR && PR.maskinene(l).some(b => !b.av && PR.REGLER.maskiner[b.type] && PR.REGLER.maskiner[b.type].ut && PR.REGLER.maskiner[b.type].ut[v] > 0)); };
   // (ut8-kr-saga) kjøpsavtaler som spilleren har sagt «Inngå avtalen» til selv om lageret ikke har plass: andre trykk inngår den
   const bekreftet = new Set();
   document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-s="varebekreft"]'); if (!b) return;
@@ -155,7 +164,7 @@
     if (window.SelskapSpill) SelskapSpill.vis(true); }, true);
   function kort(k, aktiv, o = {}) {
     const P = perDøgn()[k.vare] || 0, h = har(k.vare);
-    const rk = V.rekker(k, h, P, o.marsj && o.marsj.km > 0 ? V.bilTimer(o.marsj.km) : 0);
+    const rk = V.rekker(k, h, P, o.marsj && o.marsj.km > 0 ? V.bilTimer(o.marsj.km) : 0, { kilde: perDøgnKilde()[k.vare] || null, maskin: maskinFor(k.vare) });
     let h1 = `<div class="kort vare${aktiv ? ' aktiv' : ''}${o.låst ? ' låst' : ''}" data-kontrakt="${k.id}"><b>${esc(k.tittel)}</b><div class="fra">${esc(SK.REGLER.TYPER[k.type].navn)}${k.type === 'lever' ? (k.risiko === 'bakhold' ? ' · <span class="krav">⚠ meldt bakhold</span>' : ' · rolig rute') : ''} · ${esc(k.giver.navn)}${aktiv ? ` · <span class="tall">${esc(SK.fristTekst(k, tid))}</span>` : ''}</div>`;
     if (!aktiv) h1 += `<p>${esc(SK.kravTekst(k))}</p>`;
     if (k.type === 'lever') {
@@ -224,7 +233,7 @@
     g.restore();
   });
 
-  Object.assign(api, { verdi, har, plass, perDøgn, mål, vis, kort, send, knapp, hendelse, ferdig, levertTekst, morgen, storlia, storliaTatt, erVare, ledigBil, ledigLag, rett: { send },
+  Object.assign(api, { verdi, har, plass, perDøgn, perDøgnKilde, mål, vis, kort, send, knapp, hendelse, ferdig, levertTekst, morgen, storlia, storliaTatt, erVare, ledigBil, ledigLag, rett: { send },
     // (ut4-eksport) lageret og kjøretøyene brukes også av eksporten (spill/eksport-visning.js): ta/legg flytter varer ut av og inn i lageret
     ta, legg, fri });
   window.VareSpill = api;

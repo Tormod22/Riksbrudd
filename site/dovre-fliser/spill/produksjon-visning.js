@@ -27,7 +27,7 @@
   // ---------- lagring (per leir) ----------
   function les() { const n = leirId(); if (n === id) return; id = n; P = PR.ny(); meldt = {};
     try { const d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); if (d && d.leir === n) P = PR.fraJSON(d.P); } catch (e) { /* sperret */ } }
-  function lagre() { if (!id) return; try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: id, P: { versjon: 1, laget: P.laget, brukt: P.brukt, sto: P.sto, gikk: P.gikk } })); } catch (e) { /* fullt */ } }
+  function lagre() { if (!id) return; try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: id, P: { versjon: 1, laget: P.laget, brukt: P.brukt, sto: P.sto, gikk: P.gikk, døgn: P.døgn || null } })); } catch (e) { /* fullt */ } }
 
   // ---------- arbeidskraften: folk på «maskin» × tempo (ferdighet, moral, helse, døgnplanen) ----------
   const kraft = () => { const f = F(); if (!f || !FR) return 0; return FR.arbeidere(f, 'maskin') * (FR.tempo(f, 'maskin') || 0); };
@@ -124,6 +124,8 @@
       if (!s.går && s.grunn && s.grunn !== 'av' && f && f.går && (meldt[bid] === undefined || nåTid() - meldt[bid] > VIS.meldHvert || nåTid() < meldt[bid])) {
         meldt[bid] = nåTid(); if (typeof logg === 'function') logg(`${LB.BYGG[s.type].navn} står: ${s.tekst}.`); }
       if (s.går && f && !f.går && f.grunn && f.grunn !== 'av' && typeof logg === 'function' && meldt[bid] !== undefined) logg(`${LB.BYGG[s.type].navn} går igjen.`); }
+    // (ut8-kr-saga) det som ble laget siste døgn (leveransetilbudene i vare-visning.js)
+    PR.døgnTell(P, nåTid());
     // (ut8-kr-saga) folk som forsvinner fra «Maskiner», og maskiner som står uten folk
     try { vakt.sjekk(l); } catch (e) { /* varselet skal aldri stoppe produksjonen */ }
     if (performance.now() - sistLagret > 5000) { sistLagret = performance.now(); lagre(); }
@@ -270,5 +272,5 @@
 
   window.ProduksjonSpill = { status: () => sist.status, html, etter, tilstand: () => P, siste: () => sist, kraft, lagre, steg: simSteg, les: () => { id = ''; les(); }, kjøpTømmerbil, oppsett, VIS,
     // for vakta og testene: nullstill tellingene
-    nullstill: () => { P = PR.ny(); sist = { status: {}, kw: 0, varme: 0 }; vakt.nullstill(); }, hvorforFolk: b => { const l = L(); return l ? hvorforFolk(l, b) : ''; }, vakt };
+    nullstill: () => { P = PR.ny(); sist = { status: {}, kw: 0, varme: 0 }; vakt.nullstill(); }, laget: () => { const l = L(); if (l) { les(); PR.døgnTell(P, nåTid()); } return { iGår: P.døgn ? P.døgn.iGår : null, status: sist.status }; }, hvorforFolk: b => { const l = L(); return l ? hvorforFolk(l, b) : ''; }, vakt };
 })();

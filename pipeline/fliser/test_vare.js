@@ -93,6 +93,11 @@ ok(ks && ks.storlia && ks.fast && ks.vare === 'tømmer' && ks.enhetPris === 5600
 ok(V.storliaTilbud(S, 'blå', 0, { verdi, leir }) === null, 'Storlia bare én gang');
 for (let i = 0; i < 10; i++) SK.dagSteg(S, i * 1440 + 1, () => .01);
 ok(S.tilbud.includes(ks), 'de andre selskapene tar ikke Storlias tilbud');
+// (ut8-kr-saga) rekker() med det maskinen faktisk laget: «laget ingenting siste døgn» og ikke «gir 26,4 m³ per døgn – rekker det»
+{ const kl = { type: 'lever', vare: 'tre', mengde: 30, levert: 0, timer: 48, status: 'tilbud', turer: [], sted: { navn: 'X' } };
+  const a = V.rekker(kl, 0, 0, 0, { kilde: 'sto', maskin: true }); ok(!a.ok && /laget ingenting siste døgn/.test(a.tekst) && !/rekker det/.test(a.tekst), 'saga sto: ' + a.tekst);
+  const b = V.rekker(kl, 0, 26.4, 0, { kilde: 'målt', maskin: true }); ok(b.ok && /laget 26,4 m³ siste døgn/.test(b.tekst), 'målt: ' + b.tekst);
+  const c = V.rekker(kl, 0, 26.4, 0); ok(/gir 26,4 m³ per døgn/.test(c.tekst), 'uten kilde som før: ' + c.tekst); }
 const S2 = SK.fraJSON(SK.tilJSON(S)); ok(S2.vare && S2.vare.storlia && S2.tilbud.some(q => q.storlia && q.type === 'kjøp'), 'lagres og leses');
 
 // MORGENTILBUDENE: høyst maksÅpne, aldri to like

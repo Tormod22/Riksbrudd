@@ -160,9 +160,13 @@
       + (k.storlia ? ' Tømmeret blir verdt mye mer som planker: et sagbruk gjør 48 m³ tømmer om til 26 m³ planker og 17 m³ flis i døgnet, og Storlia kjøper plankene.' : '');
   }
   // hva lageret og maskinene rekker: { ok, tekst }. har = på lager nå, perDøgn = det maskinene lager i døgnet, kjøreTimer = tida på vegen
-  function rekker(k, har, perDøgn, kjøreTimer = 0) {
+  // (ut8-kr-saga) o.kilde: 'målt' = det maskinen faktisk laget siste døgn, 'sto' = den laget ingenting siste døgn, 'nå' = farten nå
+  // (ingen hele døgn ennå), 'står' = den står nå; o.maskin = leiren har en maskin som lager varen. Uten o: som før («gir … per døgn»).
+  function rekker(k, har, perDøgn, kjøreTimer = 0, o = {}) {
     const V = REGLER.VARER[k.vare] || { navn: k.vare }, h = Math.max(0, tall(har)), p = Math.max(0, tall(perDøgn));
-    const lager = `Dere har ${mengdeTekst(k.vare, h)}`, maskin = p > 0 ? `, ${k.vare === 'tre' ? 'sagbruket' : k.vare === 'ved' ? 'vedkløyveren' : 'maskinene'} gir ${mengdeTekst(k.vare, p)} per døgn` : '';
+    const mNavn = k.vare === 'tre' ? 'sagbruket' : k.vare === 'ved' ? 'vedkløyveren' : 'maskinene';
+    const lager = `Dere har ${mengdeTekst(k.vare, h)}`, maskin = p > 0 ? `, ${mNavn} ${o.kilde === 'målt' ? 'laget' : o.kilde === 'nå' ? 'gir nå ca.' : 'gir'} ${mengdeTekst(k.vare, p)} ${o.kilde === 'målt' ? 'siste døgn' : 'per døgn'}`
+      : o.maskin && o.kilde === 'sto' ? `, men ${mNavn} laget ingenting siste døgn` : o.maskin && o.kilde === 'står' ? `, men ${mNavn} står nå` : '';
     if (k.type === 'lever') {
       // det som alt er på vegen (egne biler og lag, eller hos fraktfirmaet), regnes som levert her
       const underveis = k.frakt ? tall(k.frakt.mengde) : (k.turer || []).reduce((s, t) => s + tall(t.mengde), 0);
