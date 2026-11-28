@@ -153,14 +153,15 @@
     const trengs = Math.round(V.døgn * (perDøgn + drift)), varsel = etter < trengs, rekker = perDøgn + drift > 0 ? Math.max(0, Math.floor(etter / (perDøgn + drift))) : Infinity;
     const kr = v => (LB && LB.kroner ? LB.kroner(v) : Math.round(v) + ' kr'), navn = B.navn;
     let tekst = `${navn} koster ${kr(o.kost || 0)}` + (kjele ? ` – og ${kr(o.kjeleKost)} for en fyrkjele, for strømmen rekker ikke` : '') + `. I drift: ca. ${kr(drift)} i døgnet (folk og vedlikehold).`;
-    if (varsel) tekst += ` Etter kjøpet har dere ${kr(Math.max(0, etter))}, og leiren bruker ca. ${kr(perDøgn + drift)} i døgnet – det rekker ${rekker < 1 ? 'ikke ett døgn' : `ca. ${rekker} døgn`} (vent til dere har ${kr(kost + trengs)}).`
+    if (varsel) tekst += ` Etter kjøpet har dere ${kr(Math.max(0, etter))}, og leiren bruker ca. ${kr(Math.round((perDøgn + drift) / 1e4) * 1e4)} i døgnet – det rekker ${rekker < 1 ? 'ikke ett døgn' : `ca. ${rekker} døgn`} (vent til dere har ${kr(Math.ceil((kost + trengs) / 1e5) * 1e5)}).`
       + (o.inntekt > 0 ? '' : ` ${navn === 'Sagbruk' ? 'Saga' : navn} alene bærer ikke leiren: den dekker lønna til ca. ti, men ikke diesel, røvere og bygg. Ta kontrakter først.`);
-    return { varsel, kost, drift, trengs, etter, døgn: V.døgn, rekker, tekst };
+    const kort = !varsel ? '' : rekker < 1 ? 'Rekker ikke et døgn' : `Rekker bare ${rekker} døgn`;
+    return { varsel, kost, drift, trengs, etter, døgn: V.døgn, rekker, tekst, kort };
   }
 
   // Leirens faste utgifter i døgnet til varselet (ut4-balanse2): lønn for «personer» (med tropper), vedlikehold av ALLE byggene (også de
   // som bygges nå – de koster snart) og dieselen strømmen trekker (byggene som bruker strøm, unntatt maskinene, minus halvparten av
-  // solcellene: sol om dagen). o = { personer, infl, dieselpris }.
+  // solcellene: sol om dagen). o = { personer, infl, dieselpris } – eller o.lønn (kr i døgnet, som FolkSpill.lønnNå()) i stedet for personer.
   function leirDøgn(L, o = {}) {
     if (!L || !Array.isArray(L.bygg) || !LB) return 0; const V = REGLER.varsel, infl = o.infl > 0 ? o.infl : 1;
     let vedl = 0, bruk = 0, sol = 0;
@@ -168,9 +169,31 @@
       vedl += g * (B.maskin && Number.isFinite(LB.REGLER.vedlikeholdMaskin) ? LB.REGLER.vedlikeholdMaskin : LB.REGLER.vedlikehold) * (b.av ? LB.REGLER.vedlikeholdAv : 1);
       if (!B.maskin && B.kw < 0 && !b.av) bruk -= B.kw; if (B.sol && B.kw > 0) sol += B.kw; }
     const kw = Math.max(0, bruk - sol / 2), diesel = kw * LB.DRIVSTOFF.literPerKWt * 24 * (o.dieselpris > 0 ? o.dieselpris : LB.DRIVSTOFF.prisPerLiter);
-    return Math.round((+o.personer || 0) * V.lønn * infl + vedl + diesel);
+    return Math.round((Number.isFinite(o.lønn) ? o.lønn : (+o.personer || 0) * V.lønn * infl) + vedl + diesel);
   }
 
   const api = { driftVarsel, leirDøgn, REGLER, GRUNNER, GRUNNTEKST, VARENAVN, erMaskin, ny, fraJSON, maskinene, råvare, vil, steg, hviler, oppskrift, merke, grunnTekst, varmeAndel, verdi, nf };
   if (NODE) module.exports = api; else rot.Produksjon = api;
+
+  // (ut4-balanse2) VARSELET I BYGGELISTA (bare i nettleseren): leir-visning.js spør window.BYGG_VARSEL for hvert bygg i lista og viser
+  // { kort, tekst } på kortet. Tallene: kassa (OppstartSpill), prisen kortet viser (ctx.kost, ctx.prisFor for kjelen), leirens faste
+  // utgifter (leirDøgn med lønna fra FolkSpill og dieselprisen i markedet) og inntekten i går og i dag (PengerSpill).
+  if (!NODE && typeof document !== 'undefined' && document.head) { const st = document.createElement('style');
+    st.textContent = '#leirmeny .bygg.kort .varsel{ display:block; font-size:11.5px; line-height:1.15; color:#e3a55c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }'; document.head.appendChild(st); }
+  if (!NODE && typeof window !== 'undefined') (window.BYGG_VARSEL = window.BYGG_VARSEL || []).push((type, ctx = {}) => {
+    if (!erMaskin(type) || !LB) return null;
+    const S = rot.OppstartSpill && OppstartSpill.tilstand(), L = rot.LeirSpill && LeirSpill.tilstand(); if (!S || !L) return null;
+    const M = rot.SpilletSpill && SpilletSpill.M ? SpilletSpill.M() : null, infl = M && M.infl > 0 ? M.infl : 1;
+    const dieselpris = M && rot.Spillet && Spillet.Marked ? Spillet.Marked.pris(M, 'diesel', LB.DRIVSTOFF.prisPerLiter) : LB.DRIVSTOFF.prisPerLiter;
+    let lønn; try { lønn = rot.FolkSpill && FolkSpill.lønnNå ? FolkSpill.lønnNå() : undefined; } catch (e) { lønn = undefined; }
+    // kjelen trengs når leiren ikke har en, og aggregatene ikke har 15 kW ledig om natta
+    const klare = L.bygg.filter(b => LB.virker(b)), agg = klare.filter(b => b.type === 'aggregat' || (LB.BYGG[b.type].diesel && LB.BYGG[b.type].kw > 0)).reduce((a, b) => a + LB.effekt(b).kw, 0);
+    const bruk = klare.filter(b => LB.BYGG[b.type].kw < 0 && !b.av && !LB.BYGG[b.type].maskin).reduce((a, b) => a - LB.BYGG[b.type].kw, 0);
+    const kjele = type === 'sagbruk' && !L.bygg.some(b => b.type === 'fyrkjele') && agg - bruk < REGLER.maskiner.sagbruk.kw;
+    let inntekt = 0; try { if (rot.PengerSpill && PengerSpill.døgn && PengerSpill.døgnNå) { const d = PengerSpill.døgnNå(); inntekt = (PengerSpill.døgn(d).inn || 0) + (d > 1 ? PengerSpill.døgn(d - 1).inn || 0 : 0); } } catch (e) { inntekt = 0; }
+    const kjeleKost = kjele ? (ctx.prisFor ? ctx.prisFor('fyrkjele') : LB.kostnad('fyrkjele').pris + LB.manglerPris(L, LB.kostnad('fyrkjele').mat)) : 0;
+    const kost = Number.isFinite(ctx.kost) ? ctx.kost : LB.kostnad(type).pris + LB.manglerPris(L, LB.kostnad(type).mat);
+    const V = driftVarsel(type, { kasse: S.penger, kost, kjeleKost, perDøgn: leirDøgn(L, { lønn, infl, dieselpris }), inntekt, infl });
+    return V && V.varsel ? V : null;
+  });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

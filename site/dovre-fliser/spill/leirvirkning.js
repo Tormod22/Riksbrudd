@@ -170,7 +170,9 @@
   const KORT_ELDRE = { kontrollrom: 'kart, kamera, radio', brakke: 'senger · byggelag', vakttårn: 'sikt · treff · varsling', port: 'åpning i gjerdet', batteri: 'lagrer strøm',
     veg: 'rask kjøring', gjerde: 'stenger leiren', lagertelt: 'lagerplass', container: 'lagerplass', sykestue: 'leger sårede', drivstofftank: 'rommer diesel',
     aggregat: 'strøm av diesel', solcelle: 'strøm av sol', kameramast: 'ser fiender', radiomast: 'radio 15–40 km', drivhus: 'dyrker mat', sandsekkvoll: 'vern 40 %',
-    kjøkken: 'varm mat · moral', brønn: 'vann' };
+    kjøkken: 'varm mat · moral', brønn: 'vann',
+    // (ut4-balanse2) maskinene sto som «bare utseende» i byggelista
+    sagbruk: 'planker og flis', vedkløyver: 'ved av flis', fyrkjele: 'strøm og varme av flis' };
   const pst = f => Math.round(Math.abs(1 - f) * 100);
   function kort(id, B) {
     const v = VIRKNING[id] || {}, d = [];
