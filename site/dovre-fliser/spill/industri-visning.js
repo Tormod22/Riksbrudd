@@ -70,7 +70,10 @@
     if (!h || !h.info || (h.info.kl !== 'industri' && h.info.kl !== 'lager') || n !== 1) return '';
     // samme regel som interiøret (Industri.koble): lageret er et industrilokale bare når dataene sier hvilken industri
     const dInd = h.e && h.e.ind > 0 ? h.e.ind : h.info.ind;
-    const ind = h.info.kl === 'lager' ? (dInd > 0 && dInd !== 11 && I.IND[dInd] ? dInd : 11) : I.forInfo(Object.assign({}, h.info, { ind: dInd }));
+    // (ut9-maskiner2) typen fra hallen i den ferdige modellen når den finnes – anslaget fra omgivelsene kan ha endret seg siden modellen ble
+    // laget (før kartdataene var lest), og da sto det «fiskeforedling» over en mathall (Egersund på /rogaland)
+    let fraModell = 0; try { const F = h.m && window.Plantegning ? Plantegning.figur(h.m, 1) : null; if (F) for (const r of F.rom) { for (const t of I.ALLE) if (I.IND[t].hall === r.rolle) { fraModell = t; break; } if (fraModell) break; } } catch (e) { /* uten modell */ }
+    const ind = fraModell || (h.info.kl === 'lager' ? (dInd > 0 && dInd !== 11 && I.IND[dInd] ? dInd : 11) : I.forInfo(Object.assign({}, h.info, { ind: dInd })));
     const navn = h.info.kl === 'lager' && ind === 11 ? 'Lager og logistikk' : I.tekst(ind, h.info.kl === 'lager' ? 'Lager' : 'Industri');
     const ting = [...new Set(I.innredning(ind).filter(x => x.rom === 'hall').map(x => x.navn.toLowerCase()))].slice(0, 4).join(', ');
     // navnet står alltid (også på telefon, der plantegningen skjuler <small>); maskinene bare på større skjermer
