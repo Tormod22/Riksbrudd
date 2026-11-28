@@ -264,14 +264,16 @@ function jobbTime(sim, tr) {
   return m;
 }
 leggTilDel({ id: 'kontrakter',
-  start(sim) { sim.kontrakter = { levert: 0, brutt: 0, tatt: 0, tjent: 0 }; },
+  start(sim) { sim.kontrakter = { levert: 0, brutt: 0, tatt: 0, tjent: 0, type: {} }; },
   time(sim) {
     const S = sim.SK, nå = sim.t, mål = {};
     for (const tr of sim.tropper) if (tr.jobb && tr.jobb.k) { const id = tr.jobb.k.id; mål[id] = jobbTime(sim, tr); }
     for (const h of Selskap.steg(S, ID, nå, REGLER.stegMin, mål)) {
       const tr = sim.tropper.find(t => t.jobb && t.jobb.k && t.jobb.k.id === h.k.id);
       if (h.type === 'levert') { let kr = h.kr; const by = h.k.sted && sim.region.byer.find(b => b.id === h.k.sted.id); if (by && by.eier === ID) kr += Math.round(h.k.betaling * Selskap.REGLER.egetSted / 1e4) * 1e4;
-        sim.gi(kr, 'kontrakt'); sim.kontrakter.levert++; sim.kontrakter.tjent += kr; sim.logg(`levert «${h.k.tittel}»: ${mill(kr)}`);
+        kr = Math.round(kr * (sim.faktor.kontrakt || 1));
+        sim.gi(kr, 'kontrakt'); sim.kontrakter.levert++; sim.kontrakter.tjent += kr;
+        { const T = sim.kontrakter.type[h.k.type] || (sim.kontrakter.type[h.k.type] = { n: 0, kr: 0, timer: 0 }); T.n++; T.kr += kr; T.timer += (sim.t - h.k.godtatt) / 60; } sim.logg(`levert «${h.k.tittel}»: ${mill(kr)}`);
         if (h.rekrutt) FolkR.rekrutter(sim.F, sim.L, () => true, { årstid: sim.årstid });
         if (h.motangrep) sim.røverAngrep = true;
         if (tr && tr.jobb) tr.jobb.faser = tr.jobb.faser.filter((f, i) => i < tr.jobb.i || f.hva === 'hjem'); }
@@ -449,7 +451,7 @@ function kjør(strategiId, frø, o = {}) {
     if ((h + 1) % 24 === 0) {
       const sd = Selskap.side(sim.SK, ID);
       sim.dager.push({ dag: (h + 1) / 24, kasse: sim.kasse, folk: sim.F.personer.length, soldater: iTropper(sim), moral: Math.round(sim.F.moral), byer: sim.region.byer.filter(b => b.eier === ID).length,
-        nivå: Selskap.nivå(sd).nr, inn: sim.bok.inn, ut: sim.bok.ut, ubetalt: sim.F.ubetalt || 0, infl: sim.M.infl });
+        nivå: Selskap.nivå(sd).nr, faste: døgnUt(sim), inn: sim.bok.inn, ut: sim.bok.ut, ubetalt: sim.F.ubetalt || 0, infl: sim.M.infl });
       for (const [k, v] of Object.entries(sim.bok.inn)) sim.sum.inn[k] = (sim.sum.inn[k] || 0) + v; for (const [k, v] of Object.entries(sim.bok.ut)) sim.sum.ut[k] = (sim.sum.ut[k] || 0) + v;
       sim.bok = { inn: {}, ut: {} };
     }
