@@ -238,7 +238,7 @@
   // betaling = som et vanlig tilbud × betaling (en trygg jobb nær leiren betaler litt mindre enn en der troppen må slåss seg fram);
   // maksNivå: bare så lenge selskapet er på nivå 1–2 (starten, trinn 1–2) – senere skal lagene være sterke nok til de vanlige tilbudene;
   // rykte: andelen av det vanlige ryktet («pålitelig») en levert lett jobb gir
-  REGLER.lett = { styrke: 4, maksMeter: 9000, nærmeste: 3, holdSjanse: .5, ekstraPerKm: 1, garnison: 8, betaling: .85, maksNivå: 2, rykte: .5 };
+  REGLER.lett = { styrke: 4, min: 800, maksMeter: 9000, nærmeste: 3, holdSjanse: .5, ekstraPerKm: 1, garnison: 8, betaling: .85, maksNivå: 2, rykte: .5 };
   // det kjente forsvaret ved stedet for en jobb (mann), samme regel som visningens forsvarVed: bygdevernet teller ikke når jobben er for
   // bygdelaget eller kommunen der (de vet om jobben); en garnison teller når et annet selskap holder stedet
   function forsvarFor(k, sted, id) {
@@ -261,11 +261,15 @@
   const stedFor = (steder, k) => (steder || []).find(q => q && sammeSted(q, k.sted)) || k.sted;
   function sikreLett(S, id, nå, steder, r, o) {
     const sd = side(S, id), L = S.leir || { x: 0, y: 0 }, LT = REGLER.lett, styrke = Math.max(LT.styrke, tall(o.styrke)), nv = nivå(sd);
-    if (nv.nr > LT.maksNivå) return null;
+    // bare når selskapet står uten arbeid: ingen kontrakt i gang (har dere en, er det den som gir pengene i dag)
+    if (nv.nr > LT.maksNivå || sd.aktive.some(k => !k.første && REGLER.TYPER[k.type] && !REGLER.TYPER[k.type].krav)) return null;
     if (S.tilbud.some(k => klarbar(k, styrke, sd, stedFor(steder, k), o.kjøretøy))) return null;
-    const kand = (steder || []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y) && q.navn)
-      .map(q => ({ ...q, d: Math.hypot(q.x - L.x, q.y - L.y) })).filter(q => q.d >= REGLER.avstand.min && q.d <= LT.maksMeter)
+    // nærmest først: fra lett.min (et tettsted like ved leiren er en god første jobb – Ulvik lå 1,3 km fra Jonas' leir), helst innen
+    // maksMeter; finnes ingen der, også lenger ut (til avstand.maks) – fristen vokser med avstanden
+    const alle = (steder || []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y) && q.navn)
+      .map(q => ({ ...q, d: Math.hypot(q.x - L.x, q.y - L.y) })).filter(q => q.d >= LT.min && q.d <= REGLER.avstand.maks)
       .filter(q => tall(q.fiender) < styrke && (q.slag === 'bru' || !q.eier || q.eier === id)).sort((a, b) => a.d - b.d);
+    const kand = alle.some(q => q.d <= LT.maksMeter) ? alle.filter(q => q.d <= LT.maksMeter) : alle;
     const ledige = kand.filter(q => !opptatt(S, sd, 'hent', q) || (!opptatt(S, sd, 'hold', q) && nv.menn <= styrke)).slice(0, LT.nærmeste);
     if (!ledige.length) return null;
     const sted = velg(ledige, r), byer = (steder || []).filter(q => q && q.slag !== 'bru' && Number.isFinite(q.x));
