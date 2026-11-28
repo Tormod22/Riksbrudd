@@ -200,7 +200,9 @@
     const grense = +regler.by || 0; if (!(grense > 0) || !by || !by.kan) return null;
     if (by.kan === 'handel' && regler.trinn !== 'begge') return null;
     const min = grense * (by.folk || 0), åpning = Math.round(Math.max(min, (by.grunnpris || min) * (1 + REGLER.forhandler.åpning * dyk(l))) / 1000) * 1000;
-    return { trinn: by.kan, pris: Math.max(1000, åpning), løfte: REGLER.forhandler.løfte, varighet: REGLER.forhandler.varighet, min };
+    // budene i rekkefølge: åpningsbudet, grunnprisen og til slutt grensen din (sier byen nei, går forhandleren ned til neste)
+    const bud = [...new Set([åpning, Math.round(Math.max(min, by.grunnpris || min) / 1000) * 1000, Math.ceil(min / 1000) * 1000].map(v => Math.max(1000, v)))].sort((a, b) => b - a);
+    return { trinn: by.kan, pris: bud[0], bud, løfte: REGLER.forhandler.løfte, varighet: REGLER.forhandler.varighet, min };
   }
   // Svaret på et motbud: ja når prisen er over grensen. Et dårlig valg: ja litt under grensen, eller nei til et godt motbud.
   function svarMotbud(motPris, min, l, r) {

@@ -158,10 +158,12 @@
       const t = LR.byTilbud({ folk: by.folk, kan: neste, grunnpris: BA.grunnpris(neste, by.folk) }, A.regler, A.ledelse); if (!t) continue;
       merk('by:' + by.id);
       const svar = k => { const r = komStille({ type: 'byForhandle', by: by.id, trinn: t.trinn, pris: k, løfte: t.løfte, varighet: t.varighet }); return r.ok ? r.svar || {} : { svar: 'nei', grunn: r.feil }; };
-      let s = svar(t.pris), pris = t.pris;
-      if (s.svar === 'motbud' && s.motbud) { const v = LR.svarMotbud(s.motbud.pris, t.min, A.ledelse, rng());
-        if (v.ja) { pris = s.motbud.pris; s = svar(pris); }
-        else vanlig(A, `${LR.tittel(A)} sa nei til motbudet fra ${by.navn}: ${kr(s.motbud.pris)} per døgn er under grensen din (${kr(t.min)}).` + (v.dårlig ? ' (Et godt tilbud.)' : '')); }
+      let s = null, pris = 0;
+      for (const b of t.bud) { pris = b; s = svar(b);
+        if (s.svar === 'motbud' && s.motbud) { const v = LR.svarMotbud(s.motbud.pris, t.min, A.ledelse, rng());
+          if (v.ja) { pris = s.motbud.pris; s = svar(pris); break; }
+          vanlig(A, `${LR.tittel(A)} sa nei til motbudet fra ${by.navn}: ${kr(s.motbud.pris)} per døgn er under grensen din (${kr(t.min)}).` + (v.dårlig ? ' (Et godt tilbud.)' : '')); break; }
+        if (s.svar !== 'nei' || /stoler|redd|opp avtalen|holder|ikke forhandle|lar seg ikke/.test(s.grunn || '')) break; }
       if (s.svar === 'ja') viktig(A, `${LR.tittel(A)} avtalte ${t.trinn === 'beskyttelse' ? 'beskyttelse' : 'handel'} med ${by.navn} for ${kr(pris)} per døgn (${Math.round(pris / Math.max(1, by.folk))} kr per innbygger).`);
       else if (s.svar === 'nei') vanlig(A, `${LR.tittel(A)} fikk nei fra ${by.navn}: ${s.grunn || 'for dyrt'}`);
     }
@@ -267,14 +269,26 @@
         knapp('Bytt', () => { velger = velger === k ? null : k; FolkSpill.vis(); }, { 'data-bytt': k }), knapp('Fjern', () => kom({ type: 'lederAv', nøkkel: k }), { 'data-fjern': k })));
       const s = S.logg.find(q => q.rolle === rolle && q.tekst.includes(pnavn(A))); if (s) rad.append(el('small', {}, 'Sist: ' + s.tekst));
     } else rad.append(el('div', { klasse: 'regler' }, knapp(velger === k ? 'Lukk' : 'Utnevn …', () => { velger = velger === k ? null : k; FolkSpill.vis(); }, { 'data-utnevn': k })));
-    if (velger === k) {
-      const K = kandidater(rolle, del).sort((a, b) => b.l - a.l).slice(0, 6), boks = el('div', { klasse: 'kand' });
-      if (!K.length) boks.append(el('small', {}, 'Ingen ledige.'));
-      for (const c of K) boks.append(knapp(`${c.navn.split(' ')[0]} · ${LR.des(c.l, 2)} · ${kr(LR.lederLønn(c.lønn, c.l))}`, () => { velger = null; const r = kom({ type: 'lederUtnevn', rolle, del, person: c.id }); melde(r.ok && r.svar && r.svar.A ? `${c.navn} er ${R.navn.toLowerCase()}.` : (r.feil || (r.svar && r.svar.feil) || 'Fikk ikke utnevnt.')); },
-        { 'data-kand': `${k}|${c.id}`, title: `${c.navn}: ledelse ${LR.des(c.l, 2)} (${LR.dyktighetOrd(c.l)}), krever ${kr(LR.lederLønn(c.lønn, c.l))} i døgnet som leder` }));
-      rad.append(boks);
-    }
+    if (velger === k) rad.append(kandBoks(rolle, del, k, { el, knapp }));
     return rad;
+  }
+  // knappene med kandidatene (de dyktigste først) for nøkkelen k
+  function kandBoks(rolle, del, k, { el, knapp }) {
+    const R = LR.ROLLER[rolle], K = kandidater(rolle, del).sort((a, b) => b.l - a.l).slice(0, 6), boks = el('div', { klasse: 'kand' });
+    if (!K.length) boks.append(el('small', {}, 'Ingen ledige.'));
+    for (const c of K) boks.append(knapp(`${c.navn.split(' ')[0]} · ${LR.des(c.l, 2)} · ${kr(LR.lederLønn(c.lønn, c.l))}`, () => { velger = null; const r = kom({ type: 'lederUtnevn', rolle, del, person: c.id }); melde(r.ok && r.svar && r.svar.A ? `${c.navn} er ${R.navn.toLowerCase()}.` : (r.feil || (r.svar && r.svar.feil) || 'Fikk ikke utnevnt.')); },
+      { 'data-kand': `${k}|${c.id}`, title: `${c.navn}: ledelse ${LR.des(c.l, 2)} (${LR.dyktighetOrd(c.l)}), krever ${kr(LR.lederLønn(c.lønn, c.l))} i døgnet som leder` }));
+    return boks;
+  }
+  // formenn og troppsjefer: de som har en leder står hver for seg, resten samlet på én rad med en knapp per maskin/tropp
+  function flereRad(rolle, liste, tittel, tom, { el, knapp }) {
+    const ut = [], uten = [];
+    for (const q of liste) { if (S.ledere[LR.nøkkel(rolle, q.del)]) ut.push(rolleRad(rolle, q.del, `${tittel} – ${q.navn}`, { el, knapp })); else uten.push(q); }
+    if (!liste.length) ut.push(el('div', { klasse: 'lrad' }, el('b', {}, tittel), el('small', {}, tom)));
+    else if (uten.length) { const rad = el('div', { klasse: 'lrad' }, el('b', {}, tittel), el('small', {}, `${LR.ROLLER[rolle].tekst}. Uten ${tittel.toLowerCase()}:`)), r = el('div', { klasse: 'regler' });
+      for (const q of uten) { const k = LR.nøkkel(rolle, q.del); r.append(knapp(velger === k ? `${q.navn} ✕` : `${q.navn} …`, () => { velger = velger === k ? null : k; FolkSpill.vis(); }, { 'data-utnevn': k, title: `Utnevn ${tittel.toLowerCase()} for ${q.navn}` })); }
+      rad.append(r); const v = uten.find(q => LR.nøkkel(rolle, q.del) === velger); if (v) rad.append(kandBoks(rolle, v.del, velger, { el, knapp })); ut.push(rad); }
+    return ut;
   }
   function del({ el, knapp }) {
     if (!leirNøkkel) les(); if (!Fo() || !Lr()) return [];
@@ -288,10 +302,9 @@
     boks.append(rad);
     if (åpen) {
       boks.append(rolleRad('leirsjef', null, 'Leirsjef', { el, knapp }));
-      for (const b of maskiner()) boks.append(rolleRad('formann', String(b.id), `Formann – ${LB().BYGG[b.type].navn.toLowerCase()}`, { el, knapp }));
-      if (!maskiner().length) boks.append(el('div', { klasse: 'lrad' }, el('b', {}, 'Formann'), el('small', {}, 'Én per maskin (sagbruk, vedkløyver, fyrkjele) – ingen maskiner ennå.')));
+      boks.append(...flereRad('formann', maskiner().map(b => ({ del: String(b.id), navn: LB().BYGG[b.type].navn.toLowerCase() })), 'Formann', 'Én per maskin (sagbruk, vedkløyver, fyrkjele) – ingen maskiner ennå.', { el, knapp }));
       boks.append(rolleRad('forhandler', null, 'Forhandler', { el, knapp }));
-      for (const s of tropper()) boks.append(rolleRad('troppsjef', s.navn, `Troppsjef – ${s.navn}`, { el, knapp }));
+      boks.append(...flereRad('troppsjef', tropper().map(s => ({ del: s.navn, navn: s.navn })), 'Troppsjef', 'Én per tropp – ingen tropper ute.', { el, knapp }));
       boks.append(rolleRad('kasserer', null, 'Kasserer', { el, knapp }));
       const v = verdi(); if (v.antall) boks.append(el('div', { klasse: 'siste' }, `Lederne gjør selskapet ca. ${mill(v.kr)} kr mer verdt (snitt ledelse ${LR.des(v.snitt, 2)}).`));
       if (S.logg.length) { const s = el('div', { klasse: 'siste' }, el('div', {}, 'Siste beslutninger:')); for (const q of S.logg.slice(0, 5)) s.append(el('div', { klasse: q.viktig ? 'v' : '' }, '· ' + q.tekst)); boks.append(s); }
