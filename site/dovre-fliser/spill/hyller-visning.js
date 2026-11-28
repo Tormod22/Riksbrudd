@@ -151,11 +151,15 @@
   function åpentNå() { const LS = window.LutSpill; if (!LS || !LS.erÅpen || !LS.erÅpen() || !LS.aktiv) return null; const c = LS.aktiv(); if (!c || !LUKKET[c.type] || !c.nk) return null;
     // nøkkelen er «bygg:type:nr» (spill/mobler.js) – nr er nummeret blant like møbler i planen
     const [si, , sk] = String(c.nk).split(':'), i = +si, k = +sk; if (!isFinite(i) || !isFinite(k)) return null; const n = c.B && typeof c.B === 'object' ? Object.keys(c.B.t || c.B).length : 2; return { i, type: c.type, k, fyll: Math.min(1, .15 + n * .15) }; }
+  // (ut10-skap) et skap i leirens egne bygg står åpent mens Lageret-panelet viser plassen (spill/leirskap.js), med tingene som ligger der
+  function skapÅpent() { const TS = window.TinglagerSpill, pid = TS && TS.plass && TS.plass(), q = window.Leirskap && Leirskap.les(pid); if (!q) return null;
+    const T = TS.T(), Ti = window.Ting, P = T && Ti && TS.plasser ? TS.plasser().find(p => p.id === pid) : null; if (!P) return null; const v = HY.innhold(T, pid, P.liter, Ti.TING);
+    return { i: 9000000 + q.bid, type: q.møbel, k: q.k, fyll: v.fyll, kat: v.kat }; }
   setInterval(() => { try { const I3 = window.Interior3d; if (!I3 || !I3.bygOm) return;
-    const å = åpentNå(), n = å ? `${å.i}:${å.type}:${å.k}:${å.fyll}` : ''; if (n !== sistÅpen) { const før = window.MØBEL_ÅPEN; window.MØBEL_ÅPEN = å; sistÅpen = n; if (før && (!å || før.i !== å.i)) I3.bygOm(før.i); if (å) I3.bygOm(å.i); }
+    const å = åpentNå() || skapÅpent(), n = å ? `${å.i}:${å.type}:${å.k}:${HY.trinn(å.fyll)}:${(å.kat || []).map(q => q.kat).join('')}` : ''; if (n !== sistÅpen) { const før = window.MØBEL_ÅPEN; window.MØBEL_ÅPEN = å; sistÅpen = n; if (før && (!å || før.i !== å.i)) I3.bygOm(før.i); if (å) I3.bygOm(å.i); }
     // leirens bygg med interiør: lag det på nytt når tingene i leiren har endret seg et trinn
     const P = (I3.aktivP ? I3.aktivP() : []).filter(q => q.leir && q.bygg); const ln = P.map(q => { const v = I3.leirVarer(q); return q.bygg.i + ':' + (v ? HY.trinn(v.fyll) + v.kat.map(x => x.kat).join('') : ''); }).join(',');
     if (ln !== sistLeir) { const før = sistLeir; sistLeir = ln; if (før) for (const q of P) I3.bygOm(q.bygg.i); } } catch (e) { /* 3D ikke klart */ } }, 600);
 
-  window.Hyller3d = { åpentNå, bygg, tegn2d, innhold, trinnNøkkel, F, FARGE2D };
+  window.Hyller3d = { åpentNå, skapÅpent, bygg, tegn2d, innhold, trinnNøkkel, F, FARGE2D };
 })();
