@@ -41,6 +41,17 @@ module.exports = {
         ut.tyveri = Object.entries(b.lager).every(([k, v]) => v <= (ute0[k] || 0) + 1e-6) && !(b.lager.tre > 0) && Math.abs(VL.sum(V, 'tre', u => VL.inne(Leir, L, V, u)) - inneTre0) < 1e-6
           && Math.abs(VL.sum(V, 'stål', u => VL.inne(Leir, L, V, u)) - inneStål0) < 1e-6 && stemmer() && Spillet.Trussel.bytte.varelager === true;
         ut.bytte = b.lager;
+        // det ekte tyveriet (SpilletSpill.trekkUt): et tyvelag tar fra lageret og går; det som lå inne, er urørt, og summen stemmer
+        if (window.SpilletSpill && SpilletSpill.trekkUt && typeof nyttLag === 'function') {
+          Leir.leggInn(L, 'tømmer', 6); VS.avstem(); const F = window.FolkSpill && FolkSpill.tilstand(), mat0 = F ? F.mat : 0;
+          const inne0 = {}; for (const k of VL.VARER) inne0[k] = VL.sum(V, k, u => VL.inne(Leir, L, V, u)); const uteF = VS.ute();
+          const e = nyttLag('Prøvetyver', S.leir.x + 60, S.leir.y, 'rød'); e.tyv = true; ENHETER.push(e);
+          let b2 = null; try { b2 = SpilletSpill.trekkUt(e); } finally { const i = ENHETER.indexOf(e); if (i >= 0) ENHETER.splice(i, 1); if (F) F.mat = mat0; }
+          VS.avstem();
+          ut.ekteTyveri = !!b2 && Object.entries(b2.lager).every(([k, v]) => v <= (uteF[k] || 0) + 1e-6) && VL.VARER.every(k => Math.abs(VL.sum(V, k, u => VL.inne(Leir, L, V, u)) - inne0[k]) < 1e-6) && stemmer()
+            && (b2.lager.tømmer > 0) && !!(V.tapt.stjålet && V.tapt.stjålet.tømmer > 0);
+          ut.ekteBytte = b2 && b2.lager;
+        } else ut.ekteTyveri = true;
         // tegnes i kartet
         const tx = (V.ute || S.leir); kam.x = tx.x + 8; kam.y = tx.y - 10; kam.m = .25; skitten = true; const t0 = performance.now();
         for (let i = 0; i < 30 && !(VS.tegnetNår > t0); i++) { skitten = true; await vent(150); }
@@ -61,7 +72,7 @@ module.exports = {
       }
       return ut;
     });
-    const ok = !d.mangler && !d.feil && d.sum && d.sone && d.inne && d.ugyldigSone && d.reservering && d.tyveri && d.tegnet && d.meny && d.tilbake;
+    const ok = !d.mangler && !d.feil && d.sum && d.sone && d.inne && d.ugyldigSone && d.reservering && d.tyveri && d.ekteTyveri && d.tegnet && d.meny && d.tilbake;
     return { ok: !!ok, tekst: ok ? `summen stemmer, planker under tak, reservering, røverne tok bare det som lå ute (${JSON.stringify(d.bytte)}), ${d.antallTegnet} enheter tegnet, fanen Lager (${profil})` : 'FEIL: ' + JSON.stringify(d), data: d };
   },
 };
