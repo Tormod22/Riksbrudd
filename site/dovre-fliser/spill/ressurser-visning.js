@@ -133,15 +133,19 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
   window.addEventListener('keydown', e => { if ((velg || valgt) && e.key === 'Escape') lukk(); });
 
   // ---------- tiden ----------
+  // (ut8-kr-saga) meldingen om fullt lager: høyst hver sjette spilltime (Claudes forslag)
+  const FULLT_HVERT = 360; let fulltSist = -1e9, fulltN = 0;
   KROKER.sim.push(dt => {
     if (!spill() || !L()) return; const lx = leirXY(), Lr = L(), leggInn = (k, m) => Leir.leggInn(Lr, k, m);
     const hend = RS.steg(R, dt, { arbeidere: folk, tempo, leir: lx, leggInn });
     for (const k of window.KJORETOY || []) if (k.oppdrag && k.oppdrag.type === 'ressurs') hend.push(...RS.bilSteg(R, k, window.VEGNETT, dt * 3600 / TIME, Kjoretoy, lx, leggInn).map(h => ({ ...h, bil: k })));
     let endret = false;
     for (const h of hend) {
-      if (h.hva === 'ferdig') { endret = true; logg(h.jobb.type === 'hogst' ? `Hogstfeltet er hogd: ${matTekst(h.jobb.mat)}.` : `${husNavn(h.jobb.hus)[0].toUpperCase() + husNavn(h.jobb.hus).slice(1)} er revet: ${matTekst(h.jobb.mat)}.`);
+      if (h.hva === 'ferdig') { endret = true; logg(h.jobb.type === 'hogst' ? `Hogstfeltet er hogd (felt nr. ${R.hogd.length}): ${matTekst(h.jobb.mat)}.` : `${husNavn(h.jobb.hus)[0].toUpperCase() + husNavn(h.jobb.hus).slice(1)} er revet: ${matTekst(h.jobb.mat)}.`);
         if (h.jobb.type === 'riving') { oppdaterBort(); husPåNytt(); } }
-      if (h.hva === 'fullt' && !h.jobb.meldtFullt) { h.jobb.meldtFullt = true; logg('Lageret i leiren er fullt: materialene venter. Bygg lagertelt eller containere.'); }
+      // (ut8-kr-saga, kritikeren: «Lageret i leiren er fullt» ×10) – høyst én melding per FULLT_HVERT spillminutter, med antallet ganger siden sist
+      if (h.hva === 'fullt' && !h.jobb.meldtFullt) { h.jobb.meldtFullt = true; fulltN++; const nå = typeof tid !== 'undefined' ? tid : 0;
+        if (nå - fulltSist >= FULLT_HVERT || nå < fulltSist) { logg(`Lageret i leiren er fullt: ${matTekst(h.jobb.haug) === 'ingenting' ? 'materialene' : matTekst(h.jobb.haug)} venter ved ${h.jobb.type === 'hogst' ? 'hogstfeltet' : 'huset'}. Bygg lagertelt eller containere, eller selg noe.` + (fulltN > 1 ? ` (${fulltN} ganger siden sist)` : '')); fulltSist = nå; fulltN = 0; } }
       if (h.hva === 'levert') h.jobb.meldtFullt = false;
       if (h.hva === 'feil') logg(`${h.bil.navn}: ${h.melding}`);
       if (h.hva === 'slutt') logg(`${h.bil.navn} er ferdig med frakten.`);

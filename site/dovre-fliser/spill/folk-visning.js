@@ -154,8 +154,9 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     // RUNDE 13 (kritiker H: «+ på Vakt tok en fra Bygg uten å si det»): siste flytting står her til neste endring
     if (flyttet) panel.append(el('div', { klasse: 'status', id: 'folkflyttet' }, flyttet));
     for (const o of FR.OPPGAVER) {
+      // (ut8-kr-saga, kritikeren: «Hogst tempo 0») – 0 betyr at ingen er i arbeid der akkurat nå, ikke at jobben står for alltid
       const antall = F.personer.filter(p => p.oppgave === o).length, a = FR.arbeidere(F, o), t = FR.tempo(F, o), O = FR.OPPGAVE[o];
-      const info = o === 'bygg' ? lagTekst(a) + (a ? ` · tempo ${nf(FR.byggTempo(F), 2)}` : '') : o === 'fri' ? O.tekst : a ? `tempo ${nf(t, 2)} · ${O.tekst.toLowerCase()}` : O.tekst;
+      const info = o === 'bygg' ? lagTekst(a) + (a ? ` · tempo ${nf(FR.byggTempo(F), 2)}` : '') : o === 'fri' ? O.tekst : a ? `${t < .005 ? 'ingen i arbeid akkurat nå (fri, spiser eller på vei)' : 'tempo ' + nf(t, 2)} · ${O.tekst.toLowerCase()}` : O.tekst;
       const minus = knapp('−', () => flytt(o, FR.minus), { 'aria-label': `Færre på ${O.navn.toLowerCase()}`, 'data-o': o, klasse: 'minus', title: minusHjelp(o) });
       const pluss = knapp('+', () => flytt(o, FR.pluss), { 'aria-label': `Flere på ${O.navn.toLowerCase()}`, 'data-o': o, klasse: 'pluss', title: plussHjelp(o) });
       minus.disabled = !antall; pluss.disabled = o === 'fri' ? n - antall === 0 : antall === n;

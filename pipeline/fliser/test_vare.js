@@ -78,7 +78,11 @@ ut = SK.steg(S, 'blå', 4 * 1440, 1, { [kc.id]: { har: 0 } }); ok(kc.døgn >= 5 
 S = SK.ny(leir); const kk = V.lagEtt(S, 'blå', 'kjøp', 0, { steder, verdi, leir, rand: V.lagRand(11) }, 'tømmer', 'Storlia Tømmer'); S.tilbud.push(kk);
 ok(kk.enhetPris === Math.round(8000 * .92 / 100) * 100 && kk.kostnad === kk.dagKr * kk.døgn && /Kjøpsavtale/.test(kk.tittel), 'kjøpsavtalen: ' + kk.tittel);
 SK.godta(S, 'blå', kk.id, 0, () => .99);
-ut = SK.steg(S, 'blå', 1, 1, { [kk.id]: { penger: 1e9, plass: 5 } }); ok(ut.length === 1 && ut[0].type === 'vareKjøp' && ut[0].får === 5 && ut[0].kr === kk.dagKr, 'første levering straks, bare 5 får plass');
+ut = SK.steg(S, 'blå', 1, 1, { [kk.id]: { penger: 1e9, plass: 5 } }); ok(ut.length === 1 && ut[0].type === 'vareKjøp' && ut[0].får === 5 && ut[0].kr === Math.round(kk.dagKr * 5 / kk.perDøgn / 100) * 100 && ut[0].ikkePlass === kk.perDøgn - 5, 'første levering straks, bare 5 får plass – og bare de 5 betales (ut8-kr-saga)');
+// (ut8-kr-saga) fullt lager: ingenting levert, ingenting betalt, ingen bot, døgnet er ikke levert
+{ const S9 = SK.ny(leir), k9 = V.lagEtt(S9, 'blå', 'kjøp', 0, { steder, verdi, leir, rand: V.lagRand(11) }, 'tømmer', 'Storlia Tømmer'); S9.tilbud.push(k9); SK.godta(S9, 'blå', k9.id, 0);
+  const u9 = SK.steg(S9, 'blå', 1, 1, { [k9.id]: { penger: 1e9, plass: 0 } }); ok(u9.length === 1 && u9[0].type === 'vareKjøp' && u9[0].får === 0 && u9[0].kr === 0 && !k9.mist && !k9.levertDøgn && k9.ikkePlass === k9.perDøgn, 'fullt lager: 0 m³ for 0 kr');
+  const u10 = SK.steg(S9, 'blå', 1441, 1, { [k9.id]: { penger: 1e9, plass: 1e9 } }); ok(u10[0].kr === k9.dagKr && u10[0].får === k9.perDøgn && k9.levertDøgn === 1, 'med plass: hele døgnet betales'); }
 ut = SK.steg(S, 'blå', 1441, 1, { [kk.id]: { penger: 10, plass: 100 } }); ok(ut[0].type === 'vareMist' && ut[0].kr === kk.botDøgn, 'uten penger: bot');
 // diesel i hele 50 liter
 S = SK.ny(leir); const kd = V.lagEtt(S, 'blå', 'kjøp', 0, { steder, verdi, leir, rand: V.lagRand(12) }, 'diesel', 'Tindvik Drivstoff'); ok(kd.perDøgn % 50 === 0 && kd.enhetPris === 2760, 'diesel ' + kd.perDøgn + ' l à ' + kd.enhetPris);

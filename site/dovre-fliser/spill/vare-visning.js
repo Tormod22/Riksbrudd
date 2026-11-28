@@ -119,8 +119,10 @@
   function hendelse(h) {
     const k = h.k; if (!k) return false;
     if (h.type === 'vareDøgn') { ta(k.vare, h.mengde); if (window.OppstartSpill) OppstartSpill.gi(h.kr); logg(`${k.giver.navn} hentet ${V.mengdeTekst(k.vare, h.mengde)} ${VN(k.vare)} og betalte ${kr(h.kr)} (døgn ${k.døgnGjort} av ${k.døgn}).`); return true; }
-    if (h.type === 'vareKjøp') { if (window.OppstartSpill) OppstartSpill.betal(h.kr); const g = legg(k.vare, h.får);
-      logg(`${k.giver.navn} leverte ${V.mengdeTekst(k.vare, g)} ${VN(k.vare)} for ${kr(h.kr)} (døgn ${k.døgnGjort} av ${k.døgn})` + (h.mengde - g > .05 ? ` – ${V.mengdeTekst(k.vare, h.mengde - g)} fikk ikke plass på lageret.` : '.')); return true; }
+    // (ut8-kr-saga) det som ikke får plass, betales ikke (vare.js) – og meldingen sier det
+    if (h.type === 'vareKjøp') { if (window.OppstartSpill && h.kr > 0) OppstartSpill.betal(h.kr); const g = legg(k.vare, h.får), uten = Math.max(0, h.mengde - g);
+      logg(g < .05 ? `${k.giver.navn} kom med ${V.mengdeTekst(k.vare, h.mengde)} ${VN(k.vare)}, men lageret var fullt – ingenting levert, ingenting betalt (døgn ${k.døgnGjort} av ${k.døgn}). Lag plass før neste levering (lagertelt eller selg).`
+        : `${k.giver.navn} leverte ${V.mengdeTekst(k.vare, g)} ${VN(k.vare)} for ${kr(h.kr)} (døgn ${k.døgnGjort} av ${k.døgn})` + (uten > .05 ? ` – ${V.mengdeTekst(k.vare, uten)} fikk ikke plass og ble ikke betalt.` : '.')); return true; }
     if (h.type === 'vareMist') { const bot = Math.min(h.kr || 0, (Sp() && Sp().penger) || 0); if (bot > 0) OppstartSpill.betal(bot);
       logg(k.type === 'avtale' ? `${k.giver.navn} kom for å hente ${V.mengdeTekst(k.vare, k.perDøgn)} ${VN(k.vare)}, men lageret manglet ${V.mengdeTekst(k.vare, h.mangler)}. Bot ${kr(bot)}.`
         : `Kassa hadde ikke ${kr(k.dagKr)} til dagens ${VN(k.vare)} fra ${k.giver.navn}. Bot ${kr(bot)}.`); return true; }
@@ -146,6 +148,11 @@
     return `${meter(Math.hypot(k.sted.x - p.x, k.sted.y - p.y))} i luftlinje` + (marsj && marsj.venter ? ' (regner ut ruta …)' : ''); };
   // døgnene som ruter: grønt = levert/kjøpt, rødt = mistet (rekkefølgen er ikke lagret – de leverte står først)
   const døgnRuter = k => `<div class="doegn" title="levert ${k.levertDøgn || 0} av ${k.døgn} døgn">${Array.from({ length: k.døgn }, (_, i) => `<i class="${i < (k.levertDøgn || 0) ? 'ja' : i < (k.døgnGjort || 0) ? 'nei' : ''}"></i>`).join('')}</div>`;
+  // (ut8-kr-saga) kjøpsavtaler som spilleren har sagt «Inngå avtalen» til selv om lageret ikke har plass: andre trykk inngår den
+  const bekreftet = new Set();
+  document.addEventListener('click', e => { const b = e.target && e.target.closest && e.target.closest('[data-s="varebekreft"]'); if (!b) return;
+    e.stopPropagation(); bekreftet.add(b.dataset.id);
+    if (window.SelskapSpill) SelskapSpill.vis(true); }, true);
   function kort(k, aktiv, o = {}) {
     const P = perDøgn()[k.vare] || 0, h = har(k.vare);
     const rk = V.rekker(k, h, P, o.marsj && o.marsj.km > 0 ? V.bilTimer(o.marsj.km) : 0);
@@ -163,8 +170,13 @@
         : `<div class="rad"><span>Kostnad per døgn <span class="bot tall">${kr(k.dagKr)}</span></span><span>${esc(V.prisTekst(k))} (marked i dag ${kr((verdi()[k.vare]) || 0)})</span><span>Bot uten penger <span class="bot tall">${kr(k.botDøgn)}</span></span></div>`;
     }
     h1 += `<div class="vlinje ${rk.ok ? 'ok' : 'ikke'}">${esc(rk.tekst)}${k.type === 'kjøp' && Number.isFinite(plass(k.vare)) ? ` Plass på lageret: ${V.mengdeTekst(k.vare, Math.floor(plass(k.vare) * 10) / 10)}.` : ''}</div>`;
-    if (!aktiv) { const igjen = Math.max(0, k.utløper - tid);
-      h1 += `<div class="rad"><span>Tilbudet står i ${igjen >= 60 ? Math.round(igjen / 60) + ' t' : Math.round(igjen) + ' min'} til.</span></div><div class="knapper"><button class="hoved" data-s="ta" data-id="${k.id}"${o.låst ? ' disabled' : ''}>${k.type === 'lever' ? 'Ta kontrakten' : 'Inngå avtalen'}</button><button data-s="avslå" data-id="${k.id}">Avslå</button>${k.type === 'lever' ? `<button data-s="vis" data-id="${k.id}">Vis i kartet</button>` : ''}</div>`; }
+    if (!aktiv) { const igjen = Math.max(0, k.utløper - tid), pl = k.type === 'kjøp' ? plass(k.vare) : Infinity, trang = Number.isFinite(pl) && pl < k.perDøgn - .05;
+      // (ut8-kr-saga) kjøpsavtale når lageret ikke har plass til ett døgns levering: først en bekreftelse på kortet
+      const spør = trang && !bekreftet.has(k.id), ja = trang && bekreftet.has(k.id);
+      if (trang) h1 += `<div class="vlinje ikke vareplass">${pl < .05 ? 'Lageret er fullt' : `Lageret har bare plass til ${V.mengdeTekst(k.vare, Math.floor(pl * 10) / 10)}`} – avtalen gir ${V.mengdeTekst(k.vare, Math.floor(Math.min(pl, k.perDøgn) * 10) / 10)} i dag av ${V.mengdeTekst(k.vare, k.perDøgn)}. Det som ikke får plass, betales ikke.${ja ? ' Inngå likevel?' : ''}</div>`;
+      h1 += `<div class="rad"><span>Tilbudet står i ${igjen >= 60 ? Math.round(igjen / 60) + ' t' : Math.round(igjen) + ' min'} til.</span></div><div class="knapper">` + (spør ? `<button class="hoved" data-s="varebekreft" data-id="${k.id}"${o.låst ? ' disabled' : ''}>Inngå avtalen</button>`
+        : `<button class="hoved" data-s="ta" data-id="${k.id}"${o.låst ? ' disabled' : ''}>${k.type === 'lever' ? 'Ta kontrakten' : ja ? 'Ja, inngå likevel' : 'Inngå avtalen'}</button>`)
+        + `<button data-s="avslå" data-id="${k.id}">Avslå</button>${k.type === 'lever' ? `<button data-s="vis" data-id="${k.id}">Vis i kartet</button>` : ''}</div>`; }
     else { h1 += '<div class="knapper">';
       if (k.type === 'lever' && !k.frakt) { const b = ledigBil(), lag = ledigLag(), v = vis(k);
         if (v.igjen > .01) h1 += `<button class="hoved" data-s="vare" data-v="bil" data-id="${k.id}" title="${esc(b.feil || `${b.bil.navn} tar ${V.mengdeTekst(k.vare, V.kapasitet(b.bil))}`)}">Send lastebil</button>`
