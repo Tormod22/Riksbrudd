@@ -5,6 +5,8 @@ investere i organisasjonen, vi blir børsnotert på en internasjonal svartebørs
 lage kontrakter for tømmer, eksportere tømmer, maskiner som raffinerer tømmer til planker … Kan du lage en plan for dette?»
 Og samme dag: «byggene i hele spillet trenger et helt nytt system, hvor hvert eneste bygg består av vegger, tak og møbler … vegger en
 senere kan rive, eller bygge vinduer på … flere etasjer, loft … om en ønsker å bygge en stor fabrikk helt selv» (kapittel 5).
+Og: «da må vi også ha et bedre system for hvordan folkene oppfører seg og beveger seg i nye bygg, slik at de kan drive maskinene»
+(kapittel 6).
 
 Planen tar også med de seks forbedringene brukeren likte i svaret på «Hvordan kan spillet gjøres bedre?»: ro i skjermen, én tydelig
 vei med kontraktene som rød tråd, en økonomi som gir valg hele spillet, en fiende som er en ekte motstander, lyd og den første halvtimen.
@@ -29,7 +31,9 @@ en ny meny du må finne selv. Sagbruket låses opp av en tømmerkontrakt, den f�
 og den første investoren ringer når selskapet har levert nok.
 
 Under alt dette ligger et nytt **byggesystem** (kapittel 5): hvert bygg i spillet består av etasjer, vegger, gulv, tak og møbler,
-husene i kartet regnes ut fra høyden og typen, og du kan rive vegger, lage vinduer og bygge din egen fabrikk del for del.
+husene i kartet regnes ut fra høyden og typen, og du kan rive vegger, lage vinduer og bygge din egen fabrikk del for del. Og et nytt
+**system for folkene** (kapittel 6): de har en døgnplan, tar jobber fra en felles jobbtavle, finner veien gjennom dører og trapper, og
+arbeidet skjer der de står – ved maskinen, på lageret, i kantina.
 
 Og: **produksjon dekker driften, kontrakter og byer gir vekst, børsen gir de store sprangene – og den store risikoen.**
 
@@ -159,7 +163,7 @@ bygge vinduer på … bygg på flere etasjer kan kalkuleres basert på høyde, m
 fabrikk helt selv, skal en kunne bygge vegger, gulv, maskinplassering, lys og så videre.»
 
 Dette er et stort system, og det henger sammen med nesten alt annet: leting, tilflukt, riving, kamp, leiren og fabrikkene i kapittel 4.
-Derfor får det egne faser (B0–B7 i kapittel 13).
+Derfor får det egne faser (B0–B7 i kapittel 14).
 
 ### 5.1 Slik er det i dag
 
@@ -283,7 +287,124 @@ Dette er det mest krevende i hele planen, og det er greit å si det rett ut:
 - **Testene:** reglene (etasjer fra høyde, planløsning, bærende vegger, ras, spenn) skrives uten DOM og testes i Node på tusenvis av
   prøvehus, slik interiøret testes i dag (504 prøvebygg).
 
-## 6. Varekontrakter
+## 6. Folkene: hvem gjør hva, hvor og når
+
+Brukeren 28. nov: «for at alt dette skal funke, må vi også ha et bedre system for hvordan folkene i leiren og organisasjonen oppfører
+seg, hvordan de beveger seg i nye bygg som vi bygger selv, slik at de kan drive maskinene og så videre.»
+
+Sagbruket, fabrikken og husene du bygger om, gir bare mening hvis folkene **er der**: går inn porten, bærer tømmeret til saga, står ved
+maskinen, spiser i kantina og sover i brakka. Dette kapittelet beskriver det. Inspirasjon: spill som RimWorld, Prison Architect og
+Project Zomboid, der folk har en dag, en jobb og egne behov – bare inspirasjon, ikke kopi.
+
+### 6.1 Slik er det i dag
+
+- **Oppgavene er tall.** En person «på sagbruket» eller «på bygg» gir et tempo (ferdighet × moral × søvn × helse), men det spiller ingen
+  rolle hvor personen står (`spill/folk.js`).
+- **Figurene er pynt.** Høyst 14 folk (og 8 barn og gamle) går rundt mellom byggene i 3D. Kokken står i kjøkkenet, vakta i tårnet,
+  operatørene i kontrollrommet – men de bare står der; arbeidet regnes uansett (`spill/folk3d.js`).
+- **Det finnes ingen vei inne i bygg** for folkene. Du selv kan gå inn i hus, men folkene vet ikke hvor dørene og trappene er.
+
+Det holder for en leir med ti personer. Det holder ikke for en fabrikk med tre maskiner og tjue arbeidere.
+
+### 6.2 Grunntanken: arbeidet skjer der personen står
+
+- Hver person har **en plass** i verden, **en vei** dit hen skal, og **en jobb** hen gjør når hen er framme.
+- **Arbeid tar tid å gå til.** Ligger lageret langt fra saga, går mye av dagen med til å bære. Et godt bygg (kort vei, dører på riktig
+  sted) gir mer arbeid per person. Slik lønner det seg å planlegge fabrikken.
+- **Stengt vei = ingen arbeid.** River du døra til verkstedet eller barrikaderer feil vindu, kommer ingen inn – og spillet sier det.
+- **Regnet når du ikke ser, ekte når du ser.** Folk i en utpost 20 km unna regnes med reisetid og tempo som i dag. Folkene i leiren der
+  du er, går ekte. Det holder spillet raskt, og det ser likt ut fra spilleren.
+
+### 6.3 Døgnet: arbeid, mat, søvn og fri
+
+- Hver person har en **døgnplan**: arbeid, måltider, søvn og fri. Standard (forslag): arbeid 07–11 og 12–17, middag 17, fri til 22,
+  søvn 22–06.
+- **Skift:** maskiner kan gå døgnet rundt med to eller tre skift. Du velger skift per maskin eller per bygg; folkene fordeles på skiftene.
+  Nattskift gir mer produksjon, men lavere moral og trenger lys (kapittel 5.6).
+- **Vakt** har egen turnus, så leiren aldri står uten vakt.
+- Måltidene skjer i **kantina** eller kjøkkenet (folk går dit), søvnen i **sin egen seng** (hver person får en seng i en brakke).
+  Mangler det senger eller plass ved bordet, går folk til nærmeste ledige – eller sover ute (moralen synker).
+- Tiden går fortsatt som i dag (1× er sanntid), så en arbeidsdag er lang. På 60× ser du dagen gå på 24 minutter.
+
+### 6.4 Jobbene: en tavle alle kan ta fra
+
+I stedet for at hver person har én fast oppgave, lager leiren **jobber**, og folkene tar dem:
+
+- **Hvert bygg og hver maskin lager jobber:** «kjør sagbenken», «bær tømmer fra porten til saga», «mat kjelen med flis», «lag middag»,
+  «stå vakt i tårn 2», «bygg vegg 14», «reparer høvelen».
+- **Prioritet per jobbtype** (1–5), som spilleren setter i Folk-panelet – omtrent som oppgavene i dag, men nå en rekkefølge, ikke en fast
+  plass. «Vakt først, så sagbruket, så bygging.»
+- **Hvem tar jobben:** den som har høyest prioritet på den, er ledig, har ferdigheten og står nærmest. En person kan låses til en jobb
+  («Kari kjører alltid saga») eller utelukkes («Per bærer aldri – dårlig rygg»).
+- **Bærejobber kommer av seg selv:** når saga mangler tømmer eller utmatingen er full, legges det ut bærejobber. Ledige folk tar dem.
+  Det er dette som binder lager, maskiner og bygg sammen.
+- **Ingen kan ta jobben?** Den vises med en grunn: «ingen ledige», «ingen med ferdighet», «ingen vei», «uten strøm», «tom for tømmer».
+
+### 6.5 Å gå i byggene
+
+Byggesystemet i kapittel 5 gir hver etasje et rutenett (1,2 m). Folkene bruker det samme rutenettet til å finne veien:
+
+- **Gulv** kan gås på, **vegger** sperrer, **dører og porter** er åpninger (kan låses: bare egne folk, eller ingen), **trapper** binder
+  etasjene sammen, **møbler og maskiner** sperrer – unntatt **bruksplassen** foran dem, der personen står og arbeider.
+- **To nivåer av vei:** først rom til rom gjennom dørene (et lite kart over rommene), så rute for rute inne i rommet. Det er raskt nok for
+  mange folk, og kartet over rommene må bare lages på nytt når en vegg, dør eller trapp endres.
+- **Ute** går folk som lagene i dag (terrenget og vegene), og inn gjennom den nærmeste døra som er åpen.
+- **Felles veikart per mål:** de vanligste målene (lageret, kantina, saga) får hvert sitt veikart over hele leiren, så tjue folk som skal
+  samme sted, ikke regner hver sin vei.
+- **Byggesettet sjekker veien når du bygger.** Setter du en maskin slik at bruksplassen ikke kan nås fra en dør, blir skissen rød med
+  grunnen «ingen vei til bruksplassen» (som de andre grunnene i byggevisningen i dag). Et rom uten dør får «rommet har ingen dør».
+- **Trengsel** (smale dører, kø) er ikke med i første versjon – folk kan gå forbi hverandre.
+
+### 6.6 Maskinene trenger folk på riktig plass
+
+Hver maskin fra kapittel 4 får tre slags plasser:
+
+| Plass | Hva skjer der | Eksempel: sagbruket |
+|---|---|---|
+| **Innmating** | råvarer legges her | tømmerbordet ved enden av saga |
+| **Bruksplass** | operatøren står her | ved sagbenken (3 personer: inn, sag, ut) |
+| **Utmating** | ferdigvarer havner her | plankehaugen ved den andre enden |
+
+- Maskinen går bare når operatøren(e) står på bruksplassen, det er råvarer i innmatingen og plass i utmatingen.
+- **Status over maskinen** (2D-ikon og i Selskapet → Produksjon): går · venter på folk · venter på tømmer · utmatingen full · uten
+  strøm · i stykker.
+- **Tempo** = ferdighet × moral × lys × helse – og hvor mye av tiden som går med til å gå. Den siste er ny, og det er den som gjør at
+  plasseringen av maskinene betyr noe.
+- **Opplæring:** en person som kjører samme maskin lenge, blir bedre (ferdigheten stiger sakte, som erfaringen til soldatene i dag).
+
+### 6.7 Oppførsel: hva folk gjør av seg selv
+
+- **Behov** (finnes alt: mat, søvn, varme, helse, moral) styrer dagen: sulten → kantina, trøtt → senga, kald → varmt rom, syk →
+  sykestua.
+- **Fritid:** folk samles ved bålet eller i kantina, prater og spiller kort. Moralen stiger mer med et sted å være.
+- **Egenskaper** (1–2 per person, forslag): flittig, lat, modig, redd, nattmenneske, ryddig, pratsom. De gir små forskjeller (flittig
+  +10 % tempo, nattmenneske liker nattskift, redd gjemmer seg tidligere ved angrep).
+- **Venner og uvenner:** folk som arbeider sammen, blir venner (bedre moral sammen); noen kommer ikke overens (dårligere i samme rom).
+  Enkelt, og bare det som merkes.
+- **Alarm:** ved angrep går vaktene til stillingene sine (som «Forsvar leiren» i dag), de andre går til **tilfluktsrommet** eller
+  nærmeste solide bygg – barn og gamle først. Etter angrepet går alle tilbake til jobbene sine.
+- **Skade og brann:** skadde går (eller bæres) til sykestua; brann i et bygg gir en slukkejobb med høy prioritet.
+- **Ting som ligger:** varer som ligger feil sted (etter en leting, et angrep), blir ryddejobber for ledige.
+- **Streik:** for lite lønn eller for mye nattskift over tid gjør at noen nekter å arbeide (henger sammen med lønna og kapittel 12).
+
+### 6.8 Hva du ser og styrer
+
+- **I 2D:** folkene er små figurer med retning i kartet og i plantegningen, i fargen til jobben de gjør. Trykk på en person: navn, jobb,
+  hva hen gjør nå og **hvorfor** («går til lageret – bærer tømmer til saga»).
+- **Folk-panelet** blir to deler: personene (som i dag) og **jobbtavla** (jobbene, prioritet, hvem som tar dem, og de som står fast).
+- **Trafikkart** (av/på): et varmekart over hvor folk går mest, så du ser hvor en ny dør eller et lager nærmere ville spart tid.
+- **I 3D:** figurene (som finnes) følger den samme veien, går opp trappene og står ved maskinene og arbeider.
+- **Du kan gi én person en ordre** («gå hit», «gjør dette nå»), men det trengs sjelden – jobbtavla skal gjøre det meste selv.
+
+### 6.9 Hvor mange folk – og ytelsen
+
+- Et stort selskap kan ha **50–200 personer** fordelt på leiren, utposter og byer.
+- **I leiren** går alle ekte i 2D (billig: rutenett og felles veikart). Regnes 4 ganger i sekundet i spilltid, ikke hver ramme.
+- **3D-figurer** bare innen ca. 150 m fra kameraet (som i dag høyst ca. 30 figurer nær).
+- **Langt unna** (utposter, byer, sagbruk i en annen by): regnet med reisetid, som lagene utenfor radioen.
+- Reglene (døgnplan, jobbtavle, vei i rutenett, maskinplasser) skrives uten DOM og testes i Node på prøveleirer med 10, 50 og 200 folk.
+
+## 7. Varekontrakter
 
 Kontraktene i dag er oppdrag (eskorte, hold, rydd, hent). Planen legger til **leveranser**, som binder produksjonen til kontraktene:
 
@@ -300,7 +421,7 @@ Du kan også sette en annen til å frakte (Gråfjell Frakt tar 15 % og risikoen)
 Fristen regnes med den ekte ruta, som kontraktene alt gjør i dag («marsj ca. 21 km, ca. 6 t»). Tilbudene sier hva du har på lager
 og hva maskinene rekker: «Du har 12 m³, sagbruket gir 26 m³ per døgn – rekker det.»
 
-## 7. Samarbeid med andre selskaper
+## 8. Samarbeid med andre selskaper
 
 Firmaene blir egne aktører med et **register** (ny fane i Selskapet):
 
@@ -320,7 +441,7 @@ Måter å samarbeide på:
 
 Svik er en del av spillet: å bryte en avtale gir en gevinst nå og koster rykte («pålitelig») hos alle som får vite det.
 
-## 8. Investere i andre selskaper
+## 9. Investere i andre selskaper
 
 Når selskapet har penger til overs (nivå 3, Etablert), kan du **kjøpe andeler** i firmaene:
 
@@ -333,17 +454,17 @@ Når selskapet har penger til overs (nivå 3, Etablert), kan du **kjøpe andeler
 - **Rivalene investerer også.** Kjøper Mosevakt seg opp i Storlia Tømmer, mister du tømmeret ditt. Et kappløp om andeler er en ny
   form for krig uten skudd.
 
-## 9. Investorer og svartebørsen
+## 10. Investorer og svartebørsen
 
 Det siste trinnet: selskapet får eiere utenfra. Det gir store penger – og noen å svare til.
 
-### 9.1 Private investorer først
+### 10.1 Private investorer først
 
 Fra nivå 3 kommer det **henvendelser**: en utenlandsk rederi-eier, et svensk sikkerhetsfirma, et anonymt fond. De tilbyr penger for en
 andel (f.eks. 8 mill. kr for 10 %), eller et **lån** med rente. Hver investor har et **ønske**: avkastning, ro i et område, at du
 holder deg unna en bestemt rival, eller at du tar en bestemt kontrakt. Ønskene blir oppdrag i Neste-lappen.
 
-### 9.2 Notering på svartebørsen
+### 10.2 Notering på svartebørsen
 
 Fra nivå 4 (Ettertraktet) kan selskapet **noteres** på en internasjonal svartebørs. Forslag til navn: **Gråbørsen** (etter Grålungen)
 – en oppdiktet handelsplass der private militærselskaper, smuglere og skyggefond kjøper og selger.
@@ -362,7 +483,7 @@ Fra nivå 4 (Ettertraktet) kan selskapet **noteres** på en internasjonal svarte
 Svartebørsen har også en mørk side: **innsidehandel** (kjøp før du gjør noe stort), **ryktespredning** om rivaler, og sjeldne varer
 (den gamle svartebørsen i `region.js` flyttes hit). Alt er valgfritt og har en pris i rykte.
 
-## 10. Eksport
+## 11. Eksport
 
 Kronen er nesten verdiløs etter Kronekrakket. Eksport gir **utenlandske penger** som holder verdien – det er den store gulroten.
 
@@ -378,7 +499,7 @@ Kronen er nesten verdiløs etter Kronekrakket. Eksport gir **utenlandske penger*
 
 Tømmer og planker er det første (det brukeren nevnte). Etter hvert: frossen fisk, pukk, stål og diesel.
 
-## 11. Andre mekanikker som passer inn
+## 12. Andre mekanikker som passer inn
 
 Kortere idéer som kan komme når grunnen over står. Hver av dem er et eget, lite valg:
 
@@ -391,7 +512,7 @@ Kortere idéer som kan komme når grunnen over står. Hver av dem er et eget, li
 - **Depoter:** små lager langs handelsruta, så du ikke må kjøre helt hjem.
 - **Sesonger:** hogst er best om vinteren (frossen mark), fiske om høsten, ved selges dyrt i kulda. Vær og årstider finnes alt.
 
-## 12. De seks forbedringene
+## 13. De seks forbedringene
 
 Dette må komme **først**, fordi alt det nye legger seg oppå det som er i dag:
 
@@ -409,7 +530,7 @@ Dette må komme **først**, fordi alt det nye legger seg oppå det som er i dag:
 6. **Den første halvtimen.** Startskjerm, leir, første kontrakt, ett angrep – og så det første glimtet av mer: «Storlia Tømmer har hørt
    om dere.» Spilleren skal vite hva neste mål er etter ti minutter, og se hele veien foran seg etter tretti.
 
-## 13. Rekkefølgen
+## 14. Rekkefølgen
 
 Hver fase kan spilles ferdig før den neste begynner, og hver har egne tester (regler uten DOM) og vakter, som resten av spillet.
 
@@ -424,7 +545,7 @@ Hver fase kan spilles ferdig før den neste begynner, og hver har egne tester (r
 | **Ø6 – Eksport** | havner og grense, eksportordre, eurokreditt | 2 runder | sjo.js, kaier.js, riksgrense.js |
 | **Ø7 – Investere og børsen** | andeler i firmaer, investorer, Gråbørsen, kurs, utbytte, oppkjøp | 2–3 runder | Ø5, dagbok.js |
 | **Ø8 – Rivalene gjør det samme** | punkt 4: AI-en bruker alt over | 2–3 runder | alt over |
-| **Ø9 – Flere kjeder** | steinknuser, fiskemottak, mølle, raffineri, og kapittel 11 | etter ønske | Ø1 |
+| **Ø9 – Flere kjeder** | steinknuser, fiskemottak, mølle, raffineri, og kapittel 12 | etter ønske | Ø1 |
 
 Ø8 bør ikke vente til slutt i praksis: hver fase gir rivalene den enkleste utgaven av det nye med en gang (de kan ta byavtaler fra Ø3),
 og Ø8 gjør dem smarte.
@@ -442,11 +563,24 @@ og Ø8 gjør dem smarte.
 | **B6 – Kamp med vegger** | dekning per vegg, hull etter skudd og sprengning, inngang via dører og vinduer, sikt fra etasjene | 2 runder | B3, strid.js |
 | **B7 – Ta over hus** | et hus i kartet blir del av leiren (utpost, lager, fabrikk) og kan bygges om | 1–2 runder | B3, B4 |
 
+**Folkene** (kapittel 6) er det tredje sporet. Det må være på plass før fabrikken (B5) kan virke:
+
+| Fase | Innhold | Omfang (forslag) | Bygger på |
+|---|---|---|---|
+| **F0 – Jobbtavla og døgnet** | jobber i stedet for faste oppgaver, prioritet per jobbtype, døgnplan og skift, «står fast fordi …» – fortsatt regnet, uten at figurene går | 2 runder | folk.js |
+| **F1 – Veien i byggene** | rutenett per etasje, rom-kart gjennom dører og trapper, felles veikart per mål, byggesettet sjekker veien | 2 runder | B0, B4 |
+| **F2 – Folk som går** | folkene går ekte i leiren (2D og 3D), arbeidet skjer der de står, spiser i kantina, sover i egen seng | 2–3 runder | F0, F1, folk3d.js |
+| **F3 – Maskinene** | innmating, bruksplass og utmating, bærejobber, maskinstatus, opplæring | 2 runder | F2, B5, Ø1 |
+| **F4 – Oppførsel** | egenskaper, venner/uvenner, fritid, alarm og tilfluktsrom, skade og brann, rydding, streik | 2 runder | F2 |
+| **F5 – Mange folk og utposter** | 50–200 personer, regnet langt unna, trafikkart, prøveleirer i testene | 1–2 runder | F2–F4 |
+
+F0 kan starte med en gang – den gjør Folk-panelet bedre også før byggene finnes.
+
 B0–B1 kan gå samtidig med Ø0–Ø2. Dagens interiør og byggesett virker hele veien til den nye utgaven er like god.
 
 En «runde» er én arbeidsøkt som i natt-løkkene (regler, visning, tester, kontroll). Tallene er grove anslag.
 
-## 14. Slik ser det ut
+## 15. Slik ser det ut
 
 - **2D først.** Alt i planen kan spilles i kartet og panelene. 3D gir bare utseende (maskinene, tømmerstabler, båter i havnen).
 - **Panelet Selskapet** (knappen «Selskap» i kommandolinja, tast S): Oversikt (verdi, kassa, kurs, ukas resultat, de tre viktigste
@@ -456,9 +590,11 @@ En «runde» er én arbeidsøkt som i natt-løkkene (regler, visning, tester, ko
   lite ikon.
 - **Byggene:** zoomet inn i 2D vises plantegningen med etasjevelger (Kjeller, 1, 2, Loft); i 3D bygges husene nær deg av vegger,
   gulv og møbler, og etasjene over deg er skjult når du står inne.
+- **Folkene:** små figurer i jobbens farge i 2D-kartet og plantegningen; trykk gir hva de gjør og hvorfor. Folk-panelet får
+  jobbtavla, og et trafikkart viser hvor folk går mest.
 - **Telefon:** panelet er et bunnark med fanene som rad øverst, ett tall per linje.
 
-## 15. Spørsmål til deg
+## 16. Spørsmål til deg
 
 Svarene bestemmer flere av detaljene over. Ingenting bygges før du har sagt ja til en fase.
 
@@ -478,3 +614,7 @@ Svarene bestemmer flere av detaljene over. Ingenting bygges før du har sagt ja 
 13. **Etasjer:** hvor mange etasjer skal du kunne bygge selv (forslaget er fire)? Og skal høyhus i byene kunne gås inn i bare de
     nederste etasjene?
 14. **Byggesystemet eller økonomien først?** Begge er store. Forslaget er å starte begge (B0 og Ø0/Ø1) og la dem møtes i fabrikken (B5).
+15. **Hvor mange folk** skal et stort selskap kunne ha – rundt 50, eller opptil 200?
+16. **Døgnplan og skift:** skal du sette tidene selv, eller holder det med «dag», «to skift» og «døgnet rundt» per maskin?
+17. **Egenskaper, venner og streik:** vil du ha folk med egne personligheter som kan skape trøbbel, eller skal de være mer like og lydige?
+18. **Direkte ordre til én person:** skal det gå an, eller skal alt gå gjennom jobbtavla?
