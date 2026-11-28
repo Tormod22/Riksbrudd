@@ -14,6 +14,8 @@
  *  - MØBELSETT: møblene per romtype som oppskrifter (vegg, rad, rutenett, midt, foran) – en ny romtype trenger bare en linje her.
  *  - STILER: eldre (mange små rom), nyere (stue og kjøkken uten vegg mellom), moderne (åpent mot gangen, større vinduer).
  * Se docs/natt/inne.md for hvordan en ny type legges til. Alle tallene er Claudes forslag.
+ * (28. nov, ut8-industri) spill/industri.js kobler seg på (Industri.koble): klassene «industri» og «lager» velger romsett etter
+ *   industritypen (info.ind fra husdataene, ellers anslått fra omgivelsene) – maskinene og oppskriftene legges inn i MØBLER/MØBELSETT/ROMSETT.
  * blokkert(plan, x, y) er kollisjonen når du går: yttervegger (unntatt inngangene), skillevegger og store møbler.
  * Bare første etasje.
  */
