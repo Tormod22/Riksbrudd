@@ -23,10 +23,15 @@
     // lys i vinduene: når mørket (NATT.mørke, 0–1) er over dette; brakka slukker mellom leggetid og morgen (folk sover)
     lysMørke: .18, leggetid: [23.5, 5.5],
     // byggene som har vinduer med lys (vinduene står i VINDU under)
-    lysBygg: { brakke: 1, sykestue: 1, verksted: 1 },
+    lysBygg: { brakke: 1, sykestue: 1, verksted: 1, kjøkken: 1, kontrollrom: 1, vakttårn: 1 },
     // så stor andel av vinduene har lys (resten er mørke rom)
     vinduAndel: .7,
     alltidLys: ['vakttårn', 'kontrollrom', 'sykestue'],
+    // bygg med bare ett «vindu» (kjøkkenets luke): det lyser alltid når bygget lyser
+    alleVinduer: ['kjøkken'],
+    // (ut9-liv2) lyskasteren i vakttårnet: ett sveip fram og tilbake på periode sekunder, ±sveip radianer, strålen lengde m, vidde (halv vinkel)
+    // og så mye ned mot bakken (radianer)
+    lyskaster: { periode: 26, sveip: 1.1, lengde: 34, vidde: .13, ned: .2 },
     // småting: så langt ut fra veggen (m), så mye luft rundt (m) og så mange forsøk
     ut: 1.6, luft: .8, forsøk: 12,
     // vasketøyet: snora er så lang (m), stolpene så høye (m); ett per brakke
@@ -34,6 +39,10 @@
     // byggeplassen: så mange kasser/verktøy rundt et bygg under arbeid
     byggeplass: { ting: 4 },
     // hundene
+    // (ut9-liv2) fugler og katt: kråker på mønet av brakkene og på bakken ved bålet om dagen (andel brakker med kråker, høyst per tak, hopp hvert
+    // hopp s), én katt i en leir med brakke (bytter sted hvert flytt s, går fart m/s), måker som sirkler over vann innen 250 m fra leiren
+    fugl: { kråkeAndel: .6, kråkerPerTak: 2, kråkerBakke: 3, hopp: 9, dag: [5, 21.5], måker: 4, måkeR: [14, 34], måkeHøyde: [16, 34], måkeFart: .55 },
+    katt: { flytt: 50, fart: .7 },
     hund: { én: 6, to: 16, fart: 1.1, løp: 2.6, vent: [4, 16], radius: 22, nærFolk: 2.2, sov: [22.5, 6] },
   };
   const R = REGLER;
@@ -78,15 +87,29 @@
     brakke: { w: .9, h: .9, z: 1.95, sider: [[3, [-4, -1.3, 1.3, 4]], [-3, [-4, -1.3, 1.3, 4]]], ender: [[6, 0], [-6, 0]] },
     sykestue: { w: 1.1, h: 1, z: 1.95, sider: [[3.5, [-4.2, -2.4, 2.6, 4.2]], [-3.5, [-3.5, 0, 3.5]]] },
     verksted: { w: 2.2, h: .8, z: 3.4, ender: [[7, -3.5], [7, 0], [-7, -3.5], [-7, 0]] },
+    // (ut9-liv2) kontrollrommet (modellen «hovedhus», 9 × 12 m, to etasjer), kjøkkenets utleveringsluke og lykta på lyskasteren i vakttårnet:
+    // [x, y, z (midten), side, bredde, høyde] rett fra modellene
+    kontrollrom: { liste: [
+      ...[-4.2, -2.6, 2.6, 4.2].map(y => [4.5, y, 1.95, 'x+', 1.1, 1.3]), ...[-4.2, -2.1, 2.1, 4.2].map(y => [4.5, y, 4.45, 'x+', 1.1, 1.3]),
+      ...[-4, -1.3, 1.3, 4].flatMap(y => [[-4.5, y, 1.95, 'x-', 1.1, 1.3], [-4.5, y, 4.45, 'x-', 1.1, 1.3]]), [0, 6, 4.35, 'y+', 2.4, 1.1], [0, -6, 4.35, 'y-', 2.4, 1.1]] },
+    kjøkken: { liste: [[2.47, 1.6, 1.75, 'x+', 2.3, .95]] },
+    vakttårn: { liste: [[1.53, .6, 6.62, 'x+', .34, .34]] },
   };
+  const SIDE = { 'x+': [.08, 0, 0], 'x-': [-.08, 0, Math.PI], 'y+': [0, .08, Math.PI / 2], 'y-': [0, -.08, -Math.PI / 2] };
   function vinduer(type) {
     const V = VINDU[type]; if (!V) return []; const ut = [];
     for (const [x, ys] of V.sider || []) for (const y of ys) ut.push({ lx: x + Math.sign(x) * .1, ly: y, z: V.z, a: x > 0 ? 0 : Math.PI, w: V.w, h: V.h });
     for (const [y, x] of V.ender || []) ut.push({ lx: x, ly: y + Math.sign(y) * .1, z: V.z, a: y > 0 ? Math.PI / 2 : -Math.PI / 2, w: V.w, h: V.h });
+    for (const [x, y, z, side, w, h] of V.liste || []) { const [dx, dy, a] = SIDE[side]; ut.push({ lx: x + dx, ly: y + dy, z, a, w, h }); }
     return ut;
   }
   // brenner lyset bak vindu nr. k i bygg nr. id? (ikke alle – noen rom er mørke; i vakttårn/kontrollrom/sykestue alle)
-  const vinduPå = (type, id, k) => R.alltidLys.includes(type) || hash(id, k + 17) < R.vinduAndel;
+  const vinduPå = (type, id, k) => R.alltidLys.includes(type) || R.alleVinduer.includes(type) || hash(id, k + 17) < R.vinduAndel;
+  // (ut9-liv2) lyskasteren i vakttårnet om natta: { på, vinkel (radianer ut fra byggets +x, feier fram og tilbake) } ved sekund t
+  function lyskaster(m, t, nr = 0) {
+    const L = R.lyskaster; if (m < R.lysMørke) return { på: false, vinkel: 0 };
+    return { på: true, vinkel: Math.sin((t / L.periode + hash(nr, 5)) * 2 * Math.PI) * L.sveip };
+  }
 
   // ---------- plasser for småting ----------
   // et punkt i byggets egne meter til kartets meter
@@ -169,6 +192,44 @@
     return h;
   }
 
-  const api = { REGLER, stilling, røyk, PIPE, lys, VINDU, vinduer, vinduPå, tilKart, inni, avstPoly, fri, plassVed, småting, antallHunder, nyHund, hundSteg, iTid, hash };
+  // ---------- fugler og katt (ut9-liv2) ----------
+  // mønet på byggene (byggets egne meter: x, y fra, y til, høyde) – fra modellene (brakka: saltak 0,8 m over veggen på 0,45 + 2,6 m)
+  const MØNE = { brakke: [0, -5.4, 5.4, 3.86] };
+  // kråkene ved tiden t (sekunder) og klokka h: [{ x, y, z (over byggets grunn, eller 0 på bakken), a, bygg (id eller null) }]
+  function kråker(bygg, leir, t, h) {
+    const F = R.fugl, ut = []; if (!iTid(h, F.dag)) return ut;
+    for (const b of bygg) { const M = MØNE[b.type]; if (!M || !b.ferdig || hash(b.id, 71) > F.kråkeAndel) continue;
+      const n = 1 + Math.floor(hash(b.id, 72) * F.kråkerPerTak);
+      for (let i = 0; i < n; i++) { const fase = hash(b.id, 80 + i) * F.hopp, slot = Math.floor((t + fase) / F.hopp), v = hash(b.id * 31 + i, slot);
+        const [x, y] = tilKart(b, M[0], M[1] + (M[2] - M[1]) * v); ut.push({ x, y, z: M[3], a: (b.ret || 0) + (hash(i, slot) < .5 ? 0 : Math.PI) + Math.PI / 2, bygg: b.id }); } }
+    for (let i = 0; i < F.kråkerBakke; i++) { const slot = Math.floor((t + i * 3.1) / (F.hopp * .6)), a = hash(i + 7, slot) * 6.283, r = 5 + hash(i + 9, slot) * 6;
+      ut.push({ x: leir.x + Math.cos(a) * r, y: leir.y + Math.sin(a) * r, z: 0, a: hash(i, slot + 3) * 6.283, bygg: null }); }
+    return ut;
+  }
+  // katten: { x, y, a, går (0/1), sover } – bytter mellom plasser (ved brakkedøra, ved bålet, ved kjøkkenet) og går mellom dem.
+  // fri(x, y) = ikke i et bygg (fra visningen); plassene som ikke er frie, hoppes over. Null uten ferdig brakke.
+  function katt(bygg, leir, t, h, fri) {
+    const K = R.katt, br = bygg.find(b => b.type === 'brakke' && b.ferdig); if (!br) return null;
+    const kj = bygg.find(b => b.type === 'kjøkken' && b.ferdig), P = [tilKart(br, 4.9, 1.6), [leir.x + 3.2, leir.y - 1.4], tilKart(br, -4.1, -3.5)];
+    if (kj) P.push(tilKart(kj, 5.3, -1.5)); const frie = P.filter(([x, y]) => !fri || fri(x, y)); if (!frie.length) return null;
+    // om natta sover den ved brakkedøra (eller første frie plass)
+    if (!iTid(h, R.fugl.dag)) { const [x, y] = frie[0]; return { x, y, a: br.ret || 0, går: 0, sover: true }; }
+    const slot = Math.floor(t / K.flytt), fra = frie[Math.floor(hash(br.id, slot - 1) * frie.length)], til = frie[Math.floor(hash(br.id, slot) * frie.length)];
+    // går ikke gjennom bygg: er veien sperret, blir den der den er denne gangen
+    let d0 = Math.hypot(til[0] - fra[0], til[1] - fra[1]); if (fri) for (let k = .5; k < d0; k += .5) { const q = k / d0; if (!fri(fra[0] + (til[0] - fra[0]) * q, fra[1] + (til[1] - fra[1]) * q)) return { x: fra[0], y: fra[1], a: hash(slot, 6) * 6.283, går: 0, sover: false }; }
+    const d = d0, gått = (t - slot * K.flytt) * K.fart, a = Math.atan2(til[1] - fra[1], til[0] - fra[0]);
+    if (gått >= d) return { x: til[0], y: til[1], a: a + hash(slot, 4), går: 0, sover: false };
+    const k = gått / d; return { x: fra[0] + (til[0] - fra[0]) * k, y: fra[1] + (til[1] - fra[1]) * k, a, går: 1, sover: false };
+  }
+  // måkene over vann (vx, vy = et punkt på vannet): [{ x, y, z (over vannet), a, krenging }]
+  function måker(vx, vy, t, h, n) {
+    const F = R.fugl, ut = []; if (!iTid(h, F.dag)) return ut;
+    for (let i = 0; i < (n == null ? F.måker : n); i++) { const r = F.måkeR[0] + hash(i, 91) * (F.måkeR[1] - F.måkeR[0]), w = F.måkeFart * (hash(i, 92) < .5 ? 1 : -1) * (8 / r + .1);
+      const v = t * w + hash(i, 93) * 6.283, z = F.måkeHøyde[0] + hash(i, 94) * (F.måkeHøyde[1] - F.måkeHøyde[0]) + Math.sin(t * .3 + i) * 2;
+      ut.push({ x: vx + Math.cos(v) * r, y: vy + Math.sin(v) * r, z, a: v + (w > 0 ? Math.PI / 2 : -Math.PI / 2), krenging: w > 0 ? .35 : -.35 }); }
+    return ut;
+  }
+
+  const api = { REGLER, kråker, katt, måker, MØNE, stilling, røyk, PIPE, lys, VINDU, vinduer, vinduPå, lyskaster, tilKart, inni, avstPoly, fri, plassVed, småting, antallHunder, nyHund, hundSteg, iTid, hash };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Leirliv = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
