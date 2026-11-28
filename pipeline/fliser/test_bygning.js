@@ -13,6 +13,11 @@ const tall = (o, sti = '') => { if (typeof o === 'number') return Number.isFinit
   ok(t.etasjer === 2 && t.loft, 'hus 9 m med saltak: to etasjer og loft (' + t.etasjer + ', loft ' + t.loft + ', vegg ' + hus9.høyde.vegg + ' m, møne ' + hus9.høyde.møne + ' m)');
   const hus6 = B.fraKart(rekt(10, 8), { i: 77, kl: 'hus', h: 6, tak: 'saltak' }); ok(B.telle(hus6).etasjer === 1 && B.telle(hus6).loft, 'hus 6 m med saltak: én etasje og loft');
   const by = B.fraKart(rekt(24, 13), { i: 5, kl: 'leil', h: 18, tak: 'flatt' }); ok(B.telle(by).etasjer === 6 && !B.telle(by).loft, 'bygård 18 m med flatt tak: seks etasjer (' + B.telle(by).etasjer + ')');
+  // bygården: trapperom i midten og en leilighet på hver side (med kjøkken), trappene i trapperommet
+  const e2 = by.etasjer.find(e => e.n === 2), kj = by.kjerne;
+  ok(kj && e2.rom.some(r => r.rolle === 'trapperom') && e2.rom.filter(r => r.rolle === 'kjøkken').length === 2 && e2.åpninger.filter(o => o.leilighet).length === 2,
+    'bygård: trapperom i midten, to leiligheter med kjøkken og dør til trapperommet i hver etasje (' + e2.rom.map(r => r.rolle).join(', ') + ')');
+  ok(kj && by.trapper.filter(t => t.fra > 0).every(t => B.trappP(t).every(p => p[0] * by.akse.ux + p[1] * by.akse.uy > kj.c0 - .01 && p[0] * by.akse.ux + p[1] * by.akse.uy < kj.c1 + .01)), 'bygård: trappene står i trapperommet');
   const kontor = B.fraKart(rekt(30, 14), { i: 6, kl: 'kontor', h: 13, tak: 'flatt' }); ok(B.telle(kontor).etasjer === 4, 'kontor 13 m (3,2 m per etasje): fire etasjer (' + B.telle(kontor).etasjer + ')');
   const hall = B.fraKart(rekt(40, 25), { i: 7, kl: 'industri', h: 12 }); ok(B.telle(hall).etasjer === 1 && hall.etasjer[0].takhøyde > 8, 'industrihall 12 m: én etasje i full høyde (' + hall.etasjer[0].takhøyde + ' m)');
   const butikk = B.fraKart(rekt(20, 14), { i: 8, kl: 'butikk', h: 11, tak: 'flatt' }); ok(B.telle(butikk).etasjer === 3 && butikk.etasjer.find(e => e.n === 2).rom.some(r => /soverom|stue|bad/.test(r.rolle)), 'butikk 11 m: butikk nede og leiligheter i to etasjer over');

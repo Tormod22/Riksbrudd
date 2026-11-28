@@ -68,6 +68,8 @@
     dørHøyde: 2.1, portHøyde: 3,
     // trappene: bredde (m), lengde per meter etasjehøyde; stige når en trapp ikke får plass (loftsluke)
     trapp: { bolig: .85, annet: 1.1, loft: .75, lengde: { bolig: 1.02, annet: 1.25 }, stige: [.6, 1.1] },
+    // bygårder (kapittel 5.3): trapperom i midten (bredde m) og en leilighet på hver side, når bygget er langt og nesten rektangulært
+    kjerne: { bredde: 3.2, minLengde: 16, minDybde: 7, minSide: 6, rekt: .85 },
     // rutenettet for å finne veien (m)
     rute: .2,
     // materialer fra riving per m² (60 % av det byggesettet bruker); ras gir en del av det som skrot
@@ -330,7 +332,9 @@
         if (andre.some(q => { const T2 = { x: q.x, y: q.y, a: q.a, b: q.b + .6, l: q.l + 1.6 }; return Q.some(p => krysserRekt(T2, { a: p, b: p }, 0)) || krysserRekt(T2, { a: Q[0], b: Q[2] }, 0) || krysserRekt(T2, { a: Q[1], b: Q[3] }, 0) || krysserRekt(T2, { a: nede, b: nede }, .2) || krysserRekt(T2, { a: oppe, b: oppe }, .2); })) continue;
         // møbler i veien (trappa + der du går på og av)
         const fLo = iVeien(lo, t).length, fHi = iVeien(hi, t).length, rLo = iRom(lo, nede[0], nede[1]), rHi = iRom(hi, oppe[0], oppe[1]), rM = iRom(lo, t.x, t.y);
-        const poeng = (rLo && STIGE.includes(rLo.rolle) ? 3 : 0) + (rHi && STIGE.includes(rHi.rolle) ? 3 : 0) + (rM && STIGE.includes(rM.rolle) ? 1 : 0)
+        // bygård: trappa i trapperommet (mellom leilighetene) går foran alt annet (ikke til loft og kjeller)
+        const iKjerne = m.kjerne && !lo.kjeller && !hi.loft && Q.every(p => { const u = p[0] * A.ux + p[1] * A.uy; return u > m.kjerne.c0 && u < m.kjerne.c1; });
+        const poeng = (iKjerne ? 20 : 0) + (rLo && STIGE.includes(rLo.rolle) ? 3 : 0) + (rHi && STIGE.includes(rHi.rolle) ? 3 : 0) + (rM && STIGE.includes(rM.rolle) ? 1 : 0)
           - .6 * (fLo + fHi) - Math.hypot(nede[0] - inn[0], nede[1] - inn[1]) / 25 + (avstKant(P, (Q[0][0] + Q[1][0]) / 2, (Q[0][1] + Q[1][1]) / 2) < .4 || avstKant(P, (Q[2][0] + Q[3][0]) / 2, (Q[2][1] + Q[3][1]) / 2) < .4 ? .8 : 0) + hash(m.hus, kand.length) * .05;
         kand.push({ t, nede, oppe, poeng });
       } }
@@ -398,6 +402,21 @@
   // hvor langt dekket over etasjen et bærer: minst halve spennet for stoffet, og minst det det ble bygget med
   function byggSpenn(m, et, stoff) { const S = støtter(et), pk = prøvepunkter(m); let maks = 0; for (const [x, y] of pk) maks = Math.max(maks, nærmest(S, x, y)); return r2(Math.max((REGLER.spenn[stoff] || 6) / 2, maks + REGLER.margin)); }
 
+  // omrisset klippet mot en linje på tvers av aksen (Sutherland–Hodgman): beholder punktene der side · (u − grense) ≥ 0
+  function klipp(P, ux, uy, grense, side) {
+    const ut = [], f = p => side * (p[0] * ux + p[1] * uy - grense);
+    for (let k = 0; k < P.length; k++) { const a = P[k], b = P[(k + 1) % P.length], fa = f(a), fb = f(b);
+      if (fa >= 0) ut.push(a); if ((fa >= 0) !== (fb >= 0)) { const t = fa / (fa - fb); ut.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); } }
+    const Q = ut.filter((p, k) => Math.hypot(p[0] - ut[(k + 1) % ut.length][0], p[1] - ut[(k + 1) % ut.length][1]) > 1e-6);
+    return areal(Q) < 0 ? Q.reverse() : Q;
+  }
+
+  // stoffet i åpninger og møbler (glass i vinduer, stål i porter og maskiner, ellers tre)
+  const STÅL = /kjøleskap|komfyr|maskin|tank|rørgate|ventil|tavlepanel|arkivskap|pallereol|traverskran|sveisebås|stålplater|kjøledisk|fryseboks|melketank|bil|traktor|fly|verktøyvogn|ovn|fyrkjele|tønne|kopimaskin|radio|medisinskap/;
+  const åpStoff = type => (type === 'vindu' || type === 'takvindu' ? 'glass' : type === 'port' ? 'stål' : 'tre');
+  function merkStoff(m) { for (const e of m.etasjer) { for (const o of e.åpninger) if (!o.stoff) o.stoff = åpStoff(o.type); for (const q of e.møbler) q.stoff = STÅL.test(q.type) ? 'stål' : 'tre'; }
+    for (const v of m.tak.vinduer) v.stoff = 'glass'; return m; }
+
   // ---------- fraKart ----------
   const VANLIG = { hus: [0, 1, 2.1], hytte: [0, 1, 2], leil: [3, 1.8, 2.3], kontor: [3, 2, 2.4], skole: [3, 2.2, 2.4], industri: [2, 4.5, 4.5], låve: [1, 3, 3.2], uthus: [1, 2.6, 2.2], butikk: [3, 2.2, 2.4], kirke: [0, 1.6, 2.6], lager: [2, 4, 4.2], sykehus: [3, 3, 2.6], hangar: [2, 20, 9], terminal: [3, 3, 2.8] };
   // døra: info.dør flyttes til nærmeste kant (som interior3d.js); uten dør midt på den lengste kanten (som hus3d)
@@ -432,20 +451,50 @@
       tak: { form: Hd.form, stoff: bolig(kl) || kl === 'hytte' ? 'tre' : 'stål', møne: Hd.møne, felt: [], vinduer: [], spenn: 0 },
       etasjer: [], trapper: [], endringer: [] };
     m.akse.ux = ux; m.akse.uy = uy; m.akse.vx = vx; m.akse.vy = vy;
-    if (!dør) { const e = nyEtasje(1, '1. etasje', 0, Hd.etasjer[0], Hd.etasjer[0] - .35, 'betong'); yttervegger(e, P, st.ytter, REGLER.tykk[st.ytter] || .2, [], true); e.rom.push({ id: 0, rolle: 'rom', P: m.P, areal: r2(A0), andel: 1 }); m.etasjer.push(e); return m; }
+    if (!dør) { const e = nyEtasje(1, '1. etasje', 0, Hd.etasjer[0], Hd.etasjer[0] - .35, 'betong'); yttervegger(e, P, st.ytter, REGLER.tykk[st.ytter] || .2, [], true); e.rom.push({ id: 0, rolle: 'rom', P: m.P, areal: r2(A0), andel: 1 }); m.etasjer.push(e); return merkStoff(m); }
     const N = Hd.etasjer.length, høy = REGLER.høyhus, iBruk = k => N <= høy.nederst + høy.øverst || k <= høy.nederst || k > N - høy.øverst;
+    // bygård: trapperom i midten der hoveddøra er, leiligheter på begge sider (forsøkes; går det ikke, er etasjen som før)
+    const KJ = REGLER.kjerne; let kjerne = null;
+    if (kl === 'leil' && N >= 2 && u1 - u0 >= KJ.minLengde && v1 - v0 >= KJ.minDybde && A0 / ((u1 - u0) * (v1 - v0)) > KJ.rekt) {
+      const du = dør.x * ux + dør.y * uy, c0 = Math.max(u0 + KJ.minSide, Math.min(u1 - KJ.minSide - KJ.bredde, du - KJ.bredde / 2));
+      if (du >= c0 + .7 && du <= c0 + KJ.bredde - .7) kjerne = m.kjerne = { c0: r2(c0), c1: r2(c0 + KJ.bredde) }; }
     // en vanlig etasje fra interior.js; samme dørplass i alle etasjene: i 1. etasje en dør, over den et vindu, og gangen innenfor er der
     // i alle etasjene (samme frø gir oftest de samme veggene over hverandre, som i ekte hus). Kalles på nytt med et annet frø når trappa
     // ikke får plass.
     const fyll = (e, k, frø) => {
       const klK = k > 1 && REGLER.oppe[kl] ? REGLER.oppe[kl] : kl, stK = k > 1 && REGLER.oppe[kl] ? REGLER.stoff[klK] : st0, takh = e.takhøyde0 || e.takhøyde;
       e.takhøyde0 = takh; e.takhøyde = takh; e.vegger = []; e.åpninger = []; e.rom = []; e.møbler = []; e.frø = frø;
+      if (kjerne && fyllKjerne(e, k, frø)) return;
       const pl = interiørPlan(P, klK, frø, h, dør, info, k > 1);
       if (k === 1 && pl) m.stil = pl.stil;
       yttervegger(e, P, k === 1 ? st.ytter : stK[0], REGLER.tykk[st.ytter] || .2, pl ? pl.innganger : [{ x: dør.x, y: dør.y, w: dør.w, type: 'hoved' }], k === 1);
       if (pl) { fraPlan(e, pl, { skille: k === 1 ? st.skille : stK[1] }); if (k === 1 || !erHall(kl)) e.takhøyde = r2(Math.min(e.takhøyde, Math.max(2.2, erHall(kl) ? takh : Math.max(pl.tak, Math.min(takh, pl.tak + .3))))); }
       else e.rom.push({ id: 0, rolle: 'rom', P: m.P, areal: r2(A0), andel: 1 });
       e.vindu = pl ? { b: pl.vindu, ned: pl.vinduNed } : null;
+    };
+    // etasjen i en bygård: trapperommet (fra ytterdøra til bakveggen) og to leiligheter fra interior.js med dør til trapperommet
+    const fyllKjerne = (e, k, frø) => {
+      const sider = [[klipp(P, ux, uy, kjerne.c0, -1), kjerne.c0], [klipp(P, ux, uy, kjerne.c1, 1), kjerne.c1]], dv = dør.x * vx + dør.y * vy, nær0 = dv - v0 < v1 - dv;
+      const ytterInn = [{ x: dør.x, y: dør.y, w: dør.w, type: 'hoved' }], kjerneVegger = [], planer = [];
+      for (let sd = 0; sd < 2; sd++) { const [Q, uL] = sider[sd]; if (Q.length < 3) return false;
+        // kanten mot trapperommet og leilighetsdøra der (nær inngangssiden, så trappa får resten av rommet)
+        let kant = null; for (let q = 0; q < Q.length; q++) { const a = Q[q], b = Q[(q + 1) % Q.length]; if (Math.abs(a[0] * ux + a[1] * uy - uL) < .05 && Math.abs(b[0] * ux + b[1] * uy - uL) < .05 && Math.hypot(b[0] - a[0], b[1] - a[1]) > 3) kant = [a, b]; }
+        if (!kant) return false;
+        const vd = nær0 ? v0 + 1.7 : v1 - 1.7, dd = finnDør(Q, 'leil', { x: uL * ux + vd * vx, y: uL * uy + vd * vy, w: 1.1 });
+        const pl = interiørPlan(Q, 'leil', (Math.imul(frø, 7) + sd * 977) | 0, h, dd, info, false); if (!pl) return false;
+        planer.push(pl); kjerneVegger.push({ kant, inn: pl.innganger.filter(q => avstSeg(q.x, q.y, kant[0][0], kant[0][1], kant[1][0], kant[1][1]) < .3) });
+        for (const q of pl.innganger) if (avstSeg(q.x, q.y, kant[0][0], kant[0][1], kant[1][0], kant[1][1]) >= .3) ytterInn.push(q); }
+      const takh = e.takhøyde0 || e.takhøyde; e.takhøyde0 = takh; e.takhøyde = takh; e.vegger = []; e.åpninger = []; e.rom = []; e.møbler = []; e.frø = frø;
+      yttervegger(e, P, st.ytter, REGLER.tykk[st.ytter] || .2, ytterInn, k === 1);
+      for (const pl of planer) { if (k === 1) m.stil = m.stil || pl.stil; fraPlan(e, pl, { skille: st.skille }); e.takhøyde = r2(Math.min(e.takhøyde, Math.max(2.2, Math.max(pl.tak, Math.min(takh, pl.tak + .3))))); }
+      for (const { kant: [a, b], inn } of kjerneVegger) { const id = e.vegger.length, L = Math.hypot(b[0] - a[0], b[1] - a[1]), ex = (b[0] - a[0]) / L, ey = (b[1] - a[1]) / L;
+        e.vegger.push({ id, a: pkt(a), b: pkt(b), type: 'skille', stoff: st.bærende, tykk: REGLER.tykk.bærende, bærende: true, tilstand: 'hel', trapperom: true });
+        for (const q of inn) { const t = (q.x - a[0]) * ex + (q.y - a[1]) * ey, bb = Math.min(q.w, 1.2); e.åpninger.push({ id: e.åpninger.length, vegg: id, t: r2(Math.max(bb / 2, Math.min(L - bb / 2, t))), b: r2(bb), h: REGLER.dørHøyde, ned: 0, type: 'dør', leilighet: true, sperre: null, tilstand: 'hel' }); } }
+      const K = klipp(klipp(P, ux, uy, kjerne.c0, 1), ux, uy, kjerne.c1, -1); e.rom.push({ id: e.rom.length, rolle: 'trapperom', P: K.map(pkt), areal: r2(Math.abs(areal(K))), andel: 1 });
+      e.vindu = { b: planer[0].vindu, ned: planer[0].vinduNed };
+      // 1. etasje: alle rom skal nås fra ytterdørene, ellers brukes vanlig plan i hele bygget
+      if (k === 1 && nåsEtasje(m, e).uten.length) { kjerne = null; delete m.kjerne; return false; }
+      return true;
     };
     let z = 0;
     for (let k = 1; k <= N; k++) {
@@ -521,6 +570,7 @@
     const øverst = ets.filter(e => !e.loft).slice(-1)[0];
     for (let k = 0, u = u0; u < u1 - .01; k++, u += 4) m.tak.felt.push({ id: k, u0: r2(u), u1: r2(Math.min(u1, u + 4)), tilstand: 'hel' });
     m.tak.spenn = byggSpenn(m, øverst, 'tak');
+    merkStoff(m);
     yield 'ferdig';
     return m;
   }
@@ -651,7 +701,7 @@
         if (et.åpninger.some(o => o.vegg === w.id && o.tilstand !== 'revet' && Math.abs(o.t - t) < (o.b + b) / 2 + .2)) return nei('Det er en åpning der allerede.');
         if (w.bærende && !d.bjelke) return nei('Bærende vegg: åpningen krever en bjelke over (bjelke: sant).');
         const h = type === 'vindu' ? 1.2 : type === 'port' ? Math.min(REGLER.portHøyde, et.takhøyde - .2) : REGLER.dørHøyde, ned = type === 'vindu' ? .9 : 0;
-        et.åpninger.push({ id: et.åpninger.length, vegg: w.id, t: r2(t), b: r2(b), h, ned, type, sperre: null, tilstand: 'hel', ny: true, ...(d.bjelke ? { bjelke: true } : {}) });
+        et.åpninger.push({ id: et.åpninger.length, vegg: w.id, t: r2(t), b: r2(b), h, ned, type, stoff: åpStoff(type), sperre: null, tilstand: 'hel', ny: true, ...(d.bjelke ? { bjelke: true } : {}) });
         legg(svar.materialer, REGLER.riving[w.stoff] || {}, b * h); svar.timer = r2(b * h * (T[w.stoff] || .05) * 2 + (d.bjelke ? 1 : 0)); svar.id = et.åpninger.length - 1;
       } else {
         const o = et.åpninger[d.id]; if (!o || o.tilstand === 'revet') return nei('Åpningen finnes ikke.');
@@ -742,7 +792,7 @@
     // takene: en rute per tak (saltak når noen er saltak)
     const tak = liste.filter(d => kat(d) === 'tak'); m.tak.form = tak.some(d => d.type === 'bs_tak_sal') ? 'saltak' : 'flatt';
     m.tak.felt = tak.map((d, k) => ({ id: k, del: d.id, i: d.i, j: d.j, n: d.n, u0: X(d.i), u1: X(d.i + 1), tilstand: 'hel' }));
-    m.høyde.vegg = m.etasjer.length * H; m.h = m.høyde.vegg;
+    m.høyde.vegg = m.etasjer.length * H; m.h = m.høyde.vegg; merkStoff(m);
     // trapp i 2. etasje antas inne (som i byggesett.js): ved den første ruta med gulv i begge etasjene
     for (let k = 1; k < m.etasjer.length; k++) { const hi = m.etasjer[k], f = liste.find(d => kat(d) === 'gulv' && d.n === hi.n - 1 && celler.has(`${d.i},${d.j},${hi.n - 2}`));
       if (f) { const x = X(f.i + .5), y = Y(f.j + .5); m.trapper.push({ id: m.trapper.length, fra: hi.n - 1, til: hi.n, x, y, a: 0, b: .8, l: 1.2, nede: [r2(x - 1), y], oppe: [r2(x + 1), y], form: 'stige', stoff: 'tre', tilstand: 'hel', antatt: true }); } }
