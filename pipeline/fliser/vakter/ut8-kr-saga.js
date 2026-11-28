@@ -32,6 +32,9 @@ module.exports = {
         const på = F.personer.filter(p => p.oppgave === 'maskin');
         let lagretFolk = []; try { const k2 = JSON.parse(localStorage.getItem('riksbrudd-k2')); lagretFolk = (k2.folk && k2.folk.personer || []).filter(p => p.oppgave === 'maskin').map(p => p.id); } catch (e) { lagretFolk = []; }
         ut.lagret = på.length === 2 && på.every(p => lagretFolk.includes(p.id)); ut.på = på.map(p => p.navn);
+        // (ut9-kontroll) feilsøking når lagringen ikke stemmer
+        if (!ut.lagret) { let k2 = null; try { k2 = JSON.parse(localStorage.getItem('riksbrudd-k2')); } catch (e) { /* */ }
+          ut.lagretInfo = { sammeFolk: L.folk === F, lagretFolk, påId: på.map(p => p.id), k2Lengde: (localStorage.getItem('riksbrudd-k2') || '').length, k2Folk: !!(k2 && k2.folk), k2Ant: k2 && k2.folk && k2.folk.personer ? k2.folk.personer.length : null, FAnt: F.personer.length, erSpeil: !!(LeirSpill.erSpeil && LeirSpill.erSpeil()) }; }
         // spillerens egne «+» skal ikke gi varsel
         ProduksjonSpill.steg(.01); ut.egenStille = !linjer.some(t => /mister folk|står:/.test(t));
         // 1b) noen flytter den ene til bygg (jobbtavla, morgenmøtet, et annet panel …): loggen sier det

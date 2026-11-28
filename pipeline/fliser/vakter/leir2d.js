@@ -58,7 +58,12 @@ module.exports = { navn: 'leir2d (leirens bygg ovenfra, figurer og folk på nær
       for (const natt of [false, true]) { KartLys.test = natt; if (natt) tid = Math.floor(tid0 / 1440) * 1440 + 19.5 * 60;
         for (const m of [50, 20, 5, 2, .5, .2, .12]) { kam.x = C.x; kam.y = C.y; kam.m = m; skitten = true; tegn(); const n = Etikett.tegnet(), o = Etikett.overlapp();
           ut.navn[(natt ? 'natt' : 'dag') + m] = n.length; krev(o === 0, `${o} navn overlapper på ${m} m per punkt${natt ? ' (natt)' : ''}`);
-          if (m <= .5 && nærBygg) krev(n.some(q => NAVN.some(v => String(q.t).startsWith(v))), `ingen byggnavn ved leiren på ${m} m per punkt`); }
+          // (28. nov, ut9-kontroll) bare når et av leirens bygg faktisk står i bildet: på telefon (390 punkter) er 0,12 m per punkt bare ±23 m,
+          // og i full kontroll står leirens nærmeste bygg (aggregatet) 25 m unna – utenfor bildet, så det er riktig at navnet ikke står der
+          const iBildet = L.bygg.some(b => !b.vakt && !Leir.BYGG[b.type].linje && !Leir.BYGG[b.type].del && Math.abs(b.x - C.x) < VW * m / 2 - Math.max(2, 40 * m) && Math.abs(b.y - C.y) < VH * m / 2 - Math.max(2, 60 * m));
+          if (m <= .5 && nærBygg && iBildet && !n.some(q => NAVN.some(v => String(q.t).startsWith(v)))) { krev(false, `ingen byggnavn ved leiren på ${m} m per punkt`);
+            // (ut9-kontroll) hva som står nær leiren når navnet mangler (for feilsøking i full kontroll)
+            ut.mangler = ut.mangler || { m, VW, VH, tekster: n.map(q => String(q.t)).slice(0, 12), bygg: L.bygg.filter(b => !b.vakt && Math.hypot(b.x - C.x, b.y - C.y) < 40).map(b => [b.type, Math.round(b.x - C.x), Math.round(b.y - C.y), b.igjen > 0 ? 'u' : 'f', !!(Leir.BYGG[b.type].linje || Leir.BYGG[b.type].del)]).slice(0, 20) }; } }
         KartLys.test = kl0; tid = tid0; }
       // figurene: et eget levende lag i bildet på nær zoom tegnes som folk ovenfra
       const lag = ENHETER.find(s => s.side === 'blå' && !s.karakter && s.menn.some(q => q.hp > 0) && !(KROKER.skjul || []).some(f => f(s)) && !(s.ombord));
