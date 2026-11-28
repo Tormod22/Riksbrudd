@@ -65,14 +65,21 @@ Begge går nå. Koordinatoren bør vurdere å skrive K2-sjekken om (den prøver 
   (brutte kontrakter fra vaktene før) og ukas netto og kan være under kassa. Med børsen sjekkes nå at seieren bruker børsverdien.
   Gjenskapt med `stemning.js` (stemning 0,3): gammel vakt feiler, ny ok.
 
-## Står igjen (rask PC-kjøring 3, 06:13 – før de tre siste vaktrettingene)
-- `terreng` («huset i den bratte lia ble ikke avvist: undefined») – ikke undersøkt.
-- `ut5-bors` «ble ikke satt tilbake: bors: false» – gjenskapes ikke med de 13 vaktene før den (diagnoseutgave `diag-bors.js` i scratchpad
-  viser hvilke felt som er ulike, hvis den feiler).
+- `ut5-bors` «ble ikke satt tilbake: bors» – SPILLET: `Bors.fraJSON` leste ikke `angrep` (angrepene på leiren siste uka, spillminutter),
+  som `tilJSON` lagrer. I lange kjøringer hadde vaktene før gitt angrep, og etter `BorsSpill.sett` var lista tom. Ved lasting av et
+  lagret spill glemte børsen altså ukas angrep (tryggheten og ønsket «ro»). Rettet i `spill/bors.js` (fraJSON leser `angrep`, høyst 40),
+  sjekk i `test_bors.js`; vakta skriver nå feltene som er ulike. Gjenskapt med `angrep.js`: feil før, ok etter.
+
+## Står igjen
+- `terreng` («huset i den bratte lia ble ikke avvist: undefined») – feiler også ALENE (ikke en langkjøringsfeil). Byggesettets brakke
+  er nå 106 deler (byggesett 3, 1,2 m), og ingen del i bratt terreng får «For bratt for huset» (byggesett-visning.js oppdater, hus-fanen).
+  Ikke undersøkt videre – hører til byggesett 3.
+- `kamp` (0 kamphendelser) kom én gang i rask 5 – fiksc sitt område, ikke rørt.
 
 ## Fellesfiler endret
 - `site/dovre-fliser/index.html`: `lagVindu` (første linje i funksjonen, klemmingen av boksen) + versjonsmerker (versjon.py).
 - `site/dovre-fliser/terreng.js`: `nyttVindu` (to linjer).
 - `site/dovre-fliser/spill/leir-visning.js`: `leirKnapp.onclick` (`menyEl.scrollTop = 0` når den åpnes).
 - `site/dovre-fliser/spill/baering.js`: se punkt 1.
-- Vakter: `ut4-maskinfolk.js`, `ut3-varekontrakt.js`, `ut5-oppforsel.js`, `ut5-bors.js`, `ut4-eksport.js`, `ut2-seier.js`. Tester: `test_baering.js`, `test_terreng.js`.
+- Vakter: `ut4-maskinfolk.js`, `ut3-varekontrakt.js`, `ut5-oppforsel.js`, `ut5-bors.js`, `ut4-eksport.js`, `ut2-seier.js`. Tester: `test_baering.js`, `test_terreng.js`, `test_bors.js`.
+- `site/dovre-fliser/spill/bors.js`: `fraJSON` (tre linjer nederst).
