@@ -16,11 +16,19 @@
     // senger per møbel
     seng: { seng: 1, sykeseng: 1, dobbeltseng: 2, køyeseng: 2 },
     // som kaserne: madrasser på gulvet, én per så mange m² i rom uten senger (ikke bad, kjøkken, gang, trapperom)
-    kaserneM2: 8,
+    // (ut8-kr-penger, Jonas: «Kaserne ga 25 senger gratis») 8 -> 12 m²: madrassene må fraktes dit og det trengs plass til utstyret
+    kaserneM2: 12,
     // lagerplass per m² gulv: i rom merket lager, og i alle rom når huset brukes som lager (som byggesettets lagerrom: 0,6)
     lagerM2: .6,
     // høyst så mye per hus (et stort bygg skal ikke gi hele leirens lager)
-    maksSenger: 40, maksLager: 300,
+    // (ut8-kr-penger) maksSenger 40 -> 24
+    maksSenger: 24, maksLager: 300,
+    // ISTANDSETTING (ut8-kr-penger, Jonas Bakke: «"Ta over huset som: Kaserne" ga 25 senger og 99,6 m³ lager gratis, mens en brakke koster
+    // 5 mill. for 8 senger»). Et overtatt hus må settes i stand: vinduer tettes, madrasser, ovner og hyller fraktes dit, og det må vaskes og
+    // repareres. Prisen etter det huset gir: fast + per seng + per m³ lager; tiden likedan (spilltimer). Bytter dere bruk, betales bare
+    // det nye (flere senger eller mer lager enn før). Claudes forslag: en kaserne med 16 senger og 100 m³ koster ca. 3,2 mill. og 9 timer
+    // (en brakke: 5 mill. for 8 senger) – billigere per seng enn å bygge, men ikke gratis.
+    istand: { fast: 200000, perSeng: 150000, perM3: 6000, timerFast: 2, timerPerSeng: .3, timerPerM3: .02 },
   };
   const BRUK = {
     utpost: { navn: 'Utpost', tekst: 'et sted å holde og forsvare – sengene teller i leiren' },
@@ -55,10 +63,21 @@
     if (!(avstand <= REGLER.maksAvstand)) return { ok: false, feil: `Huset er for langt fra leiren (${(avstand / 1000).toFixed(1).replace('.', ',')} km – høyst ${REGLER.maksAvstand / 1000} km).` };
     return { ok: true };
   }
-  // summen for alle overtatte hus: { senger, lager, antall }
-  function sum(hus) { const u = { senger: 0, lager: 0, antall: 0 }; for (const k of Object.keys(hus || {})) { const h = hus[k]; if (!h) continue; u.antall++; u.senger += +h.senger || 0; u.lager += +h.lager || 0; } u.lager = Math.round(u.lager * 10) / 10; return u; }
+  // hva det koster å sette huset i stand for en bruk: K = { senger, lager } som huset gir; betalt = det som alt er satt i stand (eller null
+  // for et nytt overtak). Gir { kr, timer, senger, lager } – senger/lager = det nye som må settes i stand
+  function istandsetting(K, betalt) {
+    const I = REGLER.istand, s = Math.max(0, (+K.senger || 0) - (betalt ? +betalt.senger || 0 : 0)), l = Math.max(0, (+K.lager || 0) - (betalt ? +betalt.lager || 0 : 0));
+    if (betalt && !s && !l) return { kr: 0, timer: 0, senger: 0, lager: 0 };
+    const kr = Math.round(((betalt ? 0 : I.fast) + s * I.perSeng + l * I.perM3) / 10000) * 10000;
+    const timer = Math.round(((betalt ? 0 : I.timerFast) + s * I.timerPerSeng + l * I.timerPerM3) * 2) / 2;
+    return { kr, timer, senger: s, lager: Math.round(l * 10) / 10 };
+  }
+  // summen for alle overtatte hus: { senger, lager, antall, iArbeid }. nå (spillminutter, valgfri): et hus som settes i stand (h.klar > nå),
+  // teller ikke ennå (iArbeid = antallet)
+  function sum(hus, nå) { const u = { senger: 0, lager: 0, antall: 0, iArbeid: 0 }; for (const k of Object.keys(hus || {})) { const h = hus[k]; if (!h) continue; u.antall++;
+    if (Number.isFinite(nå) && Number.isFinite(+h.klar) && +h.klar > nå) { u.iArbeid++; continue; } u.senger += +h.senger || 0; u.lager += +h.lager || 0; } u.lager = Math.round(u.lager * 10) / 10; return u; }
   function nyLogg(leir) { return { v: 1, leir: leir || '', hus: {} }; }
   function lesLogg(tekst, leir) { try { const d = JSON.parse(tekst || 'null'); if (d && d.v === 1 && d.leir === (leir || '') && d.hus && typeof d.hus === 'object') return d; } catch (e) { /* ødelagt: start på nytt */ } return nyLogg(leir); }
-  const api = { REGLER, BRUK, senger, lager, kanTaOver, sum, nyLogg, lesLogg };
+  const api = { REGLER, BRUK, senger, lager, kanTaOver, sum, nyLogg, lesLogg, istandsetting };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Overtak = api;
 })(typeof window !== 'undefined' ? window : globalThis);

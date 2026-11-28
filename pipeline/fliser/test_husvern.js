@@ -93,7 +93,14 @@ ok(HV.etasjer(bet).length >= 3, 'etasjene i kontoret: ' + HV.etasjer(bet).map(e 
   ok(OT.BRUK.utpost && OT.BRUK.lager && OT.BRUK.verksted && OT.BRUK.kaserne, 'brukene: ' + Object.keys(OT.BRUK).join(', '));
   const L = OT.lesLogg(JSON.stringify({ v: 1, leir: '1,2', hus: { 7: { bruk: 'lager' } } }), '1,2'); ok(L.hus[7].bruk === 'lager', 'lagringen leses for samme leir');
   ok(!OT.lesLogg(JSON.stringify({ v: 1, leir: '1,2', hus: { 7: { bruk: 'lager' } } }), '3,4').hus[7], 'en annen leir får tom liste');
-  const sum = OT.sum({ 1: { bruk: 'kaserne', senger: 4, lager: 2 }, 2: { bruk: 'lager', senger: 1, lager: 30 } }); ok(sum.senger === 5 && sum.lager === 32, 'summen: ' + JSON.stringify(sum)); }
+  const sum = OT.sum({ 1: { bruk: 'kaserne', senger: 4, lager: 2 }, 2: { bruk: 'lager', senger: 1, lager: 30 } }); ok(sum.senger === 5 && sum.lager === 32, 'summen: ' + JSON.stringify(sum));
+  // (ut8-kr-penger) istandsettingen koster, og et hus som settes i stand teller ikke før det er klart
+  const I = OT.istandsetting({ senger: 16, lager: 100 }, null), I2 = OT.istandsetting({ senger: 16, lager: 100 }, { senger: 16, lager: 100 }), I3 = OT.istandsetting({ senger: 20, lager: 40 }, { senger: 16, lager: 100 });
+  ok(I.kr >= 2e6 && I.kr < 5e6 && I.timer > 2, 'kaserne med 16 senger og 100 m³: ' + JSON.stringify(I) + ' (en brakke koster 5 mill. for 8 senger)');
+  ok(I2.kr === 0 && I3.kr > 0 && I3.kr < I.kr && I3.senger === 4, 'bytte av bruk betaler bare det nye: ' + JSON.stringify(I3));
+  ok(OT.istandsetting({ senger: 1, lager: 3 }, null).kr < I.kr, 'et lite hus er billigere');
+  const s2 = OT.sum({ 1: { senger: 4, lager: 2, klar: 600 }, 2: { senger: 1, lager: 30 } }, 300); ok(s2.senger === 1 && s2.iArbeid === 1 && OT.sum({ 1: { senger: 4, lager: 2, klar: 600 } }, 700).senger === 4, 'under istandsetting teller huset ikke: ' + JSON.stringify(s2));
+  ok(sk <= OT.REGLER.maksSenger, 'kasernen har høyst ' + OT.REGLER.maksSenger + ' plasser'); }
 
 // 7. leirens egne bygg (byggesettet): samme vern fra modellen (i kartets meter)
 { const BR = require('../../site/dovre-fliser/spill/byggesett.js'); global.ByggesettRegler = BR;

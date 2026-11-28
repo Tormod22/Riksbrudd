@@ -233,3 +233,45 @@ console.log(`Alle ${n} testene for selskap.js er ok`);
     if (Math.abs(k.betaling - venta) > 2e4) galt++; T.tilbud = []; }
   ok(n > 5 && !galt, `eskorte: betalingen følger strekket og risikoen (${n} tilbud, ${galt} avvik)`); }
 console.log('ut2-balanse: påfyll og eskortebetaling ok');
+// (ut8-kr-penger, Jonas Bakke: «4 mann mot et forsvar på ca. 10 / 25 / 50» på alle tilbudene etter den første kontrakten) med o.styrke
+// finnes alltid minst ett tilbud én tropp klarer: en hente-/holdejobb for bygdelaget/kommunen i stedet (bygdevernet slipper dere inn), eller
+// ved en bru uten fiender – ikke i et tettsted et annet selskap holder
+{ const st = [{ navn: 'Granvin', x: 4000, y: 0, slag: 'tettsted', id: 1, vern: 10 }, { navn: 'Eidfjord', x: 0, y: 7000, slag: 'tettsted', id: 2, vern: 25, fiender: 0 },
+    { navn: 'Voss', x: -6000, y: 0, slag: 'tettsted', id: 3, vern: 14, eier: 'rød' }, { navn: 'Fjærland bru', x: 0, y: -5000, slag: 'bru', id: 'b' }];
+  let utenLett = 0, medLett = 0, feilSted = 0, klarbare = 0, ikkeKlar = 0;
+  for (let i = 0; i < 200; i++) {
+    const A = S0.ny({ x: 0, y: 0 }); S0.lagTilbud(A, 'blå', 1440, st, S0.lagRand(i + 3));
+    if (!A.tilbud.some(k => S0.klarbar(k, 4, A.sider.blå, st.find(q => q.navn === k.sted.navn)))) utenLett++;
+    const B = S0.ny({ x: 0, y: 0 }); S0.lagTilbud(B, 'blå', 1440, st, S0.lagRand(i + 3), { styrke: 4 });
+    const kl = B.tilbud.filter(k => S0.klarbar(k, 4, B.sider.blå, st.find(q => q.navn === k.sted.navn)));
+    if (kl.length) medLett++; const L = B.tilbud.find(k => k.lett);
+    if (L) { if (L.sted.navn === 'Voss') feilSted++; const sted = st.find(q => q.navn === L.sted.navn);
+      if (S0.forsvarFor(L, sted, 'blå') < 4 && S0.kanTa(L, { størsteLag: 4, kjøretøy: 0, forsvar: S0.forsvarFor(L, sted, 'blå') }, B.sider.blå).ok) klarbare++; else ikkeKlar++;
+      if (L.giver.slag === 'firma' || (sted.slag !== 'bru' && L.giver.by !== sted.id)) ikkeKlar++; } }
+  ok(utenLett > 50, `selvtest: uten styrke er det ofte ingen tilbud én tropp klarer (${utenLett} av 200)`);
+  ok(medLett === 200, `med styrke 4 finnes alltid et tilbud én tropp klarer (${medLett} av 200)`);
+  ok(!feilSted && klarbare > 50 && !ikkeKlar, `det lette tilbudet: aldri i et sted et annet selskap holder (${feilSted}), giveren er stedet selv, og kortet sier ✓ (${klarbare} lette, ${ikkeKlar} galt)`);
+  // forsvaret: bygdevernet teller ikke for stedets egen bygd/kommune, men for et firma; garnisonen teller når et annet selskap holder stedet
+  const k = { type: 'hent', giver: { slag: 'bygd', by: 1 } };
+  ok(S0.forsvarFor(k, st[0], 'blå') === 0 && S0.forsvarFor({ ...k, giver: { slag: 'firma' } }, st[0], 'blå') === 10 && S0.forsvarFor({ ...k, giver: { slag: 'bygd', by: 3 } }, st[2], 'blå') === 8, 'forsvarFor: bygdevern og garnison');
+  // fristen holder til fots: en time ekstra per km
+  const C = S0.ny({ x: 0, y: 0 }); S0.lagTilbud(C, 'blå', 0, [st[1]], S0.lagRand(5), { styrke: 4, antall: 0 }); const q = C.tilbud.find(t => t.lett);
+  ok(q && q.timer >= S0.REGLER.TYPER[q.type].timer || (q && q.type === 'hold'), 'det lette tilbudet har romslig frist');
+  // ikke for en fast kunde (o.giver)
+  const D = S0.ny({ x: 0, y: 0 }); S0.lagTilbud(D, 'blå', 0, st, S0.lagRand(5), { styrke: 4, antall: 1, giver: { slag: 'firma', navn: 'Storlia Tømmer' } });
+  ok(!D.tilbud.some(t => t.lett), 'fast kunde får ikke et ekstra lett tilbud'); }
+// visningens egen vurdering (o.klarbar) bestemmer når den finnes: sier den nei til alt, kommer det lette tilbudet; sier den ja, kommer det ikke
+{ const st = [{ navn: 'A', x: 3000, y: 0, slag: 'tettsted', id: 1 }, { navn: 'B', x: 0, y: 5000, slag: 'tettsted', id: 2 }]; let nei = 0, ja = 0;
+  for (let i = 0; i < 30; i++) { const A = S0.ny({ x: 0, y: 0 }); S0.lagTilbud(A, 'blå', 1440, st, S0.lagRand(i + 7), { styrke: 4, klarbar: () => false }); if (A.tilbud.some(k => k.lett)) nei++;
+    const B = S0.ny({ x: 0, y: 0 }); S0.lagTilbud(B, 'blå', 1440, st, S0.lagRand(i + 7), { styrke: 4, klarbar: () => true }); if (B.tilbud.some(k => k.lett)) ja++; }
+  ok(nei === 30 && ja === 0, `o.klarbar styrer: lett tilbud ${nei} av 30 når ingenting passer, ${ja} når alt passer`);
+  const C = S0.ny({ x: 0, y: 0 }); C.sider.blå.aktive.push({ id: 'x', type: 'hent', frist: 9e9 }); S0.lagTilbud(C, 'blå', 1440, st, S0.lagRand(3), { styrke: 4, klarbar: () => false });
+  ok(!C.tilbud.some(k => k.lett), 'ingen lett tilbud mens en kontrakt er i gang'); }
+// reserven: ingen tettsteder passer (alle holdt av andre) – da et nødlager på land nær leiren (o.lager), høyst ett om gangen
+{ const st = [{ navn: 'Ulvik', x: 1300, y: 0, slag: 'tettsted', id: 1, eier: 'grønn' }, { navn: 'Granvin', x: 14000, y: 0, slag: 'tettsted', id: 2, fiender: 9 }];
+  const A = S0.ny({ x: 0, y: 0 }); S0.lagTilbud(A, 'blå', 1440, st, S0.lagRand(4), { styrke: 4, klarbar: () => false, lager: () => ({ x: 600, y: 700 }) });
+  const k = A.tilbud.find(q => q.lett); ok(k && k.type === 'forsyning' && k.sted.slag === 'lager' && k.betaling > 3e5 && k.betaling < S0.REGLER.første.betaling && /Hent nødlageret nordøst for leiren/.test(k.tittel) && !k.første, 'reserven: et nødlager ' + (k && k.tittel + ' ' + k.betaling));
+  ok(S0.kanTa(k, { størsteLag: 4, kjøretøy: 0 }, A.sider.blå).ok && S0.kravTekst(k).length > 20, 'reserven: kan tas, og har en kravtekst');
+  S0.lagTilbud(A, 'blå', 2880, st, S0.lagRand(5), { styrke: 4, klarbar: () => false, lager: () => ({ x: 600, y: 700 }) }); ok(A.tilbud.filter(q => q.lett).length === 1, 'reserven: høyst ett nødlager om gangen');
+  const B = S0.ny({ x: 0, y: 0 }); S0.lagTilbud(B, 'blå', 1440, st, S0.lagRand(4), { styrke: 4, klarbar: () => false }); ok(!B.tilbud.some(q => q.lett), 'uten o.lager (modellen) ingen reserve'); }
+console.log('ut8-kr-penger: et tilbud én tropp klarer ok');

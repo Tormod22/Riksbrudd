@@ -17,4 +17,12 @@ ok(B.viktigste([{ tekst: 'a' }, null, { tekst: '' }, { tekst: 'b' }, { tekst: 'c
 ok(!B.storliaNå({}, 0) && B.storliaNå({}, 1) && B.storliaNå(null, 2) && !B.storliaNå({ storlia: true }, 3), 'Storlia-kortet: etter første levering, én gang');
 { const T = B.storliaTekst('Fjellvakt', { nr: 1 }); ok(/Storlia Tømmer har hørt om dere/.test(T.tittel) && /Fjellvakt/.test(T.tekst) && /Leverandør/.test(T.neste), 'teksten på kortet peker mot Leverandør'); }
 ok(B.kr(1500000) === '1,5 mill. kr' && B.kr(-250000) === '−250 000 kr' && B.kr(40e6) === '40 mill. kr', 'kroner');
+// (ut8-kr-penger) driften: summen, de største postene og rådet med et tilbud dere klarer
+{ const d = B.drift({ lønn: 240000, diesel: 250000, vedlikehold: 171000, mat: 500 });
+  ok(d.sum === 661000 && d.største.map(q => q[0]).join() === 'diesel,lønn,vedlikehold', 'drift: sum og største poster (uten småposter)');
+  const t = B.driftTekst(d); ok(/ca\. 661 000 kr i døgnet/.test(t) && /diesel 250 000 kr, lønn 240 000 kr og vedlikehold 171 000 kr/.test(t), 'drift: teksten ' + t);
+  const r = B.driftRåd(d, { kontrakt: { tittel: 'Hent legen i Ulvik', kr: 1320000 }, kassa: 2e6 });
+  ok(/«Hent legen i Ulvik» gir 1,3 mill\. kr – ca\. 2 døgn med drift/.test(r) && /Diesel er største post/.test(r) && /rekker ca\. 3 døgn/.test(r), 'drift: rådet ' + r);
+  ok(/lite oppdrag: «Hent forsyninger»/.test(B.driftRåd(d, { oppdrag: { navn: 'Hent forsyninger', gir: '0,4 mill. kr' }, kassa: 40e6 })), 'drift: et lite oppdrag når ingen kontrakt passer');
+  ok(/ingenting/.test(B.driftTekst(B.drift({}))), 'drift: tom leir'); ok(B.ukeNå() === null, 'ukeNå uten dagbok (Node)'); }
 console.log(feil ? feil + ' FEIL' : 'alle testene for selskapsbilde.js er ok'); process.exit(feil ? 1 : 0);

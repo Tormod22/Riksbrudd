@@ -60,6 +60,11 @@
   function ukeNetto() { try { const P = window.PengerSpill; if (!P || !P.døgn || !P.døgnNå || !P.tilstand || !P.tilstand()) return 0; const d = P.døgnNå(); let n = 0;
     for (let i = Math.max(1, d - R.uke + 1); i <= d; i++) { const D = P.døgn(i); if (!D) continue; n += (+D.inn || 0) - (+D.ut || 0); for (const k of UTENOM) if (D.p && Number.isFinite(+D.p[k])) n -= +D.p[k]; }
     return n; } catch (e) { return 0; } }
+  // (ut8-kr-penger, Jonas: «−23,7 mill. i Oversikt og −12,9 mill. i Eiere») tallet som vises, er det samme som i Oversikt
+  // (Selskapsbilde.ukeNå – hele dagboka); kursen regner med en del av det (sv.inntekt: uten børsens egne penger, høyst 30 % av eiendelene)
+  function ukeTekst(sv) { let u = null; try { u = window.Selskapsbilde && Selskapsbilde.ukeNå ? Selskapsbilde.ukeNå() : null; } catch (e) { u = null; }
+    if (!u || !u.dager) return `ukas resultat ${mill(sv.inntekt)}`; const ulik = Math.abs(u.netto - sv.inntekt) >= 5e4;
+    return `ukas resultat ${mill(u.netto)}${ulik ? ` (i kursen ${mill(sv.inntekt)}: uten børsens egne penger og høyst ${pst(-Bo.REGLER.selskap.inntektGulv * 100)} av eiendelene)` : ''}`; }
   const angrepUke = () => (B.angrep || []).filter(t => nåMin() - t < 7 * DØGN).length;
   function rivalKurs(side) { let v = 0; try { v = window.SeierSpill && SeierSpill.rivalVerdi ? SeierSpill.rivalVerdi(side).sum : 15e6; } catch (e) { v = 15e6; } return { verdi: v, kurs: Bo.kurs(v, B.rivaler[side].stemning) }; }
   // alle kursene nå: { meg, rød, grønn, firma: { navn: { verdi, resultat, kurs } }, verdi (ditt selskap) }
@@ -267,7 +272,7 @@
     // kursen og grafen
     const st = m.stemning, sv = K.verdi;
     h += `<h3>Kursen${m.notert ? ' på Gråbørsen' : ' (anslått – ikke notert)'}</h3><div class="fi-boks"><div class="fi-linje">Kurs per andel <b class="bo-tall">${kr(K.meg)}</b> · børsverdi <b class="bo-tall">${mill(børs)}</b> · din del <b class="bo-tall">${mill(Bo.minDel(B, børs))}</b></div>`
-      + `<div class="fi-linje">Stemningen <b class="${st >= 1 ? 'bo-opp' : 'bo-ned'}">${st >= 1 ? '+' : '−'}${pst(Math.abs(st - 1) * 100)}</b> · eiendeler ${mill(sv.eiendeler)} · ukas resultat ${mill(sv.inntekt)}${sv.trygghet < 1 ? ` · angrep trekker ${pst((1 - sv.trygghet) * 100)}` : ''}</div>`
+      + `<div class="fi-linje">Stemningen <b class="${st >= 1 ? 'bo-opp' : 'bo-ned'}">${st >= 1 ? '+' : '−'}${pst(Math.abs(st - 1) * 100)}</b> · eiendeler ${mill(sv.eiendeler)} · ${ukeTekst(sv)}${sv.trygghet < 1 ? ` · angrep trekker ${pst((1 - sv.trygghet) * 100)}` : ''}</div>`
       + '<div class="bo-graf" data-bo-graf="1"></div><p class="fi-mangler">Opp: leverte kontrakter, nye byer, seire og eksport. Ned: brudd, tapte byer, angrep på leiren, et nei til eierne og utbytte som uteblir.</p></div>';
     // eierne
     h += '<h3>Eierne</h3><div class="fi-boks">' + eierStolpe();

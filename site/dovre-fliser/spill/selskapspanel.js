@@ -42,7 +42,17 @@
   function trinnBilde() { const { SS, sd } = selskap(); return { levert: sd && sd.sum ? sd.sum.levert : 0, nivå: SS && SS.nivå ? SS.nivå().nr : 1, bygg: ferdigeBygg(), tettsteder: egneTettsteder() }; }
   function regnTrinn() { les(); return TR.regn(trinnBilde(), H.høyest); }
   function navn() { const s = Sp(), f = s && s.fraksjon; return (f && f.navn) || (window.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER.blå && Fraksjoner.FRAKSJONER.blå.navn) || 'Ditt selskap'; }
-  function uke() { const P = window.PengerSpill; if (!P || !P.døgn || !P.døgnNå || !P.tilstand || !P.tilstand()) return null; return B.uke(n => P.døgn(n), P.døgnNå()); }
+  function uke() { if (B.ukeNå) return B.ukeNå(); const P = window.PengerSpill; if (!P || !P.døgn || !P.døgnNå || !P.tilstand || !P.tilstand()) return null; return B.uke(n => P.døgn(n), P.døgnNå()); }
+  // (ut8-kr-penger) DRIFTEN: hva leiren bruker i døgnet (lønn, diesel, vedlikehold) og et råd med et tilbud én tropp klarer (Selskapsbilde.drift)
+  function driftHtml() {
+    if (!B.drift) return ''; const p = {};
+    try { if (window.FolkSpill && FolkSpill.lønnNå) p.lønn = FolkSpill.lønnNå(); } catch (e) { /* uten folk */ }
+    try { const D = window.LeirSpill && LeirSpill.diesel ? LeirSpill.diesel() : null; if (D && window.Leir && Leir.DRIVSTOFF) p.diesel = D.perDøgn * Leir.DRIVSTOFF.prisPerLiter; } catch (e) { /* uten leir */ }
+    try { if (window.PengerSpill && PengerSpill.vedlikehold) p.vedlikehold = PengerSpill.vedlikehold().perDøgn; } catch (e) { /* uten dagbok */ }
+    const d = B.drift(p), SS = window.SelskapSpill, { sd } = selskap(); let k = null, o = null;
+    try { k = SS && SS.klarbare ? SS.klarbare()[0] || null : null; const L = SS && SS.småOppdrag ? SS.småOppdrag().filter(q => !q.tatt) : []; if (L[0] && SS.oppdragTekst) o = SS.oppdragTekst(L[0]); } catch (e) { /* */ }
+    const s = Sp(); return `<div class="drift" data-drift="${Math.round(d.sum)}"><b>${esc(B.driftTekst(d))}</b><small>${esc(B.driftRåd(d, { kontrakt: k ? { tittel: k.tittel, kr: k.betaling } : null, oppdrag: o, kassa: s ? s.penger : NaN, aktive: sd && sd.aktive ? sd.aktive.length : 0 }))}</small>${k ? `<button type="button" data-sp="drift" data-id="${esc(k.id)}">Se kontrakten</button>` : ''}</div>`;
+  }
   function byListe() { const SS = window.SelskapSpill; let st = []; try { st = SS && SS.steder ? SS.steder() : []; } catch (e) { st = []; } const G = window.Garnison, R = window.RegionSpill && RegionSpill.tilstand ? RegionSpill.tilstand() : null;
     return B.byer(st, id => (G && typeof TETTSTEDER !== 'undefined' ? G.tilstand(TETTSTEDER, id).eier : null), id => (R && R.byer && R.byer[id] && G && typeof TETTSTEDER !== 'undefined' && G.tilstand(TETTSTEDER, id).eier === 'blå' ? R.byer[id].loj : null)); }
   function viktigste() { try { const N = window.NesteSpill; return N && N.liste ? B.viktigste(N.liste().filter(k => k.slag !== 'trinn')) : []; } catch (e) { return []; } }
@@ -84,6 +94,7 @@
 #selskapet .by{ display:flex; gap:8px; align-items:center; padding:5px 0; border-bottom:1px solid #3a3226; font-size:14px; } #selskapet .by > span{ flex:1; min-width:0; } #selskapet .by small{ display:block; color:#8f8a7c; font-size:12.5px; }
 #selskapet .by em{ font-style:normal; font-size:12.5px; padding:1px 7px; border-radius:9px; border:1px solid #5a4a2a; color:#c8bfa9; flex:none; }
 #selskapet .by em.blå{ border-color:#5d86c0; color:#bcd0ee; } #selskapet .by em.rød{ border-color:#b0443a; color:#e7b3a3; } #selskapet .by em.grønn{ border-color:#5f8a45; color:#b9d48a; }
+#selskapet .drift{ margin:8px 0 2px; padding:7px 9px; border:1px solid #5a4a2a; border-radius:3px; background:rgba(0,0,0,.18); font-size:13.5px; line-height:1.4; } #selskapet .drift b{ font-weight:600; display:block; } #selskapet .drift small{ display:block; margin-top:3px; font-size:12.5px; color:#cfc3a0; } #selskapet .drift button{ margin-top:6px; min-height:32px; }
 #selskapet .laast{ margin:2px 0 4px; font-size:13.5px; color:#a89970; } #selskapet .knapperad{ display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; } #selskapet .notis{ margin:8px 0 0; font-size:13px; color:#d8cba0; font-style:italic; }
 body.kort #selskapet{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8px + env(safe-area-inset-right,0px)); width:auto; top:auto; bottom:calc(64px + env(safe-area-inset-bottom,0px)); max-height:min(70vh, calc(100% - var(--topp,44px) - 76px)); border-radius:8px 8px 4px 4px; background:#16120c; }
 body.kort #selskapet .shode{ padding:8px 44px 4px 10px; } body.kort #selskapet .shode .smerke{ width:34px; height:34px; } body.kort #selskapet .shode h2{ font-size:18px; }
@@ -120,7 +131,7 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     // før det står bare en rolig linje nederst i Oversikt (fanen Eiere har alt som før)
     const børsÅpen = R.nr >= LÅST.børs;
     try { if (børsÅpen && window.BorsSpill && BorsSpill.flisLinjer) for (const q of BorsSpill.flisLinjer()) h += linje(q[0], q[1], q[3] || '', q[2]); } catch (e) { /* uten børs */ }
-    h += '</ul>';
+    h += '</ul>' + driftHtml();
     h += `<h3>Veien videre</h3><ol class="trinn">` + TR.REGLER.TRINN.map(t => `<li class="${t.nr < R.nr ? 'gjort' : t.nr === R.nr ? 'nå' : ''}" data-trinn="${t.nr}"><i>${t.nr < R.nr ? '✓' : t.nr}</i><div><b>${esc(t.navn)}</b><small>${esc(t.nr === R.nr ? 'Dere er ' + t.du + '. ' + t.hva : t.hva)}</small></div></li>`).join('') + '</ol>';
     if (R.neste) h += `<div class="krav" data-neste="${R.neste.nr}"><div>For trinn ${R.neste.nr}, ${esc(R.neste.navn)}:</div>` + R.krav.map(k => `<div class="${k.ok ? 'ok' : 'mangler'}">${k.ok ? '✓' : '○'} ${esc(k.tekst)}</div>`).join('') + (R.steg ? `<small>${esc(R.steg.hjelp)}</small>` : '') + '</div>';
     else h += `<div class="krav"><div class="ok">Dere har nådd det siste trinnet.</div><small>Eksport, investorer og børsen kommer i senere faser.</small></div>`;
@@ -211,6 +222,7 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     if (s === 'lukk') vis(false);
     else if (s === 'gå') { const k = viktigste()[+b.dataset.i]; if (!k) return; if (k.l0) { if (k.l0.pek === 'selskap') { velgFane('kontrakter'); return; } vis(false); if (window.SelskapSpill && SelskapSpill.følgLapp) SelskapSpill.følgLapp(); } else if (k.trykk) { vis(false); k.trykk(); } }
     else if (s === 'by') { const by = byListe().find(q => String(q.id) === b.dataset.id); if (by && Number.isFinite(by.x)) { if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false); kam.x = by.x; kam.y = by.y; if (kam.m > 20) kam.m = 12; skitten = true; if (smal()) vis(false); } }
+    else if (s === 'drift') { velgFane('kontrakter'); }
     else if (s === 'region') { vis(false); RegionSpill.åpne(); }
     else if (s === 'krig') { vis(false); const k = $('krigknapp'); if (k) k.click(); }
   });

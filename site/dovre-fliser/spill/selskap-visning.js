@@ -91,7 +91,22 @@
   // (R1-løkka) stedene får eieren med (Garnison), så eskortene ikke går til/fra tettsteder de andre selskapene holder
   const medEier = L => L.map(q => { if (q.eier !== undefined || q.slag !== 'tettsted' || q.id == null || !window.Garnison || typeof TETTSTEDER === 'undefined') return q;
     try { return { ...q, eier: Garnison.tilstand(TETTSTEDER, q.id).eier || null }; } catch (e) { return q; } });
-  function nyeTilbud(liste) { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, medEier(liste || steder()), null, { infl: infl() }); lagre(); return n; }
+  // (ut8-kr-penger) det kjente forsvaret ved hvert sted (bygdevernet og fiendene for seg – samme kilde som forsvarVed), så reglene kan
+  // legge inn et tilbud én tropp klarer (Selskap.sikreLett): vern = bygdevernets mann, fiender = sett/anslått garnison
+  function medForsvar(L) {
+    const SP = window.StrategiSpill;
+    return L.map(q => { if (q.vern !== undefined) return q;
+      try {
+        if (q.slag === 'tettsted' && q.id != null && SP && SP.kjentForsvar) { let by = SP.område ? SP.område().find(b => b.id === q.id) : null;
+          if (!by && typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) { const o = INFRA.tettsted.find(t => t.e && t.e.id === q.id); if (o) by = { id: o.e.id, navn: o.e.navn, x: q.x, y: q.y, folk: o.e.folk || 0, ref: o }; }
+          if (by) { const kf = SP.kjentForsvar(by); return { ...q, vern: kf.vern || 0, fiender: (kf.sett || 0) + (kf.anslag || 0), garnison: kf.anslag || 0 }; } }
+        if (q.slag === 'bru') { const f = forsvarVed({ type: 'hent', sted: q }); return { ...q, vern: 0, fiender: f ? f.mann : 0 }; }
+      } catch (e) { /* uten krigskartet: som før */ }
+      return q; });
+  }
+  // spillerens styrke til det lette tilbudet: det største laget, men minst en tropp på fire (folkene kan alltid lage en)
+  const styrkeNå = () => Math.max(SK.REGLER.lett ? SK.REGLER.lett.styrke : 4, har().størsteLag || 0);
+  function nyeTilbud(liste) { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, medForsvar(medEier(liste || steder())), null, { infl: infl(), styrke: styrkeNå(), kjøretøy: har().kjøretøy, klarbar: q => kanKlare(q, true), lager: () => { const s = Sp(); return s && s.leir ? lagerPlass(s.leir, Math.PI + ((S.nr % 3) - 1) * Math.PI / 4) : null; } }); lagre(); return n; }
 
   // ---------- det som legges ut i verden når en kontrakt tas ----------
   const egneLag = () => ENHETER.filter(s => s.side === ID && levende(s) && !s.karakter);
@@ -206,19 +221,52 @@
   // hva «Neste»-lappen sier: { tekst, pek, k } – tråden først, så den aktive kontrakten med kortest frist, så ledige tilbud
   function lapp() {
     if (!klar || !S) return null; const st = SK.trådSteg(S), fk = førsteK();
+    // (ut8-kr-penger, Jonas: lappen sto på «Ta en ny kontrakt i Selskapet» i fire døgn mens alle tilbudene var for tunge) det siste steget
+    // i opplæringen peker på et tilbud dere klarer – eller på et lite oppdrag
+    if (st && fk && st.id === 'neste' && !SK.bruttTekst(fk)) { const v = veienVidere(); if (v) return { ...v, steg: st.id, hjelp: st.tekst(fk, knappFor()) }; }
     if (st && fk) return { tekst: st.lapp(fk), pek: st.id === 'send' || st.id === 'hjem' ? 'kart' : st.pek, k: fk, steg: st.id, hjelp: st.tekst(fk, knappFor()) };
     // (ut8-kr-ro, kritikken: lappen sto et døgn på «Kjøpsavtale: tømmer kommer hvert døgn (1 av 5)») en avtale som går av seg selv
     // (Neste.avSegSelv: kjøpsavtale, Gråfjell kjører) viker for en kontrakt som trenger dere, og for ledige tilbud
     const selv = window.Neste && Neste.avSegSelv ? Neste.avSegSelv : (k => k.type === 'kjøp'), akt = S.sider[ID].aktive.slice().sort((a, b) => a.frist - b.frist);
     const lappK = ak => { const v = vurder(ak); return { tekst: SK.lappFor(ak, v, tid) + ' · ' + SK.fristTekst(ak, tid), pek: klarTilLevering(ak) || erVare(ak) ? 'selskap' : 'kart', k: ak, hjelp: SK.kravTekst(ak) }; };
     const ak = akt.find(k => !selv(k)); if (ak) return lappK(ak);
+    { const v = veienVidere(); if (v) return v; }
     const n = S.tilbud.filter(q => SK.kanTa(q, har(), S.sider[ID]).ok).length;
     if (!n && akt.length) return lappK(akt[0]);
     return { tekst: n ? `Velg en kontrakt i Selskapet (${n} ledig${n === 1 ? '' : 'e'})` : 'Ingen kontrakter nå – nye tilbud kommer i morgen tidlig', pek: 'selskap', k: null };
   }
+  // ---------- (ut8-kr-penger) HVA DERE KLARER NÅ ----------
+  // tilbudene leiren har det som trengs til, uten advarsel (ikke for svakt, fristen holder) – de lette (Selskap.sikreLett) først, så best betalt
+  // klarer leiren tilbudet nå? Kravene og forsvaret (kanTa uten advarsel), og marsjen: regnet ut (MARSJ) når den finnes, ellers et anslag
+  // (luftlinje × omveg til fots, samme som reglene). En eskorte uten regnet marsj teller ikke (bilen kan stå på andre siden av en fjord).
+  // streng (når reglene spør om et lett tilbud trengs): uten regnet marsj teller tilbudet ikke – anslaget i luftlinje bommet på fjordene i
+  // Hardanger (Eidfjord: 10 km i luftlinje, 31 km på vegen)
+  function kanKlare(q, streng) {
+    if (!S || !q || q.første || erVare(q)) return false; const kt = SK.kanTa(q, har(q), S.sider[ID]); if (!kt.ok || (kt.advarsel && kt.advarsel.length)) return false;
+    const m = marsj(q); if (m && !m.venter && !m.feil) return !SK.marsjVurdering(q, m).advarsel; if (q.type === 'eskorte' || streng) return false;
+    const L = Sp() && Sp().leir, LT = SK.REGLER.lett; if (!L || !LT) return true; const km = Math.hypot(q.sted.x - L.x, q.sted.y - L.y) / 1000 * LT.omveg;
+    return !SK.marsjVurdering(q, { km, timer: km / LT.kmt }).advarsel;
+  }
+  function klarbare() { return S ? S.tilbud.filter(q => synligTilbud(q) && kanKlare(q)).sort((a, b) => (b.lett ? 1 : 0) - (a.lett ? 1 : 0) || b.betaling - a.betaling) : []; }
+  // de små oppdragene (Leir → Mål, spill/spillet-visning.js): { liste, tatt } – samles nå også i Kontrakter
+  const småOppdrag = () => { try { const O = window.SpilletSpill && SpilletSpill.O && SpilletSpill.O(); return O && Array.isArray(O.liste) ? O.liste : []; } catch (e) { return []; } };
+  const OPD = () => (window.Spillet && Spillet.Oppdrag) || null;
+  const oppdragNavn = o => (OPD() && OPD().TYPER[o.type] ? OPD().TYPER[o.type].navn : 'Oppdrag');
+  const oppdragGir = o => (OPD() && OPD().belønning ? OPD().belønning(o.gir || {}) : '');
+  // det Neste-lappen sier når ingen kontrakt er i gang: et tilbud dere klarer, et lite oppdrag som er tatt, eller et lite oppdrag å ta
+  function veienVidere() {
+    const k = klarbare()[0];
+    if (k) return { tekst: `Ta kontrakten «${k.tittel}» (${kr(k.betaling)}) – én tropp klarer den`, pek: 'selskap', k: null, tilbud: k.id };
+    const L = småOppdrag(), tatt = L.find(o => o.tatt);
+    if (tatt) return { tekst: `Send en tropp til oppdraget «${oppdragNavn(tatt)}» (${meter(tatt.meter || Math.hypot(tatt.x - (Sp() && Sp().leir ? Sp().leir.x : tatt.x), tatt.y - (Sp() && Sp().leir ? Sp().leir.y : tatt.y)))} mot ${tatt.retning || ''})`.replace(' mot )', ')'), pek: 'oppdrag', k: null, oppdrag: tatt.id };
+    const o = L.filter(q => !q.tatt).sort((a, b) => (a.type === 'post') - (b.type === 'post') || (a.meter || 0) - (b.meter || 0))[0];
+    if (o) return { tekst: `Ta et lite oppdrag: «${oppdragNavn(o)}» (${oppdragGir(o)}) i Selskapet`, pek: 'selskap', k: null, oppdrag: o.id };
+    return null;
+  }
   // trykk på lappen: gjør det som står (åpner panelet, Tropper, Leir – eller viser stedet og velger laget)
   function følgLapp() {
     const l = lapp(); if (!l) return;
+    if (l.pek === 'oppdrag') { const o = småOppdrag().find(q => q.id === l.oppdrag); if (o) { gåTil(o.x, o.y); const lag = egneLag().filter(q => q.fraFolk).sort((a, b) => Math.hypot(a.x - o.x, a.y - o.y) - Math.hypot(b.x - o.x, b.y - o.y))[0]; if (lag) try { valgt = lag; if (typeof visPanel === 'function') visPanel(); } catch (e) { /* uten valg */ } } return; }
     if (l.pek === 'selskap') { vis(true); return; }
     if (l.pek === 'tropper') { if (window.TropperSpill && TropperSpill.åpne) TropperSpill.åpne(); return; }
     if (l.pek === 'leir') { const b = document.getElementById('leirknapp'); if (b) b.click(); return; }
@@ -461,13 +509,33 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     h += `<div class="rad"><span>Levert <span class="tall">${sum.levert}</span></span><span>Brutt <span class="tall">${sum.brutt}</span></span><span>Tjent <span class="kr tall">${kr(sum.tjent)}</span></span><span>Bøter <span class="bot tall">${kr(sum.bøter)}</span></span></div>`;
     if (melding) h += `<div class="melding">${esc(melding)}</div>`;
     h += `<h3>Aktive kontrakter <small>${sd.aktive.length} av ${SK.REGLER.maksAktive}</small></h3>` + (sd.aktive.length ? sd.aktive.map(aktivKort).join('') : `<p class="tom">Ingen ennå. Ta et tilbud under.</p>`);
-    h += `<h3>Ledige tilbud <small>nye hver morgen</small></h3>` + (S.tilbud.some(synligTilbud) ? S.tilbud.filter(synligTilbud).map(tilbudKort).join('') : `<p class="tom">Ingen tilbud nå${steder().length ? '' : ' – kartet har ingen tettsteder eller bruer innen rekkevidde'}.</p>`);
+    // (ut8-kr-penger) tilbudene dere klarer står først (den første kontrakten alltid øverst); (nattfiks) bare tilbud som ikke er gått ut
+    { const kl = new Set(klarbare().map(q => q.id)), T = S.tilbud.filter(synligTilbud).sort((a, b) => (b.første ? 1 : 0) - (a.første ? 1 : 0) || (kl.has(b.id) ? 1 : 0) - (kl.has(a.id) ? 1 : 0));
+      h += `<h3>Ledige tilbud <small>nye hver morgen</small></h3>` + (T.length ? T.map(tilbudKort).join('') : `<p class="tom">Ingen tilbud nå${steder().length ? '' : ' – kartet har ingen tettsteder eller bruer innen rekkevidde'}.</p>`); }
+    // (ut8-kr-penger, Jonas: «de små oppdragene lå et annet sted, i fanen Mål i Leir-menyen») samme oppdrag som i Leir → Mål, her også
+    h += småHtml();
     h += `<h3>De andre selskapene</h3>` + Object.keys(RIVALER).map(s => { const R = RIVALER[s], q = S.sider[s], fr = window.Fraksjoner && Fraksjoner.FRAKSJONER[s];
       const iKart = fr && fr.navn && fr.navn !== R.navn ? ` <span class="kode" style="letter-spacing:.04em">i kartet: ${esc(fr.navn)}</span>` : '';
       return `<div class="rival" data-rival="${s}">${rivalMerke(s, 40)}<div><b>${esc(R.navn)}</b>${iKart}<div class="motto">${esc(R.motto)}</div><p style="margin:2px 0;font-size:13px;color:#d8d1bf">${esc(R.omtale)}</p><div class="rad"><span>${esc(SK.rykteTekst(q.rykte).replace('dere er', 'de er'))}</span><span>Kontrakter <span class="tall">${q.sum.levert}</span></span></div></div></div>`; }).join('');
     const fer = sd.ferdige.slice(0, 3); if (fer.length) h += `<h3>Siste kontrakter</h3>` + fer.map(k => `<div class="rad"><span>${k.status === 'levert' ? '✓' : '✗'} ${esc(k.tittel)}</span><span class="${k.status === 'levert' ? 'kr' : 'bot'} tall">${k.status === 'levert' ? kr(k.betaling) : k.status === 'tapt' ? 'tapt' : '−' + kr(k.bot)}</span></div>`).join('');
     return h;
   }
+  // SMÅ OPPDRAG (ut8-kr-penger): de samme oppdragene som i Leir → Mål (SpilletSpill), med «Ta oppdraget» og «Vis i kartet»
+  function småHtml() {
+    const L = småOppdrag(); if (!window.SpilletSpill) return '';
+    const tidT = m => (m >= 60 ? `${Math.round(m / 60)} t` : `${Math.max(0, Math.round(m))} min`);
+    return `<h3 data-smaa="1">Små oppdrag <small>korte jobber nær leiren – ingen bot</small></h3>` + (L.length ? L.map(o => `<div class="kort smaa${o.tatt ? ' aktiv' : ''}" data-oppdrag="${esc(o.id)}"><b>${esc(oppdragNavn(o))}</b>`
+      + `<div class="fra">${esc(meter(o.meter || 0))} mot ${esc(o.retning || '')} · gir <span class="kr">${esc(oppdragGir(o))}</span> · frist om ${esc(tidT((o.frist || 0) - tid))}</div>`
+      + `<p>${esc(OPD() && OPD().TYPER[o.type] ? OPD().TYPER[o.type].tekst : '')}${o.tatt ? ' Oppdraget er tatt – send en tropp dit (eller gå selv).' : ''}</p>`
+      + `<div class="knapper">${o.tatt ? '' : `<button class="hoved" data-s="oppdragTa" data-id="${esc(o.id)}">Ta oppdraget</button>`}<button data-s="oppdragVis" data-id="${esc(o.id)}">Vis i kartet</button></div></div>`).join('')
+      : '<p class="tom">Ingen små oppdrag akkurat nå – nye kommer i løpet av dagen.</p>');
+  }
+  // kommandoen for «Ta oppdraget» (samme som knappen i Leir → Mål gjør: SpilletSpill.ta)
+  function registrerOppdrag() { const K = window.Kommando; if (!K || K.finnes('oppdragTa')) return;
+    K.registrer('oppdragTa', { leir: true,
+      sjekk: k => { const o = småOppdrag().find(q => String(q.id) === String(k.id)); return !o ? 'Oppdraget finnes ikke lenger.' : o.tatt ? 'Oppdraget er alt tatt.' : null; },
+      utfør: k => { const o = småOppdrag().find(q => String(q.id) === String(k.id)); return SpilletSpill.ta(o.id) ? `Oppdraget «${oppdragNavn(o)}» er tatt – det er merket i kartet.` : { feil: 'Oppdraget er ikke ledig lenger.' }; },
+      beskriv: () => 'tar et lite oppdrag' }); }
   function tegn(tving) {
     if (!åpen) return; sistTegn = performance.now(); if (!tving && window.pekerNede && pekerNede(panel)) return;
     const h = html(); if (h === sistHtml && !tving) return; sistHtml = h; const rull = panel.scrollTop; panel.innerHTML = h; panel.scrollTop = rull;
@@ -476,6 +544,8 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     // (R18-A) handlingene går gjennom kommandolaget (window.KOMMANDO, spill/kommando-visning.js); uten det kalles de rett
     const K = window.KOMMANDO, kom = (type, f) => (K ? K({ type, id, stille: true }) : f(id));
     if (s === 'lukk') vis(false); else if (s === 'ta') kom('kontraktTa', ta); else if (s === 'avslå') kom('kontraktAvslå', avslå); else if (s === 'lever') kom('kontraktLever', lever); else if (s === 'avbryt') kom('kontraktAvbryt', avbryt); else if (s === 'pris') kom('kontraktPris', pris);
+    else if (s === 'oppdragTa') { registrerOppdrag(); const r = K ? K({ type: 'oppdragTa', id, stille: true }) : { ok: window.SpilletSpill && SpilletSpill.ta(småOppdrag().find(q => String(q.id) === id).id) }; if (r && r.ok === false && r.feil) melding = r.feil; tegn(true); }
+    else if (s === 'oppdragVis') { const o = småOppdrag().find(q => String(q.id) === id); if (o) gåTil(o.x, o.y); }
     else if (s === 'vare') { if (VS()) { VS().knapp(id, b.dataset.v); melding = ''; tegn(true); } }
     else if (s === 'vis') { const k = S && (S.tilbud.find(q => q.id === id) || S.sider[ID].aktive.find(q => q.id === id)); if (k) { const p = k.type === 'rydd' && k.sperre ? k.sperre : k.type === 'eskorte' && bilFor(k) ? bilFor(k) : k.sted; gåTil(p.x, p.y); } } });
   function vis(på) {
@@ -614,10 +684,12 @@ body.kort #nestelapp small{ display:none; }
   // (R1-løkka 26. nov, kritikken: «den første kontrakten er en felle») nødlageret ligger i en låve F.avstand fra leiren – så nær at
   // radioen aldri mister kontakten (se REGLER.første) – i retning bygda som gir jobben, på land, i spillkartet og minst F.utenfor
   // meter utenfor alle tettsteder (der står bygdevernet). Retningene prøves fra bygdas retning og utover til begge sider.
-  function lagerPlass(L) {
+  // vri (ut8-kr-penger): dreier retningen. Et nytt nødlager (Selskap.lagerJobb) legges BORT fra nærmeste tettsted (π) – lagerJobb brukes når
+  // tettstedene rundt er holdt av andre eller har fiender (gjennomspillingen: troppen gikk mot Ulvik, som Mosevakt holdt) – og dreies litt
+  function lagerPlass(L, vri = 0) {
     const F = SK.REGLER.første, byer = (typeof INFRA !== 'undefined' && INFRA && INFRA.tettsted) || [], G = window.Garnison;
     const bygd = steder().filter(q => q.slag === 'tettsted').map(q => ({ q, d: Math.hypot(q.x - L.x, q.y - L.y) })).filter(o => o.d >= F.min && o.d <= F.maks).sort((a, b) => Math.abs(a.d - F.ønsket) - Math.abs(b.d - F.ønsket))[0];
-    const v0 = bygd ? Math.atan2(bygd.q.y - L.y, bygd.q.x - L.x) : .3;
+    const v0 = (bygd ? Math.atan2(bygd.q.y - L.y, bygd.q.x - L.x) : .3) + vri;
     const fri = (x, y) => { const hh = typeof hoydeVed === 'function' ? hoydeVed(x, y) : null; if (hh !== null && hh <= 1) return false;
       if (typeof OMRÅDE_OK === 'function' && !OMRÅDE_OK(x, y)) return false;
       if (G && G.avstand) for (const by of byer) { if (!by.bb || x < by.bb[0] - F.utenfor || x > by.bb[2] + F.utenfor || y < by.bb[1] - F.utenfor || y > by.bb[3] + F.utenfor) continue; if (G.avstand(by, x, y) < F.utenfor) return false; }
@@ -648,7 +720,8 @@ body.kort #nestelapp small{ display:none; }
     return ut;
   }
   function landLager() { if (landJobb || !S || typeof lagVindu !== 'function' || typeof Terreng === 'undefined') return landJobb;
-    const k = [...S.tilbud, ...S.sider[ID].aktive].find(q => q && q.første && q.sted && q.sted.slag === 'lager' && q.sted.land !== 2 && !q.hentet); if (!k) return null;
+    // (ut8-kr-penger) også nødlageret i reserven (Selskap.lagerJobb): på fast mark troppen kan nå, nær en veg
+    const k = [...S.tilbud, ...S.sider[ID].aktive].find(q => q && (q.første || (q.lett && q.type === 'forsyning')) && q.sted && q.sted.slag === 'lager' && q.sted.land !== 2 && !q.hentet); if (!k) return null;
     landSist = performance.now();
     landJobb = (async () => { try {
       const L = S.leir || (Sp() || {}).leir; if (!L) return; const F = SK.REGLER.første, R = LAND.maks + 300;
@@ -702,6 +775,7 @@ body.kort #nestelapp small{ display:none; }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   Object.assign(api, { fargeord, levertØyeblikk, start, vis, erÅpen: () => åpen, tilstand: () => S, sett: d => { S = SK.fraJSON(d) || S; settNavn(); tegn(true); }, ta, avslå, lever, avbryt, pris, nyeTilbud, steder,
     vurder, klar: klarTilLevering, steg: dt => { akk = 0; steg(Math.max(1, dt)); }, lagre, NØKKEL,
+    klarbare, småOppdrag, veienVidere, oppdragTekst: o => ({ navn: oppdragNavn(o), gir: oppdragGir(o) }),
     førsteKontrakt, lagerPlass, landLager, marsj, marsjListe: () => MARSJ, oppdragFor, forsvarVed, fred: byId => !!oppdragFor(byId), knappFor, fargeNavn, tråd: () => (S ? SK.trådSteg(S) : null), trådAktiv, oppdaterTråd: tråd, lapp, følgLapp, har, nivå: nivåNå,
     rett: { kontraktTa: ta, kontraktAvslå: avslå, kontraktLever: id => lever(id), kontraktAvbryt: avbryt, kontraktPris: pris }, RIVALER, merke: (side, px) => (side === ID ? egetMerke(px || 40) : rivalMerke(side, px || 40)) });
   window.SelskapSpill = api;

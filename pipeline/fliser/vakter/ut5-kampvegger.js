@@ -70,7 +70,8 @@ module.exports = {
         ut.inntak = { før: f0, etter: f1, sperret: HV.inngang(P2.modell(i1)).sperret };
         ok(Number.isFinite(f0) && Number.isFinite(f1) && f1 > f0 + 3, 'barrikadene forsinker ikke inntaket: ' + JSON.stringify(ut.inntak));
         // ta over trehuset som kaserne og murhuset som lager
-        const p0 = Leir.plasser(L), l0 = Leir.lagerplass(L);
+        // (ut8-kr-penger) overtaket koster nå (istandsetting) – kassa settes tilbake etter prøven
+        const p0 = Leir.plasser(L), l0 = Leir.lagerplass(L), kr0 = OppstartSpill.tilstand().penger;
         const a = HS.kjør({ type: 'husOvertak', hus: i1, bruk: 'kaserne' }), b = HS.kjør({ type: 'husOvertak', hus: i2, bruk: 'lager' });
         const p1 = Leir.plasser(L), l1 = Leir.lagerplass(L); ut.overtak = { senger: p1 - p0, lager: Math.round((l1 - l0) * 10) / 10, svar: a.svar };
         ok(a.ok && b.ok && p1 > p0 && l1 > l0, 'et overtatt hus gir ikke senger/lager: ' + JSON.stringify(ut.overtak) + ' ' + (a.feil || '') + ' ' + (b.feil || ''));
@@ -79,6 +80,7 @@ module.exports = {
         const Pv3 = rekt(lx + 9000, ly, 10, 8), e3 = { i: 990953, t: 0, h: 6 }; P2.prøvehus(Pv3, e3); P2.nyttHus(Pv3, e3, 0); P2.modell(e3.i);
         const c = HS.kjør({ type: 'husOvertak', hus: e3.i, bruk: 'utpost' }); ok(!c.ok && /for langt/.test(c.feil || ''), 'et hus 9 km unna ble tatt over'); P2.fjernPrøve(e3.i);
         HS.kjør({ type: 'husOvertak', hus: i1, slipp: true }); HS.kjør({ type: 'husOvertak', hus: i2, slipp: true });
+        { const d = kr0 - OppstartSpill.tilstand().penger; if (d > 0) OppstartSpill.gi(d); }
         ok(Leir.plasser(L) === p0 && Math.abs(Leir.lagerplass(L) - l0) < .01, 'senger/lager gikk ikke tilbake etter «Gi opp huset»');
         // plantegningen viser raden med vern og «Ta over huset» (bare i 2D)
         if (!(typeof på3d !== 'undefined' && på3d)) { P2.seInn({ Pv: Pv1, e: e1 }); for (let n = 0; n < 30; n++) { await vent(100); if (P2.S.nær.some(h => h.i === i1 && h.klar)) break; }

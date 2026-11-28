@@ -56,8 +56,9 @@ module.exports = {
       krev(sk && sk.textContent.includes(`+${BA.REGLER.tillit.kontrakt} tillit`), 'byens kort sier ikke at en kontrakt for byen gir tillit');
       krev(sv && /per døgn/.test(sv.textContent), 'byens kort sier ikke at å vokte byen gir tillit per døgn');
       krev(kort.querySelector('.budkamp') && /Budkamp/.test(tk), 'byens kort viser ikke budkampen når en rival frir');
-      const mine = T.tilbud.filter(k => k.giver && String(k.giver.by) === 'ut8a'); d.byOppdrag = mine.map(k => k.tittel);
-      krev(mine.length === 1 && mine[0].giver.slag === 'by', 'byen fikk ikke ett tilbud i Selskapet mens rivalen frir (' + mine.length + ')');
+      // (ut8-kr-penger) det lette tilbudet (k.lett, Selskap.sikreLett) kan også komme fra byen – det er ikke byoppdraget fra frieriet
+      const mine = T.tilbud.filter(k => k.giver && String(k.giver.by) === 'ut8a' && !k.lett); d.byOppdrag = mine.map(k => k.tittel);
+      krev(mine.length === 1 && mine[0].giver.slag === 'by', 'byen fikk ikke ett tilbud i Selskapet mens rivalen frir (' + mine.length + ': ' + T.tilbud.map(k => (k.lett ? 'lett ' : '') + k.tittel).join(' | ') + ')');
       // ---------- 6) Neste-lappen: en kjøpsavtale viker for ledige tilbud ----------
       if (sd && mine.length && SS.lapp) { const kjøp = { id: 'ut8kjøp', type: 'kjøp', vare: 'tømmer', perDøgn: 20, døgn: 5, døgnGjort: 1, status: 'aktiv', frist: tid + 3000, giver: { slag: 'firma', navn: 'Storlia Tømmer' }, sted: { navn: 'leiren', x: L.x, y: L.y } };
         sd.aktive.push(kjøp); let l = null; try { l = SS.lapp(); } catch (e) { l = { tekst: 'unntak: ' + e.message }; } d.lapp = l && l.tekst;
