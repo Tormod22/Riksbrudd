@@ -111,6 +111,8 @@
         const r = BA.hjelpSteg(b, { nå, framme: mannNær(by, R.hjelp.framme) >= 2, fiendeBorte: !fi.length });
         if (r === 'hjulpet') { logg(`${by.navn}: hjelpen kom i tide. Tilliten stiger.`); endret = true; }
         if (r === 'for sent') { logg(`${by.navn}: dere kom ikke i tide. Tilliten synker, og byrådet noterer et brutt løfte.`); endret = true; } }
+      // (ut8-kr-ro) byen trenger dere mens en rival frir: et tilbud fra kommunen der (én gang per frieri)
+      if (b.forhandler && b.oppdragFor !== b.forhandler.fra) byOppdrag(by.id);
       const rv = BA.rivalSteg(b, nå); if (rv === 'rival') { logg(`${sidenavn(b.rival.side)} har fått en beskyttelsesavtale med ${by.navn}.`); endret = true; }
       if (BA.rivalVokser(b, nå)) { logg(`${by.navn} har gått i handel med ${sidenavn(b.rival.side)}. Byen teller halvt for dem i krigen.`); endret = true; } }
     if (endret) skitten = true; lagre();
@@ -198,9 +200,14 @@
 #selskapet .bamaal.frykt i span{ background:#b5503d; } #selskapet .bamaal.behov i span{ background:#7fa0c0; }
 #selskapet .bavalg{ display:flex; flex-wrap:wrap; gap:4px; margin:4px 0 8px; } #selskapet .skropp .bavalg button.på{ border-color:#c9b26a; color:#f0e2b0; background:#4a3c22; background-image:none; outline:2px solid #c9b26a; outline-offset:-2px; font-weight:700; }
 #selskapet .basvar{ margin:8px 0; padding:6px 8px; border-left:3px solid #c9b26a; font-size:13.5px; line-height:1.4; } #selskapet .basvar.nei{ border-color:#b5503d; } #selskapet .basvar.ja{ border-color:#7fb07a; }
-#selskapet .bapris{ display:flex; align-items:center; gap:6px; margin:4px 0 8px; } #selskapet .bapris b{ min-width:120px; text-align:center; }`;
+#selskapet .bapris{ display:flex; align-items:center; gap:6px; margin:4px 0 8px; } #selskapet .bapris b{ min-width:120px; text-align:center; }
+#selskapet .baandre{ margin:10px 0 2px; } #selskapet .skropp .baandre button{ width:100%; text-align:left; background:none; border-color:#3a3226; color:#a89970; }
+#selskapet .ba.andre b{ font-weight:400; color:#b9ab86; }
+#selskapet .baspor{ margin:4px 0 6px; padding:0; list-style:none; } #selskapet .baspor li{ display:flex; gap:8px; align-items:center; padding:5px 0; border-bottom:1px solid #3a3226; font-size:13.5px; line-height:1.35; }
+#selskapet .baspor li > span{ flex:1; min-width:0; } #selskapet .baspor li b{ color:#cfe0a8; font-weight:600; white-space:nowrap; } #selskapet .baspor li small{ display:block; color:#8f8a7c; font-size:12.5px; }
+#selskapet .basvar.budkamp{ border-color:#c9b26a; background:rgba(201,178,106,.06); }`;
   document.head.appendChild(css);
-  let valgt = null, modus = 'liste', forslag = null, svar = null;
+  let valgt = null, modus = 'liste', forslag = null, svar = null, andreÅpen = false;
   const prosent = v => Math.round(v);
   const måler = (navn, v, kl) => `<div class="bamaal ${kl}"><span>${navn}</span><i><span style="width:${Math.max(0, Math.min(100, v))}%"></span></i><b>${prosent(v)}</b></div>`;
   const trinnMerke = (b, id) => { const t = eier(id) === 'blå' && !(b.avtale && b.avtale.trinn === 'medlem') ? null : BA.trinn(b); let h = t && t !== 'nøytral' ? `<span class="t ${t}">${BA.TRINNORD[t]}</span>` : '';
@@ -210,9 +217,15 @@
     // (ut4-fiksa) uten tettsteder (kartet laster fortsatt, eller området har ingen) sier fanen det, i stedet for bare innledningen
     if (!L.length) return '<p class="rolig">Ingen tettsteder i området ennå. Kartet laster kanskje fortsatt.</p>';
     let h = '<p class="rolig" style="margin:6px 0">Vinn byene med avtaler: kunde (kontrakter) → beskyttelse → handel → medlem. Holder dere det dere lover, stiger tilliten. Dere kan fortsatt ta en by med makt, men da er den redd dere og stoler ikke på dere.</p>';
-    for (const q of L.slice(0, 40)) { const i = info(q.id); if (!i) { h += `<div class="ba"><span><b>${esc(q.navn)}</b><small>${q.folk ? q.folk.toLocaleString('nb-NO') + ' innbyggere' : 'tettsted'} · ${esc(q.eierNavn || '')}</small></span><button type="button" data-sp="by" data-id="${esc(q.id)}">Vis</button></div>`; continue; }
+    // (ut8-kr-ro, kritikken: «Byer lister Oslo, Bergen, Tromsø og Bodø med Vis, selv om bare Hamar, Gjøvik og Lillehammer er aktuelle»)
+    // byene i området (som krigskartet: Strategi.område) først; resten ligger sammenfoldet under «Andre byer»
+    const iOmr = L.filter(q => finn(q.id)), andre = L.filter(q => !finn(q.id));
+    if (!iOmr.length) h += '<p class="rolig">Ingen tettsteder i området rundt leiren ennå. Kartet laster kanskje fortsatt.</p>';
+    for (const q of iOmr.slice(0, 40)) { const i = info(q.id); if (!i) continue;
       const b = i.b, eierT = i.eier && i.eier !== 'blå' ? ` · holdes av ${esc(sidenavn(i.eier))}` : i.eier === 'blå' && !(b.avtale && b.avtale.trinn === 'medlem') ? ' · holdes av dere' : '';
       h += `<div class="ba"><span><b>${esc(q.navn)}</b>${trinnMerke(b, q.id)}<small>${(q.folk || 0).toLocaleString('nb-NO')} innb.${eierT} · tillit ${prosent(b.tillit)} · frykt ${prosent(b.frykt)} · trenger ${BA.BEHOVORD[i.behov.hoved]}</small></span><button type="button" data-sp="ba-kort" data-id="${esc(q.id)}">Åpne</button></div>`; }
+    if (andre.length) { h += `<div class="baandre"><button type="button" data-sp="ba-andre" aria-expanded="${andreÅpen}">${andreÅpen ? '▾' : '▸'} Andre byer (${andre.length}) – utenfor området</button></div>`;
+      if (andreÅpen) h += andre.slice(0, 40).map(q => `<div class="ba andre"><span><b>${esc(q.navn)}</b><small>${q.folk ? q.folk.toLocaleString('nb-NO') + ' innbyggere' : 'tettsted'} · ${esc(q.eierNavn || '')}</small></span><button type="button" data-sp="by" data-id="${esc(q.id)}">Vis</button></div>`).join(''); }
     h += `<div class="knapperad">${window.RegionSpill && RegionSpill.åpne ? '<button type="button" data-sp="region">Regionen</button>' : ''}${document.getElementById('krigknapp') ? '<button type="button" data-sp="krig">Krigskartet</button>' : ''}</div>`;
     return h;
   }
@@ -228,7 +241,10 @@
     if (b.hjelp) h += `<div class="basvar nei">Byen ber om hjelp: ${b.hjelp.fiender} fiendtlige lag ${String(b.hjelp.km).replace('.', ',')} km ${esc(b.hjelp.retning)}. Frist om ${Math.max(0, Math.round((b.hjelp.frist - nå) / 6) / 10).toString().replace('.', ',')} t.</div>`;
     if (b.forhandler) h += `<div class="basvar">${esc(sidenavn(b.forhandler.side))} forhandler med ${esc(by.navn)} og tilbyr beskyttelse for ${kr(b.forhandler.pris)} per døgn. By under for å vinne byen (innen ${Math.max(0, Math.round((b.forhandler.ferdig - nå) / 60))} t).</div>`;
     if (b.rival) h += `<div class="basvar">${esc(by.navn)} har ${b.rival.trinn === 'handel' ? 'handelsavtale' : 'beskyttelsesavtale'} med ${esc(sidenavn(b.rival.side))}. Et billigere tilbud kan vinne byen tilbake.</div>`;
-    const annen = i.eier && i.eier !== 'blå', nt = annen ? null : nesteTrinn(b, by.id), feil = nt ? BA.kanTrinn(b, nt, 'blå', i.eier === 'blå', nåMin()) : null;
+    // (ut8-kr-ro) i budkamp regnes kravet med det minste løftet som holder (Byavtale.tillitSpor), ellers som før
+    const annen = i.eier && i.eier !== 'blå', nt = annen ? null : nesteTrinn(b, by.id), spor = nt ? BA.tillitSpor(b, { holdning: l.holdning, navn: by.navn, trinn: nt }) : null;
+    const feil = nt ? BA.kanTrinn(b, nt, 'blå', i.eier === 'blå', nåMin(), { løfte: spor && spor.budkamp && spor.budkamp.løfte ? spor.budkamp.løfte : undefined }) : null;
+    h += sporHtml(by, b, nt, spor);
     h += '<div class="knapperad">';
     if (nt) h += `<button type="button" data-sp="ba-forhandle" data-id="${esc(by.id)}">Forhandle${feil ? '' : ' om ' + BA.TRINNORD[nt].toLowerCase()}</button>`;
     h += `<button type="button" data-sp="ba-send" data-id="${esc(by.id)}">Send lag</button><button type="button" data-sp="by" data-id="${esc(by.id)}">Vis i kartet</button>`;
@@ -237,12 +253,53 @@
     if (svar && svar.by === String(by.id) && modus === 'kort') h += `<div class="basvar ${svar.r.svar}">${esc(svar.r.grunn)}</div>`;
     return h + '</div>';
   }
+  // (ut8-kr-ro, kritikken: «Ravnsund frir, men all forhandling sier tillit 30 av 40 – og ingen kontrakt jeg kunne ta, ga tillit»)
+  // kontraktene for byen (tilbud og aktive i Selskapet: oppdragsgiveren er bygdelaget eller kommunen der)
+  function kontrakterFor(id) { const T = window.SelskapSpill && SelskapSpill.tilstand ? SelskapSpill.tilstand() : null, sd = T && T.sider && T.sider.blå; if (!T) return { tilbud: [], aktive: [] };
+    const for_ = k => k && k.giver && k.giver.slag !== 'firma' && k.giver.by != null && String(k.giver.by) === String(id);
+    return { tilbud: (T.tilbud || []).filter(for_), aktive: sd ? (sd.aktive || []).filter(for_) : [] }; }
+  // SPORET: hva som gir mer tillit, med tallene fra Byavtale.REGLER, og budkampen når en rival frir
+  function sporHtml(by, b, nt, spor) {
+    if (!spor || !nt || nt === 'medlem' && !spor.mangler) return '';
+    const K = kontrakterFor(by.id), sd = s => sidenavn(s), rv = b.forhandler || b.rival; let h = '';
+    if (spor.budkamp && rv) { const bk = spor.budkamp, L = bk.løfte ? R.løfter.find(q => q.id === bk.løfte) : null, grense = rv.pris ? Math.round(rv.pris * R.rival.overby / 1000) * 1000 : 0;
+      h += `<div class="basvar budkamp" data-budkamp="${bk.løfte || ''}"><b>Budkamp.</b> ${esc(sd(rv.side))} vil ha byen. Lover dere mer, trenger dere mindre tillit: ${R.løfter.map((q, n) => `${q.mann} mann krever ${n ? '' : 'tillit '}${BA.tillitKrav(b, 'beskyttelse', q.id)}`).join(', ')} (dere har ${prosent(b.tillit)}). `
+        + (L ? `Lov ${L.mann} mann og hjelp innen ${L.svartid} t, og by under ${esc(sd(rv.side))}${grense ? `: høyst ${kr(grense)} per døgn` : ''}.` : `Dere trenger tillit ${bk.krav} selv med det største løftet.`) + '</div>'; }
+    if (!spor.mangler && !spor.budkamp) return h;
+    h += `<h3>Slik får dere mer tillit${spor.mangler ? ` <small>${spor.mangler} mangler til ${BA.TRINNORD[nt].toLowerCase()}</small>` : ''}</h3><ul class="baspor">`;
+    for (const v of spor.veier) {
+      const pluss = `+${String(v.pluss).replace('.', ',')} ${v.per === 'døgn' ? 'per døgn' : v.per === 'gang' ? 'hver gang' : 'tillit'}`;
+      let under = '', knapp = '';
+      if (v.id === 'kontrakt') { const n = K.tilbud.length, a = K.aktive.length; under = a ? `${a} aktiv${a === 1 ? '' : 'e'} for byen nå` : n ? `${n} tilbud for byen i Selskapet nå` : 'Ingen tilbud for byen akkurat nå – nye kommer om morgenen.';
+        if (n || a) knapp = `<button type="button" data-sp="ba-kontrakter" data-id="${esc(by.id)}">Se ${n ? 'tilbudet' : 'kontrakten'}</button>`; }
+      else if (v.id === 'vakt') { under = `Opp til tillit ${v.tak}. I dag: ${b.vakt || 0} av ${R.vakt.timer} t, ${Math.floor(mannNær(by, R.radius))} egne mann nær nå.`; knapp = `<button type="button" data-sp="ba-send" data-id="${esc(by.id)}">Send lag</button>`; }
+      h += `<li data-spor="${v.id}"><span>${esc(v.tekst)}: <b>${pluss}</b><small>${esc(under)}</small></span>${knapp}</li>`; }
+    return h + '</ul>';
+  }
+  // et tilbud fra byen når den trenger dere (en rival frir): ett per frieri, fra kommunen i byen (Selskap.lagTilbud med fast oppdragsgiver)
+  function byOppdrag(id, stille) {
+    const by = finn(id), b = by && S.byer[by.id], rv = b && b.forhandler; if (!by || !rv || eier(by.id) || !window.Selskap || !window.SelskapSpill) return null;
+    if (b.oppdragFor === rv.fra) return null; const K = kontrakterFor(by.id); if (K.tilbud.length || K.aktive.length) { b.oppdragFor = rv.fra; lagre(); return null; }
+    const T = SelskapSpill.tilstand(); if (!T) return null;
+    const infl = (() => { try { const M = window.SpilletSpill && SpilletSpill.M && SpilletSpill.M(); return M && M.infl > 0 ? M.infl : 1; } catch (e) { return 1; } })();
+    const st = SelskapSpill.steder ? SelskapSpill.steder() : [], her = st.filter(q => q.slag === 'tettsted' && String(q.id) === String(by.id));
+    const giver = { slag: 'by', navn: `Kommunen i ${by.navn}`, by: by.id };
+    let n = []; try { n = Selskap.lagTilbud(T, 'blå', nåMin(), her.length ? her : [{ navn: by.navn, x: by.x, y: by.y, slag: 'tettsted', id: by.id }], null, { antall: 1, giver, infl });
+      if (!n.length) n = Selskap.lagTilbud(T, 'blå', nåMin(), st, null, { antall: 1, giver, infl }); } catch (e) { n = []; }
+    const k = n[0]; b.oppdragFor = rv.fra; lagre(); if (!k) return null;
+    k.byOppdrag = by.id; try { if (SelskapSpill.lagre) SelskapSpill.lagre(); } catch (e) { /* */ }
+    if (!stille) logg(`Kommunen i ${by.navn} har en jobb til dere mens ${sidenavn(rv.side)} frir: ${k.tittel} (${kr(k.betaling)}). Levert gir den +${R.tillit.kontrakt} tillit hos byen (Selskapet → Kontrakter).`);
+    skitten = true; return k;
+  }
   function forhandleHtml(i) {
     const { by, b } = i, f = forslag;
     let h = `<div class="bakort"><button type="button" data-sp="ba-kort" data-id="${esc(by.id)}">← ${esc(by.navn)}</button><h3>Forhandle med ${esc(by.navn)}</h3>`;
     const muligeTrinn = eier(by.id) === 'blå' ? ['medlem'] : ['beskyttelse', 'handel', 'medlem'].filter(t => BA.rang(t) > BA.rang(BA.trinn(b)));
     h += '<div class="bavalg">' + muligeTrinn.map(t => `<button type="button" data-sp="ba-trinn" data-v="${t}" class="${f.trinn === t ? 'på' : ''}">${BA.TRINNORD[t]}</button>`).join('') + '</div>';
-    const feil = BA.kanTrinn(b, f.trinn, 'blå', eier(by.id) === 'blå', nåMin()); if (feil) h += `<p class="rolig">${esc(feil)}</p>`;
+    const feil = BA.kanTrinn(b, f.trinn, 'blå', eier(by.id) === 'blå', nåMin(), { løfte: f.løfte }); if (feil) h += `<p class="rolig">${esc(feil)}</p>`;
+    // (ut8-kr-ro) budkamp: løftet senker kravet til tillit – si det her også
+    if (f.trinn === 'beskyttelse' && BA.budkamp(b)) { const rv = b.forhandler || b.rival;
+      h += `<p class="rolig" data-budkamp="1">Budkamp med ${esc(sidenavn(rv.side))}: ${R.løfter.map(q => `${q.mann} mann krever tillit ${BA.tillitKrav(b, 'beskyttelse', q.id)}`).join(', ')}.${rv.pris ? ` By under ${kr(Math.round(rv.pris * R.rival.overby / 1000) * 1000)} per døgn.` : ''}</p>`; }
     if (f.trinn !== 'medlem') h += `<h3>Pris byen betaler per døgn</h3><div class="bapris"><button type="button" data-sp="ba-pris" data-v="-1">−</button><b>${kr(f.pris)}</b><button type="button" data-sp="ba-pris" data-v="1">+</button></div>`;
     else h += '<p class="rolig">Som medlem betaler byen skatt til dere (som et tettsted dere holder), uten opprør, og teller fullt i krigen.</p>';
     h += '<h3>Det dere lover</h3><div class="bavalg">' + R.løfter.map(l => `<button type="button" data-sp="ba-løfte" data-v="${l.id}" class="${f.løfte === l.id ? 'på' : ''}">${l.mann} mann, hjelp innen ${l.svartid} t</button>`).join('') + '</div>';
@@ -258,7 +315,11 @@
     return liste(L || []);
   }
   function nyttForslag(id) { const i = info(id); if (!i) return; const t = nesteTrinn(i.b, i.by.id) || 'beskyttelse';
-    forslag = { trinn: t, pris: Math.round(BA.grunnpris(t === 'medlem' ? 'handel' : t, i.by.folk) * 1.1 / 1000) * 1000, løfte: 'vanlig', varighet: 14 }; }
+    forslag = { trinn: t, pris: Math.round(BA.grunnpris(t === 'medlem' ? 'handel' : t, i.by.folk) * 1.1 / 1000) * 1000, løfte: 'vanlig', varighet: 14 };
+    // (ut8-kr-ro) budkamp: det minste løftet som holder, og en pris under rivalens
+    if (t === 'beskyttelse' && BA.budkamp(i.b)) { const sp = BA.tillitSpor(i.b, { holdning: i.leder.holdning }), rv = i.b.forhandler || i.b.rival;
+      if (sp.budkamp && sp.budkamp.løfte) forslag.løfte = sp.budkamp.løfte;
+      if (rv && rv.pris) forslag.pris = Math.max(1000, Math.min(forslag.pris, Math.round(rv.pris * R.rival.overby / 1000) * 1000)); } }
   function sendLag(id) { const by = finn(id); if (!by) return; let best = null, bd = Infinity;
     for (const s of lag()) { if (s.side !== 'blå' || s.karakter || s.ombord || s.leirvakt || !lever(s)) continue; const d = Math.hypot(s.x - by.x, s.y - by.y); if (d < bd) { bd = d; best = s; } }
     if (!best) { logg('Ingen ledige lag å sende.'); return; }
@@ -267,7 +328,9 @@
   function trykk(knapp) {
     const s = knapp.dataset.sp, id = knapp.dataset.id, v = knapp.dataset.v;
     if (s === 'ba-liste') { modus = 'liste'; valgt = null; svar = null; }
-    else if (s === 'ba-kort') { valgt = id; modus = 'kort'; }
+    else if (s === 'ba-kort') { valgt = id; modus = 'kort'; byOppdrag(id); }
+    else if (s === 'ba-andre') andreÅpen = !andreÅpen;
+    else if (s === 'ba-kontrakter') { if (window.SelskapetSpill && SelskapetSpill.velgFane) SelskapetSpill.velgFane('kontrakter'); }
     else if (s === 'ba-forhandle') { valgt = id; modus = 'forhandle'; nyttForslag(id); svar = null; }
     else if (s === 'ba-trinn' && forslag) { forslag.trinn = v; const i = info(valgt); if (i && v !== 'medlem') forslag.pris = Math.round(BA.grunnpris(v, i.by.folk) * 1.1 / 1000) * 1000; svar = null; }
     else if (s === 'ba-pris' && forslag) { const steg = Math.max(1000, Math.round(forslag.pris * .08 / 1000) * 1000); forslag.pris = Math.max(1000, forslag.pris + (+v) * steg); }
@@ -287,6 +350,7 @@
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   setTimeout(koble, 0);
   Object.assign(api, { start, fane, trykk, ringer, timeSteg, døgnSteg, info, område, tillit, endreTillit, forhandle: k => kom({ type: 'byForhandle', ...k }), siOpp: id => kom({ type: 'bySiOpp', by: id }),
+    byOppdrag, kontrakterFor, andre: v => { if (v !== undefined) andreÅpen = !!v; return andreÅpen; },
     tilstand: () => S, sett: d => { S = BA.fraJSON(d); lagre(); }, nullstill: () => { S = BA.ny(); lagre(); }, lagre, mannNær, klar: () => klar, velg: (id, m) => { valgt = id; modus = m || 'kort'; if (m === 'forhandle') nyttForslag(id); }, NØKKEL });
   window.ByavtaleSpill = api;
 })();

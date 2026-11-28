@@ -205,9 +205,13 @@
   function lapp() {
     if (!klar || !S) return null; const st = SK.trådSteg(S), fk = førsteK();
     if (st && fk) return { tekst: st.lapp(fk), pek: st.id === 'send' || st.id === 'hjem' ? 'kart' : st.pek, k: fk, steg: st.id, hjelp: st.tekst(fk, knappFor()) };
-    const ak = S.sider[ID].aktive.slice().sort((a, b) => a.frist - b.frist)[0];
-    if (ak) { const v = vurder(ak); return { tekst: SK.lappFor(ak, v, tid) + ' · ' + SK.fristTekst(ak, tid), pek: klarTilLevering(ak) || erVare(ak) ? 'selskap' : 'kart', k: ak, hjelp: SK.kravTekst(ak) }; }
+    // (ut8-kr-ro, kritikken: lappen sto et døgn på «Kjøpsavtale: tømmer kommer hvert døgn (1 av 5)») en avtale som går av seg selv
+    // (Neste.avSegSelv: kjøpsavtale, Gråfjell kjører) viker for en kontrakt som trenger dere, og for ledige tilbud
+    const selv = window.Neste && Neste.avSegSelv ? Neste.avSegSelv : (k => k.type === 'kjøp'), akt = S.sider[ID].aktive.slice().sort((a, b) => a.frist - b.frist);
+    const lappK = ak => { const v = vurder(ak); return { tekst: SK.lappFor(ak, v, tid) + ' · ' + SK.fristTekst(ak, tid), pek: klarTilLevering(ak) || erVare(ak) ? 'selskap' : 'kart', k: ak, hjelp: SK.kravTekst(ak) }; };
+    const ak = akt.find(k => !selv(k)); if (ak) return lappK(ak);
     const n = S.tilbud.filter(q => SK.kanTa(q, har(), S.sider[ID]).ok).length;
+    if (!n && akt.length) return lappK(akt[0]);
     return { tekst: n ? `Velg en kontrakt i Selskapet (${n} ledig${n === 1 ? '' : 'e'})` : 'Ingen kontrakter nå – nye tilbud kommer i morgen tidlig', pek: 'selskap', k: null };
   }
   // trykk på lappen: gjør det som står (åpner panelet, Tropper, Leir – eller viser stedet og velger laget)
@@ -439,8 +443,10 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     const sd = S.sider[ID], r = sd.rykte, sum = sd.sum;
     let h = `<button class="lukk" data-s="lukk" aria-label="Lukk">×</button><div class="hode">${egetMerke(58)}<div><div class="kode">Privat militærselskap${fargeord() ? ' · ' + esc(fargeord()) : ''}</div><h2>${esc(egetNavn())}</h2><div class="motto">${esc(SK.rykteTekst(r))}</div></div></div>`;
     { const nv = nivåNå(), nn = SK.nesteNivå(sd);
-      h += `<h3>Nivå ${nv.nr} · ${esc(nv.navn)} <small>betaling ×${String(nv.faktor).replace('.', ',')}</small></h3>`
-        + (nn ? `<div class="nivaa" data-nivaa="${nn.nivå.nr}">Neste nivå: <b>${esc(nn.nivå.navn)}</b> (betaling ×${String(nn.nivå.faktor).replace('.', ',')}, lag på ${nn.nivå.menn}+ til de store holdejobbene). Mangler: ${esc(nn.mangler.join(' og '))}.</div>`
+      // (ut8-kr-ro, kritikken: «to stiger») trinnet står først, nivået (ryktet) som et krav under det – samme linje som i Oversikt
+      let tr = null; try { const R = window.TrinnSpill && window.Trinn ? TrinnSpill.regn() : null; if (R) tr = { R, N: Trinn.nivåLinje(R, nv.nr, SK.REGLER.NIVÅER.length) }; } catch (e) { tr = null; }
+      h += `<h3>${tr ? `Trinn ${tr.R.nr} ${esc(tr.R.trinn.navn)} · rykte: nivå ${nv.nr} · ${esc(nv.navn)}` : `Nivå ${nv.nr} · ${esc(nv.navn)}`} <small>betaling ×${String(nv.faktor).replace('.', ',')}</small></h3>`
+        + (nn ? `<div class="nivaa" data-nivaa="${nn.nivå.nr}">Neste nivå: <b>${esc(nn.nivå.navn)}</b> (betaling ×${String(nn.nivå.faktor).replace('.', ',')}, lag på ${nn.nivå.menn}+ til de store holdejobbene). Mangler: ${esc(nn.mangler.join(' og '))}.${tr && tr.N.krav && !tr.N.ok ? ` Nivået er ryktet som kunde: trinn ${tr.N.trinn} krever nivå ${tr.N.krav}.` : ''}</div>`
           : `<div class="nivaa">Øverste nivå – de beste kontraktene er deres.</div>`);
       const st = SK.trådSteg(S), fk = førsteK();
       if (st && fk) h += `<div class="traad"><small>Første kontrakt · steg ${S.tråd.gjort.length + 1} av ${SK.TRÅD.length}</small><b>${esc(st.tittel)}</b><p>${esc(st.tekst(fk))}</p></div>`; }
