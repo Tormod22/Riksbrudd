@@ -73,7 +73,11 @@
     { const FI = window.Forsvar, hoved = nye.some(e => !e.prøver) ? nye.filter(e => !e.prøver) : nye;
       for (const e of nye) { const p = FI && FI.innfart ? FI.innfart(e.sti, leir) : null; if (p) e.innfart = p; }
       const inn = hoved.map(e => e.innfart).filter(Boolean);
-      if (inn.length) { const x = inn.reduce((a, p) => a + p.x, 0) / inn.length, y = inn.reduce((a, p) => a + p.y, 0) / inn.length; s = { ...s, retning: Spillet.retning(x - leir.x, y - leir.y) }; } }
+      if (inn.length) { const x = inn.reduce((a, p) => a + p.x, 0) / inn.length, y = inn.reduce((a, p) => a + p.y, 0) / inn.length; s = { ...s, retning: Spillet.retning(x - leir.x, y - leir.y) }; }
+      // (28. nov, fiksb – full kontroll: «varselet (vest) og banneret (nord) er ulike») ser en sensor eller et lag dem alt når de drar ut,
+      // bruker banneret der de er (ForsvarSpill: de som er sett utenfor leiren går foran ruta) – da sier varselet det samme
+      const sett = typeof synlig === 'function' ? nye.filter(e => { try { return synlig(e); } catch (q) { return false; } }) : [];
+      if (sett.length) { const x = sett.reduce((a, e) => a + e.x, 0) / sett.length, y = sett.reduce((a, e) => a + e.y, 0) / sett.length; if (Math.hypot(x - leir.x, y - leir.y) > 1) s = { ...s, retning: Spillet.retning(x - leir.x, y - leir.y) }; } }
     // (19. nov, etter kritikken) angrepsbanneret sier det samme (retning, avstand, anslag) – på telefon sto beskjeden tre steder samtidig,
     // så den går bare til loggen her, ikke i et eget varsel midt på skjermen
     // (kritikerløkka r1, Ingrid: tre ulike tider i banneret og loggen) – loggen sier det samme som banneret: når de trolig er framme (Forsvar.når)

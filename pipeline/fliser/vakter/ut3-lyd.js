@@ -14,21 +14,31 @@ module.exports = {
         if (var3d && typeof slå3d === 'function') { slå3d(false); await vent(300); }
         Lyd.start(); Lyd2d.velg('kart', 'lav'); Lyd2d.velg('meld', 'middels'); Lyd2d.nullstill(); await vent(100);
         const sisteNavn = () => Lyd2d.sjekk().siste[0];
+        // (fiksb) et nummer per kjøring i tekstene, så loggdemp.js ikke slår dem sammen med samme tekst fra en kjøring like før
+        const nr = Math.floor(Math.random() * 1e6);
         const lag = ENHETER.find(s => s.side === 'blå' && !s.ai && !s.karakter && s.navn);
         if (!lag) feil.push('ingen egne lag å prøve radioen med');
         else {
           // radio: et lag melder; ordre: «planlegger rute» (det ordre() skriver); sus: ingen radiokontakt
           logg(`${lag.navn}: ordren er mottatt (lydvakt).`); await vent(20);
           const a = sisteNavn(); if (!a || a.navn !== 'radio') feil.push('en melding fra et lag ga ikke radio: ' + JSON.stringify(a));
-          Lyd2d.nullstill(); logg(`${lag.navn}: planlegger rute …`); await vent(20);
-          const b = sisteNavn(); if (!b || b.navn !== 'ordre') feil.push('en ordre ga ikke ordrelyden: ' + JSON.stringify(b));
-          logg(`${lag.navn}: marsj 1,2 km, ca. 0,3 t.`); await vent(20);
+          // (28. nov, fiksb) ordren gis med selve ordre() – lyd2d lytter på kallet. Før skrev vakta «planlegger rute …» i loggen, men
+          // loggdemp.js holder den linja igjen når laget fikk en ordre for under 3 min siden (det skjer i full kontroll), og da kom ingen lyd.
+          // Laget settes tilbake etterpå (ruta, planleggingen, hvor langt det var kommet).
+          const lagFør = { x: lag.x, y: lag.y, sti: lag.sti, planlegger: lag.planlegger, timerIgjen: lag.timerIgjen, prog: lag.prog, seg: lag.seg, steg: lag.steg, kø: lag.kø, køSlutt: lag.køSlutt, køSiste: lag.køSiste };
+          // (svaret fra ordren – «marsj 0,1 km» – kan komme før vi ser etter, så ordrelyden letes etter blant lydene etter kallet)
+          Lyd2d.nullstill(); const topp = Lyd2d.sjekk().siste[0], po = ordre(lag, lag.x + 60, lag.y + 40, false); await vent(20);
+          const etter = (l => { const i = l.indexOf(topp); return i < 0 ? l : l.slice(0, i); })(Lyd2d.sjekk().siste), b = etter.find(x => x.navn === 'ordre') || etter[0];
+          if (!b || b.navn !== 'ordre') feil.push('en ordre ga ikke ordrelyden: ' + JSON.stringify(b));
+          logg(`${lag.navn}: marsj 1,2 km, ca. 0,3 t. (lydvakt ${nr})`); await vent(20);
           const c = sisteNavn(); if (!c || c.navn !== 'radio' || c.spilt !== false || c.grunn !== 'svar på ordren') feil.push('svaret på ordren skulle vært stille: ' + JSON.stringify(c));
-          Lyd2d.nullstill(); logg(`${lag.navn}: ingen radiokontakt – ordren når ikke fram (lydvakt).`); await vent(20);
+          try { await Promise.race([po, vent(8000)]); } catch (e) { /* ruta trengs ikke */ }
+          for (const [k, v] of Object.entries(lagFør)) { if (v === undefined) delete lag[k]; else lag[k] = v; } lag.siktSkitten = true;
+          Lyd2d.nullstill(); logg(`${lag.navn}: ingen radiokontakt – ordren når ikke fram (lydvakt ${nr}).`); await vent(20);
           const d = sisteNavn(); if (!d || d.navn !== 'stille') feil.push('ingen kontakt ga ikke sus: ' + JSON.stringify(d));
-          // samme lyd rett etter: holdes igjen
-          logg(`${lag.navn}: ingen radiokontakt – ordren når ikke fram (lydvakt).`); await vent(20);
-          const e = sisteNavn(); if (!e || e.spilt !== false) feil.push('samme lyd to ganger på rad ble ikke holdt igjen');
+          // samme lyd rett etter: holdes igjen (ingen ny lyd i det hele tatt – loggdemp.js holdt linja igjen – er også stille)
+          logg(`${lag.navn}: ingen radiokontakt – ordren når ikke fram (lydvakt ${nr}).`); await vent(20);
+          const e = sisteNavn(); if (e !== d && (!e || e.spilt !== false)) feil.push('samme lyd to ganger på rad ble ikke holdt igjen');
         }
         const n0 = Lyd2d.sjekk().teller.radio || 0; logg('Ravnsund har tatt et tettsted (lydvakt).'); await vent(20);
         if ((Lyd2d.sjekk().teller.radio || 0) !== n0) feil.push('en melding som ikke er fra dine lag ga radio');
