@@ -54,7 +54,7 @@
   function registrer() {
     if (!window.Kommando || registrer.ferdig) return; registrer.ferdig = true;
     LR.registrerKommandoer(Kommando, { tilstand: side => (side === 'blå' && leirNøkkel ? S : null), person: (side, rolle, del, id) => person(rolle, del, id), tid: nåTid,
-      endret: () => { lagre(); if (window.FolkSpill) FolkSpill.vis(); } });
+      endret: () => { lagre(); pakkKasse(); if (window.FolkSpill) FolkSpill.vis(); } });
     pakkKasse();
   }
   document.addEventListener('DOMContentLoaded', registrer); setTimeout(registrer, 0);
@@ -122,6 +122,9 @@
       if (v) { merk('diesel'); const r = komStille({ type: 'kjøpDiesel', liter: v.liter });
         if (r.ok) viktig(A, `${LR.tittel(A)} kjøpte ${v.liter} liter diesel – den rakk ${døgnTekst(v.dagerFør)}.`);
         else viktig(A, `${LR.tittel(A)} fikk ikke kjøpt diesel: ${r.feil}`); } }
+    // sengene: sover noen i telt og ingen brakke står i planen eller i køen, sier leirsjefen fra (høyst én gang i døgnet)
+    if (A.regler.senger === 'ja' && B.utenSeng > 0 && !sist('senger', LR.REGLER.døgn) && !(L.plan || []).some(a => a.type === 'brakke') && !B0.jobber(L).some(j => j.b && j.b.type === 'brakke')) {
+      merk('senger'); viktig(A, `${LR.tittel(A)}: ${B.utenSeng} sover i telt. Legg en brakke i planen (Leir → Plan), så bygger jeg den.`); }
     // planen
     if (!sist('bygg', 60) && (L.plan || []).length) {
       const plan = L.plan.map(a => { const T = B0.BYGG[a.type], q = T && B0.kostnad(a.type, T.linje ? B0.lengde(a.punkter, a.lukket) : 0); return { pid: a.pid, type: a.type, pris: q ? q.pris + B0.manglerPris(L, q.mat) : 0, mat: q ? q.mat : {} }; });
@@ -135,8 +138,12 @@
   }
 
   function formann(A, bid) {
-    const st = status(bid), F = Fo(); if (!st || !F || sist('formann:' + bid, 30)) return;
-    const J = window.JobberSpill ? JobberSpill.tilstand() : null, prio = o => (J && window.Jobber ? Jobber.prio(J, o) : 3);
+    const st = status(bid), F = Fo(), J = window.JobberSpill ? JobberSpill.tilstand() : null;
+    // skiftene på maskinjobben (gjelder alle maskinene – den siste formannen som endret, vinner)
+    if (J && window.Jobber) { const ny = LR.skiftValg(A.regler, Jobber.skift(J, 'maskin'));
+      if (ny) { const r = komStille({ type: 'jobbSkift', jobb: 'maskin', skift: ny }); if (r.ok) vanlig(A, `${LR.tittel(A)} satte maskinene på ${Jobber.SKIFTNAVN[ny]}.`); } }
+    if (!st || !F || sist('formann:' + bid, 30)) return;
+    const prio = o => (J && window.Jobber ? Jobber.prio(J, o) : 3);
     const folk = F.personer.filter(p => p.id !== undefined).map(p => ({ id: p.id, navn: p.navn, oppgave: p.oppgave, maskin: p.ferd ? p.ferd.maskin : 1, arbeidsfør: FR.arbeidsfør(p) && !p.skole, prio: prio(p.oppgave), låst: !!(J && J.auto && J.lås && J.lås[p.id]) }));
     const v = LR.formannValg(st, folk, A.regler, A.ledelse, rng()); if (!v) return;
     merk('formann:' + bid); const p = F.personer.find(q => q.id === v.person), navn = LB().BYGG[st.type] ? LB().BYGG[st.type].navn.toLowerCase() : 'maskinen';

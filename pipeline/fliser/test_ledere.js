@@ -70,6 +70,7 @@ ok(LR.feilSjanse(1.2) === 0 && LR.feilSjanse(1.45) === 0 && Math.abs(LR.feilSjan
   ok(LR.formannValg(st, [folk[0]], { folk: 'alltid' }, 1.3, fast(.9)).person === 1, '«for enhver pris»: også fra vakt');
   ok(!LR.formannValg(st, folk.slice(0, 3), { folk: 'fri' }, 1.3, fast(.9)), '«bare folk som har fri»');
   ok(!LR.formannValg({ grunn: 'tom' }, folk, { folk: 'vakt' }, 1.3, fast(.9)) && !LR.formannValg(null, folk, { folk: 'vakt' }, 1.3, fast(.9)), 'bare når maskinen venter på folk');
+  ok(LR.skiftValg({ skift: 'to' }, 'dag') === 'to' && !LR.skiftValg({ skift: 'to' }, 'to') && !LR.skiftValg({ skift: 'egen' }, 'dag'), 'formann: skiftene etter regelen');
   ok(LR.formannValg(st, folk.filter(p => p.oppgave !== 'fri'), { folk: 'vakt' }, .7, fast(.01)).person === 2, 'et dårlig valg: den som er dårligst ved maskinen');
 }
 

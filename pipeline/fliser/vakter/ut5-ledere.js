@@ -71,6 +71,9 @@ module.exports = {
         const på = F.personer.filter(p => p.oppgave === 'maskin').length; ut.data.maskin = [påFør, på];
         if (!(på === påFør + 1)) feil.push(`formannen flyttet ingen til saga (${påFør} -> ${på})`);
         if (F.personer.some(p => vakt.includes(p.id) && p.oppgave === 'maskin')) feil.push('formannen tok fra vakta');
+        // skiftregelen: maskinene døgnet rundt
+        if (window.JobberSpill && window.Jobber) { KOMMANDO({ type: 'lederRegel', nøkkel: 'formann:990001', regel: 'skift', verdi: 'døgn' }); LedereSpill.tilstand().sist = {}; LedereSpill.steg(true);
+          ut.data.skift = Jobber.skift(JobberSpill.tilstand(), 'maskin'); if (ut.data.skift !== 'døgn') feil.push('formannen satte ikke skiftene (' + ut.data.skift + ')'); }
         delete st[990001];
       } else feil.push('ProduksjonSpill mangler');
       // 5) FORHANDLEREN sier ja til et tilbud over grensen (byen stoler nok på oss; grensen 15 kr per innbygger)

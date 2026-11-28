@@ -62,6 +62,8 @@
     } },
     formann: { navn: 'Formann', flere: true, tekst: 'Én maskin: skift, operatører og bærere', regler: {
       folk: { navn: 'Folk', standard: 'vakt', valg: [['vakt', 'hold maskinen i gang, men vakta først'], ['alltid', 'hold maskinen i gang for enhver pris'], ['fri', 'bare folk som har fri']] },
+      // skiftene på jobben «Maskiner» (jobbtavla, spill/jobber.js); «egen» = det du har satt
+      skift: { navn: 'Skift', standard: 'egen', valg: [['egen', 'skiftene du har satt'], ['dag', 'bare dagskift'], ['to', 'to skift'], ['døgn', 'døgnet rundt']] },
     } },
     forhandler: { navn: 'Forhandler', flere: false, tekst: 'Byene og firmaene: tilbud og motbud', regler: {
       by: { navn: 'Byene', standard: 20, valg: [[0, 'forhandler ikke med byene'], [15, 'ja over 15 kr per innbygger'], [20, 'ja over 20 kr per innbygger'], [25, 'ja over 25 kr per innbygger'], [30, 'ja over 30 kr per innbygger']] },
@@ -195,6 +197,8 @@
     else K.sort((a, b) => (a.maskin || 1) - (b.maskin || 1));
     return { person: K[0].id, fra: K[0].oppgave, dårlig };
   }
+  // FORMANNEN, SKIFTENE: hvilket skift maskinjobben skal ha (null = la det være). nå = skiftet jobben har.
+  const skiftValg = (regler, nå) => (regler.skift && regler.skift !== 'egen' && regler.skift !== nå ? regler.skift : null);
   // FORHANDLEREN, BYENE. by: { folk, kan (trinnet som kan forhandles nå, eller null) , grunnpris }. Gir tilbudet eller null.
   function byTilbud(by, regler, l) {
     const grense = +regler.by || 0; if (!(grense > 0) || !by || !by.kan) return null;
@@ -267,6 +271,6 @@
 
   const api = { REGLER, ROLLER, RO, VERN, ledelse, dyk, feilSjanse, lønnFaktor, lederLønn, dyktighetOrd, rng, ny, fraJSON, nøkkel, nøkkelRolle, renRegler, standardRegler,
     regelTekst, ref, iArbeid, nesteMorgen, lederFor, utnevn, av, settRegel, notér, tittel, fornavn, des, matValg, dieselValg, byggValg, formannValg, byTilbud, svarMotbud,
-    firmaTyper, troppValg, kassaValg, utbytteLov, lokkBud, verdi, registrerKommandoer };
+    firmaTyper, skiftValg, troppValg, kassaValg, utbytteLov, lokkBud, verdi, registrerKommandoer };
   if (NODE) module.exports = api; else rot.Ledere = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
