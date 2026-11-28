@@ -30,7 +30,7 @@
 #byggesett button{ background:#2a2318; border:1px solid var(--rule); color:var(--ink); min-height:36px; padding:3px 10px; cursor:pointer; font:inherit; font-size:14px; }
 #byggesett button.på{ border-color:var(--hover); background:#4a3c22; color:#fff3d6; }
 #byggesett button:disabled{ opacity:.45; cursor:default; }
-#byggesett .tekst{ font-size:13.5px; margin-top:4px; line-height:1.35; } #byggesett small{ color:var(--ink-dim); display:block; font-size:12.5px; }
+#byggesett .tekst{ font-size:13.5px; margin-top:4px; line-height:1.35; } #byggesett small{ color:var(--ink-dim); display:block; font-size:12.5px; } #byggesett small.advarsel{ color:#e8a35a; }
 #byggesett .faner button{ flex:1 1 auto; }
 body.kort #byggesett{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padding:4px 6px 5px; width:min(620px,calc(100vw - 120px)); max-height:46vh; overflow-y:auto; }
 body.kort.smal #byggesett{ left:calc(6px + env(safe-area-inset-left,0px)); transform:none; width:calc(100vw - 62px); }
@@ -43,7 +43,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   const FANER = [['gulv', 'Gulv'], ['vegg', 'Vegg'], ['tak', 'Tak'], ['forsvar', 'Forsvar'], ['hus', 'Hus'], ['riv', 'Riv']];
   const STOFF = [['tre', 'Tre'], ['betong', 'Betong'], ['stein', 'Murstein']], VARIANT = [['hel', 'Hel'], ['dør', 'Dør'], ['vindu', 'Vindu'], ['port', 'Port']];
   const V = { åpen: false, fane: 'vegg', stoff: 'tre', variant: 'hel', gulv: 'bs_fundament', tak: 'bs_tak_sal', forsvar: 'bs_palisade', hus: 'hytte', rot: 0, nivå: 'auto' };
-  let A = null, B = null, forslag = [], kart = null, teller = 0, tekst = '', ekstra = '';
+  let A = null, B = null, forslag = [], kart = null, teller = 0, tekst = '', ekstra = '', advarsel = '';
   function typeNå() {
     if (V.fane === 'vegg') return `bs_vegg_${V.stoff}${V.variant === 'hel' ? '' : '_' + V.variant}`;
     return V.fane === 'gulv' ? V.gulv : V.fane === 'tak' ? V.tak : V.fane === 'forsvar' ? V.forsvar : null;
@@ -58,7 +58,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     if (V.fane === 'tak') linje.append(rad(valg('tak', 'bs_tak_sal', 'Saltak'), valg('tak', 'bs_tak_flatt', 'Flatt tak')));
     if (V.fane === 'forsvar') linje.append(rad(...['bs_palisade', 'bs_mur', 'bs_voll', 'bs_piggtråd'].map(t => valg('forsvar', t, D[t].kort))));
     if (V.fane === 'hus') linje.append(rad(...Object.entries(BS.HUS).map(([k, M]) => valg('hus', k, M.navn))));
-    linje.append(el('div', { klasse: 'tekst' }, tekst || hjelp()), ekstra ? el('small', {}, ekstra) : '');
+    linje.append(el('div', { klasse: 'tekst' }, tekst || hjelp()), advarsel ? el('small', { klasse: 'advarsel' }, advarsel) : '', ekstra ? el('small', {}, ekstra) : '');
     const ok = forslag.filter(q => !q.feil), mangler = matMangler(), knp = [];
     if (V.fane === 'tak' && V.tak === 'bs_tak_sal' || V.fane === 'hus') knp.push(knapp(V.fane === 'hus' ? '⟳ Snu' : `Møne: ${['auto', 'langs x', 'langs y'][V.rot]}`, () => { V.rot = (V.rot + 1) % (V.fane === 'hus' ? 4 : 3); oppdater(); }));
     if (V.fane === 'vegg' || V.fane === 'gulv') knp.push(knapp(`Etasje: ${V.nivå === 'auto' ? 'auto' : V.nivå + 1}`, () => { V.nivå = V.nivå === 'auto' ? 0 : V.nivå === 0 ? 1 : 'auto'; oppdater(); }, { title: 'Auto: delen legger seg i neste ledige etasje' }));
@@ -120,7 +120,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   const somBygg = (o, d) => ({ type: d.type, ...BS.midt(o, d) });
   // Regner ut hva som legges (eller rives) for trykkene A og B, og sjekker kartet
   async function oppdater() {
-    const nr = ++teller, o = opphav(), l = L(); tekst = ''; ekstra = '';
+    const nr = ++teller, o = opphav(), l = L(); tekst = ''; ekstra = ''; advarsel = '';
     if (!o || !l || !A) { forslag = []; visLinje(); skisse3d(); skitten = true; return; }
     const alle = deler();
     if (V.fane === 'riv') forslag = rivValg(alle, o).map(d => ({ d }));
@@ -150,8 +150,27 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
       // utpost: byggelaget må reise dit først (Leir.reise, brukeren 12. nov) – si det før du bekrefter
       const sted = BS.midt(o, ok[0].d), rs = LB.reise ? LB.reise(l, sted.x, sted.y) : null;
       const m = matMangler(); ekstra = [rs && rs.full > 0 ? LB.reiseTekst(rs) : null, matTekst(s.mat) ? `Materialer: ${matTekst(s.mat)}` + (m ? ` – mangler for ${LB.kroner(m)}` : '') : 'Ingen materialer', feil.length ? `${feil.length} får ikke plass (rødt): ${feil[0].feil}` : null, B ? null : 'Trykk et punkt til for en rad.'].filter(Boolean).join(' · '); }
+    // F1 (veien, spill/vei.js): et rom som blir lukket uten dør, eller som ingen vei går inn til, sies fra om (som de andre grunnene)
+    if (V.fane !== 'riv' && ok.length && window.Vei) advarsel = veiTekst(alle, ok, o, l) || '';
     visLinje(); skisse3d(); skitten = true;
   }
+  // F1: rommene som ikke nås (Vei.romUtenVei) før og etter forslaget; de nye gir teksten «Rommet på 23 m² har ingen dør …».
+  // Alle delene regnes som ferdige (det er planen som sjekkes). Kartet for delene som står, huskes til de endres.
+  let veiFør = null;
+  function veiRom(deler, o, l) { const S = spill(), st = S && S.leir ? [S.leir.x, S.leir.y] : [o.ox, o.oy];
+    const K = Vei.lag({ deler: deler.map(d => ({ ...d, ferdig: true })), leir: l, opphav: o, start: st, prøve: true });
+    return Vei.romUtenVei(K, { minAreal: 2 }); }
+  function veiTekst(alle, ok, o, l) {
+    try { const nøkkel = alle.map(d => d.type + d.i + ',' + d.j + d.a + d.n).join('|');
+      if (!veiFør || veiFør.nøkkel !== nøkkel) veiFør = { nøkkel, rom: veiRom(alle, o, l) };
+      const bytt = new Set(ok.filter(q => q.bytt).map(q => q.bytt)), nye = [...alle.filter(d => !bytt.has(d.id)), ...ok.map((q, k) => ({ ...q.d, id: 'ny' + k }))];
+      const før = veiFør.rom.map(r => r.e + ':' + Math.round(r.x) + ',' + Math.round(r.y) + ':' + r.ruter), R = veiRom(nye, o, l).filter(r => !før.includes(r.e + ':' + Math.round(r.x) + ',' + Math.round(r.y) + ':' + r.ruter));
+      if (!R.length) return null; const r = R[0], navn = `rommet på ${Math.round(r.areal)} m²${r.e > 1 ? ' i ' + r.e + '. etasje' : ''}`, fler = R.length > 1 ? ` (og ${R.length - 1} rom til)` : '';
+      if (r.grunn === 'rommet har ingen dør') return `R${navn.slice(1)} har ingen dør – ingen kommer inn (sett inn en dør)${fler}.`;
+      if (r.grunn === 'døra er låst') return `Døra til ${navn} er låst${fler}.`;
+      return `Ingen vei inn til ${navn}${fler}.`;
+    } catch (e) { return null; } }
+  window.ByggesettVei = { tekst: () => advarsel, sjekk: veiTekst };
   // Delene som rives: den øverste nær trykket, eller alt i rektangelet mellom to trykk
   function rivValg(alle, o) {
     if (!B) { let best = null, bd = 1.6;
