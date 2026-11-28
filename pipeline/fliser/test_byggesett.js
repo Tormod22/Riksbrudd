@@ -41,6 +41,12 @@ ok(!BS.forslag(D, 'bs_tak_blikk_1', BS.rad(O, 'bs_tak_blikk_1', P(.1, .1), P(8.3
 legg(D, BS.forslag(D, 'bs_søyle_tre_1', BS.rad(O, 'bs_søyle_tre_1', P(4.8, 0), P(4.8, 8.4))));
 ok(D.filter(d => BS.kat(d) === 'søyle').length === 3, 'en søylerad (tre søyler)');
 r = BS.forslag(D, 'bs_tak_flatt_1', BS.rad(O, 'bs_tak_flatt_1', P(.1, .1), P(8.3, 8.3))); ok(r.every(q => !q.feil), 'med søylerad holder tretaket');
+{ const E = legg(D.slice(), r), søyle = E.find(d => BS.kat(d) === 'søyle' && d.j === 4), rr = BS.rasVedRiving(E, new Set([søyle.id]));
+  ok(rr && rr.m2 > 0, `river du søylen midt i, raser taket (ca. ${rr && rr.m2} m²)`);
+  ok(!BS.rasVedRiving(E, new Set([E.find(d => BS.kat(d) === 'søyle' && d.j === 0).id])), 'søylen i veggen kan rives uten ras'); }
+// også uten gulv (tak rett på veggene) sjekkes spennet
+{ let E = []; legg(E, BS.forslag(E, 'bs_vegg_tre_1', BS.rad(O, 'bs_vegg_tre_1', P(40, 0), P(48.4, 8.4))));
+  ok(BS.forslag(E, 'bs_tak_sal_1', BS.rad(O, 'bs_tak_sal_1', P(40.1, .1), P(48.3, 8.3))).every(q => /Spennet/.test(q.feil || '')), 'saltak over 8,4 m uten gulv avvises også'); }
 // bjelke: hviler på veggene i begge ender
 const bj = BS.forslag(D, 'bs_bjelke_tre_1', BS.rad(O, 'bs_bjelke_tre_1', P(0, 3.6), P(8.4, 3.6))); ok(bj.length === 7 && bj.every(q => !q.feil), 'en bjelke tvers over rommet (7 stykker) hviler på veggene');
 ok(/hvile/.test(BS.plassering([], 'bs_bjelke_tre_1', { a: 'x', i: 50, j: 50 }).feil || ''), 'bjelke i lufta avvises');

@@ -173,7 +173,9 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
         if (d > Math.max(LB.BRATT, .35 * diag)) for (const q of hel) q.feil = `For bratt for huset (${Math.round(d)} m høydeforskjell under det).`; }
     }
     const ok = forslag.filter(q => !q.feil), feil = forslag.filter(q => q.feil), s = sum();
-    if (V.fane === 'riv') tekst = ok.length ? `Riv ${ok.length} ${ok.length === 1 ? D[ok[0].d.type].navn.toLowerCase() : 'deler'}.` : 'Ingen deler her.';
+    if (V.fane === 'riv') { tekst = ok.length ? `Riv ${ok.length} ${ok.length === 1 ? D[ok[0].d.type].navn.toLowerCase() : 'deler'}.` : 'Ingen deler her.';
+      // (B4) river du noe som bærer, sier byggesettet fra om det som raser (samme regel som husene i kartet)
+      try { const r = ok.length ? BS.rasVedRiving(alle, new Set(ok.map(q => q.d.id))) : null; if (r) advarsel = `Uten ${ok.length === 1 ? 'denne delen' : 'disse delene'} raser dekket eller taket over (ca. ${r.m2} m²) – rives sammen med det.`; } catch (e) { /* uten Bygning */ } }
     else if (!ok.length) tekst = feil.length ? feil[0].feil : 'Ingenting å bygge her.';
     else { const n = ok.length, navn = V.fane === 'hus' ? malNå().navn : D[ok[0].d.type].navn, erTak = D[ok[0].d.type].kat === 'tak' || D[ok[0].d.type].kat === 'gulv' && ok[0].d.n > 0;
       // etasjen: vegger og gulv står i etasje n + 1, taket ligger oppå etasje n
@@ -243,9 +245,12 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     ferdigEndret(); if (V.fane === 'hus' || !stopp) { A = null; B = null; forslag = []; } oppdater(); return n;
   }
   function riv() {
-    const l = L(); let n = 0, penger = 0;
+    const l = L(); let n = 0, penger = 0, rast = 0;
+    // det som ville rast (BS.rasVedRiving), rives med – ingen deler blir stående i lufta
+    let ras = null; try { ras = BS.rasVedRiving(deler(), new Set(forslag.map(q => q.d.id))); } catch (e) { ras = null; }
     for (const q of forslag) { const r = kom({ type: 'riv', bygg: q.d.id }); if (r.feil) continue; penger += r.penger; n++; }
-    if (n) logg(`Byggesettet: ${n} ${n === 1 ? 'del' : 'deler'} revet, ${LB.kroner(penger)} tilbake.`);
+    if (ras) for (const id of ras.ider) { const r = kom({ type: 'riv', bygg: id }); if (r.feil) continue; penger += r.penger; rast++; }
+    if (n) logg(`Byggesettet: ${n} ${n === 1 ? 'del' : 'deler'} revet, ${LB.kroner(penger)} tilbake.` + (rast ? ` ${rast} ${rast === 1 ? 'del' : 'deler'} over raste og ble tatt ned.` : ''));
     ferdigEndret(); A = null; B = null; forslag = []; oppdater(); return n;
   }
   function ferdigEndret() { LeirSpill.lagre(); if (LeirSpill.oppdater3d) LeirSpill.oppdater3d(true); lag3d(); LeirSpill.visMeny && LeirSpill.visMeny(); skitten = true; }

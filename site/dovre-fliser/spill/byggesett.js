@@ -307,18 +307,36 @@
   }
 
   // ---------- spennet (samme regel som husene i kartet: Bygning.ras) ----------
+  // delene nær delene i ider (støtter lenger unna enn halve det største spennet + to ruter teller ikke) – raskere i store leirer
+  function nærDeler(alle, ider, ekstra = 0) {
+    const ny = alle.filter(d => ider.has(d.id)); if (!ny.length) return null; const N = Math.ceil(STOFF.stål.spenn / 2 / U) + 2 + ekstra;
+    let a0 = Infinity, b0 = Infinity, a1 = -Infinity, b1 = -Infinity; for (const d of ny) for (const [i, j] of RUTE(d) || kat(d) === 'trapp' ? ruter(d) : [[d.i, d.j]]) { a0 = Math.min(a0, i); b0 = Math.min(b0, j); a1 = Math.max(a1, i + 1); b1 = Math.max(b1, j + 1); }
+    return alle.filter(d => { if (ider.has(d.id)) return true; const P = KANT(d) ? kanter(d).map(k => [k.i, k.j]) : kat(d) === 'søyle' ? [[d.i, d.j]] : ruter(d); return P.some(([i, j]) => i >= a0 - N && i <= a1 + N && j >= b0 - N && j <= b1 + N); });
+  }
   let BYG = null;
   const bygning = () => BYG || (BYG = rot.Bygning || (typeof require === 'function' ? (() => { try { return require('./bygning.js'); } catch (e) { return null; } })() : null));
   // alle = delene slik de blir (de nye med id i nye). Gir null (holder) eller { feil, spenn, stoff, maks, id }.
   function spenn(alle, nye) {
     const B = bygning(); if (!B || !B.fraByggesett || !B.ras || !nye || !nye.size) return null;
-    const m = B.fraByggesett(alle.map(d => ({ ...d, ferdig: true })), { ox: 0, oy: 0 }); if (!m) return null;
+    // bare delene nær de nye (støtter lenger unna enn halve det største spennet + en rute teller ikke) – raskere i store leirer
+    const nær = nærDeler(alle, nye); if (!nær) return null;
+    const m = B.fraByggesett(nær.map(d => ({ ...d, ferdig: true })), { ox: 0, oy: 0, utenGulv: true }); if (!m) return null;
     const R = B.ras(m); let verst = null;
     for (const r of R) { if (r.del !== 'dekke' && r.del !== 'tak') continue; const et = r.del === 'dekke' ? m.etasjer.find(e => e.n === r.e) : null, f = r.del === 'dekke' ? et && et.dekke.felt[r.id] : m.tak.felt[r.id];
       if (!f || !nye.has(f.del)) continue; if (!verst || (f.bredde || 0) > (verst.bredde || 0)) verst = f; }
     if (!verst) return null;
     const st = STOFF[verst.stoff] || STOFF.tre, b = Math.round((verst.bredde || 0) * 10) / 10, mål = String(b).replace('.', ',');
     return { feil: `Spennet er ${mål} m – for langt for ${st.navn.toLowerCase()} (høyst ${st.spenn} m). Sett inn en søylerad eller en bjelke.`, spenn: b, stoff: verst.stoff, maks: st.spenn, id: verst.del };
+  }
+
+  // Hva raser hvis delene i fjern rives? Gir { ider (dekke/tak som raser), m2 } eller null. Samme regel (Bygning.ras), før og etter.
+  function rasVedRiving(alle, fjern) {
+    const B = bygning(); if (!B || !B.fraByggesett || !fjern || !fjern.size) return null; alle = nærDeler(norm(alle), fjern, 6); if (!alle) return null;
+    const rasIder = liste => { const m = B.fraByggesett(liste.map(d => ({ ...d, ferdig: true })), { ox: 0, oy: 0, utenGulv: true }); if (!m) return new Map(); const ut = new Map();
+      for (const r of B.ras(m)) { const f = r.del === 'dekke' ? (m.etasjer.find(e => e.n === r.e) || { dekke: { felt: [] } }).dekke.felt[r.id] : r.del === 'tak' ? m.tak.felt[r.id] : null; if (f && f.del !== undefined) ut.set(f.del, (ut.get(f.del) || 0) + U * U); }
+      return ut; };
+    const før = rasIder(alle), etter = rasIder(alle.filter(d => !fjern.has(d.id))), ider = [...etter.keys()].filter(id => !før.has(id) && !fjern.has(id));
+    if (!ider.length) return null; return { ider, m2: Math.round(ider.reduce((s, id) => s + etter.get(id), 0)) };
   }
 
   // ---------- ferdige hus (maler) ----------
@@ -469,7 +487,7 @@
   if (Leir && Leir.lagerplass && !Leir.lagerplass.ekstra) Leir.lagerplass.ekstra = L => (L && L.romBruk && Object.keys(L.romBruk).length ? romSum(rom(fraLeir(L, Leir), L.romBruk)).lager : 0);
 
   const api = { U, G, H, ETASJER, GROV, SOKKEL, DELER, GAMLE, NYE, STOFF, HUS, erDel, registrer, størrelse, typeFor, celle, ruter, kanter, biter, midt, kantEnder, kantVed, hjørneVed, rad,
-    nøkkel, indeks, norm, punkter, støttet, plassering, forslag, spenn, lagHus, husDeler, husForslag, dreiDel, tilMal, malGyldig, rom, ROMBRUK, ROMTYPER, romType, romSum, høyder, fraBygg, fraLeir, plassFor,
+    nøkkel, indeks, norm, punkter, støttet, plassering, forslag, spenn, rasVedRiving, lagHus, husDeler, husForslag, dreiDel, tilMal, malGyldig, rom, ROMBRUK, ROMTYPER, romType, romSum, høyder, fraBygg, fraLeir, plassFor,
     KANT, RUTE, kat };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.ByggesettRegler = api;

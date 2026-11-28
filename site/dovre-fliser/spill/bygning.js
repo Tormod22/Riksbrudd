@@ -777,6 +777,8 @@
     // omrisset: rammen rundt alle gulvrutene i 1. etasje (bygg av flere hus deles ikke opp)
     let i0 = Infinity, j0 = Infinity, i1 = -Infinity, j1 = -Infinity, n0 = 0;
     for (const d of liste) if (kat(d) === 'gulv' && d.n === 0) for (const [i, j] of BS.ruter(d)) { n0++; i0 = Math.min(i0, i); j0 = Math.min(j0, j); i1 = Math.max(i1, i + 1); j1 = Math.max(j1, j + 1); }
+    // (o.utenGulv: byggesettets spennsjekk – tak på vegger uten gulv regnes også; rammen er da alle rutene)
+    if (!n0 && o.utenGulv) for (const d of liste) if (kat(d) === 'gulv' || kat(d) === 'tak') for (const [i, j] of BS.ruter(d)) { n0++; i0 = Math.min(i0, i); j0 = Math.min(j0, j); i1 = Math.max(i1, i + 1); j1 = Math.max(j1, j + 1); }
     if (!n0) return null;
     const X = i => r2(ox + i * G), Y = j => r2(oy + j * G), P = [[X(i0), Y(j0)], [X(i1), Y(j0)], [X(i1), Y(j1)], [X(i0), Y(j1)]];
     const ruteP = (i, j) => [[X(i), Y(j)], [X(i + 1), Y(j)], [X(i + 1), Y(j + 1)], [X(i), Y(j + 1)]];
