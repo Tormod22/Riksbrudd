@@ -14,7 +14,9 @@
   const årstid = () => (window.VAER && VAER.årstid) || 'sommer';
   // senger i egenbygde rom (spill/byggesett.js, del 2), hvis de finnes – men ikke når Leir.plasser allerede har dem med
   // (byggesett.js legger rommene inn i Leir.plasser; før ble de telt to ganger)
-  function ekstraSenger() { if (LB.plasser && LB.plasser.byggesett) return 0; try { const r = window.Byggesett && Byggesett.rom ? Byggesett.rom() : null; return Array.isArray(r) ? r.reduce((s, q) => s + (+q.senger || 0), 0) : 0; } catch (e) { return 0; } }
+  // (F5) sengene i utpostene som er i bruk (spill/utpost-visning.js) telles med leirens
+  const utpostSenger = () => { try { return window.Utpost && Utpost.senger ? Utpost.senger() : 0; } catch (e) { return 0; } };
+  function ekstraSenger() { if (LB.plasser && LB.plasser.byggesett) return utpostSenger(); try { const r = window.Byggesett && Byggesett.rom ? Byggesett.rom() : null; return (Array.isArray(r) ? r.reduce((s, q) => s + (+q.senger || 0), 0) : 0) + utpostSenger(); } catch (e) { return utpostSenger(); } }
   // egenbygde rom brukt som kjøkken eller verksted (spill/byggesett-visning.js: Byggesett.romBruk)
   function romBruk() { try { return window.Byggesett && Byggesett.romBruk ? Byggesett.romBruk() : null; } catch (e) { return null; } }
   const grunn = () => { const rb = romBruk(); return { årstid: årstid(), mangler: window.LeirSpill ? LeirSpill.siste().mangler : new Set(), ekstraSenger: ekstraSenger(), moralTillegg: (window.OverlevSpill ? OverlevSpill.moralTillegg() : 0) + (window.JobberSpill ? JobberSpill.moralTillegg() : 0),
@@ -56,6 +58,10 @@
 #folkmeny .opp button{ min-height:38px; padding:0; font-size:19px; }
 #folkmeny .person{ font-size:13px; padding:3px 0; border-bottom:1px solid #2e281e; line-height:1.3; } #folkmeny .person small{ color:var(--ink-dim); }
 #folkmeny .person.syk{ color:#e8a46a; } #folkmeny .person img.ansikt{ float:left; width:30px; height:37px; margin:1px 7px 2px 0; border:1px solid #3a3226; background:#2a2318; border-radius:3px; cursor:pointer; } #folkmeny .person::after{ content:''; display:block; clear:both; } #folkmeny .person select{ background:#2a2318; color:var(--ink); border:1px solid var(--rule); font:inherit; font-size:13px; min-height:30px; margin:0 4px; }
+#folkmeny .gruppe{ display:block; width:100%; text-align:left; margin-top:4px; background:#221c13; font-weight:600; }
+#folkmeny .flere{ margin:4px 0; font-size:13px; } #folkmeny .sokrad input{ flex:1; min-width:140px; min-height:36px; background:#2a2318; color:var(--ink); border:1px solid var(--rule); font:inherit; padding:2px 8px; }
+#folkmeny .sokrad select{ background:#2a2318; color:var(--ink); border:1px solid var(--rule); font:inherit; min-height:36px; }
+#folkmeny button.av{ opacity:.8; }
 body.kort #folkmeny{ top:calc(var(--topp,44px) + 4px); bottom:calc(6px + env(safe-area-inset-bottom,0px)); left:calc(8px + env(safe-area-inset-left,0px)); padding:8px 10px 10px; }
 body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-height:34px; } body.kort #folkmeny .opp{ grid-template-columns:1fr 36px 24px 36px; }`;
   document.head.appendChild(css);
@@ -161,23 +167,67 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     // (G5, ut5-ledere) LEDERE: leirsjef, formenn, forhandler, troppsjefer og kasserer (spill/ledere-visning.js)
     if (window.LedereSpill) panel.append(...LedereSpill.del({ el, knapp }));
     // folkene
-    panel.append(el('div', { klasse: 'rad' }, knapp(visFolk ? `Skjul folkene` : `Vis folkene (${n})`, () => { visFolk = !visFolk; vis(); }, { id: 'visfolk' })));
-    if (visFolk) for (const p of F.personer) {
-      const best = Object.entries(p.ferd).sort((a, b) => b[1] - a[1])[0];
-      // DELEGERE (brukeren 16. nov): velg oppgaven for hver enkelt; ★ står ved det personen er best på
-      const velg = el('select', { 'aria-label': `Oppgave for ${p.navn}`, 'data-id': String(p.id) }); for (const o of FR.OPPGAVER) { const v = el('option', { value: o }, FR.OPPGAVE[o].navn + (o === best[0] ? ' ★' : '')); if (o === p.oppgave) v.setAttribute('selected', ''); velg.appendChild(v); }
-      velg.onchange = () => { if (!(window.JobberSpill && JobberSpill.velg(p, velg.value))) KOMMANDO({ type: 'folk', person: p.id, oppgave: velg.value }); endret(); };
-      // trykk på navnet åpner personkortet (ansikt, historie, ønske – spill/samfunn-visning.js)
-      const navn = el('span', { klasse: 'pnavn', 'data-person': String(p.id), style: 'cursor:pointer;text-decoration:underline dotted' }, `${p.spes ? '★ ' : ''}${p.navn}, ${p.alder} `);
-      navn.onclick = () => { if (window.SamfunnSpill) SamfunnSpill.visPerson(p.id); };
-      const merke = (p.syk ? ' · Grålungen' : '') + (p.karantene ? ' · karantene' : '') + (p.trener ? ' · i opplæring' : '') + (p.borte ? ' · borte' : '');
-      const bilde = ansikt(p); if (bilde) bilde.onclick = navn.onclick;
-      panel.append(el('div', { klasse: 'person' + (p.helse < FR.R.arbeidsfør || p.syk ? ' syk' : '') }, ...(bilde ? [bilde] : []), navn, velg,
-        el('small', {}, ` · ${p.yrke}, best på ${FR.OPPGAVE[best[0]].navn.toLowerCase()} · helse ${Math.round(p.helse * 100)} %${p.seng ? '' : ' · telt'}${merke}${window.RekrutteringSpill ? RekrutteringSpill.personDel(p) : ''}`,
-          ...(window.JobberSpill ? JobberSpill.personDel(p, { el, knapp }) : []))));
-    }
+    // (F5) TRAFIKKART: av/på her (bare visning) med en linje om hvor folk har gått mest siste døgn
+    const TS = window.TrafikkSpill;
+    panel.append(el('div', { klasse: 'rad' }, knapp(visFolk ? `Skjul folkene` : `Vis folkene (${n})`, () => { visFolk = !visFolk; vis(); }, { id: 'visfolk' }),
+      TS ? knapp(TS.på() ? 'Trafikkart: på' : 'Trafikkart: av', () => { TS.vis(); vis(); }, { id: 'trafikkknapp', klasse: TS.på() ? '' : 'av', title: 'Varmekart over hvor folk har gått mest siste døgn' }) : ''));
+    if (TS && TS.på()) panel.append(el('div', { klasse: 'status', id: 'trafikktekst' }, TS.tekst()));
+    if (visFolk) personene(panel, n);
     // SØKERE OG OPPLÆRING (28. nov, spill/rekruttering-visning.js): nederst, så oppgavene står høyt på telefonen
     if (window.RekrutteringSpill) panel.append(el('div', { klasse: 'søkere' }, ...RekrutteringSpill.del({ el, knapp })));
+  }
+  // ---------- (F5) PERSONENE – også for 200 folk ----------
+  // Under GRUPPE_FRA personer: lista som før. Ellers: søk og filter øverst, og folkene i grupper per jobb og per utpost som foldes
+  // ut med et trykk (bare de åpne gruppene bygges – 200 rader med portretter og nedtrekkslister hvert sekund ble tregt). Claudes forslag.
+  const GRUPPE_FRA = 20, PER_GRUPPE = 40;
+  let søk = '', filter = 'alle', åpneGrupper = new Set(), flere = {};
+  const FILTER = { alle: 'Alle', syke: 'Syke og skadde', fast: 'Står fast', ordre: 'Har en ordre', utpost: 'I en utpost', fri: 'Har fri' };
+  const iUtpost = p => (window.Utpost && Utpost.hvor ? Utpost.hvor(p.id) : null);
+  function passer(p) {
+    if (søk && !p.navn.toLowerCase().includes(søk) && !(p.yrke || '').toLowerCase().includes(søk)) return false;
+    const G = window.FolkgangSpill && FolkgangSpill.tilstand ? FolkgangSpill.tilstand() : null, s = G && G.pers[p.id];
+    if (filter === 'syke') return p.helse < FR.R.arbeidsfør || !!p.syk; if (filter === 'fast') return !!(s && s.fast); if (filter === 'ordre') return !!(G && G.ordre && G.ordre[p.id]);
+    if (filter === 'utpost') return !!iUtpost(p); if (filter === 'fri') return p.oppgave === 'fri'; return true;
+  }
+  function personene(panel, n) {
+    if (n < GRUPPE_FRA) { for (const p of F.personer) panel.append(personRad(p)); return; }
+    const sf = el('input', { type: 'search', id: 'folksok', placeholder: 'Søk etter navn eller yrke', 'aria-label': 'Søk i folkene', value: søk, autocomplete: 'off' });
+    sf.oninput = () => { søk = sf.value.trim().toLowerCase(); vis(); const ny = document.getElementById('folksok'); if (ny) { ny.focus(); try { ny.setSelectionRange(ny.value.length, ny.value.length); } catch (e) { /* */ } } };
+    const fv = el('select', { id: 'folkfilter', 'aria-label': 'Vis bare' }); for (const [k, t] of Object.entries(FILTER)) { const o = el('option', { value: k }, t); if (k === filter) o.setAttribute('selected', ''); fv.appendChild(o); }
+    fv.onchange = () => { filter = fv.value; vis(); };
+    panel.append(el('div', { klasse: 'rad sokrad' }, sf, fv));
+    // søk eller filter: én flat liste (høyst 60)
+    if (søk || filter !== 'alle') { const L = F.personer.filter(passer); panel.append(el('div', { klasse: 'status' }, `${L.length} av ${n}`));
+      for (const p of L.slice(0, 60)) panel.append(personRad(p)); if (L.length > 60) panel.append(el('div', { klasse: 'status' }, `… og ${L.length - 60} til – søk smalere.`)); return; }
+    // gruppene: utpostene først, så jobbene i leiren
+    const grupper = [];
+    for (const U of (window.Utpost && Utpost.liste ? Utpost.liste() : [])) grupper.push({ k: 'u' + U.id, navn: 'Utpost: ' + U.navn, ps: F.personer.filter(p => U.folk.includes(p.id)) });
+    for (const o of FR.OPPGAVER) grupper.push({ k: o, navn: FR.OPPGAVE[o].navn, ps: F.personer.filter(p => p.oppgave === o && !iUtpost(p)) });
+    for (const g of grupper) { if (!g.ps.length) continue; const åpen = åpneGrupper.has(g.k), syke = g.ps.filter(p => p.helse < FR.R.arbeidsfør || p.syk).length;
+      const hode = knapp(`${åpen ? '▾' : '▸'} ${g.navn} (${g.ps.length})${syke ? ` · ${syke} syke` : ''}`, () => { if (åpen) åpneGrupper.delete(g.k); else åpneGrupper.add(g.k); vis(); }, { klasse: 'gruppe', 'data-gruppe': g.k, 'aria-expanded': åpen ? 'true' : 'false' });
+      panel.append(hode); if (!åpen) continue; const vis1 = flere[g.k] || PER_GRUPPE;
+      for (const p of g.ps.slice(0, vis1)) panel.append(personRad(p));
+      if (g.ps.length > vis1) panel.append(knapp(`Vis ${Math.min(PER_GRUPPE, g.ps.length - vis1)} til`, () => { flere[g.k] = vis1 + PER_GRUPPE; vis(); }, { klasse: 'flere' })); }
+  }
+  // én person: navn, oppgave (og utpost når det finnes utposter), ferdighet, helse og det jobbtavla/rekrutteringen legger til
+  function personRad(p) {
+    const best = Object.entries(p.ferd).sort((a, b) => b[1] - a[1])[0];
+    // DELEGERE (brukeren 16. nov): velg oppgaven for hver enkelt; ★ står ved det personen er best på
+    const velg = el('select', { 'aria-label': `Oppgave for ${p.navn}`, 'data-id': String(p.id) }); for (const o of FR.OPPGAVER) { const v = el('option', { value: o }, FR.OPPGAVE[o].navn + (o === best[0] ? ' ★' : '')); if (o === p.oppgave) v.setAttribute('selected', ''); velg.appendChild(v); }
+    velg.onchange = () => { if (!(window.JobberSpill && JobberSpill.velg(p, velg.value))) KOMMANDO({ type: 'folk', person: p.id, oppgave: velg.value }); endret(); };
+    // (F5) utposten personen hører til (bare når det finnes utposter)
+    const UL = window.Utpost && Utpost.liste ? Utpost.liste() : [], hos = iUtpost(p); let ut = null;
+    if (UL.length) { ut = el('select', { 'aria-label': `Utpost for ${p.navn}`, 'data-utpost-for': String(p.id) }); const o0 = el('option', { value: '' }, 'I leiren'); if (!hos) o0.setAttribute('selected', ''); ut.appendChild(o0);
+      for (const U of UL) { const o = el('option', { value: String(U.id) }, U.navn); if (hos && hos.id === U.id) o.setAttribute('selected', ''); ut.appendChild(o); }
+      ut.onchange = () => { const r = KOMMANDO({ type: 'utpostTildel', person: p.id, utpost: ut.value ? +ut.value : null }); if (!r.ok) logg(r.feil || 'Avvist.'); endret(); }; }
+    // trykk på navnet åpner personkortet (ansikt, historie, ønske – spill/samfunn-visning.js)
+    const navn = el('span', { klasse: 'pnavn', 'data-person': String(p.id), style: 'cursor:pointer;text-decoration:underline dotted' }, `${p.spes ? '★ ' : ''}${p.navn}, ${p.alder} `);
+    navn.onclick = () => { if (window.SamfunnSpill) SamfunnSpill.visPerson(p.id); };
+    const merke = (p.syk ? ' · Grålungen' : '') + (p.karantene ? ' · karantene' : '') + (p.trener ? ' · i opplæring' : '') + (p.borte ? ' · borte' : '');
+    const bilde = ansikt(p); if (bilde) bilde.onclick = navn.onclick;
+    return el('div', { klasse: 'person' + (p.helse < FR.R.arbeidsfør || p.syk ? ' syk' : '') }, ...(bilde ? [bilde] : []), navn, velg, ...(ut ? [ut] : []),
+      el('small', {}, ` · ${p.yrke}, best på ${FR.OPPGAVE[best[0]].navn.toLowerCase()} · helse ${Math.round(p.helse * 100)} %${p.seng ? '' : ' · telt'}${merke}${window.RekrutteringSpill ? RekrutteringSpill.personDel(p) : ''}`,
+        ...(window.JobberSpill ? JobberSpill.personDel(p, { el, knapp }) : [])));
   }
   function endret() { lagre(); vis(); visStatus(); skitten = true; }
   // ---------- RUNDE 13: hvem − / + flytter, og byggelagene sagt likt overalt ----------
@@ -235,7 +285,7 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
       for (const h of r.hendelser) logg(h); if (r.hendelser.length) lagre();
       if (r.døde && r.døde.length && window.SamfunnSpill) SamfunnSpill.døde(r.døde); }
     soldater(dt); vakter(); falne();
-    if (performance.now() - sist > 1000) { sist = performance.now(); visStatus(); if (!(window.pekerNede && pekerNede(panel)) && !(document.activeElement && document.activeElement.tagName === 'SELECT' && panel.contains(document.activeElement))) vis(); forsvarNå = null; }
+    if (performance.now() - sist > 1000) { sist = performance.now(); visStatus(); if (!(window.pekerNede && pekerNede(panel)) && !(document.activeElement && (document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'INPUT') && panel.contains(document.activeElement))) vis(); forsvarNå = null; }
   });
   // RUNDE 14 (kritiker J: «FOLK 10 ⚠» øverst mens Folk-knappen viste 6 etter at en tropp ble laget): tallet øverst oppdateres også når
   // spillet står på pause (KROKER.sim går ikke da) – samme kilde som knappen (F.personer.length), høyst 0,4 s etter

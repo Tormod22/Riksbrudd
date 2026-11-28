@@ -22,7 +22,7 @@
     // høyst så mange utposter
     maks: 8,
     // arbeidene en utpost kan ha, og hva de heter
-    JOBB: { vakt: 'Holde utposten (vakt)', hogst: 'Hogst ved utposten', riving: 'Riving ved utposten', bygg: 'Arbeid ved utposten' },
+    JOBB: { vakt: 'Holde utposten (vakt)', hogst: 'Hogst ved utposten', riving: 'Riving ved utposten' },
   };
   const MAT = { leir: 'Mat fra leiren (frakt hver dag)', lokal: 'Kjøper mat lokalt' };
   const tall = v => typeof v === 'number' && Number.isFinite(v);
