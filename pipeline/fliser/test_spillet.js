@@ -69,4 +69,13 @@ ok(Kamp.skade([{ avst: 50, menn: 6 }], null) > Kamp.skade([{ avst: 50, menn: 6 }
   ok(Trussel.lei(q) && !Trussel.lei({ stille: 59 }), 'røvere: går lei etter 60 spillminutter utenfor leiren uten kamp');
   ok(Trussel.stilleSteg({ nærVært: true, kamp: true, stille: 50 }, 1) === 0 && Trussel.stilleSteg({ nærVært: true, inne: true, stille: 50 }, 1) === 0, 'røvere: kamp eller leiren nullstiller');
   ok(Trussel.stilleSteg({ nærVært: false, stille: 0 }, 5) === 0 && Trussel.stilleSteg({ nærVært: true, venter: true, stille: 7 }, 5) === 7, 'røvere: på vei eller venter på mørket teller ikke'); }
+// (ut8-kr-telefon) bølge 2 sto i halvannen time: et lag som ikke kommer nærmere leiren, går sin vei
+{ let q = { nærmest: undefined, stå: 0 }; q = Trussel.framSteg(q, 2400, 1); ok(q.nærmest === 2400 && q.stå === 0, 'røvere: første steg husker avstanden');
+  for (let i = 0; i < 44; i++) q = Trussel.framSteg(q, 2380, 1); ok(!Trussel.lei({ stå: q.stå }) && q.stå === 44, 'røvere: 44 min uten å komme 100 m nærmere er ikke nok');
+  q = Trussel.framSteg(q, 2380, 1); ok(Trussel.lei({ stå: q.stå }), 'røvere: 45 min uten å komme nærmere – laget gir opp (også langt ute, ' + q.nærmest + ' m)');
+  const fram = Trussel.framSteg({ nærmest: 2400, stå: 30 }, 2290, 1); ok(fram.stå === 0 && fram.nærmest === 2290, 'røvere: 100 m nærmere nullstiller');
+  ok(Trussel.framSteg({ nærmest: 300, stå: 30, kamp: true }, 400, 1).stå === 0 && Trussel.framSteg({ nærmest: 300, stå: 30, inne: true }, 400, 1).stå === 0, 'røvere: kamp eller leiren nullstiller');
+  ok(Trussel.framSteg({ nærmest: 300, stå: 30, venter: true }, 400, 5).stå === 30 && Trussel.framSteg({ nærmest: 300, stå: 30, går: true }, 400, 10).stå === 35, 'røvere: venter på mørket teller ikke, går teller halvt');
+  // et lag som har vært i leiren og gått 420 m ut (Jonas: «de har vært i leiren – ikke sett siden»): gir opp etter 45 min
+  let r = { nærmest: 20, stå: 0 }; for (let i = 0; i < 46; i++) r = Trussel.framSteg(r, 420, 1); ok(Trussel.lei({ stå: r.stå }), 'røvere: ute av leiren og stille i 45 min – gir opp'); }
 console.log(feil ? feil + ' feil' : 'alle testene for spillet ok'); process.exit(feil ? 1 : 0);

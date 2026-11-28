@@ -146,7 +146,10 @@ body.kort.tlfaktiv.tlfpanel #nestelapp{ display:none; }
     const orig = E.tekst;
     const ny = function (g, t, x, y, retning, prio) {
       if (g && g.canvas && isFinite(x) && typeof g.measureText === 'function') { const W = typeof VW !== 'undefined' ? VW : g.canvas.clientWidth || g.canvas.width, w = g.measureText(String(t)).width, a = g.textAlign;
-        if (W > 2 * KANT + w) { if (a === 'left' || a === 'start') x = Math.min(Math.max(x, KANT), W - KANT - w); else if (a === 'right' || a === 'end') x = Math.min(Math.max(x, KANT + w), W - KANT); else x = Math.min(Math.max(x, KANT + w / 2), W - KANT - w / 2); } }
+        // (ut8-kr-telefon, Jonas: «Speiderbil 1» svevde midt på fjorden) – står selve merket utenfor skjermen, skyves ikke navnet inn: da
+        // fanget ikke spill/etikett.js at merket var utenfor (navnet sto langt fra bilen), og det viktigste står der med en pil (Etikett, REGLER.pil)
+        const utenfor = x < 0 || x > W;
+        if (W > 2 * KANT + w && !utenfor) { if (a === 'left' || a === 'start') x = Math.min(Math.max(x, KANT), W - KANT - w); else if (a === 'right' || a === 'end') x = Math.min(Math.max(x, KANT + w), W - KANT); else x = Math.min(Math.max(x, KANT + w / 2), W - KANT - w / 2); } }
       return orig.call(this, g, t, x, y, retning, prio); };
     ny.__klamp = true; E.tekst = ny; return true; }
   if (!klampNavn()) { const t = setInterval(() => { if (klampNavn()) clearInterval(t); }, 500); }

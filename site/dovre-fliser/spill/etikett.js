@@ -124,8 +124,17 @@
     return t + ' ›'; }
 
   // ---------- tegnerne: tekst() fanger navnet, og strokeText/fillText(t, x, NaN) gir fargene ----------
+  // (ut8-kr-telefon, Jonas: «Lever nødlageret her» under leirmerket, «inn 3,3 m³» under «Sagbruk») tekst som en modul tegner rett i kartet
+  // (uten Etikett.tekst) mens rammen pågår, blir en hindring for navnene som plasseres til slutt – de flytter seg unna (de viktigste kan
+  // fortsatt stå oppå, som over kartnavnene). direkte(g, t, x, y): rammen rundt teksten etter skriftstørrelse, justering og grunnlinje.
+  const pxAv = f => { const m = /(\d+(?:\.\d+)?)px/.exec(String(f || '')); return m ? +m[1] : 13; };
+  function direkte(g, t, x, y) { if (!aktiv || !isFinite(x) || !isFinite(y)) return; const s = String(t); if (!s.trim() || s.length > 80) return;
+    let w = 0; try { w = g.measureText(s).width; } catch (e) { return; } if (!(w > 0)) return; const h = pxAv(g.font) * 1.15, a = g.textAlign, b = g.textBaseline;
+    const x0 = a === 'center' ? x - w / 2 : a === 'right' || a === 'end' ? x - w : x, y0 = b === 'top' || b === 'hanging' ? y : b === 'middle' ? y - h / 2 : b === 'bottom' || b === 'ideographic' ? y - h : y - h + 3;
+    if (hindre.length < 600) hindre.push({ r: [x0 - 2, y0, w + 4, h], prio: REGLER.prio.kart, tekst: true }); }
   function pakkInn(g) { if (!g || g.__etikett) return; g.__etikett = true; const f0 = g.fillText, s0 = g.strokeText;
     g.fillText = function (t, x, y, mw) { const L = this.__etikettSiste; if (y !== y && L && L.t === String(t)) { L.fyll = this.fillStyle; L.font = this.font; L.align = this.textAlign; L.baseline = this.textBaseline; L.alpha = this.globalAlpha; return; }
+      direkte(this, t, x, y);
       return arguments.length > 3 ? f0.call(this, t, x, y, mw) : f0.call(this, t, x, y); };
     g.strokeText = function (t, x, y, mw) { const L = this.__etikettSiste; if (y !== y && L && L.t === String(t)) { L.strek = this.strokeStyle; L.bredde = this.lineWidth; L.font = this.font; L.align = this.textAlign; L.baseline = this.textBaseline; return; }
       return arguments.length > 3 ? s0.call(this, t, x, y, mw) : s0.call(this, t, x, y); };
@@ -136,7 +145,8 @@
     const v = vurder(String(t));
     if (!aktiv || !g || typeof g.measureText !== 'function') { if (v === false) return NaN; return plass(x, y, g.measureText(t).width, retning); }
     if (v === false || !isFinite(x) || !isFinite(y)) return NaN;
-    pakkInn(g); const P = REGLER.prio, L = { t: String(t), x, y, w: g.measureText(t).width, h: LINJE, retning: retning < 0 ? -1 : 1, nr: kø.length,
+    // (ut8-kr-telefon) store skrifter (15–16 px med strek) får litt høyere ramme, så to navn over hverandre ikke berører
+    pakkInn(g); const P = REGLER.prio, L = { t: String(t), x, y, w: g.measureText(t).width, h: Math.max(LINJE, Math.round(pxAv(g.font) + 1)), retning: retning < 0 ? -1 : 1, nr: kø.length,
       prio: typeof v === 'number' ? v : typeof prio === 'number' ? prio : retning < 0 ? P.kjøretøy : P.sted,
       font: g.font, align: g.textAlign, baseline: g.textBaseline, alpha: g.globalAlpha, fyll: null, strek: null, bredde: 3 };
     kø.push(L); g.__etikettSiste = L; return NaN;

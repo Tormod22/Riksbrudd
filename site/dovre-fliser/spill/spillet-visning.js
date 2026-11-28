@@ -98,7 +98,10 @@
   KROKER.sim.push(dt => { if (!klar || !T || !T.aktiv || !auto() || !S() || !S().leir || !Trussel.stilleSteg) return; const leir = S().leir;
     for (const e of ENHETER) { if (e.raid !== T.aktiv || e.trekker || e.flykter || !levende(e)) continue; const d = Math.hypot(e.x - leir.x, e.y - leir.y);
       if (d <= Trussel.LEI.nær) e.leiNær = true; const kamp = iKampNå(e); if (kamp) e.leiNær = true;
-      e.stille = Trussel.stilleSteg({ nærVært: !!e.leiNær, inne: d <= Trussel.HERJ.radius || !!(window.HERJER && HERJER.has(e)), kamp, venter: !!e.venterNatt, stille: e.stille }, dt); } });
+      const inne = d <= Trussel.HERJ.radius || !!(window.HERJER && HERJER.has(e));
+      e.stille = Trussel.stilleSteg({ nærVært: !!e.leiNær, inne, kamp, venter: !!e.venterNatt, stille: e.stille }, dt);
+      // (ut8-kr-telefon) lag som ikke kommer nærmere leiren (gått seg fast, står og venter langt ute): Trussel.framSteg
+      if (Trussel.framSteg) { const f = Trussel.framSteg({ nærmest: e.leiNærmest, stå: e.stå, inne, kamp, venter: !!e.venterNatt, går: !!(e.sti || e.planlegger) }, d, dt); e.leiNærmest = f.nærmest; e.stå = f.stå; } } });
   // laget tar byttet (kassa, lageret, dieselen og maten) og marsjerer bort fra leiren
   function trekkUt(e) { const leir = S().leir, LS = L(), f = F(), H = Trussel.HERJ;
     const b = Trussel.bytte({ penger: S().penger, lager: LS ? LS.lager : {}, diesel: LS ? LS.drivstoff : 0, mat: f ? f.mat : 0 });
