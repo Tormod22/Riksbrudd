@@ -125,13 +125,19 @@
     }
     return ut;
   }
-  // Paller med varer (pallplass, pallreol): én kloss per pall, høyden etter fyllingen. Gir klossene som over.
+  // Paller med varer (pallplass, pallreol): på hver pall lag på lag med kartonger (to side om side, litt ulik tone), høyden etter fyllingen.
+  // o = { l, d, nivåer, hv, fyll, kat, f }. Gir klossene som over.
   function paller(o) {
     const ut = [], fyll = Math.max(0, Math.min(1, o.fyll || 0)); if (!(fyll > 0)) return ut; const s = frøAv(o.f), kat = o.kat && o.kat.length ? o.kat : [{ kat: 'mat', andel: 1 }];
-    const n = Math.max(1, Math.floor(o.l / 1.25)), totalt = n * o.nivåer.length; let igjen = Math.max(1, Math.round(fyll * totalt)), nr = 0;
+    const n = Math.max(1, Math.floor(o.l / 1.15)), totalt = n * o.nivåer.length; let igjen = Math.max(1, Math.round(fyll * totalt)), nr = 0;
     for (let q = 0; q < o.nivåer.length && igjen > 0; q++) for (let p = 0; p < n && igjen > 0; p++, igjen--, nr++) {
-      const x0 = -o.l / 2 + p * (o.l / n) + .08, x1 = x0 + o.l / n - .16, kt = velgKat(kat, s, nr), K = KAT[kt] || KAT.mat, c = K.farger[Math.floor(hash(s, 1200 + nr) * K.farger.length)], h = o.hv * (.55 + hash(s, 1300 + nr) * .45);
-      ut.push([x0, x1, -o.d / 2 + .06, o.d / 2 - .06, o.nivåer[q], o.nivåer[q] + h, c, false]); }
+      const x0 = -o.l / 2 + p * (o.l / n) + .08, x1 = x0 + o.l / n - .16, kt = velgKat(kat, s, nr), K = KAT[kt] || KAT.mat, c = K.farger[Math.floor(hash(s, 1200 + nr) * K.farger.length)];
+      const h = o.hv * (.55 + hash(s, 1300 + nr) * .45), lag = Math.max(1, Math.round(h / .26)), lh = h / lag, xm = (x0 + x1) / 2;
+      for (let k = 0; k < lag; k++) { const z = o.nivåer[q] + k * lh, t = (k + p) % 2 ? .88 : 1, c2 = c.map(v => v * t), c3 = c.map(v => v * t * .92);
+        // annethvert lag er snudd: skjøten går på tvers
+        if (k % 2) { ut.push([x0, x1, -o.d / 2 + .06, -.005, z, z + lh - .01, c2, false]); ut.push([x0, x1, .005, o.d / 2 - .06, z, z + lh - .01, c3, false]); }
+        else { ut.push([x0, xm - .005, -o.d / 2 + .06, o.d / 2 - .06, z, z + lh - .01, c2, false]); ut.push([xm + .005, x1, -o.d / 2 + .06, o.d / 2 - .06, z, z + lh - .01, c3, false]); } }
+    }
     return ut;
   }
   const api = { REGLER, FORM, KAT, KATER, OPPSETT, HUS, MØBEL, hash, innhold, trinn, husFyll, husKat, varer, paller, velgKat };

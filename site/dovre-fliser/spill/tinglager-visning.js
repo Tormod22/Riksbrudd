@@ -244,6 +244,8 @@ body.kort #tingpanel{ left:6px; right:6px; width:auto; top:auto; bottom:calc(6px
     for (const [i, j] of R) { i0 = Math.min(i0, i); i1 = Math.max(i1, i + 1); j0 = Math.min(j0, j); j1 = Math.max(j1, j + 1); }
     return { x: sx(o.ox + i0 * U), y: sy(o.oy + j1 * U), w: sx(o.ox + i1 * U) - sx(o.ox + i0 * U), h: sy(o.oy + j0 * U) - sy(o.oy + j1 * U) }; }
   function tegnDel(g, d, o, sx, sy, m, skisse) { const BS = BSR(), D = BS.DELER[d.type], typ = D.ting, b = ruteAv(d, o, sx, sy);
+    // (ut9-mobler) de nye hyllene har egne symboler (spill/hyller-visning.js)
+    if (!skisse && window.Hyller3d && Hyller3d.tegn2d(g, d, b, typ)) return;
     g.fillStyle = skisse || FARGE[typ] || '#7b6a4c'; g.fillRect(b.x, b.y, b.w, b.h); if (skisse) return;
     g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 1; g.strokeRect(b.x + .5, b.y + .5, b.w - 1, b.h - 1);
     const t = TEGN[typ], r = Math.min(b.w, b.h); if (t && r > 9) { g.fillStyle = typ === 'medisinskap' ? '#b8382f' : typ === 'tønne' || /kjøl|frys/.test(typ) ? '#2a3338' : 'rgba(240,226,176,.85)';
@@ -252,7 +254,9 @@ body.kort #tingpanel{ left:6px; right:6px; width:auto; top:auto; bottom:calc(6px
   function pakkInn() { const FS = window.FabrikkSpill, BS = BSR(); if (!FS || !BS || FS.tingPakket) return !!(FS && FS.tingPakket); FS.tingPakket = true;
     const egen = d => { const D = BS.DELER[d.type]; return D && D.ting && D.grunn !== 'bs_hylle' && D.grunn !== 'bs_pall'; };
     const t0 = FS.tegnDel; if (t0) FS.tegnDel = function (g, d, o, sx, sy, m, skisse) { if (egen(d)) return tegnDel(g, d, o, sx, sy, m, skisse); return t0.apply(this, arguments); };
-    const b0 = FS.bygg3d; if (b0) FS.bygg3d = function (Bg, d, T2, z0, f, o) { if (egen(d)) return bygg3d(Bg, d, T2, z0, f, o); return b0.apply(this, arguments); };
+    // (ut9-mobler) i 3D tegnes alle hyllene og skapene her – også hyllerekka og pallplassen – med tingene som står der (spill/hyller-visning.js)
+    const egen3d = d => { const D = BS.DELER[d.type]; return !!(D && D.ting); };
+    const b0 = FS.bygg3d; if (b0) FS.bygg3d = function (Bg, d, T2, z0, f, o) { if (egen3d(d) && window.Hyller3d && Hyller3d.bygg(Bg, d, T2, z0, f) !== false) return; if (egen(d)) return bygg3d(Bg, d, T2, z0, f, o); return b0.apply(this, arguments); };
     return true; }
   document.addEventListener('DOMContentLoaded', pakkInn); window.addEventListener('riksbrudd-spill', pakkInn);
   // ---------- 3D: enkle kasser (en tredje hjelper lager flere møbler senere) ----------

@@ -44,7 +44,8 @@ ok(TL.legg(T2, P1, 'flaskevann', 4, 0, { utenUte: true }).some(q => q.p === 'b2'
 ok(TL.legg(T2, [P1[2]], 'peanøttsmør', 1, 0, { utenUte: true }).length === 0, 'vitrinen tar ikke mat');
 // 10) paller
 const pl = H.paller({ l: 2.4, d: 1, nivåer: [.23, 1.31, 2.39], hv: .8, fyll: .5, f: .6 });
-ok(pl.length >= 2 && pl.length <= 6, 'paller: ' + pl.length);
+ok(pl.length >= 4 && pl.length <= 40 && pl.every(q => q[0] >= -1.2 && q[1] <= 1.2 && q[2] >= -.5 && q[3] <= .5), 'paller: ' + pl.length + ' kartonger');
+ok(H.paller({ l: 2.4, d: 1, nivåer: [.23, 1.31, 2.39], hv: .8, fyll: 1, f: .6 }).length > pl.length, 'full pallreol har flere kartonger');
 // selvtest: en hylle som setter tingene over neste nivå skal fanges av punkt 3
 { const q = [0, .1, 0, .1, .08, .08 + .5]; ok(!(q[5] - q[4] <= .34), 'selvtest'); }
 if (feil) { console.log(feil + ' feil'); process.exit(1); } else console.log('alle hylletestene ok');

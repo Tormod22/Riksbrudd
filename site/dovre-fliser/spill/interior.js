@@ -503,7 +503,7 @@
       for (let q = 0; q < 5; q++) { const su = HJØRNER[q * 2], sv = HJØRNER[q * 2 + 1], pu = cu + su * hu, pv = cv + sv * hv, x = pu * ux + pv * vx, y = pu * uy + pv * vy; if (!inniR(P, x, y) || nærKantR(P, x, y, .1)) return null; }
       const [x, y] = tilXY(cu, cv), a = Math.atan2(langsU ? uy : vy, langsU ? ux : vx) + (snu ? Math.PI : 0);
       // (i rom som er skåret av omrisset, stemmer ikke gangveiene: der sperrer ikke møblene)
-      const it = { type, x, y, a, b, d: dd, h: o.h || h, sperrer: !!sperrer && r.andel > .97, cu, cv, hu, hv, f: tilf() }; if (!o.svev) satt.push(it); pl.møbler.push(it); return it;
+      const it = { type, x, y, a, b, d: dd, h: o.h || h, sperrer: !!sperrer && r.andel > .97, cu, cv, hu, hv, f: tilf(), rolle: r.rolle }; if (!o.svev) satt.push(it); pl.møbler.push(it); return it;
     };
     // inntil en vegg: side 0–3, t = plass langs veggen (0–1)
     const vegg = (r, type, side, t, o) => { const [b0, d0] = MØBLER[type], b = (o && o.b) || b0, d = (o && o.d) || d0, lu = r.u1 - r.u0, lv = r.v1 - r.v0, k = .16 + d / 2;
@@ -662,6 +662,8 @@
       const midt = dyp * .55;
       // (ut9-mobler) halve butikkene har gondoler (lavere, dobbeltsidige reoler), resten høye reoler
       const reolType = hash(pl.i, 77) < .5 ? 'gondol' : 'reol';
+      // med gondoler i midten står de høye reolene langs den andre langveggen
+      if (reolType === 'gondol') rad(r, 'reol', Math.max(1, Math.floor(dyp / 3.2)), { fri: 1.2 }, [dybdeV ? (mot > 0 ? 1 : 3) : (mot > 0 ? 2 : 0)]);
       yield* rutenett(r, reolType, { du: dybdeV ? 2.7 : 2.5, dv: dybdeV ? 2.5 : 2.7, mU: 1.6, mV: 1.6, langsU: !dybdeV, fri: 1.4, maks: 48, iVeien: true,
         hopp: (cu, cv) => { const a = inn(cu, cv); return a < front + 2.2 || a > dyp - 2.4 || Math.abs(a - midt) < 1.3; } });
       if (!pl.møbler.some(m => m.type === 'kasse')) etSted(r, 'kasse');
