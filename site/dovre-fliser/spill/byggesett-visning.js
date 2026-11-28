@@ -60,7 +60,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
   function lagreMal(deler, navn) { const m = BS.tilMal(deler, navn); if (!m) return null; const L0 = egneMaler(); L0.push(m); while (L0.length > 12) L0.shift(); try { localStorage.setItem(MALNØKKEL, JSON.stringify(L0)); } catch (e) { /* sperret */ } return L0.length - 1; }
   const prisTekst = t => { const d = D[t]; if (!d) return ''; const L = d.s * G, k = d.kat === 'gulv' || d.kat === 'tak' ? `${String(Math.round(L * L * 10) / 10).replace('.', ',')} m²` : d.kat === 'søyle' ? 'søyle' : d.kat === 'trapp' ? 'trapp' : `${String(L).replace('.', ',')} m`;
     // (B5) maskiner, lamper og hyller: prisen per stykk, målene og strømmen
-    if (['maskin', 'lampe', 'lager'].includes(d.kat)) return `${LB.kroner(d.pris)} og ${tidTekst(d.tid * 60)} arbeid` + (d.l ? ` · ${String(d.b * G).replace('.', ',')} × ${String(Math.round(d.l * G * 10) / 10).replace('.', ',')} m` : '') + (d.kw ? ` · ${String(-d.kw).replace('.', ',')} kW` : '') + (d.tung ? ' · betonggulv' : '');
+    if (['maskin', 'lampe', 'lager'].includes(d.kat)) return `${LB.kroner(d.pris)} og ${tidTekst(d.tid * 60)} arbeid` + (d.l ? ` · ${String(Math.round(d.b * G * 10) / 10).replace('.', ',')} × ${String(Math.round(d.l * G * 10) / 10).replace('.', ',')} m` : '') + (d.kw ? ` · ${String(-d.kw).replace('.', ',')} kW` : '') + (d.tung ? ' · betonggulv' : '');
     return `${LB.kroner(d.pris)} og ${tidTekst(d.tid * 60)} per ${k}`; };
   const stoffTekst = st => { const S = BS.STOFF[st]; return S ? `${S.navn}: spenn ${S.spenn} m${S.brenner ? ', brenner' : ''}` : ''; };
   const velg = (k, v) => () => { V[k] = v; if (k === 'fane') { V.rot = 0; V.malValg = false; } A = null; B = null; forslag = []; if (k === 'fane' && v === 'plan') sentrerPlan(); oppdater(); };
@@ -193,7 +193,7 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
         + (ok.some(q => q.bytt) ? ` – bytter ut ${ok.filter(q => q.bytt).length}` : '') + '.';
       // utpost: byggelaget må reise dit først (Leir.reise, brukeren 12. nov) – si det før du bekrefter
       const sted = BS.midt(o, ok[0].d), rs = LB.reise ? LB.reise(l, sted.x, sted.y) : null;
-      const m = matMangler(); ekstra = [rs && rs.full > 0 ? LB.reiseTekst(rs) : null, matTekst(s.mat) ? `Materialer: ${matTekst(s.mat)}` + (m ? ` – mangler for ${LB.kroner(m)}` : '') : 'Ingen materialer', feil.length ? `${feil.length} får ikke plass (rødt): ${feil[0].feil}` : null, B ? null : 'Trykk et punkt til for en rad.'].filter(Boolean).join(' · '); }
+      const m = matMangler(); ekstra = [rs && rs.full > 0 ? LB.reiseTekst(rs) : null, matTekst(s.mat) ? `Materialer: ${matTekst(s.mat)}` + (m ? ` – mangler for ${LB.kroner(m)}` : '') : 'Ingen materialer', feil.length ? `${feil.length} får ikke plass (rødt): ${feil[0].feil}` : null, B || (V.fane === 'maskin' && BS.TING({ type: ok[0].d.type })) ? null : 'Trykk et punkt til for en rad.'].filter(Boolean).join(' · '); }
     // F1 (veien, spill/vei.js): et rom som blir lukket uten dør, eller som ingen vei går inn til, sies fra om (som de andre grunnene)
     if (V.fane !== 'riv' && ok.length && window.Vei) advarsel = veiTekst(alle, ok, o, l) || '';
     if (V.fane === 'maskin' && ok.some(q => q.advarsel)) advarsel = [advarsel, ok.find(q => q.advarsel).advarsel].filter(Boolean).join(' ');

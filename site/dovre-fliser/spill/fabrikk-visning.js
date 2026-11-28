@@ -45,6 +45,9 @@
     for (const q of ok) {
       const d = { ...q.d, id: q.d.id || 'ny', ferdig: true }, deler = alle.filter(a => a.id !== q.bytt).map(a => ({ ...a, ferdig: true })).concat([d]), m = BS.midt(o, d);
       const a = FB.sjekkNy(deler, d); if (a.advarsel) q.advarsel = a.advarsel;
+      // varselet før kjøpet (Produksjon.driftVarsel, ut4-balanse2): rekker kassa etter kjøpet?
+      if (Array.isArray(window.BYGG_VARSEL)) for (const f of BYGG_VARSEL) { try { const K = LB.kostnad(d.type), v = f(d.type, { kost: K.pris + (LB.manglerPris ? LB.manglerPris(l, K.mat) : 0) });
+        if (v && v.tekst) { q.advarsel = [q.advarsel, v.tekst].filter(Boolean).join(' '); break; } } catch (e) { /* uten varsel */ } }
       if (!window.Vei) continue;
       try { const K = Vei.lag({ deler, leir: l, opphav: o, start: st, prøve: true }), P = FB.plasser({ type: d.type, x: m.x, y: m.y, ret: m.ret });
         const r = P.bruks.map(p => Vei.kanNå({ x: p.x, y: p.y, e: (d.n || 0) + 1, bruksplass: true }, { kart: K })), feil = r.find(x => !x.ok);
