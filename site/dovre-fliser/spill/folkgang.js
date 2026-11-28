@@ -84,6 +84,8 @@
     const sted = (D, nr) => { const B = ctx.L.bygg.filter(b => D.bygg.includes(b.type) && ferdigB(b)); if (B.length) return tilBygg(B[nr % B.length], D.gjør, D.navn);
       const R = (D.rom || []).length ? sm.rom.filter(r => D.rom.includes(r.bruk)) : []; return R.length ? tilRom(R[nr % R.length], D.gjør, D.navn) : null; };
     if (hva === 'borte') return null;
+    // (F3) bæring og bruksplassene ved maskinene (spill/baering.js): ctx.mål(p, hva) gir et mål – eller ingenting, så gjelder reglene under
+    if (ctx.mål) { const q = ctx.mål(p, hva); if (q) return q; }
     if (hva === 'søvn' || hva === 'syk') {
       if (hva === 'syk') { const s = sted(STED.stell, 0); if (s) return { ...s, gjør: 'ligger på sykestua' }; }
       const seng = sm.seng.get(p.id);
@@ -150,7 +152,8 @@
 
   // ---------- ett steg ----------
   // ctx: { F (folket), L (leiren), leir { x, y } (midten), hva(p) -> 'arbeid' | 'mat' | 'søvn' | 'fri' | 'syk' | 'borte' (døgnplanen),
-  //        kart (Vei-kartet for leiren; uten kart går alle rett fram), RJ (hogst/riving/hauger fra RessursSpill), nær }
+  //        kart (Vei-kartet for leiren; uten kart går alle rett fram), RJ (hogst/riving/hauger fra RessursSpill), nær,
+  //        mål(p, hva) -> mål eller null (F3: bærerne og operatørene, spill/baering.js) }
   // dt i sekunder spilltid. Gir G.
   function steg(G, ctx, dt) {
     const t0 = Date.now(), F = ctx.F, K = ctx.kart || null; if (!F || !ctx.L || !ctx.leir) return G;

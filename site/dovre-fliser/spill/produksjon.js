@@ -32,9 +32,13 @@
     // KVALITET (planen 4.3): dyktige folk (snittferdighet på «maskin» over 1,2) gir 10 % mer ut av sagbruket og vedkløyveren
     kvalitet: { grense: 1.2, bonus: .1 },
     tømmerbil: { pris: 2.5e6 },   // kjøpes i fanen Produksjon; 20 m³ per tur (Ressurser.REGLER.tømmerbil)
+    // (F3) MATING – Claudes forslag: innmatingen tar høyst 4 m³ av hver råvare, utmatingen høyst 4 m³ til sammen (spill/baering.js bærer)
+    buffer: { inn: 4, ut: 4 },
   };
   const GRUNNER = ['av', 'ødelagt', 'fullt', 'tom', 'folk', 'strøm', 'slitt'];
   const GRUNNTEKST = { av: 'slått av', ødelagt: 'ødelagt', fullt: 'lageret fullt', folk: 'ingen folk', strøm: 'uten strøm', slitt: 'slitt – må repareres' };
+  // (F3) med innmating og utmating (folk går og bærer, spill/baering.js): grunnene som planen 6.6 sier dem
+  const MATETEKST = { av: 'slått av', ødelagt: 'i stykker', fullt: 'utmatingen full', folk: 'venter på folk', strøm: 'uten strøm', slitt: 'slitt – må repareres' };
   const VARENAVN = { tre: 'planker', tømmer: 'tømmer', flis: 'flis', ved: 'ved', betong: 'betong', stål: 'stål' };
   const erMaskin = t => !!REGLER.maskiner[t];
 
@@ -52,31 +56,41 @@
   const maskinene = L => (L && Array.isArray(L.bygg) ? L.bygg : []).filter(b => erMaskin(b.type) && (LB ? LB.ferdig(b) : b.igjen <= 0))
     .sort((a, b) => REGLER.rekkefølge.indexOf(a.type) - REGLER.rekkefølge.indexOf(b.type) || a.id - b.id);
   // hvilken råvare maskinen kan bruke nå (første i lista som finnes i lageret), eller null
-  function råvare(L, M, andel = 1) { for (const r of M.inn) if (Object.entries(r).every(([v, m]) => har(L, v) >= m * andel * .05 + 1e-9)) return r; return null; }
+  // (F3) Bf = maskinens mating { inn: { vare: m³ }, ut: { vare: m³ } } (spill/baering.js) – da leses råvaren fra innmatingen og plassen
+  // fra utmatingen i stedet for lageret. Uten Bf (døgnplanen av, gamle spill, testene) er alt som før.
+  const hentFra = (L, Bf) => (Bf ? v => Bf.inn[v] || 0 : v => har(L, v));
+  const utSum = Bf => Object.values(Bf.ut).reduce((s, m) => s + (m || 0), 0);
+  const plassFor = (L, Bf) => (Bf ? () => Math.max(0, REGLER.buffer.ut - utSum(Bf)) : v => plass(L, v));
+  function råvare(L, M, andel = 1, Bf) { const h = hentFra(L, Bf); for (const r of M.inn) if (Object.entries(r).every(([v, m]) => h(v) >= m * andel * .05 + 1e-9)) return r; return null; }
   const tomTekst = (t) => (t === 'sagbruk' ? 'tom for tømmer' : t === 'vedkløyver' ? 'tom for flis' : 'tom for brensel');
-  const grunnTekst = (g, t) => (g === 'tom' ? tomTekst(t) : GRUNNTEKST[g] || g);
+  const venterTekst = (t) => (t === 'sagbruk' ? 'venter på tømmer' : t === 'vedkløyver' ? 'venter på flis' : 'venter på brensel');
+  const grunnTekst = (g, t, mating) => (g === 'tom' ? (mating ? venterTekst(t) : tomTekst(t)) : (mating ? MATETEKST : GRUNNTEKST)[g] || g);
 
   // Vil maskinen gå nå (alt unntatt strøm og folk er på plass)? Brukes av leir.js (api.hviler) så en maskin som står, ikke tar strøm.
   // Folk telles også: uten folk på «maskin» tar den ingen strøm.
-  function vil(L, b, folkIgjen) {
+  function vil(L, b, folkIgjen, Bf) {
     const M = REGLER.maskiner[b.type]; if (!M) return { grunn: 'ukjent' };
     if (b.av) return { grunn: 'av' };
     if (LB && !LB.virker(b)) return { grunn: 'ødelagt' };
-    if (Object.keys(M.ut).some(v => plass(L, v) < .05)) return { grunn: 'fullt' };
-    const r = råvare(L, M); if (!r) return { grunn: 'tom' };
+    const pl = plassFor(L, Bf); if (Object.keys(M.ut).some(v => pl(v) < .05)) return { grunn: 'fullt' };
+    const r = råvare(L, M, 1, Bf); if (!r) return { grunn: 'tom' };
     if (folkIgjen !== undefined && !(folkIgjen > 1e-6)) return { grunn: 'folk' };
     return { r };
   }
 
   // Ett steg på dt spillminutter. ctx: { kraft (folk × tempo på «maskin»), mangler (Set av bygg-id uten strøm fra Leir.steg),
   // ferdighet (snittferdigheten til dem på «maskin», for kvaliteten) }.
+  // (F3) ctx.mating = { byggId: { inn, ut } } (spill/baering.js): råvaren tas fra innmatingen og det som lages, legges i utmatingen;
+  // ctx.kraftPer = { byggId: arbeidskraft } – bare operatørene som STÅR på bruksplassene ved maskinen (ingen felles pott).
   // Gir { status: { id: { type, går, drift (0–1), grunn, tekst, inn, ut, folk, kw } }, kw (strøm fra kjelene nå), varme (fyringssteder) }
   // og endrer L.lager, b.hp og P (tellingene).
   function steg(P, L, dt, ctx = {}) {
     const t = dt / 60, mangler = ctx.mangler || new Set(), K = REGLER.kvalitet, kval = ctx.ferdighet > K.grense ? 1 + K.bonus : 1; let kraft = Math.max(0, ctx.kraft || 0), kw = 0, varme = 0;
-    const status = {};
+    const status = {}, MT = ctx.mating || null, KP = ctx.kraftPer || null;
     for (const b of maskinene(L)) {
-      const M = REGLER.maskiner[b.type], v = vil(L, b, kraft), s = { type: b.type, går: false, drift: 0, grunn: null, tekst: '', inn: {}, ut: {}, folk: 0, kw: 0 };
+      const Bf = MT ? (MT[b.id] || (MT[b.id] = { inn: {}, ut: {} })) : null; if (KP) kraft = Math.max(0, KP[b.id] || 0);
+      const h = hentFra(L, Bf), pl = plassFor(L, Bf);
+      const M = REGLER.maskiner[b.type], v = vil(L, b, kraft, Bf), s = { type: b.type, går: false, drift: 0, grunn: null, tekst: '', inn: {}, ut: {}, folk: 0, kw: 0, mating: !!Bf };
       status[b.id] = s;
       if (v.grunn) { s.grunn = v.grunn; }
       else if (M.kw > 0 && mangler.has(b.id)) { s.grunn = 'strøm'; s.folk = Math.min(M.folk, kraft); }
@@ -87,15 +101,18 @@
         const fFolk = Math.min(1, tatt / M.folk), fSlitt = b.hp < ((LB && LB.REGLER.halvSkade) || .5) ? .5 : 1;
         // råvaren og plassen i lageret begrenser også
         let fRå = 1, fPlass = 1;
-        for (const [vare, m] of Object.entries(v.r)) fRå = Math.min(fRå, har(L, vare) / (m * t));
-        for (const [vare, m] of Object.entries(M.ut)) fPlass = Math.min(fPlass, plass(L, vare) / (m * t));
+        for (const [vare, m] of Object.entries(v.r)) fRå = Math.min(fRå, h(vare) / (m * t));
+        // (utmatingen er felles for alle varene maskinen lager: plassen deles på summen)
+        const utPerT = Object.values(M.ut).reduce((a, m) => a + m, 0);
+        if (Bf) { if (utPerT > 0) fPlass = pl() / (utPerT * t * kval); } else for (const [vare, m] of Object.entries(M.ut)) fPlass = Math.min(fPlass, plass(L, vare) / (m * t));
         const drift = Math.max(0, Math.min(fFolk * fSlitt, fRå, fPlass));
         // grunnen når den ikke går fullt: det som begrenser mest
         if (drift < 1 - 1e-6) s.grunn = fRå <= drift + 1e-9 && fRå < fFolk * fSlitt ? 'tom' : fPlass <= drift + 1e-9 && fPlass < fFolk * fSlitt ? 'fullt' : fSlitt < 1 && fSlitt <= fFolk ? 'slitt' : 'folk';
         if (drift > 1e-6) {
           s.går = true; s.drift = drift;
-          for (const [vare, m] of Object.entries(v.r)) { const q = m * t * drift; L.lager[vare] = Math.max(0, har(L, vare) - q); s.inn[vare] = m * drift; P.brukt[vare] = (P.brukt[vare] || 0) + q; }
-          for (const [vare, m] of Object.entries(M.ut)) { const q = Math.min(m * t * drift * kval, plass(L, vare)); L.lager[vare] = har(L, vare) + q; s.ut[vare] = q / t; P.laget[vare] = (P.laget[vare] || 0) + q; }
+          for (const [vare, m] of Object.entries(v.r)) { const q = m * t * drift; if (Bf) Bf.inn[vare] = Math.max(0, h(vare) - q); else L.lager[vare] = Math.max(0, har(L, vare) - q); s.inn[vare] = m * drift; P.brukt[vare] = (P.brukt[vare] || 0) + q; }
+          for (const [vare, m] of Object.entries(M.ut)) { const q = Bf ? m * t * drift * kval : Math.min(m * t * drift * kval, plass(L, vare));
+            if (Bf) Bf.ut[vare] = (Bf.ut[vare] || 0) + q; else L.lager[vare] = har(L, vare) + q; s.ut[vare] = q / t; P.laget[vare] = (P.laget[vare] || 0) + q; }
           s.kvalitet = kval > 1;
           if (M.gir) { s.kw = M.gir * drift; kw += s.kw; varme += M.varme * drift; }
           s.kwBruk = M.kw * drift;
@@ -106,14 +123,14 @@
       // tida maskinen sto (helt eller delvis), per grunn
       const stod = (1 - s.drift) * t; if (stod > 1e-9) { const g = s.grunn || (s.folk < M.folk - 1e-6 ? 'folk' : 'tom'); if (!s.grunn && s.drift < 1 - 1e-6) s.grunn = g; P.sto[g] = (P.sto[g] || 0) + stod; }
       // delvis drift: «går 50 % – for få folk» / «– lite tømmer»
-      const delvis = g => (g === 'slitt' ? 'slitt, halv fart' : g === 'folk' ? 'for få folk' : g === 'tom' ? tomTekst(b.type).replace('tom for', 'lite') : grunnTekst(g, b.type));
-      s.tekst = s.går ? (s.drift < .98 ? `går ${Math.round(s.drift * 100)} %` + (s.grunn ? ' – ' + delvis(s.grunn) : '') : 'går') : grunnTekst(s.grunn, b.type);
+      const delvis = g => (g === 'slitt' ? 'slitt, halv fart' : g === 'folk' ? (Bf ? 'for få på plass' : 'for få folk') : g === 'tom' ? tomTekst(b.type).replace('tom for', 'lite') : g === 'fullt' && Bf ? 'utmatingen nesten full' : grunnTekst(g, b.type, !!Bf));
+      s.tekst = s.går ? (s.drift < .98 ? `går ${Math.round(s.drift * 100)} %` + (s.grunn ? ' – ' + delvis(s.grunn) : '') : 'går') : grunnTekst(s.grunn, b.type, !!Bf);
     }
     P.status = status;
     return { status, kw, varme };
   }
   // Står maskinen (så den ikke skal ha strøm)? Regnes uten folk/strøm-sjekk når kraft mangler: da spør vi bare om råvare og plass.
-  function hviler(L, b, kraft) { if (!erMaskin(b.type)) return false; const v = vil(L, b, kraft); return !!v.grunn; }
+  function hviler(L, b, kraft, Bf) { if (!erMaskin(b.type)) return false; const v = vil(L, b, kraft, Bf); return !!v.grunn; }
 
   // Hva maskinen gjør ved full drift, som tekst: «2 m³ tømmer → 1,1 m³ planker + 0,7 m³ flis»
   const nf = (v, d = 1) => (Math.round(v * 10 ** d) / 10 ** d).toString().replace('.', ',');
@@ -136,6 +153,6 @@
   // Verdien av det som er laget (kr), med prisene i MATERIALER: planker + flis + ved − tømmer
   function verdi(P, MAT) { const p = v => (MAT && MAT[v] ? MAT[v].pris : 0); let s = 0; for (const [v, m] of Object.entries(P.laget)) s += m * p(v); for (const [v, m] of Object.entries(P.brukt)) s -= m * p(v); return Math.round(s); }
 
-  const api = { REGLER, GRUNNER, GRUNNTEKST, VARENAVN, erMaskin, ny, fraJSON, maskinene, råvare, vil, steg, hviler, oppskrift, merke, grunnTekst, varmeAndel, verdi, nf };
+  const api = { REGLER, GRUNNER, GRUNNTEKST, MATETEKST, VARENAVN, utSum, erMaskin, ny, fraJSON, maskinene, råvare, vil, steg, hviler, oppskrift, merke, grunnTekst, varmeAndel, verdi, nf };
   if (NODE) module.exports = api; else rot.Produksjon = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
