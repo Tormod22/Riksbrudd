@@ -73,7 +73,7 @@ const ms = f => { const t = process.hrtime.bigint(); const r = f(); return [r, N
   const K = V.lag({ bygninger: [h9, by], start: [-8, -8] });
   for (const [m, nk] of [[h9, 'hus81234'], [by, 'hus5']]) { let n = 0, uten = [];
     for (const et of m.etasjer) for (const r of et.rom) { if (r.andel < .5 || r.areal < 1.5) continue; n++; const [p, q, u, v] = [Math.min(...r.P.map(a => a[0])), Math.min(...r.P.map(a => a[1])), Math.max(...r.P.map(a => a[0])), Math.max(...r.P.map(a => a[1]))];
-      const s = V.kanNå({ x: (p + u) / 2, y: (q + v) / 2, e: et.n, hus: nk }); if (!s.ok) uten.push(et.n + ':' + r.rolle + ' ' + s.grunn); }
+      void p; void q; void u; void v; const s = V.romNås(r.P, { e: et.n, hus: nk }); if (!s.ok) uten.push(et.n + ':' + r.rolle + ' ' + s.grunn); }
     ok(!uten.length, m.kl + ' ' + m.h + ' m: alle ' + n + ' rom nås fra leiren' + (uten.length ? ' – IKKE: ' + uten.join('; ') : '')); }
   const øverst = by.etasjer.filter(e => !e.kjeller).slice(-1)[0], rr = øverst.rom.find(r => r.rolle === 'kjøkken') || øverst.rom[0];
   const r = V.finn({ x: -8, y: -8 }, { x: (rr.P[0][0] + rr.P[2][0]) / 2, y: (rr.P[0][1] + rr.P[2][1]) / 2, e: øverst.n, hus: 'hus5' });
@@ -86,7 +86,7 @@ const ms = f => { const t = process.hrtime.bigint(); const r = f(); return [r, N
     const [K, t] = ms(() => V.lag({ bygninger: [m], start: [-6, -6] })); tid += t; const nk = K.hus[0].nøkkel;
     for (const et of m.etasjer) { const nå = B.nåsEtasje(m, et); for (const r of et.rom) { if (r.andel < .5 || r.areal < 1.5 || nå.uten.includes(r.id)) continue; rom++;
       const [p, q, u, v] = [Math.min(...r.P.map(a => a[0])), Math.min(...r.P.map(a => a[1])), Math.max(...r.P.map(a => a[0])), Math.max(...r.P.map(a => a[1]))];
-      if (!V.kanNå({ x: (p + u) / 2, y: (q + v) / 2, e: et.n, hus: nk }).ok && !V.kanNå({ x: r.P[0][0] * .6 + r.P[2][0] * .4, y: r.P[0][1] * .6 + r.P[2][1] * .4, e: et.n, hus: nk }).ok) { borte++; if (eks.length < 6) eks.push(kl + ' ' + (1000 + k) + ' e' + et.n + ' ' + r.rolle); } } } }
+      void p; void q; void u; void v; if (!V.romNås(r.P, { e: et.n, hus: nk }).ok) { borte++; if (eks.length < 6) eks.push(kl + ' ' + (1000 + k) + ' e' + et.n + ' ' + r.rolle); } } } }
   ok(borte <= rom * .02, N + ' prøvehus: ' + (rom - borte) + ' av ' + rom + ' rom som Bygning.nås når, nås også av veien (' + (tid / N).toFixed(1) + ' ms per hus for Vei.lag)' + (eks.length ? ' – ikke: ' + eks.join(', ') : ''));
 }
 // ---------- 7. leir med Leir-bygg og gjerde ----------

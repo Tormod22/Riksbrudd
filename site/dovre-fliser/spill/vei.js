@@ -168,8 +168,7 @@
     const [a, b] = boks(m.P); let valgt = REGLER.finere[REGLER.finere.length - 1];
     for (const s of [REGLER.rute, ...REGLER.finere]) {
       const K = lag({ bygninger: [m], start: [a - 3, b - 3], margin: 4, ruter: { [nøkkel]: s }, prøve: true });
-      const alle = m.etasjer.every(et => et.tilstand === 'revet' || (et.rom || []).every(r => { if (r.andel < .5 || r.areal < 1.5) return true; const [p, q, u, v] = boks(r.P);
-        return [[.5, .5], [.3, .3], [.7, .7], [.3, .7], [.7, .3]].some(([f, g]) => kanNå({ x: p + (u - p) * f, y: q + (v - q) * g, e: et.n, hus: nøkkel }, { kart: K }).ok); }));
+      const alle = m.etasjer.every(et => et.tilstand === 'revet' || (et.rom || []).every(r => r.andel < .5 || r.areal < 1.5 || romNås(r.P, { kart: K, e: et.n, hus: nøkkel }).ok));
       if (alle) { valgt = s; break; } }
     Object.defineProperty(m, '_veiRute', { value: { sg, s: valgt }, enumerable: false, configurable: true, writable: true });
     return valgt;
@@ -373,6 +372,16 @@
     const r = K.rom[K.komp[n0]]; if (nåbar(K, hvem)[r.id]) return { ok: true, rom: r.id };
     return { ok: false, grunn: grunn(K, n0, hvem, p.bruksplass), rom: r.id };
   }
+  // Nås et rom (et omriss P i etasje e i hus)? Ja når minst én fri rute inne i omrisset nås -> { ok, grunn?, ruter }
+  function romNås(P, o = {}) {
+    const K = o.kart || api.nå; if (!K) return { ok: false, grunn: 'ingen kart' }; const e = o.e === undefined || o.e === null ? 1 : o.e;
+    const L = (o.hus !== undefined && o.hus !== null ? K.lagene.find(q => q.hus === o.hus && q.e === e) : null) || K.lagene.find(q => !q.bakke && q.P && q.e === e && inni(q.P, P[0][0], P[0][1])) || (e !== 1 ? K.lagene.find(q => q.hus === 'leir' && q.e === e) : null) || K.lagene[0];
+    const N = nåbar(K, o.hvem || 'egne'), [a, b, c, d] = boks(P); let første = -1, n = 0;
+    for (let j = Math.max(0, Math.floor((b - L.y0) / L.s)); j <= Math.min(L.H - 1, Math.floor((d - L.y0) / L.s)); j++) for (let i = Math.max(0, Math.floor((a - L.x0) / L.s)); i <= Math.min(L.W - 1, Math.floor((c - L.x0) / L.s)); i++) {
+      const k = j * L.W + i; if (!L.fri[k] || !inni(P, L.x0 + (i + .5) * L.s, L.y0 + (j + .5) * L.s)) continue; n++; if (N[K.komp[L.off + k]]) return { ok: true, ruter: n }; if (første < 0) første = L.off + k; }
+    if (første < 0) return { ok: false, grunn: GRUNN.gulv, ruter: 0 };
+    return { ok: false, grunn: grunn(K, første, o.hvem || 'egne', o.bruksplass), ruter: n };
+  }
   // Rommene i byggene som ikke nås (inne-rom: mer enn halvparten av rutene er gulv i et bygg): [{ rom, x, y, e, hus, ruter, grunn }]
   function romUtenVei(K0, o = {}) {
     const K = K0 || api.nå; if (!K) return []; const N = nåbar(K, o.hvem || 'egne'), ut = [];
@@ -429,7 +438,44 @@
   function oversikt(K0) { const K = K0 || api.nå; if (!K) return null;
     return { lag: K.lagene.map(L => ({ id: L.id, e: L.e, s: L.s, W: L.W, H: L.H, fri: L.fri.reduce((a, v) => a + v, 0) })), noder: K.N, rom: K.rom.length, portaler: K.portaler.length, lenker: K.lenkeListe.length, mål: [...K.mål.keys()], ms: K.ms, start: K.start }; }
 
-  const api = { REGLER, MÅL, GRUNN, lag, oppdater, signatur, endrerVei, lås, finn, kanNå, veikart, romUtenVei, node, punkt, bruksplass, oversikt, nå: null, _: { lagLag, nærFri, tilRute, nåbar, romVei, aStjerne, Haug } };
+  const api = { REGLER, MÅL, GRUNN, lag, oppdater, signatur, endrerVei, lås, finn, kanNå, romNås, veikart, romUtenVei, node, punkt, bruksplass, oversikt, nå: null, _: { lagLag, nærFri, tilRute, nåbar, romVei, aStjerne, Haug } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Vei = api;
+
+  // ---------- feilsøkingsvisning i 2D (bare i nettleseren; av som standard – ikke for spilleren) ----------
+  // I konsollen: VeiSpill.feilsøk(true) tegner rutenettet (sperret = rødt, inne = blått, dører = gult) og en vei;
+  // VeiSpill.vis('lager') eller VeiSpill.vis([x, y, e]) viser veien fra leirens midte dit; VeiSpill.etasje(2) bytter etasje.
+  if (typeof window === 'undefined' || typeof KROKER === 'undefined') return;
+  const VS = { på: false, e: 1, vei: null, mål: null, sist: 0 };
+  const leirNå = () => (window.LeirSpill && LeirSpill.tilstand ? LeirSpill.tilstand() : null);
+  const midte = () => { const S = window.OppstartSpill && OppstartSpill.tilstand ? OppstartSpill.tilstand() : null; return S && S.leir ? [S.leir.x, S.leir.y] : null; };
+  // kartet for leiren slik den står nå (lages på nytt bare når noe som endrer veien er endret)
+  function kartNå() { const L = leirNå(); return oppdater({ leir: L, start: midte() || (typeof kam !== 'undefined' ? [kam.x, kam.y] : [0, 0]) }); }
+  function vis(mål) { VS.mål = mål; const K = kartNå(), fra = midte();
+    VS.vei = !fra ? null : typeof mål === 'string' ? finn({ x: fra[0], y: fra[1] }, mål, { kart: K }) : Array.isArray(mål) ? finn({ x: fra[0], y: fra[1] }, { x: mål[0], y: mål[1], e: mål[2] }, { kart: K }) : null;
+    if (typeof skitten !== 'undefined') skitten = true; return VS.vei; }
+  KROKER.tegn.push((g, vx0, vy1) => {
+    if (!VS.på || typeof kam === 'undefined') return; const now = Date.now();
+    if (now - VS.sist > 2000) { VS.sist = now; try { kartNå(); if (VS.mål) vis(VS.mål); } catch (e) { VS.feil = e.message; } }
+    const K = api.nå; if (!K) return; const m = kam.m, W = g.canvas.clientWidth || g.canvas.width, H = g.canvas.clientHeight || g.canvas.height, sx = X => (X - vx0) / m, sy = Y => (vy1 - Y) / m;
+    g.save();
+    for (const L of K.lagene) { if (L.e !== VS.e) continue; const px = L.s / m; if (px < 2.5) continue;
+      const i0 = Math.max(0, Math.floor((vx0 - L.x0) / L.s)), i1 = Math.min(L.W - 1, Math.ceil((vx0 + W * m - L.x0) / L.s)), j0 = Math.max(0, Math.floor((vy1 - H * m - L.y0) / L.s)), j1 = Math.min(L.H - 1, Math.ceil((vy1 - L.y0) / L.s));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const k = j * L.W + i, x = sx(L.x0 + i * L.s), y = sy(L.y0 + (j + 1) * L.s);
+        if (!L.fri[k]) { if (L.bakke || L.P) { g.fillStyle = 'rgba(210,60,50,.33)'; g.fillRect(x + .5, y + .5, px - 1, px - 1); } continue; }
+        g.strokeStyle = L.inne[k] && (L.bakke || L.hus !== 'leir') ? 'rgba(110,160,230,.5)' : 'rgba(240,230,200,.16)'; g.strokeRect(x + .5, y + .5, px - 1, px - 1);
+        if (L.dør[k]) { g.fillStyle = 'rgba(245,205,80,.85)'; for (let d = 0; d < 4; d++) if (L.dør[k] >> d & 1) g.fillRect(x + px / 2 + DI[d] * px / 2 - 2, y + px / 2 - DJ[d] * px / 2 - 2, 4, 4); } } }
+    // trappene og dørene inn i husene (lenkene)
+    g.strokeStyle = 'rgba(245,205,80,.9)'; g.lineWidth = 2;
+    for (const l of K.lenkeListe) { const a = K.lagene[K.nlag[l.a]], b = K.lagene[K.nlag[l.b]]; if (a.e !== VS.e && b.e !== VS.e) continue; g.beginPath(); g.moveTo(sx(K.nx[l.a]), sy(K.ny[l.a])); g.lineTo(sx(K.nx[l.b]), sy(K.ny[l.b])); g.stroke(); }
+    if (VS.vei && VS.vei.ok) { g.lineWidth = 3; g.strokeStyle = '#f08a3c'; g.beginPath(); let f = true;
+      for (const p of VS.vei.punkter) { const x = sx(p.x), y = sy(p.y); if (f) g.moveTo(x, y); else g.lineTo(x, y); f = false; } g.stroke();
+      g.fillStyle = '#f08a3c'; for (const p of VS.vei.punkter) if (p.e !== VS.e) { g.beginPath(); g.arc(sx(p.x), sy(p.y), 3, 0, 6.283); g.fill(); } }
+    g.fillStyle = '#f2ead6'; g.font = '12px sans-serif'; g.textAlign = 'center'; g.strokeStyle = 'rgba(0,0,0,.75)'; g.lineWidth = 3;
+    const t = [`Vei (feilsøking): etasje ${VS.e} · ${K.N} ruter · ${K.ms} ms`, `${K.rom.length} rom · ${K.portaler.length} dører/trapper` + (VS.vei ? ` · vei ${VS.vei.ok ? VS.vei.lengde + ' m' : VS.vei.grunn}` : '')];
+    t.forEach((l, k) => { g.strokeText(l, W / 2, H - 150 + k * 15); g.fillText(l, W / 2, H - 150 + k * 15); });
+    g.restore();
+  });
+  rot.VeiSpill = { feilsøk: (p = true) => { VS.på = !!p; VS.sist = 0; if (typeof skitten !== 'undefined') skitten = true; return VS.på; }, vis, kart: kartNå,
+    etasje: e => { VS.e = e; if (typeof skitten !== 'undefined') skitten = true; return e; }, tilstand: () => ({ på: VS.på, e: VS.e, vei: VS.vei, feil: VS.feil || null }) };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
