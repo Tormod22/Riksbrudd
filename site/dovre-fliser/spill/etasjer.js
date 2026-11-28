@@ -37,7 +37,7 @@
     // gange i 2D: meter per sekund inne i huset, og høyst så mange sekunder (resten hoppes over)
     gange: { fart: 1.3, maks: 12 },
     // trappa: du er på trappa fra så langt utenfor endene (m), og høyst så mye til siden
-    trapp: { ende: .45, side: .06, bytt: .5, luft: .12, gelender: .12 },
+    trapp: { ende: .45, side: .06, bytt: .5, luft: .12, gelender: .12, korridor: .75 },
     // kollisjon: så nær en vegg (m fra midtlinja, pluss halve tykkelsen); loftet: lavere skråtak enn dette sperrer (m);
     // stengt etasje: du kan bare stå så langt fra trappa (m)
     vegg: .18, loftMin: 1.1, stengtRepos: 1.6,
@@ -111,9 +111,23 @@
   // KOLLISJON i etasje n (ikke 1. etasje – den har interiøret fra interior.js): yttervegger uten dører, skillevegger utenom
   // døråpningene, møbler som sperrer, trappene, lavt skråtak på loftet og stengte etasjer (bare reposet ved trappa)
   const avstSeg = (x, y, ax, ay, bx, by) => { const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy, t = L ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / L)) : 0; return Math.hypot(x - ax - dx * t, y - ay - dy * t); };
+  // ENDEN AV TRAPPA: byggemodellen kan legge reposet tett inntil (eller på andre siden av) en skillevegg (test_etasjer.js teller dem).
+  // Da får veggen en åpning der trappa møter den – du går rett av trappa. korridor(t, ende, x, y): (x, y) ligger i forlengelsen av
+  // trappa ved den enden (ende −1 = foten, 1 = toppen), høyst REGLER.trapp.korridor m ut.
+  function korridor(t, ende, x, y) { const q = lokal(t, x, y), hl = t.l / 2; return Math.abs(q.v) < t.b / 2 + .05 && ende * q.u > hl - .6 && ende * q.u < hl + REGLER.trapp.korridor; }
+  const iKorridor = (m, n, x, y) => trapperVed(m, n).some(t => korridor(t, t.fra === n ? -1 : 1, x, y));
+  // åpningene trappene lager i veggen w i etasje n: [{ t, b }] (t langs veggen fra a)
+  function trappÅpninger(m, n, w) { const ut = [], L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < .05) return ut; const ex = (w.b[0] - w.a[0]) / L, ey = (w.b[1] - w.a[1]) / L;
+    for (const t of trapperVed(m, n)) { const ende = t.fra === n ? -1 : 1, c = Math.cos(t.a), s = Math.sin(t.a);
+      // trappas midtlinje (fra enden og utover) mot veggens linje
+      const px = t.x + c * ende * t.l / 2, py = t.y + s * ende * t.l / 2, dx = c * ende, dy = s * ende, nev = dx * ey - dy * ex; if (Math.abs(nev) < .3) continue;
+      const k = ((w.a[0] - px) * ey - (w.a[1] - py) * ex) / nev; if (k < -.1 || k > REGLER.trapp.korridor) continue;
+      const tt = (px + dx * k - w.a[0]) * ex + (py + dy * k - w.a[1]) * ey; if (tt < 0 || tt > L) continue;
+      const b = Math.min(L, t.b + .25); ut.push({ t: Math.max(b / 2, Math.min(L - b / 2, tt)), b }); }
+    return ut; }
   function blokkert(m, n, x, y) {
-    const e = etasje(m, n); if (!e) return false; const V = REGLER.vegg;
-    for (const w of e.vegger) { if (!står(w)) continue; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < .01) continue;
+    const e = etasje(m, n); if (!e) return false; const V = REGLER.vegg, kor = iKorridor(m, n, x, y);
+    for (const w of e.vegger) { if (!står(w) || (kor && w.type === 'skille')) continue; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (L < .01) continue;
       const d = avstSeg(x, y, w.a[0], w.a[1], w.b[0], w.b[1]); if (d >= V + (w.tykk || .1) / 2) continue;
       const t = ((x - w.a[0]) * (w.b[0] - w.a[0]) + (y - w.a[1]) * (w.b[1] - w.a[1])) / L;
       if (e.åpninger.some(o => o.vegg === w.id && o.type !== 'vindu' && !o.sperre && o.tilstand !== 'ødelagt' && Math.abs(t - o.t) < o.b / 2 - .12)) continue;
@@ -190,7 +204,7 @@
   function loftHøyde(m, x, y) { const A = m.akse, v = x * A.vx + y * A.vy, vm = (A.v0 + A.v1) / 2, hv = (A.v1 - A.v0) / 2;
     return Math.max(0, (m.tak && m.tak.møne || 0) * (1 - Math.abs(v - vm) / Math.max(.5, hv))); }
 
-  const api = { REGLER, etasje, navn, slag, nøkkel, funn, tilflukt, sperret, påTrapp, trappHøyde, trapperVed, stå, trappSperrer, blokkert, rute, vei, lengde, hull, trappUV, loftHøyde, lokal, areal, står };
+  const api = { REGLER, etasje, navn, slag, nøkkel, funn, tilflukt, sperret, påTrapp, trappHøyde, trapperVed, stå, trappSperrer, blokkert, rute, korridor, iKorridor, trappÅpninger, vei, lengde, hull, trappUV, loftHøyde, lokal, areal, står };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Etasjer = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

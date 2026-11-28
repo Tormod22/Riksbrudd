@@ -189,7 +189,7 @@
     const k = karakter(); if (!k || S.hus === null || (S.n === 1 && !S.gang)) return; const h = husAv(S.hus); if (!h || kam.m > 4) return;
     const m = modell(h), et = m && E.etasje(m, S.n); if (!et) return; const x = (k.x - vx0) / kam.m, y = (vy1 - k.y) / kam.m, t = et.kjeller ? 'Kjeller' : et.loft ? 'Loft' : et.n + '. etg.';
     g.save(); g.font = '600 12px "Cormorant Garamond", Georgia, serif'; const w = g.measureText(t).width + 10; g.fillStyle = 'rgba(22,18,12,.88)'; g.strokeStyle = '#c9b26a'; g.lineWidth = 1;
-    g.fillRect(x + 9, y - 22, w, 16); g.strokeRect(x + 9, y - 22, w, 16); g.fillStyle = '#f0e2b0'; g.textBaseline = 'middle'; g.fillText(t, x + 14, y - 14); g.restore();
+    g.fillRect(x + 9, y + 6, w, 16); g.strokeRect(x + 9, y + 6, w, 16); g.fillStyle = '#f0e2b0'; g.textBaseline = 'middle'; g.fillText(t, x + 14, y + 14); g.restore();
   });
 
   window.Etasjer2D = { S, gåTil, let2d, etasjeI, inngang, husAv, modell, registrer, kjør, les, lagre, erLett, rest, rad, klikk, husKnapper,

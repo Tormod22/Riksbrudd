@@ -47,10 +47,27 @@
     const like = pl.møbler.every((q, k) => { const b = e1.møbler.find(w => w.id === k); return !b || (Math.abs(b.x + ox - q.x) < .06 && Math.abs(b.y + oy - q.y) < .06); });
     if (like && m.trapper.length) { const før = pl.møbler.length, ider = new Set(e1.møbler.map(w => w.id)); pl.møbler = pl.møbler.filter((q, k) => ider.has(k)); P.etasjer.fjernet = før - pl.møbler.length; }
     P.etasjer.like = like;
+    // ulike planer (bygård med trapperom, sykehjem …): 1. etasje i 3D lages av modellen, så 2D og 3D er like og trappene står fritt
+    if (!like) { planFra(pl, e1, ox, oy); P.etasjer.fraModell = true; }
     const flytt = t => Object.assign({}, t, { x: t.x + ox, y: t.y + oy });
     pl.hullUV = { tak: E().trapperVed(m, 1).filter(t => t.fra === 1).map(t => E().trappUV(flytt(t), A)), gulv: E().trapperVed(m, 1).filter(t => t.til === 1).map(t => E().trappUV(flytt(t), A)) };
   }
 
+  // 1. etasje fra modellen i interiørets form (interior.js sin plan): rom (u0–v1 i byggets akser), skillevegger delt rundt
+  // døråpningene, døråpningene [x, y, dx, dy, bredde] og møblene; inngangene, omrisset og ytterveggene står som før
+  function planFra(pl, e1, ox, oy) {
+    const A = pl.akse, Es = E(), uv = (x, y) => [x * A.ux + y * A.uy, x * A.vx + y * A.vy];
+    pl.rom = e1.rom.map(r => { const U = r.P.map(p => uv(p[0] + ox, p[1] + oy)); return { u0: Math.min(...U.map(q => q[0])), u1: Math.max(...U.map(q => q[0])), v0: Math.min(...U.map(q => q[1])), v1: Math.max(...U.map(q => q[1])), rolle: r.rolle, areal: r.areal, andel: r.andel || 1 }; });
+    const vegger = [], dører = [];
+    for (const w of e1.vegger) { if (w.type !== 'skille' || !Es.står(w)) continue; const a = [w.a[0] + ox, w.a[1] + oy], b = [w.b[0] + ox, w.b[1] + oy], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .05) continue;
+      const ex = (b[0] - a[0]) / L, ey = (b[1] - a[1]) / L, hull = e1.åpninger.filter(o => o.vegg === w.id && o.type !== 'vindu' && o.tilstand !== 'ødelagt').map(o => [Math.max(0, o.t - o.b / 2), Math.min(L, o.t + o.b / 2), o]).sort((p, q) => p[0] - q[0]);
+      let t = 0; for (const [p, q, o] of hull) { if (p > t + .02) vegger.push({ ax: a[0] + ex * t, ay: a[1] + ey * t, bx: a[0] + ex * p, by: a[1] + ey * p }); t = Math.max(t, q);
+        if (!o.sperre && o.tilstand !== 'revet') dører.push([a[0] + ex * o.t, a[1] + ey * o.t, ex, ey, o.b]); }
+      if (L > t + .02) vegger.push({ ax: a[0] + ex * t, ay: a[1] + ey * t, bx: b[0], by: b[1] }); }
+    pl.vegger = vegger; pl.dører = dører;
+    pl.møbler = e1.møbler.filter(q => q.tilstand !== 'revet').map(q => ({ type: q.type, x: q.x + ox, y: q.y + oy, a: q.a, b: q.b, d: q.d, h: q.h, sperrer: q.sperrer, f: ((q.id * 2654435761 + pl.i) >>> 0) / 4294967296 }));
+    delete pl.naboer; delete pl.bærbare;
+  }
   // ---------- nettene ----------
   const FARGE = { gulv: [.6, .46, .31], kjellergulv: [.5, .5, .48], loftgulv: [.52, .4, .27], vegg: [.88, .86, .8], skille: [.84, .83, .77], kjellervegg: [.66, .66, .63],
     himling: [.93, .93, .9], loft: [.56, .43, .3], trapp: [.52, .38, .25], gelender: [.3, .22, .15], sperret: [.42, .3, .18], planke: [.62, .46, .26], stige: [.45, .33, .2] };
@@ -109,6 +126,8 @@
     const loftTopp = (x, y) => Es.loftHøyde(m, x - ox, y - oy);
     for (const w of et.vegger) { if (!Es.står(w)) continue; const a = [w.a[0] + ox, w.a[1] + oy], b = [w.b[0] + ox, w.b[1] + oy], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .02) continue;
       const hull = et.åpninger.filter(o => o.vegg === w.id).map(o => ({ t: o.t, b: o.b, ned: o.type === 'vindu' ? o.ned : 0, h: o.tilstand === 'revet' ? 99 : o.type === 'vindu' ? o.h : (et.stengt ? 0 : o.h) })).filter(o => o.h > 0);
+      // åpningen der en trapp møter en skillevegg (Etasjer.trappÅpninger)
+      if (w.type === 'skille') for (const q of Es.trappÅpninger(m, et.n, w)) hull.push({ t: q.t, b: q.b, ned: 0, h: Math.min(2.1, et.takhøyde - .1) });
       // ytterveggen: innsiden (3 cm inn) i hele etasjehøyden; skilleveggene i takhøyden
       const ytter = w.type !== 'skille', ex = (b[0] - a[0]) / L, ey = (b[1] - a[1]) / L, inn = ytter ? .08 : 0, ai = [a[0] - ey * inn, a[1] + ex * inn], bi = [b[0] - ey * inn, b[1] + ex * inn];
       const topp = et.loft ? t => Math.max(.05, loftTopp(ai[0] + ex * t, ai[1] + ey * t)) : () => (ytter ? et.høyde : et.takhøyde);
@@ -184,7 +203,8 @@
   function påTrapp(x, y) { const a = aktiv; if (!a || !Interior.inni(a.P, x, y)) return false; const [mx, my] = lokal(a, x, y), r = E().stå(a.m, a.n, mx, my); return !!r && r.trapp !== null; }
   // kollisjonen (Interior.blokkert -> pl.over): i 1. etasje bare trappene, ellers hele etasjen
   function sperrer(x, y) { const a = aktiv; if (!a) return undefined; const [mx, my] = lokal(a, x, y), Es = E();
-    if (a.n === 1) return Es.trappSperrer(a.m, 1, mx, my) ? true : undefined; return Es.blokkert(a.m, a.n, mx, my); }
+    if (a.n === 1) return Es.trappSperrer(a.m, 1, mx, my) ? true : Es.iKorridor(a.m, 1, mx, my) && !yttervegg(a, x, y) ? false : undefined; return Es.blokkert(a.m, a.n, mx, my); }
+  const yttervegg = (a, x, y) => Interior.avstKant(a.P, x, y) < .25;
 
   // ---------- hver ramme ----------
   let meldt = null;
@@ -226,5 +246,5 @@
     // vakta: hele byggingen nå (uten å vente på bildene)
     ferdig: () => { const a = aktiv; if (a && a.jobb) { iEtt(a.jobb); a.jobb = null; } return !!(a && a.ferdig); },
     nett: () => (aktiv ? [...aktiv.nett.entries()].map(([n, me]) => ({ n, synlig: me.visible, trekanter: me.geometry.attributes.position.count / 3 })) : []),
-    kast: () => kast(r3()), knapp: () => knapp };
+    kast: () => kast(r3()), knapp: () => knapp, steg: () => { const R = r3(); if (R) ramme(R); } };
 })();
