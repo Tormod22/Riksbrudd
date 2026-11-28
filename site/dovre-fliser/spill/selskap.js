@@ -236,8 +236,9 @@
   // en bru, der det ikke står fiender. Fristen får en time ekstra per km (den skal kunne holdes til fots). Alle tallene er Claudes forslag.
   // steder kan ha: vern (bygdevernets mann), fiender (mann dere ser eller nylig så ved stedet), garnison (anslått, når et annet selskap holder det)
   // betaling = som et vanlig tilbud × betaling (en trygg jobb nær leiren betaler litt mindre enn en der troppen må slåss seg fram);
-  // maksNivå: bare så lenge selskapet er på nivå 1–2 (starten, trinn 1–2) – senere skal lagene være sterke nok til de vanlige tilbudene
-  REGLER.lett = { styrke: 4, maksMeter: 9000, nærmeste: 3, holdSjanse: .5, ekstraPerKm: 1, garnison: 8, betaling: .8, maksNivå: 2 };
+  // maksNivå: bare så lenge selskapet er på nivå 1–2 (starten, trinn 1–2) – senere skal lagene være sterke nok til de vanlige tilbudene;
+  // rykte: andelen av det vanlige ryktet («pålitelig») en levert lett jobb gir
+  REGLER.lett = { styrke: 4, maksMeter: 9000, nærmeste: 3, holdSjanse: .5, ekstraPerKm: 1, garnison: 8, betaling: .85, maksNivå: 2, rykte: .5 };
   // det kjente forsvaret ved stedet for en jobb (mann), samme regel som visningens forsvarVed: bygdevernet teller ikke når jobben er for
   // bygdelaget eller kommunen der (de vet om jobben); en garnison teller når et annet selskap holder stedet
   function forsvarFor(k, sted, id) {
@@ -399,7 +400,8 @@
   // gir { kr, rykte } – pengene settes inn av visningen. R18-A: også { motangrep, rekrutt, nivåOpp } (koblingene til resten av spillet)
   function lever(S, id, k, nå, rand) {
     const sd = side(S, id), T = REGLER.TYPER[k.type], P = REGLER.pris[k.pris] || REGLER.pris.vanlig, før = nivå(sd).nr, r = rand || tilf;
-    endreRykte(S, id, { pålitelig: REGLER.levert.pålitelig, hardhendt: T.hardhendt, billig: P.billig });
+    // (ut8-kr-penger) en lett jobb nær leiren (Selskap.sikreLett) gir halvt så mye rykte – den skal holde selskapet i live, ikke være snarveien til nivå 4
+    endreRykte(S, id, { pålitelig: REGLER.levert.pålitelig * (k.lett ? REGLER.lett.rykte : 1), hardhendt: T.hardhendt, billig: P.billig });
     // (ut3-varekontrakt) k.sluttKr: det som betales ved slutten når en del er betalt underveis (avtale) eller frakten er trukket (lever)
     const sluttKr = Number.isFinite(k.sluttKr) ? k.sluttKr : k.betaling;
     k.ferdig = Math.round(nå); avslutt(S, id, k, 'levert'); sd.sum.levert++; sd.sum.tjent += sluttKr;
