@@ -50,7 +50,8 @@ Alle tall er Claudes forslag (`Fabrikk.REGLER`, delene i `ByggesettRegler.NYE`).
   maskiner/lamper som flater (samme grunnhøyde som gulvet).
 - `spill/byggesett-visning.js`: fanen «Maskiner» (FANER, V.maskin, typeNå, knapperaden, «Flyt mot …», etasjeknappen, prisTekst per maskin, hjelp),
   ett trykk per maskin, ingen pekerfølging for maskiner, kallet `FabrikkSpill.sjekkForslag` etter kanBygge, advarselen, `tegnDel`- og 3D-kroken
-  (maskin/lampe/lager → FabrikkSpill), maskinene i fanen Plan, riv velger maskinen når du trykker på fotavtrykket.
+  (maskin/lampe/lager → FabrikkSpill), maskinene i fanen Plan, riv velger maskinen når du trykker på fotavtrykket, og maskiner/hyller i 1. etasje
+  er hindringer i 3D (`hindringer`, R3.hindre).
 - `spill/produksjon.js`: maskintypen `høvel` (tillegg: 1 folk, 5 kW, ingen råvare), `rekkefølge` med høvel før saga, `alias()`/`base()` (delene bruker
   samme regelobjekt som maskin-byggene: `REGLER.maskiner.bs_sagbenk_1 === REGLER.maskiner.sagbruk`), `steg` med `ctx.fart`, `ctx.slit`, `ctx.sager`,
   `ctx.høvelFor` (uten dem som før), `s.maskin`, `s.fart`, `s.høvlet`, `utFor(b, høvlet)`, teksten «· +15 %», `oppskrift`/`merke` for høvelen.
@@ -93,7 +94,7 @@ Hallen 9,6 × 19,2 m i blikk med to porter koster ca. 2,4 mill. kr.
   Maskiner), plan.png (fanen Plan), tre.png og tre-utak.png (3D med og uten tak), gange.png. Ingen sidefeil.
 
 ## IKKE gjort / å vite
-- Maskinene i 3D stopper deg ikke når du går (bare veggene er hindringer i byggesettet), og de har ingen lyd.
+- Maskinene har ingen lyd og ingen bevegelige deler i 3D. (De stopper deg når du går: fotavtrykket ligger i R3.hindre – prøvd med hindring3d.)
 - Rives gulvet under en maskin, blir maskinen stående (ingen kaskade som for dekker).
 - Flyt bare for sagbenk/høvel; vedkløyver og fyrkjele i rommet får ×1. Ingen transportbånd (planen: folkene bærer).
 - Lyset gjelder bare maskinene i hallene (maskin-byggene antas å ha lys); lysene lyser ikke opp noe i 3D.

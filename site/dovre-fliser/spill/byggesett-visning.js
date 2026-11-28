@@ -638,6 +638,11 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
         const nøkler = new Set(P.map(([x, y]) => Math.floor(x / 20) + ',' + Math.floor(y / 20))); nøkler.add(k);
         for (const n of nøkler) { if (!R.hindre.has(n)) R.hindre.set(n, []); R.hindre.get(n).push({ P, bs: true }); } }
     }
+    // (B5) maskiner og hyller i 1. etasje stopper deg når du går (fotavtrykket litt mindre enn rutene)
+    for (const d of liste) { if (!BS.TING || !BS.TING(d) || d.n !== 0 || d.ferdig === false) continue; const R0 = BS.ruter(d), i0 = Math.min(...R0.map(c => c[0])), j0 = Math.min(...R0.map(c => c[1])), i1 = Math.max(...R0.map(c => c[0])) + 1, j1 = Math.max(...R0.map(c => c[1])) + 1;
+      const a0 = o.ox + i0 * G + .15 - u.cx, b0 = o.oy + j0 * G + .15 - u.cy, a1 = o.ox + i1 * G - .15 - u.cx, b1 = o.oy + j1 * G - .15 - u.cy, P = [[a0, b0], [a1, b0], [a1, b1], [a0, b1]];
+      const nøkler = new Set(); for (let x = Math.floor(a0 / 20); x <= Math.floor(a1 / 20); x++) for (let y = Math.floor(b0 / 20); y <= Math.floor(b1 / 20); y++) nøkler.add(x + ',' + y);
+      for (const n of nøkler) { if (!R.hindre.has(n)) R.hindre.set(n, []); R.hindre.get(n).push({ P, bs: true }); } }
   }
   // Forslaget i 3D: gjennomsiktig grønt (kan bygges) og rødt (får ikke plass), riv: rødt
   function skisse3d(u, R) {
