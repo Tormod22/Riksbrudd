@@ -117,7 +117,9 @@
   // Snittet for dem som er i arbeid på oppgaven (0 når ingen er der), 0–1,5
   // (F0, 28. nov) api.døgnF(F, o): døgnplanen fra jobbtavla (spill/jobber.js) – 0 når ingen på oppgaven er i arbeidstida, høyere i
   // arbeidstida, så et helt døgn gir like mye som før. Uten jobbtavla (og i testene) 1.
-  const døgnF = (F, o) => { const v = api.døgnF ? api.døgnF(F, o) : 1; return v >= 0 ? v : 1; };
+  // (F2, 28. nov) api.stedF(F, o): andelen av dem i arbeidstida som er FRAMME på arbeidsplassen (spill/folkgang.js); uten den 1
+  const stedF = (F, o) => { const v = api.stedF ? api.stedF(F, o) : 1; return v >= 0 ? v : 1; };
+  const døgnF = (F, o) => { const v = api.døgnF ? api.døgnF(F, o) : 1; return (v >= 0 ? v : 1) * stedF(F, o); };
   function tempo(F, o) { const A = på(F, o).filter(arbeidsfør); if (!A.length) return 0; return Math.min(1.5, Math.max(0, A.reduce((s, p) => s + personTempo(F, p, o), 0) / A.length)) * døgnF(F, o); }
   // Byggelagene: to personer = ett lag; et lag med én person går halvt så fort (byggTempo)
   const byggelag = F => Math.ceil(arbeidere(F, 'bygg') / 2);
@@ -146,7 +148,7 @@
   function behov(F, L, o = {}) {
     // avh: barn og gamle (arbeider ikke, men spiser og trenger seng); ekstraKjøkken/ekstraVerksted: egenbygde rom (spill/byggesett.js)
     const n = F.personer.length, avh = o.avhengige || 0, senger = LB.plasser(L) + (o.ekstraSenger || 0), kjøkken = iDrift(L, 'kjøkken', o.mangler).length + (o.ekstraKjøkken || 0);
-    const kokker = på(F, 'kjøkken').filter(arbeidsfør).reduce((s, p) => s + personTempo(F, p, 'kjøkken'), 0);
+    const kokker = på(F, 'kjøkken').filter(arbeidsfør).reduce((s, p) => s + personTempo(F, p, 'kjøkken'), 0) * stedF(F, 'kjøkken');
     const bemannet = n ? Math.min(1, kokker * R.perKokk / (n + avh)) : 0, vinter = o.årstid === 'vinter';
     const sesong = årstidF(o.årstid, [1, .5, 0]), fyring = sesong ? Math.ceil(n / R.varmeEnhet) * sesong : 0;
     const drivhus = iDrift(L, 'drivhus', o.mangler).length * R.drivhus * årstidF(o.årstid, [.3, .6, 1]);
@@ -322,7 +324,7 @@
   function fjern(F, id) { if (!F || id === undefined || id === null) return null; const i = F.personer.findIndex(p => p.id === id); if (i < 0) return null; return F.personer.splice(i, 1)[0]; }
   // personId(m): mannens kobling til folket – Leirvakta har tallet (p.id), en tropp har hele personposten (som ikke står i folket)
   const personId = m => (m && (typeof m.person === 'number' || typeof m.person === 'string') ? m.person : null);
-  const api = { varmeAndel: null, døgnF: null, tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
+  const api = { varmeAndel: null, døgnF: null, stedF: null, tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.FolkRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
