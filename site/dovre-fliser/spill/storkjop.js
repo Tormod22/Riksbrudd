@@ -23,7 +23,8 @@
       if (m[3] && MRD.test(m[3])) v *= 1e9; else if (m[3] && MILL.test(m[3])) v *= 1e6; if (v > maks) maks = v; }
     return maks; }
   // ikke kjøp: bekreftelsene selv, salg, riving, avbestilling, penger tilbake, lønnsbud, «Vis»/«Avbryt»
-  const IKKE = /^\s*(ja\b|nei\b|ok\b|avbryt|lukk|tilbake|vis\b|selg|riv\b|avbestill|by over|bryt|si opp|avslå|ingen endring)/i;
+  // (og det som gir penger inn: oppdrag med lønn, aksjer som selges – emisjon og notering –, varer som legges av til en kjøper)
+  const IKKE = /^\s*(ja\b|nei\b|ok\b|avbryt|lukk|tilbake|vis\b|selg|riv\b|avbestill|by over|bryt|si opp|avslå|ingen endring|ta et\b|ta oppdrag|legg av|emisjon|noter\b)/i;
   // er dette et kjøp som må bekreftes? { kr, tekst } eller null
   function måBekreftes(tekst, R = REGLER) { const t = String(tekst || '').replace(/\s+/g, ' ').trim(); if (!t || IKKE.test(t) || /tilbake\)|\(\+/.test(t)) return null;
     const kr = pris(t); return kr > R.grense ? { kr, tekst: t } : null; }
