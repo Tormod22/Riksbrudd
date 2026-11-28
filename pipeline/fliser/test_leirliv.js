@@ -40,6 +40,19 @@ ok(LL.lys('vakttårn', 3, .9) && LL.lys('kontrollrom', 3, .9), 'vakttårnet og k
 { const a = LL.lyskaster(.9, 0, 1), b = LL.lyskaster(.9, LL.REGLER.lyskaster.periode / 4, 1), d = LL.lyskaster(.05, 3, 1);
   ok(a.på && b.på && Math.abs(a.vinkel - b.vinkel) > .3 && Math.abs(b.vinkel) <= LL.REGLER.lyskaster.sveip + 1e-9, 'lyskasteren feier om natta');
   ok(!d.på, 'lyskasteren er av om dagen'); }
+// (ut9-liv2) fugler og katt
+{ const B = [{ id: 1, type: 'brakke', x: 0, y: 0, ret: 0, ferdig: true }, { id: 2, type: 'brakke', x: 20, y: 0, ret: .5, ferdig: true }, { id: 3, type: 'brakke', x: 40, y: 0, ret: 0, ferdig: true }, { id: 4, type: 'kjøkken', x: 0, y: 25, ret: 0, ferdig: true }], leir = { x: 10, y: 14 };
+  const K = LL.kråker(B, leir, 100, 12), tak = K.filter(k => k.bygg);
+  ok(K.length >= LL.REGLER.fugl.kråkerBakke && tak.length >= 1, 'kråker på mønet og på bakken om dagen (' + tak.length + ' på tak)');
+  ok(tak.every(k => { const b = B.find(q => q.id === k.bygg), [lx, ly] = [(k.x - b.x) * Math.cos(-b.ret) - (k.y - b.y) * Math.sin(-b.ret), (k.x - b.x) * Math.sin(-b.ret) + (k.y - b.y) * Math.cos(-b.ret)]; return Math.abs(lx) < .01 && Math.abs(ly) <= 5.5 && k.z > 3; }), 'kråkene sitter på mønet');
+  ok(LL.kråker(B, leir, 100, 1).length === 0, 'ingen kråker om natta');
+  ok(JSON.stringify(LL.kråker(B, leir, 100, 12)) === JSON.stringify(K) && JSON.stringify(LL.kråker(B, leir, 100 + LL.REGLER.fugl.hopp * 3, 12)) !== JSON.stringify(K), 'samme tid gir samme plass, kråkene hopper med tida');
+  const polys = B.map(b => (Leir.BYGG[b.type] ? Leir.hjørner(b) : [[-3.6, -4.6], [3.6, -4.6], [3.6, 4.6], [-3.6, 4.6]].map(([u, v]) => [b.x + u, b.y + v]))), fri = (x, y) => polys.every(P => LL.avstPoly(P, x, y) > .3);
+  let ute = 0, gikk = 0; for (let t = 0; t < 2000; t += 7) { const k = LL.katt(B, leir, t, 13, fri); if (!fri(k.x, k.y)) ute++; gikk += k.går; }
+  ok(ute === 0 && gikk > 0, 'katten går mellom plassene og står aldri i et bygg');
+  ok(LL.katt(B, leir, 50, 2, fri).sover && LL.katt([], leir, 50, 13, fri) === null, 'katten sover om natta; ingen katt uten brakke');
+  const M = LL.måker(100, 200, 30, 12); ok(M.length === LL.REGLER.fugl.måker && M.every(m => { const r = Math.hypot(m.x - 100, m.y - 200); return r >= 14 && r <= 34 && m.z > 10; }), 'måkene sirkler over vannet');
+  ok(LL.måker(100, 200, 30, 0).length === 0, 'ingen måker om natta'); }
 // småting: aldri inni et bygg, aldri oppå hverandre
 const bygg = [
   { id: 1, type: 'brakke', x: 0, y: 0, ret: 0, ferdig: true, fot: Leir.BYGG.brakke.fot },

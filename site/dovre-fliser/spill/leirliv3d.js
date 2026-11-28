@@ -99,7 +99,17 @@
     const kropp = [boks(-.33, .33, -.11, .11, .3, .55, P), boks(.26, .38, -.07, .07, .45, .62, P), ...hode(.55, .3), boks(-.48, -.32, -.035, .035, .5, .58, P, 0)];
     const bein = sv => [[.24, sv], [-.24, -sv]].flatMap(([x, s]) => [-1, 1].map(sy => boks(x + s * sy - .035, x + s * sy + .035, sy * .085 - .035, sy * .085 + .035, 0, .33, P)));
     const ligg = [boks(-.35, .32, -.14, .14, .03, .27, P), boks(.3, .58, -.06, .06, .02, .09, P), boks(.3, .58, .07, .13, .02, .09, P), ...hode(.06, .34), boks(-.62, -.33, -.04, .04, .03, .09, P)];
-    return { snor: samle(snor), kasse: samle(kasse), verktøy: samle(verk), bukk: samle(bukk), kikkert: samle(kikk), planker: samle(plank),
+    // (ut9-liv2) kråke (svart, x fram), katt (stående og liggende) og måke (hvit med grå vinger som en flat V)
+    const SV = [.07, .07, .08], NEB = [.25, .24, .22];
+    const kråke = [boks(-.13, .13, -.06, .06, .07, .19, SV), boks(.11, .21, -.045, .045, .16, .25, SV), boks(.21, .27, -.014, .014, .19, .215, NEB), boks(-.27, -.12, -.04, .04, .11, .15, SV),
+      boks(-.01, .01, -.03, -.015, 0, .08, NEB), boks(-.01, .01, .015, .03, 0, .08, NEB)];
+    const KF = [.62, .4, .2], KM = [.95, .9, .82];
+    const katt = [boks(-.2, .2, -.07, .07, .13, .27, KF), boks(.17, .3, -.065, .065, .21, .33, KF), boks(.26, .31, -.03, .03, .22, .27, KM), boks(.19, .23, -.06, -.025, .33, .38, KF), boks(.19, .23, .025, .06, .33, .38, KF),
+      boks(-.36, -.19, -.02, .02, .24, .28, KF), boks(-.4, -.34, -.02, .02, .27, .38, KF), ...[[.13, -1], [.13, 1], [-.14, -1], [-.14, 1]].map(([x, sy]) => boks(x - .025, x + .025, sy * .045 - .02, sy * .045 + .02, 0, .14, KF))];
+    const kattL = [boks(-.2, .18, -.1, .1, .01, .14, KF), boks(.12, .26, -.065, .065, .03, .15, KF), boks(.15, .19, -.06, -.025, .15, .2, KF), boks(.15, .19, .025, .06, .15, .2, KF), boks(-.15, .2, .1, .14, .01, .06, KF)];
+    const MH = [.94, .94, .92], MG = [.62, .64, .66], vinge = sy => { const g = new THREE.BoxGeometry(.24, .5, .015); g.translate(0, sy * .27, 0); g.rotateX(sy * .22); g.translate(.02, 0, .02); return farg(g, MG); };
+    const måke = [boks(-.22, .2, -.05, .05, -.05, .05, MH), boks(.17, .27, -.04, .04, -.02, .07, MH), boks(.27, .32, -.012, .012, .01, .03, [.9, .7, .2]), boks(-.32, -.2, -.05, .05, -.02, .01, MG), vinge(1), vinge(-1)];
+    return { kråke: samle(kråke), katt: samle(katt), kattL: samle(kattL), måke: samle(måke), snor: samle(snor), kasse: samle(kasse), verktøy: samle(verk), bukk: samle(bukk), kikkert: samle(kikk), planker: samle(plank),
       hundA: samle([...kropp, ...bein(.06)]), hundB: samle([...kropp, ...bein(-.06)]), hundL: samle(ligg) };
   }
   function lagInst(geo, mat, n, R) { const m = new THREE.InstancedMesh(geo, mat, n); m.count = 0; m.frustumCulled = false; m.userData.kilde = 'leirliv3d.js'; R.scene.add(m); return m; }
@@ -108,7 +118,7 @@
   function lag(R) {
     kast(); const geo = geometrier(), mat = window.MODELLER.materiale(), M = {};
     for (const k of ['snor', 'kasse', 'verktøy', 'bukk']) M[k] = lagInst(geo[k], mat, MAKS.ting, R);
-    M.kikkert = lagInst(geo.kikkert, mat, MAKS.figur, R); M.planker = lagInst(geo.planker, mat, MAKS.figur, R);
+    M.kikkert = lagInst(geo.kikkert, mat, MAKS.figur, R); M.kråke = lagInst(geo.kråke, mat, 16, R); M.katt = lagInst(geo.katt, mat, 1, R); M.kattL = lagInst(geo.kattL, mat, 1, R); M.måke = lagInst(geo.måke, mat, 8, R); M.planker = lagInst(geo.planker, mat, MAKS.figur, R);
     const hmat = new THREE.MeshLambertMaterial({ vertexColors: true });
     for (const k of ['hundA', 'hundB', 'hundL']) { M[k] = lagInst(geo[k], hmat, MAKS.hund, R); M[k].instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAKS.hund * 3), 3); }
     // vinduene: en firkant som vender ut (+x), selvlysende og varm
@@ -139,8 +149,11 @@
     for (const t of T) { const m = S.M[t.k]; if (!m) continue; o.position.set(t.x - u.cx, t.y - u.cy, zVed(t.x, t.y, u, R)); o.rotation.set(0, 0, t.a); o.scale.setScalar(1); o.updateMatrix(); m.setMatrixAt(n[t.k]++, o.matrix); }
     for (const k in n) { S.M[k].count = n[k]; S.M[k].instanceMatrix.needsUpdate = true; }
     // vinduene og pipene står på bygget (samme grunnhøyde og størrelse som modellen i leir-visning.js)
-    S.vinduer = []; S.kilder = []; S.tårn = [];
-    for (const b of B) { if (!b.ferdig) continue; const G = window.LeirSpill && LeirSpill.grunn3d ? LeirSpill.grunn3d(b.b, u, R) : null, z0 = (G ? G.topp : zVed(b.x, b.y, u, R)) - .05, k = 1 + (b.nivå - 1) * .08;
+    S.vinduer = []; S.kilder = []; S.tårn = []; S.B = B; S.grunn = new Map(); S.polys = polysFor(B);
+    // vann innen 250 m fra leiren (måkene): første punkt i ringene som er vann i 3D
+    S.vann = null; const lr = leirTils(); if (lr && typeof iVann3d === 'function') { ytre: for (const r of [70, 130, 190, 250]) for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, x = lr.x + Math.cos(a) * r, y = lr.y + Math.sin(a) * r;
+      if (Math.abs(x - u.cx) < u.S - 40 && Math.abs(y - u.cy) < u.S - 40 && iVann3d(u, x - u.cx, y - u.cy)) { S.vann = [x, y, zVed(x, y, u, R)]; break ytre; } } }
+    for (const b of B) { if (!b.ferdig) continue; const G = window.LeirSpill && LeirSpill.grunn3d ? LeirSpill.grunn3d(b.b, u, R) : null, z0 = (G ? G.topp : zVed(b.x, b.y, u, R)) - .05, k = 1 + (b.nivå - 1) * .08; S.grunn.set(b.id, z0);
       LL.vinduer(b.type).forEach((v, i) => { const [x, y] = LL.tilKart(b, v.lx * k, v.ly * k); S.vinduer.push({ type: b.type, id: b.id, i, x: x - u.cx, y: y - u.cy, z: z0 + v.z * k, a: v.a + b.ret, w: v.w * k, h: v.h * k }); });
       if (b.type === 'vakttårn' && S.tårn.length < 6) { const [x, y] = LL.tilKart(b, 1.53 * k, .6 * k); S.tårn.push({ id: b.id, x: x - u.cx, y: y - u.cy, z: z0 + 6.62 * k, ret: b.ret }); }
       const p = LL.PIPE[b.type]; if (p && S.kilder.length < MAKS.røyk) { const [x, y] = LL.tilKart(b, p[0] * k, p[1] * k); S.kilder.push({ type: b.type, id: b.id, x: x - u.cx, y: y - u.cy, z: z0 + p[2] * k }); } }
@@ -165,6 +178,20 @@
     p.needsUpdate = true; A.needsUpdate = true;
     S.M.røyk.material.uniforms.uS.value = R.renderer ? R.renderer.domElement.height * 1.05 : 600;
   }
+  // kråker på mønet og ved bålet, katten og måkene over vann (spill/leirliv.js)
+  function dyr(R, u, lr) {
+    const h = klokka(), t = (typeof tid !== 'undefined' ? tid : 0) * 60, o = o3(), B = S.B || [];
+    let n = 0; for (const k of LL.kråker(B, lr, t, h)) { if (n >= 16) break; const z = k.bygg ? (S.grunn.get(k.bygg) ?? zVed(k.x, k.y, u, R)) + k.z : zVed(k.x, k.y, u, R);
+      if (!k.bygg && !LL.fri(k.x, k.y, .3, S.polys || [], [])) continue; o.position.set(k.x - u.cx, k.y - u.cy, z); o.rotation.set(0, 0, k.a); o.scale.setScalar(1); o.updateMatrix(); S.M.kråke.setMatrixAt(n++, o.matrix); }
+    S.M.kråke.count = n; S.M.kråke.instanceMatrix.needsUpdate = true;
+    const fri = (x, y) => LL.fri(x, y, .35, S.polys || [], []) && !(typeof hindring3d === 'function' && hindring3d(x - u.cx, y - u.cy)), K = LL.katt(B, lr, t, h, fri);
+    S.M.katt.count = S.M.kattL.count = 0;
+    if (K) { const m = K.sover || (!K.går && hash01(Math.floor(t / 20)) < .4) ? S.M.kattL : S.M.katt; o.position.set(K.x - u.cx, K.y - u.cy, zVed(K.x, K.y, u, R)); o.rotation.set(0, 0, K.a); o.updateMatrix(); m.setMatrixAt(0, o.matrix); m.count = 1; }
+    S.M.katt.instanceMatrix.needsUpdate = S.M.kattL.instanceMatrix.needsUpdate = true;
+    n = 0; if (S.vann) for (const g of LL.måker(S.vann[0], S.vann[1], t, h)) { o.position.set(g.x - u.cx, g.y - u.cy, S.vann[2] + g.z); o.rotation.order = 'ZYX'; o.rotation.set(g.krenging, 0, g.a); o.updateMatrix(); S.M.måke.setMatrixAt(n++, o.matrix); }
+    o.rotation.order = 'XYZ'; S.M.måke.count = n; S.M.måke.instanceMatrix.needsUpdate = true;
+  }
+  const hash01 = k => LL.hash(k, 13);
   // lyskasteren feier sakte om natta
   function stråler() {
     const m = window.NATT ? NATT.mørke : 0, t = performance.now() / 1000, o = o3(); let n = 0;
@@ -191,14 +218,14 @@
     const nær = !!lr && Math.abs(lr.x - u.cx) < u.S - 60 && Math.abs(lr.y - u.cy) < u.S - 60;
     for (const m of Object.values(S.M)) m.visible = nær; if (!nær) return;
     const ms = performance.now(); if (ms - S.sistStatisk > 1000 || S.u !== u) { S.sistStatisk = ms; if (S.u !== u) S.nøk = ''; S.u = u; statisk(R, u); vinduLys(); }
-    røyk(R); figurer(u); hunder3d(R, u); stråler();
+    røyk(R); figurer(u); hunder3d(R, u); stråler(); dyr(R, u, lr);
   });
 
   // ---------- vakta ----------
   function sjekk() {
-    const R = r3(), u = R && R.ut; if (!S || !u) return null; const ut = { ting: {}, vinduer: S.M.vindu.count, røykKilder: S.kilder.length, kikkert: S.M.kikkert.count, planker: S.M.planker.count, hunder: hunder.length, iBygg: 0, svever: 0 };
+    const R = r3(), u = R && R.ut; if (!S || !u) return null; const ut = { ting: {}, vinduer: S.M.vindu.count, røykKilder: S.kilder.length, kikkert: S.M.kikkert.count, planker: S.M.planker.count, hunder: hunder.length, kråker: S.M.kråke.count, måker: S.M.måke.count, vann: !!S.vann, stråler: S.M.stråle.count, iBygg: 0, svever: 0 };
     const B = byggListe(), polys = polysFor(B), m = new THREE.Matrix4(), v = new THREE.Vector3();
-    for (const k of ['snor', 'kasse', 'verktøy', 'bukk', 'hundA', 'hundB', 'hundL']) { const M = S.M[k]; ut.ting[k] = M.count;
+    for (const k of ['snor', 'kasse', 'verktøy', 'bukk', 'hundA', 'hundB', 'hundL', 'katt', 'kattL']) { const M = S.M[k]; ut.ting[k] = M.count;
       for (let i = 0; i < M.count; i++) { M.getMatrixAt(i, m); v.setFromMatrixPosition(m); const X = v.x + u.cx, Y = v.y + u.cy;
         if (polys.some(P => LL.avstPoly(P, X, Y) < .3)) ut.iBygg++; if (Math.abs(v.z - zVed(X, Y, u, R)) > .25) ut.svever++; } }
     return ut;
