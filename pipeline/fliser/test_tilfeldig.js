@@ -84,7 +84,7 @@ ok(!lik(rekke(T.lag('a'), 20), rekke(T.lag('b'), 20)), 'ulike tekster gir ulike 
 // den fritt. Ellers godtas bare: reserven når Tilfeldig mangler («TILFELDIG ? TILFELDIG.verden : Math.random» og
 // «Tilfeldig.verden) || Math.random»), lånet i oppstart.js (Math.random byttes ut mens portrettet lages), kommentarer, og en linje
 // rett under en kommentar som sier «Math.random med vilje».
-const BARE_UTSEENDE = ['lyd.js', 'effekter3d.js', 'vind3d.js', 'folk3d.js', 'dyr3d.js', 'natt3d.js', 'liv3d.js', 'portrett-motor.js'];
+const BARE_UTSEENDE = ['lyd.js', 'lyd2d.js', 'effekter3d.js', 'vind3d.js', 'folk3d.js', 'dyr3d.js', 'natt3d.js', 'liv3d.js', 'portrett-motor.js'];
 function mathRandomFeil(navn, tekst) {
   if (BARE_UTSEENDE.includes(navn)) return [];
   const L = tekst.split('\n'), ut = [];
