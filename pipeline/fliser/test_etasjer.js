@@ -2,7 +2,7 @@
 // node pipeline/fliser/test_etasjer.js   (RASK=1 færre prøvehus)
 'use strict';
 const B = require('../../site/dovre-fliser/spill/bygning.js'), E = require('../../site/dovre-fliser/spill/etasjer.js'), L = require('../../site/dovre-fliser/spill/leting.js');
-let feil = 0, n = 0; const ok = (v, t) => { n++; if (!v) { feil++; if (feil < 30) console.log('FEIL:', t); } };
+let feil = 0, n = 0, iVei = false; const ok = (v, t) => { n++; if (!v) { feil++; if (feil < 30) console.log(iVei ? 'MERK (veien går rett, telles under):' : 'FEIL:', t); } };
 const rekt = (w, d) => [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]];
 const L_ = [-1, 1];
 const saker = [];
@@ -17,7 +17,7 @@ for (const [k, [kl, w, d, h]] of utvalg.entries()) {
     if (et.n === 1) continue; const v = E.vei(m, fra, et.n); ok(!!v, `${kl} ${w}×${d} ${h} m: ingen vei til ${et.navn}`); if (!v) continue; veier++;
     ok(v[v.length - 1].n === et.n, `${kl}: veien ender ikke i ${et.navn}`);
     // gå langs veien i små steg: høyden endrer seg jevnt, og etasjen skifter midt i hver trapp
-    let nå = 1, z0 = 0; const før = feil;
+    let nå = 1, z0 = 0; const før = feil; iVei = true;
     for (let s = 1; s < v.length; s++) { const a = v[s - 1], b = v[s], Ls = Math.hypot(b.x - a.x, b.y - a.y), N = Math.max(1, Math.ceil(Ls / .1));
       if (s === 1) continue;
       for (let q = 0; q <= N; q++) { const x = a.x + (b.x - a.x) * q / N, y = a.y + (b.y - a.y) * q / N, r = E.stå(m, nå, x, y); trinn++;
@@ -31,7 +31,7 @@ for (const [k, [kl, w, d, h]] of utvalg.entries()) {
     ok(nå === et.n, `${kl} ${h} m: kom til etasje ${nå}, ikke ${et.n}`);
     ok(Math.abs(z0 - et.z) < .05, `${kl}: høyden i ${et.navn} er ${z0}, ikke ${et.z}`);
     // (en vei der rutenettet ikke fant noen vei inne i en etasje, går rett – det telles; høyst 3 % er godtatt)
-    if (feil > før) { rette++; feil = før; }
+    if (feil > før) { rette++; feil = før; } iVei = false;
   }
   // fra 1. etasje: toppen av trappa kan ikke nås fra siden eller fra toppenden (ingen «hopp» opp)
   for (const t of m.trapper.filter(q => q.fra === 1)) { const c = Math.cos(t.a), s2 = Math.sin(t.a), x = t.x + c * t.l * .45, y = t.y + s2 * t.l * .45;
@@ -55,6 +55,13 @@ ok(flere > (process.env.RASK ? 10 : 40), 'for få prøvehus med flere etasjer: '
 // tilflukt: tilfluktsrom alltid, kjeller bare i store nok bygg
 { const m = { P: rekt(20, 12), etasjer: [{ n: -1, kjeller: true, rom: [{ id: 0, rolle: 'tilfluktsrom', areal: 40 }] }] }; ok(E.tilflukt(m) && E.tilflukt(m).tilfluktsrom, 'tilfluktsrommet er ikke tilflukt');
   const m2 = { P: rekt(6, 6), etasjer: [{ n: -1, kjeller: true, rom: [{ id: 0, rolle: 'kjeller', areal: 30 }] }] }; ok(E.tilflukt(m2) === null, 'en liten kjeller ble tilflukt'); }
+// høyhus: de stengte etasjene – veien går gjennom trapperommet, bare reposet ved trappa er fritt («trapperommet er sperret»)
+{ const P = rekt(24, 16), m = B.fraKart(P, { i: 4711, kl: 'kontor', h: 45, dør: { x: 0, y: -8, w: 1.6 } }), st = m.etasjer.filter(e => e.stengt);
+  ok(st.length >= 3, 'høyhuset har ingen stengte etasjer'); const topp = m.etasjer[m.etasjer.length - 1];
+  ok(!topp.stengt && E.vei(m, { x: 0, y: -7.2, n: 1 }, topp.n), 'ingen vei til øverste etasje i høyhuset');
+  for (const e of st) { const T = E.trapperVed(m, e.n); ok(T.every(t => !E.blokkert(m, e.n, t.oppe[0], t.oppe[1]) || !E.blokkert(m, e.n, t.nede[0], t.nede[1])), `stengt etasje ${e.n}: reposet sperrer`);
+    const langt = [[11, 7], [-11, 7], [11, -7], [-11, -7]].find(([x, y]) => T.every(t => Math.hypot(x - t.x, y - t.y) > t.l / 2 + 2));
+    ok(!langt || E.blokkert(m, e.n, langt[0], langt[1]), `stengt etasje ${e.n}: du kan gå utenfor trapperommet`); } }
 // selvtest: en trapp uten hysterese ville gitt hopp – fjern trappa og se at veien forsvinner
 { const m = B.fraKart(rekt(14, 9), { i: 5, kl: 'hus', h: 9, dør: { x: 0, y: -4.5, w: 1 } }); const t = m.trapper[0]; t.tilstand = 'revet'; ok(E.vei(m, { x: 0, y: -3.7, n: 1 }, m.etasjer[1].n) === null, 'selvtest: veien går gjennom en revet trapp'); }
 console.log(`etasjer: ${n} sjekker, ${feil} feil – ${flere} hus med flere etasjer, ${veier} veier, ${trinn} steg, ${bytter} etasjebytter, ${rette} veier rett gjennom; ${vedVegg.size} trapper med repos inntil en vegg (modellen)`);
