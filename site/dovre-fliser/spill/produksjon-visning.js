@@ -178,8 +178,8 @@
       const strøm = R.gir ? `gir ${nf(s.kw || 0, 0)} av ${R.gir} kW` : `${R.kw} kW`;
       h += `<div class="by mrad" data-maskin="${b.id}"><span>${esc(B.navn)}<small>${esc(PR.oppskrift(b.type))}</small><small>Folk ${nf(s.folk || 0, 1)} av ${R.folk}${s.kvalitet ? ' (dyktige: +10 %)' : ''} · ${strøm} · slitt ${Math.round((1 - (b.hp || 0)) * 100)} %</small>`
         + (mating() ? `<small class="mating">${esc(mating().maskinTekst(b))}</small>` : '')
-        + (!s.går && !b.av && s.grunn === 'folk' ? `<small class="hvorfor">Hvorfor: ${esc(hvorforFolk(l, b))}</small>` : '') + (window.FabrikkSpill && FabrikkSpill.tekst(b.id) ? `<small class="hall">I hallen: ${esc(FabrikkSpill.tekst(b.id))}</small>` : '') + '</span>'
-        + `<em class="${s.går && s.drift >= .98 ? 'grønn' : s.går || b.av ? '' : 'rød'}">${esc(s.går ? s.tekst : b.av ? 'slått av' : s.tekst)}</em>`
+        + (!s.går && !b.av && (s.grunn === 'folk' || !n) ? `<small class="hvorfor">Hvorfor: ${esc(hvorforFolk(l, b))}</small>` : '') + (window.FabrikkSpill && FabrikkSpill.tekst(b.id) ? `<small class="hall">I hallen: ${esc(FabrikkSpill.tekst(b.id))}</small>` : '') + '</span>'
+        + `<em class="${s.går && s.drift >= .98 ? 'grønn' : s.går || b.av ? '' : 'rød'}">${esc(s.går ? s.tekst : b.av ? 'slått av' : !n && !R.tillegg ? 'ingen folk' : s.tekst)}</em>`
         + `<button type="button" data-pr="av" data-id="${b.id}" data-av="${b.av ? '0' : '1'}">${b.av ? 'Slå på' : 'Slå av'}</button></div>`; }
     h += '<ul class="tall">' + VARER.map(([v, navn]) => `<li><span>${navn}</span><b>${nf((l.lager && l.lager[v]) || 0, 1)} av ${plass} m³</b></li>`).join('');
     h += `<li class="prfolk"><span>Folk på «Maskiner»</span><button type="button" data-pr="folk" data-r="minus" aria-label="Færre på maskinene">−</button><b>${n}${trenger ? ' av ' + trenger : ''}</b><button type="button" data-pr="folk" data-r="pluss" aria-label="Flere på maskinene">+</button></li>`;

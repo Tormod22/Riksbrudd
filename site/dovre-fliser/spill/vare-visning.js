@@ -188,7 +188,8 @@
       h1 += k.type === 'avtale' ? `<div class="rad"><span>Per døgn <span class="kr tall">${kr(k.dagKr)}</span></span><span>Bonus til slutt <span class="kr tall">${kr(k.bonus)}</span></span><span>Bot per døgn uten varer <span class="bot tall">${kr(k.botDøgn)}</span></span></div>`
         : `<div class="rad"><span>Kostnad per døgn <span class="bot tall">${kr(k.dagKr)}</span></span><span>${esc(V.prisTekst(k))} (marked i dag ${kr((verdi()[k.vare]) || 0)})</span><span>Bot uten penger <span class="bot tall">${kr(k.botDøgn)}</span></span></div>`;
     }
-    h1 += `<div class="vlinje ${rk.ok ? 'ok' : 'ikke'}">${esc(rk.tekst)}${k.type === 'kjøp' && Number.isFinite(plass(k.vare)) ? ` Plass på lageret: ${V.mengdeTekst(k.vare, Math.floor(plass(k.vare) * 10) / 10)}.` : ''}</div>`;
+    const trangK = k.type === 'kjøp' && Number.isFinite(plass(k.vare)) && plass(k.vare) < k.perDøgn - .05;
+    h1 += `<div class="vlinje ${rk.ok && !trangK ? 'ok' : 'ikke'}">${esc(rk.tekst)}${k.type === 'kjøp' && Number.isFinite(plass(k.vare)) ? ` Plass på lageret: ${V.mengdeTekst(k.vare, Math.floor(plass(k.vare) * 10) / 10)}.` : ''}</div>`;
     if (!aktiv) { const igjen = Math.max(0, k.utløper - tid), pl = k.type === 'kjøp' ? plass(k.vare) : Infinity, trang = Number.isFinite(pl) && pl < k.perDøgn - .05;
       // (ut8-kr-saga) kjøpsavtale når lageret ikke har plass til ett døgns levering: først en bekreftelse på kortet
       const spør = trang && !bekreftet.has(k.id), ja = trang && bekreftet.has(k.id);
