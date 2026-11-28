@@ -16,10 +16,10 @@
   'use strict';
   // ---------- tallene (alle er Claudes forslag) ----------
   const REGLER = {
-    // varene som kan eksporteres: pris i eurokreditt per enhet (1 eurokreditt ≈ 1000 kr ved start, så planker gir ca. 32 000 kr mot
-    // 20 000 kr hjemme), mengden en ordre spør etter, og plassen i lasterommet per enhet (som i spill/sjo.js: m³/t = 1, diesel 0,01 per liter)
+    // varene som kan eksporteres: pris i eurokreditt per enhet (1 eurokreditt ≈ 1000 kr ved start, så planker gir ca. 36 000 kr mot
+    // 20 000 kr i markedet og 25 000 kr for en levering hjemme – økonomitesten viste at 32 knapt lønte seg, fordi plankene er flaskehalsen), mengden en ordre spør etter, og plassen i lasterommet per enhet (som i spill/sjo.js: m³/t = 1, diesel 0,01 per liter)
     VARER: {
-      tre: { navn: 'planker', enhet: 'm³', ek: 32, mengde: [40, 200], steg: 10, plass: 1 },
+      tre: { navn: 'planker', enhet: 'm³', ek: 36, mengde: [40, 200], steg: 10, plass: 1 },
       tømmer: { navn: 'tømmer', enhet: 'm³', ek: 12, mengde: [60, 240], steg: 20, plass: 1 },
       ved: { navn: 'ved', enhet: 'm³', ek: 13, mengde: [30, 120], steg: 10, plass: 1 },
       stål: { navn: 'stål', enhet: 't', ek: 85, mengde: [5, 25], steg: 5, plass: 1 },

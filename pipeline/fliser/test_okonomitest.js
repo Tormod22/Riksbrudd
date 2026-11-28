@@ -46,6 +46,8 @@ const KJENT = {
   // (28. nov, flettingen av byavtalene) på grensen: 10–12 % blakk – varekontraktene (Ø2) skal gi saga kunder og løfte strategien
   'utenSjanse:kontraktSag': 'på grensen (10–12 %): saga, kjelen og bilen (ca. 15 mill.) tidlig gjør de dårligste kjøringene blakke – balansepakke 2 skal rette det',
   'utenSjanse:kontraktVare': 'samme som over (10–12 %), selv om varekontraktene løfter de dårligste kjøringene – balansepakke 2',
+  // (ut4-eksport, Ø6) samme frø (7, 18, 19) som «kontrakter + sag + varer» – eksporten begynner først fra trinn 2 og redder ikke de dårligste
+  'utenSjanse:kontraktEksport': 'samme som over (12 %, de samme frøene som «kontrakter + sag + varer») – eksporten kommer fra trinn 2, balansepakke 2',
 };
 const BAND_FIL = path.join(__dirname, 'okonomitest-band.json');
 
