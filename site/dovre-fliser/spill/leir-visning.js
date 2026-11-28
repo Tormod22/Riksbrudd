@@ -207,15 +207,16 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
         const B = LB.BYGG[b.type], navn = B.navn.toLowerCase(), r = LB.skad(L, b.id, .08 * dt / 60); if (!r) continue;
         if (r.ødelagt) { const tapt = Math.max(0, L.drivstoff - LB.kapasitet(L)), mt = matTekst(r.mat);
           // delene i byggesettet (ofte mange på én gang) meldes samlet under
-          if (B.del) { deler.n++; for (const [k, v] of Object.entries(r.mat)) deler.mat[k] = Math.round(((deler.mat[k] || 0) + v) * 10) / 10; }
+          if (B.del && !B.fabrikkbygg) { deler.n++; for (const [k, v] of Object.entries(r.mat)) deler.mat[k] = Math.round(((deler.mat[k] || 0) + v) * 10) / 10; }
           else if (r.byggeplass) logg(`Byggeplassen for ${navn} er ødelagt av ${e.navn}! ` + (mt ? `Materialene som ikke var brukt, er tilbake på lageret: ${mt}.` : 'Alle materialene var brukt opp.'));
           else logg(`${B.navn} er ødelagt av ${e.navn}!` + (tapt >= 1 ? ` ${Math.round(tapt).toLocaleString('nb-NO')} l diesel gikk tapt.` : '') + (mt ? ` Materialene til oppgraderingen som ikke var brukt, er tilbake på lageret: ${mt}.` : ''));
           if (valgtBygg === b.id) { valgtBygg = null; banner.classList.remove('på'); }
           bygg3dPåNytt(); lagre(); }
         // (R2-løkka 26. nov, kritikken: «røverne skader aggregat/dieseltank …» mens byggene sto på 99–100 %) meldes først når skaden synes
         // (under 90 %), og med hvor mye som er igjen
-        else { const nøkkel = B.del ? 'byggesett' : b.id; if (!skadeMeldt.has(nøkkel) && !(b.hp >= .9)) { skadeMeldt.add(nøkkel);
-          logg(B.del ? `${e.navn} skader byggesettet!` : r.byggeplass ? `${e.navn} skader byggeplassen for ${navn}!` : `${e.navn} skader ${navn} i leiren (${Math.round(Math.max(0, b.hp) * 100)} % igjen)!`); } } }
+        else { const nøkkel = B.del && !B.fabrikkbygg ? 'byggesett' : b.id; if (!skadeMeldt.has(nøkkel) && !(b.hp >= .9)) { skadeMeldt.add(nøkkel);
+          // (ut10-fabrikkbygg) maskinene i et fabrikkbygg meldes med navn (de er del: true, men ikke byggesettet)
+          logg(B.del && !B.fabrikkbygg ? `${e.navn} skader byggesettet!` : r.byggeplass ? `${e.navn} skader byggeplassen for ${navn}!` : `${e.navn} skader ${navn} i leiren (${Math.round(Math.max(0, b.hp) * 100)} % igjen)!`); } } }
       if (deler.n) { const mt = matTekst(deler.mat); logg(`${deler.n} ${deler.n === 1 ? 'del' : 'deler'} i byggesettet er ødelagt av ${e.navn}!` + (mt ? ` Materialene som ikke var brukt, er tilbake på lageret: ${mt}.` : '')); skitten = true; } }
     akk += dt; if (akk >= 10 || siste.nyFerdig.length || siste.ferdigArbeid.length) { akk = 0; lagre(); }
     if (performance.now() - (sist || 0) > 1000) { sist = performance.now(); visStatus(); const nede = window.pekerNede || (() => false); if (meny && !nede(menyEl)) visMeny(true); if (valgtBygg && !plassering && !nede(banner)) visByggPanel(); skitten = true; }
