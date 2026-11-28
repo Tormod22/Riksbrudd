@@ -97,7 +97,9 @@
       }
       // tida maskinen sto (helt eller delvis), per grunn
       const stod = (1 - s.drift) * t; if (stod > 1e-9) { const g = s.grunn || (s.folk < M.folk - 1e-6 ? 'folk' : 'tom'); if (!s.grunn && s.drift < 1 - 1e-6) s.grunn = g; P.sto[g] = (P.sto[g] || 0) + stod; }
-      s.tekst = s.går ? (s.drift < .98 ? `går ${Math.round(s.drift * 100)} %` + (s.grunn ? ' – ' + grunnTekst(s.grunn, b.type) : '') : 'går') : grunnTekst(s.grunn, b.type);
+      // delvis drift: «går 50 % – for få folk» / «– lite tømmer»
+      const delvis = g => (g === 'folk' ? 'for få folk' : g === 'tom' ? tomTekst(b.type).replace('tom for', 'lite') : grunnTekst(g, b.type));
+      s.tekst = s.går ? (s.drift < .98 ? `går ${Math.round(s.drift * 100)} %` + (s.grunn ? ' – ' + delvis(s.grunn) : '') : 'går') : grunnTekst(s.grunn, b.type);
     }
     P.status = status;
     return { status, kw, varme };

@@ -22,7 +22,9 @@
   const timer = t => (!isFinite(t) ? 'aldri (ingen folk)' : t < 1 ? `${Math.max(1, Math.round(t * 60))} min` : `${tall(t)} t`);
   const hash = (x, y) => { let n = (Math.round(x * 10) * 73856093) ^ (Math.round(y * 10) * 19349663); n = Math.imul(n ^ (n >>> 13), 0x5bd1e995); n ^= n >>> 15; return (n >>> 0) / 4294967296; };
   const pip = (P, x, y) => { let inn = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) inn = !inn; return inn; };
-  const ledigBil = () => (window.KJORETOY || []).find(k => k.side === 'blå' && k.type === 'lastebil' && k.antall && !k.oppdrag && !(window.Forsyning && Forsyning.drivstoff(k) <= 0));
+  // (Ø1, 28. nov) til hogst tas en ledig tømmerbil (20 m³, spill/produksjon-visning.js) først, ellers en lastebil
+  const ledigBil = type => { const t = type || (velg && velg.type), alle = (window.KJORETOY || []).filter(k => k.side === 'blå' && k.antall && !k.oppdrag && !(window.Forsyning && Forsyning.drivstoff(k) <= 0));
+    return (t === 'hogst' && alle.find(k => k.type === 'tømmerbil')) || alle.find(k => k.type === 'lastebil'); };
 
   // ---------- stil og panelet ----------
   const css = document.createElement('style');
@@ -112,7 +114,7 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
     banner.innerHTML = ''; banner.classList.add('på'); const n = folk(j.type) * tempo(j.type);
     banner.append(el('div', {}, el('b', {}, j.type === 'hogst' ? `Hogstfelt (${j.r} m)` : `Riving: ${husNavn(j.hus)}`), ' – ' + jobbLinje(j).split(' – ')[1]),
       el('small', {}, `Gir ${matTekst(j.mat)}; levert ${matTekst(j.levert)}.` + (j.gjort < j.arbeid && !j.stoppet ? ` Igjen: ${timer(RS.timerMed(j, n))} med ${folk(j.type)} på ${j.type}.` : '')));
-    if (j.avst > RS.REGLER.nær && RS.iHaug(j) > .05 && j.frakt !== 'lastebil') { const b = ledigBil(); banner.append(kn(b ? `Send ${b.navn}` : 'Ingen ledig lastebil', () => { sendBil(b, j.id); visJobb(j.id); }, b ? {} : { disabled: '' })); }
+    if (j.avst > RS.REGLER.nær && RS.iHaug(j) > .05 && j.frakt !== 'lastebil') { const b = ledigBil(j.type); banner.append(kn(b ? `Send ${b.navn}` : 'Ingen ledig lastebil', () => { sendBil(b, j.id); visJobb(j.id); }, b ? {} : { disabled: '' })); }
     if (!j.stoppet && j.gjort < j.arbeid) banner.append(kn('Stopp arbeidet', () => { RS.avbryt(R, j.id); lagre(); bygg3dDel(); logg('Arbeidet er stoppet; det som er gjort, fraktes fortsatt hjem.'); visJobb(j.id); }));
     banner.append(kn('Lukk', lukk)); skitten = true;
   }
@@ -254,7 +256,7 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
   function hauger(u, R3_) {
     const M = window.MODELLER; if (!M) return null; const d = [];
     for (const j of R.jobber) { const h = RS.iHaug(j); if (h < .3 || Math.abs(j.x - u.cx) > u.S || Math.abs(j.y - u.cy) > u.S) continue;
-      const z = (hoyde3d(j.x, j.y, u) - u.h0) * R3_.EX, x = j.x - u.cx + (j.type === 'hogst' ? j.r * .6 : 0), y = j.y - u.cy, tre = j.haug.tre / h, rader = Math.min(6, Math.max(1, Math.round(Math.sqrt(h))));
+      const z = (hoyde3d(j.x, j.y, u) - u.h0) * R3_.EX, x = j.x - u.cx + (j.type === 'hogst' ? j.r * .6 : 0), y = j.y - u.cy, tre = (j.haug.tre + (j.haug.tømmer || 0)) / h, rader = Math.min(6, Math.max(1, Math.round(Math.sqrt(h))));
       for (let r = 0; r < rader; r++) for (let k = 0; k < rader - r + 2; k++) {
         const g = new THREE.CylinderGeometry(.22, .22, 4.5, 7).toNonIndexed(); g.rotateZ(Math.PI / 2); const c = tre > .5 ? [.55, .42, .27] : [.52, .5, .47];
         g.translate(x + (k - (rader - r + 1) / 2) * .46, y, z + .22 + r * .4); const n = g.attributes.position.count, f = new Float32Array(n * 3); for (let i = 0; i < n; i++) f.set(c, i * 3); g.setAttribute('color', new THREE.BufferAttribute(f, 3)); d.push(g); } }
