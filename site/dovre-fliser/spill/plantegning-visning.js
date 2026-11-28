@@ -114,10 +114,14 @@
   // (ut8-kr-hus, kritikeren Jonas: «husvinduet viste huset selv når kartet sto på leiren») Husvinduet gjelder bare et hus som er på
   // skjermen: midten av huset innenfor bildet og huset minst så stort som når plantegningen kommer. Et hus i fokus («Se inn») som er
   // flyttet ut av bildet eller blitt for lite, slippes.
+  // (Statuslinja øverst og – på telefon – bunnmenyen dekker kanten av kartet: midten av huset må være i den delen du ser, SKJERM.topp/bunn
+  // punkter fra kanten. Claudes forslag.)
+  const SKJERM = { topp: 70, bunn: 30, bunnTelefon: 150 };
   function påSkjerm(h) {
     if (typeof kam === 'undefined' || typeof VW === 'undefined') return true;
-    const cx = (h.bb[0] + h.bb[2]) / 2, cy = (h.bb[1] + h.bb[3]) / 2;
-    return Math.abs(cx - kam.x) <= VW * kam.m / 2 && Math.abs(cy - kam.y) <= VH * kam.m / 2 && Math.max(h.bb[2] - h.bb[0], h.bb[3] - h.bb[1]) / kam.m >= R.minPunkter * .8;
+    const cx = (h.bb[0] + h.bb[2]) / 2, cy = (h.bb[1] + h.bb[3]) / 2, sx = (cx - kam.x) / kam.m + VW / 2, sy = VH / 2 - (cy - kam.y) / kam.m;
+    const bunn = VH - (VW <= 700 ? SKJERM.bunnTelefon : SKJERM.bunn);
+    return sx >= 0 && sx <= VW && sy >= SKJERM.topp && sy <= bunn && Math.max(h.bb[2] - h.bb[0], h.bb[3] - h.bb[1]) / kam.m >= R.minPunkter * .8;
   }
   const hoved = () => { const l = S.nær.filter(h => h.klar && h.m);
     if (S.fokus) { const f = l.find(h => h.i === S.fokus.i); if (f && påSkjerm(f)) return f; if (f) { S.fokus = null; S.sist = null; } }
@@ -259,7 +263,7 @@
   const css = document.createElement('style');
   css.textContent = `#plan2d{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp,58px) + 8px); z-index:7; display:none; box-sizing:border-box; max-width:min(600px,calc(100vw - 32px));
   background:var(--panel,rgba(22,18,12,.94)); border:1px solid var(--rule,#5b5140); color:var(--ink,#e7dcc3); padding:6px 10px; font-size:14px; line-height:1.35; }
-#plan2d.på{ display:block; } #plan2d .rad{ display:flex; flex-wrap:wrap; align-items:center; gap:4px; } #plan2d b{ font-weight:600; margin-right:6px; }
+#plan2d.på{ display:block; max-height:calc(100% - var(--topp,58px) - 40px); overflow-y:auto; } #plan2d .rad{ display:flex; flex-wrap:wrap; align-items:center; gap:4px; } #plan2d b{ font-weight:600; margin-right:6px; }
 #plan2d .hode .fyll{ flex:1 1 0; min-width:0; } #plan2d button.x{ min-width:34px; padding:0; font-size:19px; line-height:1; } #plan2d button.mer{ display:none; }
 #plan2d button{ min-height:32px; min-width:34px; padding:2px 10px; background:#2a2318; border:1px solid var(--rule,#5b5140); color:var(--ink,#e7dcc3); font:inherit; font-size:14px; cursor:pointer; }
 #plan2d button.valgt{ border-color:#c9b26a; color:#f0d79a; } #plan2d button.grå{ opacity:.55; } #plan2d small{ color:var(--ink-dim,#a69b82); }
@@ -267,7 +271,7 @@
 @media (max-width:700px){ #plan2d{ left:12px; right:76px; top:auto; bottom:calc(150px + env(safe-area-inset-bottom,0px)); transform:none; max-width:none; font-size:13px; padding:5px 8px; }
   #plan2d button{ font-size:13px; padding:2px 8px; } #plan2d .rad small{ display:none; }
   /* (ut8-kr-hus) telefon: én rad med knapper; resten bak «Mer» (det du har valgt, og det karakteren gjør nå, vises alltid) */
-  #plan2d button.mer{ display:inline-block; } #plan2d.ingenmer button.mer{ display:none; } #plan2d:not(.mer) > .rad:not(.hode):not(.viktig){ display:none; } }`;
+  #plan2d.på{ max-height:46vh; } #plan2d button.mer{ display:inline-block; } #plan2d.ingenmer button.mer{ display:none; } #plan2d:not(.mer) > .rad:not(.hode):not(.viktig){ display:none; } }`;
   document.head.appendChild(css);
   const velger = document.createElement('div'); velger.id = 'plan2d'; velger.setAttribute('role', 'group'); velger.setAttribute('aria-label', 'Plantegning');
   (document.body || document.documentElement).appendChild(velger);
@@ -306,7 +310,7 @@
   function merk() {
     let skjult = 0;
     for (const r of velger.children) { if (!r.classList.contains('rad') || r.classList.contains('hode')) continue;
-      const viktig = !!r.querySelector('[data-h="avbryt"], [data-he="avbryt"], [data-he="likevel"]') || (r.id === 'etasjerad' && (!!r.querySelector('button') || /^(Går|Leter)/.test(r.textContent.trim())));
+      const t = r.textContent.trim(), viktig = !!r.querySelector('[data-h="avbryt"], [data-he="avbryt"], [data-he="likevel"]') || (r.id === 'etasjerad' && (/^(Går|Leter)/.test(t) || (/^Du er/.test(t) && !!r.querySelector('button'))));
       r.classList.toggle('viktig', viktig); if (!viktig) skjult++; }
     velger.classList.toggle('ingenmer', !skjult);
   }
