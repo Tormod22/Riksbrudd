@@ -74,6 +74,18 @@
       return hend; }; Ressurser.steg.kjede = true; }
   }
 
+  // ---------- pukk til grusvegen (Leir.BYGG.veg): egen pukk gjør vegen billigere ----------
+  function pakkVeg() {
+    if (LB.bygg.kjede) return; const b0 = LB.bygg;
+    LB.bygg = function (l, b) { const r = b0.apply(this, arguments);
+      try { if (r && r.bygg && b && LB.BYGG[b.type] && LB.BYGG[b.type].veg && l && (l.lager.pukk || 0) > .01 && Array.isArray(r.bygg.punkter)) {
+        const P = r.bygg.punkter; let m = 0; for (let i = 1; i < P.length; i++) m += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]);
+        const q = K.vegPukk(m, l.lager.pukk); if (q.pukk > 0) { l.lager.pukk -= q.pukk; r.bygg.pris = Math.max(0, (r.bygg.pris || 0) - q.kr); r.pukk = q;
+          if (window.OppstartSpill) OppstartSpill.gi(q.kr); if (typeof logg === 'function') logg(`Vegen bruker ${nf(q.pukk)} m³ egen pukk – ${kr(q.kr)} billigere.`); } } } catch (e) { /* vegen er bygget som før */ }
+      return r; };
+    LB.bygg.kjede = true;
+  }
+
   // ---------- simuleringen ----------
   let sistLagret = 0;
   function simSteg(dt) {
@@ -215,7 +227,7 @@
     if (window.Ikoner && Ikoner.legg) Ikoner.legg(I, IB); else if (window.Ikoner && Ikoner.BYGG) Object.assign(Ikoner.BYGG, IB);
     const G = window.LEIR2_GRUPPER; if (Array.isArray(G)) { let g = G.find(q => q[0] === 'Produksjon'); if (!g) { g = ['Produksjon', []]; G.push(g); } for (const t of NYE) if (!g[1].includes(t)) g[1].push(t); }
     if (window.Eksport) Eksport.ekstraVarer = ekstraVarer;
-    pakkInn(); pakkLogg(); sesongPå(); pakkProduksjon(); registrer();
+    pakkInn(); pakkLogg(); sesongPå(); pakkProduksjon(); pakkVeg(); registrer();
   }
   window.addEventListener('riksbrudd-spill', () => { id = ''; les(); oppsett(); });
   window.addEventListener('load', () => setTimeout(oppsett, 0));

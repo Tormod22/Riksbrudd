@@ -27,6 +27,8 @@
     fisk: { perRasjon: .2 },
     // riving: 0,4 t skrap per tonn stål som rives (rør, armering, plater)
     skrap: { perStål: .4 },
+    // grusveg med egen pukk: 0,15 m³ pukk per meter dekker grusen, og vegen koster da 3 000 kr mindre per meter (av 6 000)
+    veg: { perMeter: .15, rabatt: 3000 },
     // sesongene: faktor på hogsten (arbeidsfarten), fisket og prisen på ved
     sesong: {
       hogst: { vinter: 1.25, vår: .85, sommer: 1, høst: 1 },
@@ -94,6 +96,13 @@
   const fiskFraFangst = (rasjoner, årstid) => Math.max(0, tall(rasjoner)) * REGLER.fisk.perRasjon * sesong('fisk', årstid);
   const skrapFraRiving = stål => Math.max(0, tall(stål)) * REGLER.skrap.perStål;
 
-  const api = { REGLER, steinPlass, plassFeil, sesong, korn, oljeTilLeir, dieselTilTank, melTilMat, fiskFraFangst, skrapFraRiving };
+  // ---------- pukk til vegen ----------
+  // meter veg, pukk i lageret. Gir { pukk (m³ brukt), kr (rabatt) } – delvis når pukken ikke rekker hele vegen.
+  function vegPukk(meter, pukk) {
+    const V = REGLER.veg, m = Math.max(0, Math.min(tall(meter) * V.perMeter, tall(pukk))); if (!(m > .01)) return { pukk: 0, kr: 0 };
+    return { pukk: m, kr: Math.round(m / V.perMeter * V.rabatt) };
+  }
+
+  const api = { REGLER, vegPukk, steinPlass, plassFeil, sesong, korn, oljeTilLeir, dieselTilTank, melTilMat, fiskFraFangst, skrapFraRiving };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Kjeder = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

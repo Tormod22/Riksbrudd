@@ -33,6 +33,9 @@ forslag** – samlet i `Produksjon.REGLER.maskiner`, `Kjeder.REGLER`, `Laan.REGL
   6 rasjoner av 1 t mel (høyst 0,25 t i timen) når maten rekker under 3 døgn (`Kjeder.melTilMat`).
 - **Fisk**: `Sjo.fangst` pakkes inn – med et fiskemottak som virker, går fangsten fra båtene til mottaket som fisk (0,2 t per «rasjon»,
   × årstid: høst 1,3) i stedet for rasjoner. Dovre har ingen kyst, så fiskemottaket kan ikke bygges der (ingen kai).
+- **Pukk til grusvegen**: `Leir.bygg` pakkes inn – en grusveg (`Leir.BYGG.veg`) bruker egen pukk når leiren har det: 0,15 m³ per meter, og
+  vegen koster da 3 000 av 6 000 kr mindre per meter (`Kjeder.vegPukk`; pengene gis tilbake, `b.pris` settes ned så rivingen regner riktig).
+  Prøvd i nettleseren: 100 m veg med 50 m³ pukk kostet 300 000 kr i stedet for 600 000 og brukte 15 m³.
 - **Skrap**: `Ressurser.steg` pakkes inn – riving gir 0,4 t skrap per tonn stål som leveres. Skrap kan også kjøpes.
 
 ### 2. Nye varer
@@ -100,14 +103,14 @@ stål) – med 0,3 ga den 3,5 × lønna.
   `test_avis.js`, `okosim-kjeder.js`, `vakter/ut6-kjeder.js`, `docs/natt/ut6-kjeder-hjelp.json`.
 
 ## API
-- `Kjeder`: `REGLER, steinPlass, plassFeil, sesong, korn, oljeTilLeir, dieselTilTank, melTilMat, fiskFraFangst, skrapFraRiving`.
+- `Kjeder`: `REGLER, vegPukk, steinPlass, plassFeil, sesong, korn, oljeTilLeir, dieselTilTank, melTilMat, fiskFraFangst, skrapFraRiving`.
 - `Laan`: `REGLER, ny, fraJSON, tilbud, ta, døgn, betal, gjeld, rente, forfalt, perDøgn`.
 - `Avis`: `REGLER, lag(saker, dag, leir), linje, fraLogg, frø`.
 - `KjedeSpill`: `test, morgen(tving), lagAvis(), avis(), lån(), sett(S), handelsByer(), plassCtx(), html(), nullstill(), les(), sist()`.
+- Innpakninger (en gang, merket `.kjede`): `Sjo.fangst`, `Ressurser.steg`, `Leir.bygg`, `window.logg`, `ProduksjonSpill.html`.
 - Kroker: `Leir.kanByggeEkstra(L, b, v)`, `Leir.visMateriale(L, k)`, `Marked.sesong(vare)`, `Eksport.ekstraVarer()`.
 
 ## IKKE gjort / å vite
-- Pukk til veger: `Leir.BYGG.veg` bruker ikke pukk (prisen per meter er uendret) – planen nevner det; krever en endring i kostnaden for linjebygg.
 - Ammunisjon fra smia: lagene har ammunisjon per lag (forsyning.js), ikke en vare i lageret – smia lager bare stål og deler.
 - Fiskemottaket er ikke prøvd i et spill med kyst (Dovre har ingen kai; reglene og fangst-innpakningen er prøvd i Node/Dovre uten båter).
 - Kornet fra byene er ikke prøvd i nettleseren med en ekte handelsavtale (bare i Node).

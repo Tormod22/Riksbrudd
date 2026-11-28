@@ -57,6 +57,9 @@ ok(K.oljeTilLeir(100, 1, 60) === 2 && K.oljeTilLeir(.5, 0, 60) === .5 && K.oljeT
 ok(K.sesong('hogst', 'vinter') > 1 && K.sesong('fisk', 'høst') > K.sesong('fisk', 'sommer') && K.sesong('ved', 'vinter') > K.sesong('ved', 'sommer') && K.sesong('hogst', 'x') === 1, 'sesongene: hogst om vinteren, fisk om høsten, ved dyr i kulda');
 ok(Math.abs(K.fiskFraFangst(10, 'høst') - 2.6) < 1e-9 && Math.abs(K.skrapFraRiving(5) - 2) < 1e-9, 'fisk fra fangsten og skrap fra riving');
 
+// pukk til grusvegen
+{ const a = K.vegPukk(100, 50), b = K.vegPukk(100, 6), c = K.vegPukk(100, 0); ok(Math.abs(a.pukk - 15) < 1e-9 && a.kr === 300000, 'vegen: 100 m bruker 15 m³ pukk og blir 300 000 kr billigere');
+  ok(Math.abs(b.pukk - 6) < 1e-9 && b.kr === 120000 && c.kr === 0, 'vegen: delvis rabatt når pukken ikke rekker, ingen uten pukk'); }
 // markedet: de nye varene, og de gamle trekker terningen som før
 { const r = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; }), M1 = Marked.ny(), A = r();
   for (let i = 0; i < 5; i++) Marked.steg(M1, A); const neste = A();
