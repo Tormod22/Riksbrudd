@@ -106,7 +106,8 @@ blakk de tre siste døgnene (krav ≤ 10 %). `OKO_STRENG=1`: de eneste bruddene 
 
 ## Prøvd
 - Regeltester: test_vare (45), test_selskap, test_balanse, test_trinn, test_selskapsbilde, test_kommando, test_okonomi, test_okonomitest
-  (60 frø, også OKO_STRENG=1), og alle `pipeline/fliser/test_*.js` (se rapporten).
+  (60 frø, også OKO_STRENG=1), og alle 138 `pipeline/fliser/test_*.js` (grønne; test_tilfeldig fant `Math.random` i frakten – rettet til
+  den felles tilfeldigheten). Storlia av seg selv (VareSpill.test/SelskapSpill.test på, trinn 2): tilbudet kom innen 5 s, ble tatt, sagbruket kjent.
 - Nettleser (Dovre-testsiden, 1400 × 860 og 390 × 844 mobil): tilbudskort og aktive kort for levering, leveranseavtale og Storlias kjøpsavtale
   (bilder sett), «Send lastebil» lastet 20 m³ på leirens lastebilkolonne, «La et lag bære» sendte et lag mot stedet (det gikk), morgenens
   varetilbud (`VareSpill.morgen(true)`). Testsiden har ikke vegnettet («Fikk ikke hentet vegkartet»), så **lastebilen er ikke kjørt en hel
