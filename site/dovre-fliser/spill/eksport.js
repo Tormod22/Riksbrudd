@@ -43,9 +43,12 @@
     skip: { kommer: [6, 18], laster: 4, navn: ['MS Nordstern', 'MV Baltic Trader', 'MS Hanna Vos', 'MV Skagerrak Star', 'MS Elbe Kontor', 'MV Gdynia Pearl'] },
     // PIRATER OG RIVALER på sjøen: sjansen for at lasten tas, med avtale med havnebyen (eller en by dere holder) og uten
     pirat: { avtale: .03, uten: .08 },
-    // GRENSA: en grensestasjon må ligge så nær leiren (m) for å gi ordre og for å kjøre dit; per tur med Grensevakta (kr, ganges med
-    // inflasjonen); smugling: sjansen for beslag per tur
-    grense: { maks: 200000, perTur: 150000, beslag: .25, firma: 'Grensevakta', fulltNavn: 'Gränsvakten Nord AB' },
+    // GRENSA: en grensestasjon så nær leiren (m) gjør at ordrene kommer før trinn 3 (nær), og dere kan kjøre til stasjoner innen maks m;
+    // per tur med Grensevakta (kr, ganges med inflasjonen); smugling: sjansen for beslag per tur
+    grense: { nær: 80000, maks: 200000, perTur: 150000, beslag: .25, firma: 'Grensevakta', fulltNavn: 'Gränsvakten Nord AB' },
+    // GRÅFJELL FRAKT kjører til havna/grensestasjonen (som i spill/vare.js): andel av eksportverdien i kroner, kmt km/t langs en veg omveg ×
+    // luftlinja + fast timer lasting, sjansen for tap og erstatningen (andel av verdien) – lavere andel enn for leveringer hjemme (lang kjøring)
+    frakt: { firma: 'Gråfjell Frakt', andel: .08, kmt: 35, omveg: 1.35, fast: 3, tap: .04, erstatning: .8 },
     // varene er framme innen så mange meter av havna/grensestasjonen; tas på innen leir meter av leiren
     nær: { fram: 300, leir: 400 },
     // RYKTET UTE (0–100, start 50): levert +5, beslag −8, utløpt −10; flytter prisen (se svingning) og sjansen for nye ordre
@@ -105,7 +108,7 @@
   const skipTar = størrelse => REGLER.havn[størrelse] || 0;
   // grensestasjonene innen maks meter fra (x, y), nærmest først: [{ ...stasjon, d }]
   function grenserNær(x, y, maks = REGLER.grense.maks) { return GRENSER.map(g => ({ ...g, d: Math.hypot(g.x - x, g.y - y) })).filter(g => g.d <= maks).sort((a, b) => a.d - b.d); }
-  // kommer ordrene? o: { trinn, havner: antall havner som tar skip, grenser: antall grensestasjoner innen rekkevidde }
+  // kommer ordrene? o: { trinn, havner: antall havner som tar skip, grenser: antall grensestasjoner innen REGLER.grense.nær }
   const åpen = o => tall(o && o.trinn) >= REGLER.trinn || tall(o && o.havner) > 0 || tall(o && o.grenser) > 0;
   const rykteFaktor = S => .9 + klem(tall(S.rykte, 50), 0, 100) / 500;
 

@@ -120,6 +120,8 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     if (R.neste) h += `<div class="krav" data-neste="${R.neste.nr}"><div>For trinn ${R.neste.nr}, ${esc(R.neste.navn)}:</div>` + R.krav.map(k => `<div class="${k.ok ? 'ok' : 'mangler'}">${k.ok ? '✓' : '○'} ${esc(k.tekst)}</div>`).join('') + (R.steg ? `<small>${esc(R.steg.hjelp)}</small>` : '') + '</div>';
     else h += `<div class="krav"><div class="ok">Dere har nådd det siste trinnet.</div><small>Eksport, investorer og børsen kommer i senere faser.</small></div>`;
     if (H.storlia && R.nr <= 2) h += `<p class="notis">Storlia Tømmer har hørt om dere. Hold leveransene jevne – de følger med.</p>`;
+    // (ut4-eksport, Ø6) eksportordrene, havn/grense og eurokreditten (spill/eksport-visning.js)
+    try { if (window.EksportSpill && EksportSpill.oversiktHtml) h += EksportSpill.oversiktHtml(); } catch (e) { /* uten eksport */ }
     // (28. nov, pakke «seier») de tre veiene til seier: makt, penger og gjenoppbygging (spill/seier-visning.js)
     try { if (window.SeierSpill && SeierSpill.oversiktHtml) h += SeierSpill.oversiktHtml(); } catch (e) { /* uten seier */ }
     const V = viktigste();
@@ -181,6 +183,7 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     const f = e.target.closest('.sfaner button'); if (f) { e.stopPropagation(); velgFane(f.dataset.fane, true); return; }
     const b = e.target.closest('[data-sp]'); if (!b) return; e.stopPropagation(); const s = b.dataset.sp;
     if (s.startsWith('ba-') && window.ByavtaleSpill) { if (ByavtaleSpill.trykk(b)) { sistKropp = ''; tegn(); } return; }
+    if (s.startsWith('ek-') && window.EksportSpill) { if (EksportSpill.trykk(b)) { sistKropp = ''; tegn(); } return; }
     if (s === 'lukk') vis(false);
     else if (s === 'gå') { const k = viktigste()[+b.dataset.i]; if (!k) return; if (k.l0) { if (k.l0.pek === 'selskap') { velgFane('kontrakter'); return; } vis(false); if (window.SelskapSpill && SelskapSpill.følgLapp) SelskapSpill.følgLapp(); } else if (k.trykk) { vis(false); k.trykk(); } }
     else if (s === 'by') { const by = byListe().find(q => String(q.id) === b.dataset.id); if (by && Number.isFinite(by.x)) { if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false); kam.x = by.x; kam.y = by.y; if (kam.m > 20) kam.m = 12; skitten = true; if (smal()) vis(false); } }

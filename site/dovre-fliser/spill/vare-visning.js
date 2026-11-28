@@ -212,6 +212,8 @@
     g.restore();
   });
 
-  Object.assign(api, { verdi, har, plass, perDøgn, mål, vis, kort, send, knapp, hendelse, ferdig, levertTekst, morgen, storlia, storliaTatt, erVare, ledigBil, ledigLag, rett: { send } });
+  Object.assign(api, { verdi, har, plass, perDøgn, mål, vis, kort, send, knapp, hendelse, ferdig, levertTekst, morgen, storlia, storliaTatt, erVare, ledigBil, ledigLag, rett: { send },
+    // (ut4-eksport) lageret og kjøretøyene brukes også av eksporten (spill/eksport-visning.js): ta/legg flytter varer ut av og inn i lageret
+    ta, legg, fri });
   window.VareSpill = api;
 })();
