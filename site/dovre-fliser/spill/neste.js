@@ -13,12 +13,13 @@
 (function (rot) {
   // Claudes forslag: høyere tall står først. Kontraktene er den røde tråden (brukerens ønske): den første kontrakten og en kontrakt med kort
   // frist går foran opplæringen; ledige tilbud står over målene. Et opplæringssteg du har utsatt («Senere», eller ugjort lenge) synker.
+  // (fase Ø0, 28. nov) trinn = steget mot neste av de fire trinnene (spill/trinn.js): over målene, under alt som haster
   const REGLER = {
-    prio: { angrep: 100, tråd: 90, kontraktSnart: 80, opplæring: 70, kontrakt: 60, scenario: 55, tilbud: 50, utsatt: 45, mål: 40 },
+    prio: { angrep: 100, tråd: 90, kontraktSnart: 80, opplæring: 70, kontrakt: 60, scenario: 55, tilbud: 50, utsatt: 45, trinn: 42, mål: 40 },
     snart: 360,      // spillminutter: en aktiv kontrakt med kortere frist enn dette er «snart»
     maks: 6,         // så mange linjer i lista
   };
-  const NAVN = { angrep: 'Angrep', tråd: 'Første kontrakt', kontraktSnart: 'Kontrakt', kontrakt: 'Kontrakt', opplæring: 'Opplæring', utsatt: 'Opplæring', scenario: 'Scenario', tilbud: 'Selskapet', mål: 'Mål' };
+  const NAVN = { angrep: 'Angrep', tråd: 'Første kontrakt', kontraktSnart: 'Kontrakt', kontrakt: 'Kontrakt', opplæring: 'Opplæring', utsatt: 'Opplæring', scenario: 'Scenario', tilbud: 'Selskapet', trinn: 'Veien videre', mål: 'Mål' };
   // kilde: { id, slag, tekst, hjelp, igjen (spillminutter til fristen), utsatt (opplæring), trykk }
   function slagFor(k) { if (k.slag === 'kontrakt' && Number.isFinite(k.igjen) && k.igjen <= REGLER.snart) return 'kontraktSnart'; if (k.slag === 'opplæring' && k.utsatt) return 'utsatt'; return k.slag; }
   const prioritet = k => { const s = slagFor(k); return Number.isFinite(REGLER.prio[s]) ? REGLER.prio[s] : 10; };
@@ -55,6 +56,9 @@
     // scenariet (spill/scenario-visning.js)
     try { const s = rot.ScenarioSpill && ScenarioSpill.scenario ? ScenarioSpill.scenario() : null;
       if (s && s.status === 'pågår' && s.tekst) ut.push({ id: 'scenario', slag: 'scenario', tekst: 'Scenario: ' + String(s.tekst).replace(/\.$/, '') + (Number.isFinite(s.igjen) && rot.Scenario && Scenario.fristTekst ? ' · ' + Scenario.fristTekst(Math.round(s.igjen / 10) * 10) : ''), hjelp: 'Leir → Mål viser scenariet.', trykk: åpneMål }); } catch (e) { /* uten scenario */ }
+    // veien videre (fase Ø0, spill/selskapspanel.js): steget mot neste trinn. Et steg om kontraktene står ikke når kontraktene alt har en linje.
+    try { const t = rot.TrinnSpill && TrinnSpill.lappInfo ? TrinnSpill.lappInfo() : null;
+      if (t && t.tekst && !(t.om === 'kontrakt' && l0 && l0.tekst)) ut.push({ id: 'trinn', slag: 'trinn', tekst: t.tekst, hjelp: t.hjelp, trykk: t.trykk }); } catch (e) { /* uten trinn */ }
     // målene (spill/maal.js) – neste mål i kapittelet du er i (krigen om regionen er det siste kapittelet)
     try { const M = rot.MaalSpill, st = M && M.stilling ? M.stilling() : null;
       if (st && st.neste && rot.Maal) { let T = null; try { T = M.bilde(); } catch (e) { T = null; } ut.push({ id: 'mål', slag: 'mål', tekst: Maal.tekstNå(st.neste, T), hjelp: Maal.hjelpNå ? Maal.hjelpNå(st.neste, T) : st.neste.hjelp, trykk: åpneMål }); } } catch (e) { /* uten mål */ }
