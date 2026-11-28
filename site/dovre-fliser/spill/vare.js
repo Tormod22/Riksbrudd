@@ -161,8 +161,11 @@
     const V = REGLER.VARER[k.vare] || { navn: k.vare }, h = Math.max(0, tall(har)), p = Math.max(0, tall(perDøgn));
     const lager = `Dere har ${mengdeTekst(k.vare, h)}`, maskin = p > 0 ? `, ${k.vare === 'tre' ? 'sagbruket' : k.vare === 'ved' ? 'vedkløyveren' : 'maskinene'} gir ${mengdeTekst(k.vare, p)} per døgn` : '';
     if (k.type === 'lever') {
-      const trengs = Math.max(0, k.mengde - tall(k.levert)), tid = Math.max(0, (k.status === 'aktiv' ? (k.frist - k.godtatt) / 60 : k.timer) - kjøreTimer - 1);
+      // det som alt er på vegen (egne biler og lag, eller hos fraktfirmaet), regnes som levert her
+      const underveis = k.frakt ? tall(k.frakt.mengde) : (k.turer || []).reduce((s, t) => s + tall(t.mengde), 0);
+      const trengs = Math.max(0, k.mengde - tall(k.levert) - underveis), tid = Math.max(0, (k.status === 'aktiv' ? (k.frist - k.godtatt) / 60 : k.timer) - kjøreTimer - 1);
       const får = h + p * tid / 24, ok = får >= trengs;
+      if (trengs <= .01) return { ok: true, tekst: 'Alt er på vegen til ' + k.sted.navn + '.' };
       return { ok, tekst: `${lager}${maskin} – ${ok ? (h >= trengs ? 'nok på lager nå' : 'rekker det') : `rekker ikke (mangler ca. ${mengdeTekst(k.vare, Math.ceil(trengs - får))})`}.` };
     }
     if (k.type === 'avtale') { const ok = p >= k.perDøgn || h >= k.perDøgn * (k.døgn - tall(k.døgnGjort));

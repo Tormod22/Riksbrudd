@@ -99,4 +99,7 @@ ok(vt.every(q => q.tittel && SK.kravTekst(q) && q.utløper > q.tilbudt), 'alle h
 // et lag og kjøretøyene
 ok(V.bære(6) === 1.5 && V.kapasitet({ type: 'tømmerbil', antall: 1 }) === 20 && V.kapasitet({ type: 'speiderbil' }) === 0, 'last');
 ok(/lastebil ca\. 0,4 t/.test(V.vegTekst(21)), 'vegtekst: ' + V.vegTekst(21));
+// det som er på vegen, regnes med i «rekker det»
+{ const q = { type: 'lever', vare: 'tre', mengde: 20, levert: 0, turer: [{ bil: 'b', mengde: 20 }], timer: 48, sted: { navn: 'Otta' } };
+  ok(V.rekker(q, 0, 0).ok && /Alt er på vegen/.test(V.rekker(q, 0, 0).tekst), 'alt på vegen'); q.turer[0].mengde = 12; ok(V.rekker(q, 8, 0).ok && !V.rekker(q, 2, 0).ok, 'resten fra lageret'); }
 console.log(`test_vare: ${n} sjekker ok`);
