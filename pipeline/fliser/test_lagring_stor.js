@@ -28,7 +28,7 @@ ok(JSON.stringify(LS.lesStor(f, null)) === '[7]' && LS.lesStor(f, leir) === unde
 ok(LS.lesStor('ikke json', leir) === undefined && LS.lesStor('{"leir":"1,2"}', { x: 1, y: 2 }) === undefined && LS.lesStor(LS.pakkStor(0, leir), leir) === 0, 'ødelagt eller uten verdi gir ingenting; 0 er en verdi');
 
 // størrelse og to kopier
-ok(LS.størrelse({ ab: 'cde' }) === 10 && LS.størrelse({}) === 0, 'bytes regnes som 2 per tegn i nøkkel og verdi');
+ok(LS.størrelse({ ab: 'cde' }) === 5 && LS.størrelse({}) === 0, 'plassen regnes i tegn (nøkkel og verdi), som grensen for localStorage');
 ok(LS.kb(0) === '0 kB' && LS.kb(100) === '1 kB' && LS.kb(51200) === '50 kB' && LS.kb(1.5 * 1024 * 1024) === '1,5 MB', 'kB og MB');
 ok(LS.nyest('{"laget":5}', '{"laget":9}') === '{"laget":9}' && LS.nyest('{"laget":9}', '{"laget":5}') === '{"laget":9}' && LS.nyest(undefined, 'x') === 'x' && LS.nyest('a', 'b') === 'a', 'den nyeste kopien vinner (ellers den første)');
 

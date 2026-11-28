@@ -96,8 +96,8 @@
     const vil = leir === null ? '' : leirId(leir); if (leir !== null && !vil) return undefined;
     return d.leir === vil ? d.v : undefined;
   }
-  // bytes i nettleseren (localStorage og databasen regner med UTF-16: 2 byte per tegn i nøkkel og verdi)
-  function størrelse(alle) { let b = 0; for (const [k, v] of Object.entries(alle || {})) b += 2 * (k.length + String(v === null || v === undefined ? '' : v).length); return b; }
+  // plassen i tegn (nøkkel + verdi). Grensen for localStorage regnes i tegn: målt 28. nov i Chromium – 5 242 873 tegn fikk plass (5 Mi).
+  function størrelse(alle) { let b = 0; for (const [k, v] of Object.entries(alle || {})) b += k.length + String(v === null || v === undefined ? '' : v).length; return b; }
   // «12 kB», «1,4 MB»
   function kb(b) { if (!(b > 0)) return '0 kB'; if (b < 1024 * 1024) return Math.max(1, Math.round(b / 1024)) + ' kB'; return (b / 1024 / 1024).toFixed(1).replace('.', ',') + ' MB'; }
   // to kopier av samme nøkkel (databasen og en gammel i localStorage): den nyeste etter «laget»/«t» i JSON, ellers den første
@@ -321,14 +321,15 @@
   // localStorage full, men databasen virker, er det «ok»: det som ikke får plass, flyttes dit.
   api.virker = () => { if (!L || iMinne) return 'sperret'; if (simulert) return simulert; const k = 'riksbrudd-plass-test' + ending(S);
     try { rs(k, '1'); rd(k); return 'ok'; } catch (e) { return erFull(e) ? (dbTilstand === 'ute' ? 'fullt' : 'ok') : 'sperret'; } };
-  // hvor mye plass spillet bruker (bytes): ls = alle «riksbrudd-»-nøkler i localStorage (alle sidene), db = alt i databasen, spill = spillet
-  // på denne siden (begge steder, uten lagringsplassene), plasser = { id: bytes } for denne siden, kvote = localStorage sin grense (anslag)
+  // hvor mye plass spillet bruker (tegn): ls = alle «riksbrudd-»-nøkler i localStorage (alle sidene), lsAlle = alt i localStorage (også andre
+  // ting på samme adresse), db = alt i databasen, spill = spillet på denne siden (begge steder, uten lagringsplassene), plasser = { id: tegn }
+  // for denne siden, kvote = localStorage sin grense (målt i Chromium; andre nettlesere har omtrent det samme)
   api.størrelse = (s = S) => {
-    const ls = {}, side = {}, pl = {}; for (const k of lsNøkler()) if (/^riksbrudd-/.test(k)) ls[k] = lsGet(k);
+    const ls = {}, lsAlle = {}, side = {}, pl = {}; for (const k of lsNøkler()) { lsAlle[k] = lsGet(k); if (/^riksbrudd-/.test(k)) ls[k] = lsAlle[k]; }
     const dbAlle = {}; for (const [k, v] of MINNE) dbAlle[k] = v;
     for (const [k, v] of Object.entries({ ...ls, ...dbAlle })) { const h = hvem(k); if (!h || h.side !== s) continue;
       const m = /^riksbrudd-plass-([\w-]+)$/.exec(h.navn); if (m) pl[m[1]] = størrelse({ [k]: v }); else if (erSpill(h.navn, v)) side[k] = v; }
-    return { ls: størrelse(ls), db: størrelse(dbAlle), spill: størrelse(side), plasser: pl, flyttet: OVL.size, database: dbTilstand, kvote: 5 * 1024 * 1024 };
+    return { ls: størrelse(ls), lsAlle: størrelse(lsAlle), db: størrelse(dbAlle), spill: størrelse(side), plasser: pl, flyttet: OVL.size, database: dbTilstand, kvote: 5 * 1024 * 1024 };
   };
 
   // ---------- G0: versjonen og omgjøringene ----------

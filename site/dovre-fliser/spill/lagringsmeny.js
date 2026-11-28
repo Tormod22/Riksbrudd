@@ -182,7 +182,7 @@
     if (!LS.størrelse) return '';
     if (!størrelser || Date.now() - størrelseT > 5000) { størrelser = LS.størrelse(); størrelseT = Date.now(); }
     const z = størrelser, pl = Object.values(z.plasser).reduce((a, b) => a + b, 0), db = z.database === 'ok';
-    return `Plass: spillet ${LS.kb(z.spill)}, lagringsplassene ${LS.kb(pl)}${db ? ' (i nettleserens database)' : ''}. Nettleserens enkle lager: ${LS.kb(z.ls)} av ca. ${LS.kb(z.kvote)} brukt (alle kartene).`
+    return `Plass: spillet ${LS.kb(z.spill)}, lagringsplassene ${LS.kb(pl)}${db ? ' (i nettleserens database)' : ''}. Det enkle lageret i nettleseren: ${LS.kb(z.lsAlle)} av ca. ${LS.kb(z.kvote)} brukt${z.lsAlle - z.ls > 1024 ? `, ${LS.kb(z.ls)} av det er spillet` : ''}.`
       + (db ? '' : ' Databasen virker ikke her, så alt ligger i det enkle lageret.');
   }
   function tegn(tving) {
