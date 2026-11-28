@@ -169,7 +169,7 @@
   css.textContent = `#plan2d .he-adv{ color:#f0c08a; flex:1 0 100%; margin-bottom:3px; } #plan2d .valg small{ color:var(--ink-dim,#a69b82); }
 #plan2d button small{ color:var(--ink-dim,#a69b82); font-size:12px; } #plan2d button:disabled{ opacity:.45; cursor:default; }
 #plan2d .he-varsel{ border-top-color:#b5543c; }
-@media (max-width:700px){ #plan2d button small{ display:block; font-size:11px; } #plan2d{ max-height:44vh; overflow-y:auto; } }`;
+@media (max-width:700px){ #plan2d .rad button small{ display:block; font-size:11px; } #plan2d .rad.valg > small{ display:inline; } #plan2d{ max-height:44vh; overflow-y:auto; } }`;
   document.head.appendChild(css);
 
   // knappene (etasjevelgeren lytter selv først; den tegner raden på nytt etterpå)
