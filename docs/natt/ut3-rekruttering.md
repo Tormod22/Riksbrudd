@@ -36,7 +36,7 @@ Alle tall er Claudes forslag (samlet i `Rekruttering.REGLER`).
 - **Ansettelse** (`Rekruttering.ansett`, kommando `ansett { søker, byOver }`): krever det samme som før (`FolkRegler.kanRekruttere`: ledig seng og
   moral ≥ 40, ikke i nød) og 150 000 kr for utstyret; personen får `p.lønn` = kravet (eller budet + 1 000) og `p.egen`. I nød går den nye
   på «bygg» som før.
-- **Lokking** (bare om morgenen, ikke i testene): misfornøyd = lojalitet < 0,55 og (moral < 45 eller lønn < kravet − 2 500). Sjanse 0,15 per
+- **Lokking** (bare om morgenen, ikke i testene): misfornøyd = lojalitet < 0,55 og (moral < 45 eller lønn < kravet − 2 500). Sjanse 0,1 per
   morgen for ett tilbud (`S.lokk`) på max(kravet, lønna + 2 000). Frist 12 spilltimer. «Gi lønnstillegg» (kommando `lokkSvar { valg: 'tillegg' }`)
   gir budet som lønn og +0,1 lojalitet; «La gå» (`valg: 'gå'`) eller ingen svar: personen går (`F.borte` + 1).
 - **Opplæring** (14.2): bygget **Øvingsfelt** (2,5 mill. kr, 2 t, 0 kW, modellen til lagerteltet, 10 planker, 4 betong, 1 stål) gir 4/6/8

@@ -35,7 +35,7 @@
     bud: { ferdighet: 1.3, sjanse: .55, påslag: [1.1, 1.25], overbud: 1000, gårSjanse: .35 },
     // en misfornøyd person: lojalitet under lojal, og moral under moral ELLER lønn under kravet − underbetalt. Sjanse per morgen for ett
     // tilbud fra en rival; fristen for å svare (spillminutter); tillegget hever lojaliteten.
-    lokk: { lojal: .55, moral: 45, underbetalt: 2500, sjanse: .15, frist: 720, påslag: 2000, lojalPluss: .1 },
+    lokk: { lojal: .55, moral: 45, underbetalt: 2500, sjanse: .1, frist: 720, påslag: 2000, lojalPluss: .1 },
     // egenskapene (bare tekst og små tall): sjansen for minst én og for to
     egenskapSjanse: [.45, .12],
     // øvingsfeltet: elever per nivå, ferdighet per døgn, taket, lærenem lærer raskere
