@@ -184,6 +184,18 @@
   const vb0 = typeof window.visByggVed === 'function' ? window.visByggVed : null;
   if (vb0) window.visByggVed = async function (X, Y) { const ok = await vb0.apply(this, arguments); if (ok) { try { await husKnapper(X, Y); } catch (e) { console.warn('etasjer:', e); } } return ok; };
 
+  // ---------- åpningene der trappa møter en skillevegg (Etasjer.trappÅpninger; samme som i 3D) ----------
+  // Plantegningen tegner modellens vegger; her males åpningen i gulvets farge oppå veggen, så 2D og 3D er like.
+  if (typeof KROKER !== 'undefined' && KROKER.tegn) KROKER.tegn.push((g, vx0, vy1) => {
+    const P = PT(); if (!P || !P.S || !P.S.tegnet || !P.aktiv || !P.aktiv()) return;
+    for (const t of P.S.tegnet) { const h = P.hus(t.i), m = h && h.m, et = m && E.etasje(m, t.n); if (!et) continue;
+      for (const w of et.vegger) { if (w.type !== 'skille' || !E.står(w)) continue; const Å = E.trappÅpninger(m, t.n, w); if (!Å.length) continue;
+        const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]), ex = (w.b[0] - w.a[0]) / L, ey = (w.b[1] - w.a[1]) / L, X = q => (h.o[0] + q[0] - vx0) / kam.m, Y = q => (vy1 - h.o[1] - q[1]) / kam.m;
+        g.save(); g.strokeStyle = 'rgba(20,17,11,1)'; g.lineWidth = Math.max(3, ((w.tykk || .1) + .04) / kam.m); g.lineCap = 'butt'; g.beginPath();
+        for (const q of Å) { const a = [w.a[0] + ex * (q.t - q.b / 2), w.a[1] + ey * (q.t - q.b / 2)], b = [w.a[0] + ex * (q.t + q.b / 2), w.a[1] + ey * (q.t + q.b / 2)]; g.moveTo(X(a), Y(a)); g.lineTo(X(b), Y(b)); }
+        g.stroke(); g.restore(); } }
+  });
+
   // ---------- lappen ved figuren ----------
   if (typeof KROKER !== 'undefined' && KROKER.tegn) KROKER.tegn.push((g, vx0, vy1) => {
     const k = karakter(); if (!k || S.hus === null || (S.n === 1 && !S.gang)) return; const h = husAv(S.hus); if (!h || kam.m > 4) return;

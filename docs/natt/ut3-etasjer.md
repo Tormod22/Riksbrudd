@@ -74,7 +74,8 @@ Bygger på ut1-bygning (modellen, spill/bygning.js) og ut2-hus2d (plantegningen,
 - **Åpning der trappa møter en vegg:** byggemodellen legger av og til toppen/foten av trappa tett inntil – eller på andre siden av – en
   skillevegg (repos 0,25 m fra veggen; test_etasjer.js teller 6 av 190 veier etter rettingen, 15 før). Da får veggen en åpning i trappas
   bredde der trappa møter den (`Etasjer.trappÅpninger`, korridor 0,75 m ut fra enden), både i kollisjonen og i 3D-tegningen.
-  Plantegningen i 2D tegner IKKE den åpningen (den tegner modellen) – B3 eller bygning.js bør rette selve trappeplasseringen.
+  Plantegningen tegner modellens vegger; etasjer-visning.js maler åpningen i gulvets farge oppå veggen (egen tegnekrok), så 2D og 3D er
+  like. Bygning.js bør på sikt rette selve trappeplasseringen (da blir åpningene overflødige).
 
 ## Tall (Claudes forslag – Etasjer.REGLER)
 Funn per 100 m² – loft: tomt 15 %, tre 80 % 0,6–2,5 m³, stål 45 % 0,1–0,6 t, mat 35 % 1–5, penger 20 % 2–20 000 kr, diesel 10 % 5–20 l;
@@ -119,8 +120,8 @@ Kommandoene: `etasjeLet` { hus, n, hent? } og `etasjeTilflukt` { hus } (Kommando
   interiøret uten modell 4–49 ms, modellen 4–320 ms ekstra i biter (lengste bit 8–84 ms), etasjenettene 20–33 ms. Nettene for de andre
   etasjene lages bare når du går inn.
 - Lengste bit i Bygning.fraKartG kan være over 100 ms på en treg maskin (trappesøket) – det gir et hakk når et hus får interiør.
-- Plantegningen tegner ikke åpningene der trappa møter en vegg (se over), og veien i 2D kan i sjeldne hus gå rett gjennom en vegg
-  (1 av 190 i testen: rutenettet fant ingen vei).
+- Veien i 2D kan i sjeldne hus gå rett gjennom en vegg (1 av 190 i testen: rutenettet fant ingen vei). Barrikader/riving på åpningene
+  der trappa møter en vegg finnes ikke (de er ikke deler i modellen).
 - I 3D er etasjene enklere enn 1. etasje: hjørnefarger uten mønstre, ingen lamper, gardiner, dørblader eller bilder.
 - Skap/beholdere (LutSpill) og «Plukk opp» i de andre etasjene finnes ikke (bare i 1. etasje). Mens du står i en annen etasje, er
   `P.inne.møbler` byttet ut med en tom liste (settes tilbake i 1. etasje og når du går ut), så du kan ikke åpne skap i etasjen under.
