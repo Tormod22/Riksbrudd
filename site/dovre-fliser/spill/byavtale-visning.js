@@ -165,14 +165,15 @@
 
   // ---------- kartet: ringene ----------
   const RING = { kunde: ['rgba(170,180,190,.75)', 1.5, [4, 4]], beskyttelse: ['rgba(214,178,90,.9)', 2.5, []], handel: ['rgba(127,176,122,.95)', 3, []], medlem: ['rgba(110,150,210,1)', 4, []] };
-  KROKER.tegn.push((g, vx0, vy1) => { if (!klar) return; const m = kam.m;
+  const ringer = (g, vx0, vy1) => { if (!klar) return; const m = kam.m;
     for (const by of område()) { const b = S.byer[by.id]; if (!b) continue; const t = BA.trinn(b), x = (by.x - vx0) / m, y = (vy1 - by.y) / m, r = Math.max(10, by.r / m);
       if (x < -r - 20 || y < -r - 20 || x > g.canvas.width + r + 20 || y > g.canvas.height + r + 20) continue;
       g.save();
       if (RING[t]) { const [f, w, d] = RING[t]; g.strokeStyle = f; g.lineWidth = w; g.setLineDash(d); g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke(); }
       if (b.rival || b.forhandler) { const sd = (b.rival || b.forhandler).side; g.strokeStyle = typeof sidefarge === 'function' ? sidefarge(sd, 'lys') : '#b5503d'; g.lineWidth = 2; g.setLineDash(b.rival ? [7, 5] : [2, 5]); g.beginPath(); g.arc(x, y, r + 6, 0, Math.PI * 2); g.stroke(); }
       if (b.hjelp) { const p = .5 + .5 * Math.sin(performance.now() / 250); g.strokeStyle = `rgba(230,80,60,${.4 + .5 * p})`; g.lineWidth = 3; g.setLineDash([]); g.beginPath(); g.arc(x, y, r + 12 + 4 * p, 0, Math.PI * 2); g.stroke(); skitten = true; }
-      g.restore(); } });
+      g.restore(); } };
+  KROKER.tegn.push(ringer);
 
   // ---------- fanen Byer ----------
   const css = document.createElement('style');
@@ -273,7 +274,7 @@
   function start() { const s = Sp(); if (!s || !s.leir) return; leirId = Math.round(s.leir.x) + ',' + Math.round(s.leir.y); S = BA.fraJSON(les()); OMR.t = -1e9; klar = true; valgt = null; modus = 'liste'; koble(); }
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   setTimeout(koble, 0);
-  Object.assign(api, { start, fane, trykk, timeSteg, døgnSteg, info, område, tillit, endreTillit, forhandle: k => kom({ type: 'byForhandle', ...k }), siOpp: id => kom({ type: 'bySiOpp', by: id }),
+  Object.assign(api, { start, fane, trykk, ringer, timeSteg, døgnSteg, info, område, tillit, endreTillit, forhandle: k => kom({ type: 'byForhandle', ...k }), siOpp: id => kom({ type: 'bySiOpp', by: id }),
     tilstand: () => S, sett: d => { S = BA.fraJSON(d); lagre(); }, nullstill: () => { S = BA.ny(); lagre(); }, lagre, mannNær, klar: () => klar, velg: (id, m) => { valgt = id; modus = m || 'kort'; if (m === 'forhandle') nyttForslag(id); }, NØKKEL });
   window.ByavtaleSpill = api;
 })();
