@@ -104,6 +104,17 @@
     bs_kiste: { navn: 'Kiste', kort: 'Kiste', kat: 'lager', stoff: 'tre', l: 1, b: 1, lager: 0, ting: 'kiste', pris: 3000, tid: .02, mat: { tre: .05 }, str: [1], tekst: 'Lukket kiste for tørre ting og klær (180 l)' },
     bs_pallreol: { navn: 'Pallreol', kort: 'Pallreol', kat: 'lager', stoff: 'stål', l: 4, b: 2, lager: 10, ting: 'pallreol', pris: 60000, tid: .3, mat: { stål: .8 }, str: [1], tekst: 'Paller i tre høyder: 10 m³ av hver vare og 3 000 l ting' },
     bs_tønne: { navn: 'Vanntønne', kort: 'Tønne', kat: 'lager', stoff: 'stål', l: 1, b: 1, lager: 0, ting: 'tønne', pris: 2000, tid: .02, mat: { stål: .02 }, str: [1], tekst: 'Vann i flasker og dunker (200 l)' },
+    // (ut9-mobler, 28. nov) TI HYLLETYPER TIL for tingene (lagringstypene i Tinglager.LAGRING). Priser og mål er Claudes forslag.
+    bs_trehylle: { navn: 'Trehylle', kort: 'Trehylle', kat: 'lager', stoff: 'tre', l: 1, b: 1, lager: 0, ting: 'trehylle', pris: 2500, tid: .03, mat: { tre: .06 }, str: [1], tekst: 'Mat, kjøkkenting og bøker (250 l)' },
+    bs_stålreol: { navn: 'Stålreol', kort: 'Stålreol', kat: 'lager', stoff: 'stål', l: 2, b: 1, lager: 3, ting: 'stålreol', pris: 9000, tid: .06, mat: { stål: .15 }, str: [1], tekst: 'Tunge ting, verktøy og elektro (600 l + 3 m³ materialer)' },
+    bs_vitrine: { navn: 'Glassvitrine', kort: 'Vitrine', kat: 'lager', stoff: 'tre', l: 1, b: 1, lager: 0, ting: 'vitrine', pris: 7000, tid: .04, mat: { tre: .05 }, str: [1], tekst: 'Glass, porselen, bøker og spill (120 l)' },
+    bs_kjøkkenhylle: { navn: 'Kjøkkenhylle', kort: 'Kjøkken', kat: 'lager', stoff: 'tre', l: 1, b: 1, lager: 0, ting: 'kjøkkenhylle', pris: 1500, tid: .02, mat: { tre: .03 }, str: [1], tekst: 'Krydder, glass og bokser (80 l)' },
+    bs_kjølereol: { navn: 'Kjølereol', kort: 'Kjølereol', kat: 'lager', stoff: 'stål', l: 2, b: 1, lager: 0, ting: 'kjølereol', kw: -.5, pris: 45000, tid: .15, mat: { stål: .2 }, str: [1], tekst: 'Åpen kjølereol for ferskvarer (800 l, 0,5 kW)' },
+    bs_verktøyskap: { navn: 'Verktøyskap', kort: 'V-skap', kat: 'lager', stoff: 'stål', l: 1, b: 1, lager: 0, ting: 'verktøyskap', pris: 9000, tid: .04, mat: { stål: .1 }, str: [1], tekst: 'Låst skap for verktøy og elektro (250 l)' },
+    bs_arkivskap: { navn: 'Arkivskap', kort: 'Arkiv', kat: 'lager', stoff: 'stål', l: 1, b: 1, lager: 0, ting: 'arkivskap', pris: 5000, tid: .03, mat: { stål: .08 }, str: [1], tekst: 'Låste skuffer for papirer og kart (150 l)' },
+    bs_smalhylle: { navn: 'Smal hylle', kort: 'Smal', kat: 'lager', stoff: 'tre', l: 1, b: 1, lager: 0, ting: 'smalhylle', pris: 1800, tid: .02, mat: { tre: .04 }, str: [1], tekst: 'Småting og hygiene (120 l)' },
+    bs_hjørnehylle: { navn: 'Hjørnehylle', kort: 'Hjørne', kat: 'lager', stoff: 'tre', l: 1, b: 1, lager: 0, ting: 'hjørnehylle', pris: 1600, tid: .02, mat: { tre: .03 }, str: [1], tekst: 'Liten hylle i hjørnet (90 l)' },
+    bs_tønnestativ: { navn: 'Tønnestativ', kort: 'Tønner', kat: 'lager', stoff: 'tre', l: 2, b: 1, lager: 0, ting: 'tønnestativ', pris: 6000, tid: .05, mat: { tre: .15 }, str: [1], tekst: 'Tre liggende tønner for vann og drikke (600 l)' },
   };
   // veggene: fire stoff × hel/dør/vindu/port (dør og vindu i 1,2 m, porten 2,4 m i det fine rutenettet; alt 4,8 m i hallrutenettet)
   for (const [st, V] of Object.entries(VEGG)) for (const v of ['hel', 'dør', 'vindu', 'port']) {
@@ -567,7 +578,8 @@
     const S = romSum(rom(fraLeir(L, Leir), L.romBruk)); return (rb ? S.lager : 0) + S.hyller; };
 
   // (ut8-hverdag) delene i fanen «Maskiner» i byggesett-visning.js: maskinene, lampene, så hyllene og skapene
-  const MASKINFANE = ['bs_sagbenk', 'bs_høvel', 'bs_vedkløyver', 'bs_fyrkjele', 'bs_lysrør', 'bs_lyskaster', 'bs_hylle', 'bs_pall', 'bs_pallreol', 'bs_kjøleskap', 'bs_kjølerom', 'bs_frys', 'bs_medisinskap', 'bs_verktøytavle', 'bs_garderobe', 'bs_kiste', 'bs_tønne'];
+  const MASKINFANE = ['bs_sagbenk', 'bs_høvel', 'bs_vedkløyver', 'bs_fyrkjele', 'bs_lysrør', 'bs_lyskaster', 'bs_hylle', 'bs_pall', 'bs_pallreol', 'bs_kjøleskap', 'bs_kjølerom', 'bs_frys', 'bs_medisinskap', 'bs_verktøytavle', 'bs_garderobe', 'bs_kiste', 'bs_tønne',
+    'bs_trehylle', 'bs_stålreol', 'bs_vitrine', 'bs_kjøkkenhylle', 'bs_kjølereol', 'bs_verktøyskap', 'bs_arkivskap', 'bs_smalhylle', 'bs_hjørnehylle', 'bs_tønnestativ'];
   const api = { MASKINFANE, U, G, H, ETASJER, GROV, SOKKEL, DELER, GAMLE, NYE, STOFF, HUS, erDel, registrer, størrelse, typeFor, celle, ruter, kanter, biter, midt, kantEnder, kantVed, hjørneVed, rad,
     nøkkel, indeks, norm, punkter, støttet, plassering, forslag, spenn, rasVedRiving, lagHus, husDeler, husForslag, dreiDel, tilMal, malGyldig, rom, ROMBRUK, ROMTYPER, romType, romSum, høyder, fraBygg, fraLeir, plassFor,
     KANT, RUTE, kat, TING, fotRuter, tingFeil, BETONG, harHyller };
