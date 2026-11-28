@@ -95,4 +95,15 @@ ok(HV.etasjer(bet).length >= 3, 'etasjene i kontoret: ' + HV.etasjer(bet).map(e 
   ok(!OT.lesLogg(JSON.stringify({ v: 1, leir: '1,2', hus: { 7: { bruk: 'lager' } } }), '3,4').hus[7], 'en annen leir får tom liste');
   const sum = OT.sum({ 1: { bruk: 'kaserne', senger: 4, lager: 2 }, 2: { bruk: 'lager', senger: 1, lager: 30 } }); ok(sum.senger === 5 && sum.lager === 32, 'summen: ' + JSON.stringify(sum)); }
 
+// 7. leirens egne bygg (byggesettet): samme vern fra modellen (i kartets meter)
+{ const BR = require('../../site/dovre-fliser/spill/byggesett.js'); global.ByggesettRegler = BR;
+  const o = { ox: 1000, oy: 2000 }, X = i => o.ox + i * BR.U, Y = j => o.oy + j * BR.U, P = (i, j) => [X(i) + .1, Y(j) + .1]; let D = [], n = 0;
+  const legg = l => { for (const q of l) if (!q.feil) { if (q.bytt) D = D.filter(x => x.id !== q.bytt); D.push({ ...q.d, id: 'v' + n++, ferdig: true }); } };
+  legg(BR.forslag(D, 'bs_fundament_1', BR.rad(o, 'bs_fundament_1', P(0, 0), P(3, 2))));
+  legg(BR.forslag(D, 'bs_vegg_betong_1', BR.rad(o, 'bs_vegg_betong_1', [X(0), Y(0)], [X(4), Y(3)])));
+  legg(BR.forslag(D, 'bs_vegg_betong_dør_1', [BR.kantVed(o, X(2) + .6, Y(0) + .05)]));
+  legg(BR.forslag(D, 'bs_tak_betong_1', BR.rad(o, 'bs_tak_betong_1', P(0, 0), P(3, 2))));
+  const m = B.fraByggesett(D, o), c = [X(1) + .5, Y(1) + .7], v = m && HV.vern(m, 1, c, [c[0], c[1] + 80]);
+  ok(m && HV.inni(m.P, c[0], c[1]) && v.vegger.length >= 1 && v.vegger[0].stoff === 'betong' && v.andel >= .7, 'egenbygd betongbu: veggene tar ' + (v && HV.prosent(v.andel))); }
+
 console.log(feil ? feil + ' FEIL' : 'alt ok'); process.exit(feil ? 1 : 0);
