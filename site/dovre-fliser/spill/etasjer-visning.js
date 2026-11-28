@@ -177,7 +177,7 @@
     const sm = document.createElement('small'); sm.style.color = '#b9ab8a'; sm.textContent = 'Etasjer:'; r.append(sm);
     for (const v of Plantegning.etasjeValg(m)) { if (v.n === 1) continue; const kn = document.createElement('button'); kn.type = 'button'; kn.textContent = v.kort; kn.dataset.n = v.n;
       kn.title = v.stengt ? 'Trapperommet er sperret' : `Karakteren går til ${v.navn.toLowerCase()} – opp eller ned trappa`; if (v.stengt) kn.disabled = true;
-      kn.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); const P = PT(); if (P.S) P.S.etasje = v.n; gåTil(P.hus(h0.i), v.n); };
+      kn.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); const P = PT(); if (P.S) P.S.etasje = v.n; if (P.åpneIgjen) P.åpneIgjen(); gåTil(P.hus(h0.i), v.n); };
       r.append(kn); }
     H.append(r);
   }
@@ -204,7 +204,12 @@
     g.fillRect(x + 9, y + 6, w, 16); g.strokeRect(x + 9, y + 6, w, 16); g.fillStyle = '#f0e2b0'; g.textBaseline = 'middle'; g.fillText(t, x + 14, y + 14); g.restore();
   });
 
-  window.Etasjer2D = { S, gåTil, let2d, etasjeI, inngang, husAv, modell, registrer, kjør, les, lagre, erLett, rest, rad, klikk, husKnapper,
+  // (ut8-kr-hus, kritikeren: «letingen på loftet talte ikke i Din historie: Let gjennom tre hus») husene du har lett gjennom – i hvilken som
+  // helst etasje: 1. etasje fra leting-visning.js (lett = Map husnr -> …) og de andre etasjene her (S.lett 'husnr:etasje'). Samme hus én gang.
+  // LeteSpill.antall() bruker dette, så historien («Let gjennom tre hus»), målene og Deg teller alle etasjer.
+  function husLett(lett1) { const ut = new Set(); for (const i of (lett1 && lett1.keys ? lett1.keys() : [])) ut.add(String(i));
+    for (const k of Object.keys(S.lett || {})) ut.add(String(k).split(':')[0]); return ut; }
+  window.Etasjer2D = { S, gåTil, let2d, husLett, etasjeI, inngang, husAv, modell, registrer, kjør, les, lagre, erLett, rest, rad, klikk, husKnapper,
     // ferdig nå (vakta): gangen hoppes fram til enden, letingen til slutten
     spol: () => { if (S.gang) S.gang.t0 -= 600000; if (S.leter) S.leter.start -= 600000; },
     nullstill: () => { S.hus = null; S.n = 1; S.p = null; S.gang = null; S.leter = null; } };

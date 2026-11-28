@@ -155,9 +155,12 @@
 
   // ---------- rydding: folkene bærer inn ----------
   // flytter høyst n enheter (ikke reserverte) fra ute eller fra et bygg med feil sone inn der det er plass. Gir antallet flyttet.
-  function rydd(Leir, L, V, n) {
+  // (ut9-liv) først = id-en til enheten en rydder faktisk bar: den flyttes først (før ble den første enheten ute flyttet, så varen
+  // rydderen bar, kunne bli liggende ute når andre varer også lå der)
+  function rydd(Leir, L, V, n, først) {
     const Ps = plasser(Leir, L, V), Pm = new Map(Ps.map(P => [P.id, P])); let flyttet = 0;
     const kand = V.e.filter(u => !u.r && u.p !== 'bæres' && (u.p === 'ute' || (Pm.get(u.p) && Pm.get(u.p).sone && Pm.get(u.p).sone !== u.v)));
+    if (først != null) kand.sort((a, b) => (b.id === først) - (a.id === først));
     for (const u of kand) { if (flyttet >= n) break; const nå = Pm.get(u.p);
       const P = bestePlasser(Ps, u.v).find(P => P.id !== u.p && P.id !== 'ute' && rang(P, u.v) < (nå ? rang(nå, u.v) : 9) && P.cap(u.v) - sum(V, u.v, q => q.p === P.id) >= u.m - REGLER.eps);
       if (!P) continue; u.p = P.id; u.i = ledigRute(V, P.id, u.v); flyttet++; }

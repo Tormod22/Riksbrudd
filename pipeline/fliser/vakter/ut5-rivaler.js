@@ -35,7 +35,7 @@ module.exports = {
       if (by) { const b = BA.by(BT, String(by.id)); b.avtale = null; b.rival = null; b.forhandler = null; delete b.rivalStengt;
         BA.rivalFrir(b, 'rød', by.folk, tid - 2000, 'redd'); const r = BA.rivalSteg(b, tid); krev(r === 'rival' && b.rival && b.rival.trinn === 'beskyttelse', 'Ravnsund fikk ikke beskyttelsesavtalen');
         // ingen røde lag i nærheten: løftet brytes hver time, og byen sier opp etter tre døgn
-        const røde = ENHETER.filter(e => e.side === 'rød'); for (const e of røde) ENHETER.splice(ENHETER.indexOf(e), 1);
+        const røde = ENHETER.filter(e => e.side === 'rød'); for (const e of røde) (ENHETER.indexOf(e) >= 0 && ENHETER.splice(ENHETER.indexOf(e), 1));
         let opp = null; for (let dg = 0; dg < 4 && b.rival; dg++) { for (let h = 0; h < 24; h++) RS.time(60); const u = RS.byDøgn('rød'); if (u.some(q => q.sierOpp)) opp = u.find(q => q.sierOpp); }
         d.byOpp = opp; krev(opp && !b.rival && b.rivalStengt && b.rivalStengt.side === 'rød', 'byen sa ikke opp Ravnsund da de ikke holdt løftet');
         krev(RS.meldinger.some(t => /sagt opp avtalen med Ravnsund/.test(t)), 'du fikk ikke beskjed om oppsigelsen');

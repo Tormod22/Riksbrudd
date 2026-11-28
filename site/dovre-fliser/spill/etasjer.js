@@ -60,7 +60,7 @@
     const n = typeof et === 'number' ? et : et ? et.n : 1, Leting = Leting_();
     if (n === 1 || !Leting) return Leting ? Leting.funn(kl, A, i) : { mat: 0, tre: 0, betong: 0, stål: 0, diesel: 0, penger: 0, tomt: true, person: false };
     const s = typeof et === 'object' ? slag(et) : n < 0 ? 'kjeller' : 'over', frø = Math.imul(i | 0, 31) + (n + 7) * 101;
-    if (s === 'over') { const f = Leting.funn(kl, A, frø); f.person = false; if (!f.tomt) for (const k of ['mat', 'tre', 'betong', 'stål', 'diesel', 'penger']) f[k] = rund(k, f[k] * REGLER.funn.over); return f; }
+    if (s === 'over') { const f = Leting.funn(kl, A, frø, { etasje: 'over' }); f.person = false; if (!f.tomt) for (const k of ['mat', 'tre', 'betong', 'stål', 'diesel', 'penger']) f[k] = rund(k, f[k] * REGLER.funn.over); return f; }
     const K = REGLER.funn[s], f = { mat: 0, tre: 0, betong: 0, stål: 0, diesel: 0, penger: 0, tomt: false, person: false };
     if (hash(frø, 1) < K.tomt) { f.tomt = true; return f; }
     // mer skrot (flyttekasser, kister …) gir mer å finne
@@ -68,6 +68,9 @@
     const skala = Math.max(.4, Math.min(5, Math.sqrt(Math.max(10, A) / 100))) * Math.min(REGLER.skrot.maks, 1 + ting * REGLER.skrot.perTing);
     K.ting.forEach(([k, sj, a, b], j) => { if (hash(frø, 10 + j) < sj) f[k] = rund(k, (a + (b - a) * hash(frø, 40 + j)) * skala); });
     if (!(f.mat || f.tre || f.betong || f.stål || f.diesel || f.penger)) f.tomt = true;
+    // (ut8-hverdag) hverdagsting i loftet, kjelleren og tilfluktsrommet (spill/ting.js)
+    const Tg = rot.Ting || (typeof require === 'function' ? (() => { try { return require('./ting.js'); } catch (e) { return null; } })() : null);
+    if (Tg && !f.tomt) f.ting = Tg.funnIBygg(kl, A, frø, { etasje: s });
     return f;
   }
   // tilflukt: tilfluktsrom alltid, ellers kjeller i bygg som er store nok

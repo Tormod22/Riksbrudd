@@ -115,7 +115,9 @@
     // (runde 12, kritiker E: «1 såret. 1 bygg skadet» uten navn) – med navnene når de finnes: u.falneNavn, u.sårNavn, u.skadetNavn, u.ødelagtNavn
     const f = u.falne || 0, s2 = u.sårede || 0, fN = u.falneNavn && u.falneNavn.length === f && f ? u.falneNavn : null, sN = u.sårNavn && u.sårNavn.length === s2 && s2 ? u.sårNavn : null;
     const fT = fN ? `${og(fN)} falt` : f ? f + ' falt' : '', sT = sN ? `${og(sN)} ble såret` : s2 ? s2 + ' såret' : '';
-    d.push(f || s2 ? `Hos oss: ${fT}${f && s2 ? (fN || sN ? ', og ' : ' og ') : ''}${sT}.` : 'Ingen tap hos oss.');
+    // (ut8-kr-krig, Ingrid 28. nov) u.karakter = { navn, hp (0–100 eller null), falt } når du selv ble truffet: da står det, og ikke «Ingen tap hos oss»
+    const K = u.karakter, kT = K ? (K.falt ? `Du (${K.navn || 'karakteren'}) ble slått ut.` : `Du ble truffet${K.hp !== null && K.hp !== undefined ? ` – helse ${Math.round(K.hp)} av 100` : ''}.`) : '';
+    d.push(f || s2 ? `Hos oss: ${fT}${f && s2 ? (fN || sN ? ', og ' : ' og ') : ''}${sT}.` : K ? 'Ingen tap i lagene.' : 'Ingen tap hos oss.'); if (kT) d.push(kT);
     const b = []; if (u.skadet) b.push(u.skadetNavn && u.skadetNavn.length === u.skadet ? `${og(u.skadetNavn)} skadet` : `${u.skadet} bygg skadet`); if (u.ødelagt) b.push(u.ødelagtNavn && u.ødelagtNavn.length === u.ødelagt ? `${og(u.ødelagtNavn)} ødelagt` : `${u.ødelagt} ødelagt`);
     if (b.length) { const t = b.join(', '); d.push(t.charAt(0).toUpperCase() + t.slice(1) + '.'); }
     return { tittel: T[u.utfall] || `${hva} er over`, tekst: d.filter(Boolean).join(' '), god }; }

@@ -334,7 +334,9 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
     if (!spoler && !(autoPå() && tempo > 1)) { før = null; innboks.length = 0; return; }
     const b = bilde(); if (!før) { før = b; innboks.length = 0; return; }
     const h = angrepFilter(F.hendelser(før, b).concat(innboks.splice(0))); før = b; if (!h.length && !(spoler && spolMål)) return;
-    let st = spoler ? F.stopper(h, 'spol') : F.hviler(F.stopper(h, 'auto'), sistAuto, tid);
+    // (ut8-kr-krig, Ingrid 28. nov: «farten senkes ved hvert ferdig bygg – for masete») et ferdig bygg senker ikke farten av seg selv
+    // før du slår det på (valg.bygg, Leir-menyen → Mål); ⏭ stopper fortsatt ved ferdige bygg
+    let st = spoler ? F.stopper(h, 'spol') : F.hviler(F.stopper(h, 'auto').filter(x => x.type !== 'bygg' || valg.bygg === true), sistAuto, tid);
     // (kritikerløkka r1) en rolig natt stopper ikke ved midnatt («ny dag») – morgenmøtet kl. 06 stopper spolingen og sier hva som har skjedd
     if (spoler && rot.MorgenSpill && st.some(q => q.type === 'dag') && rolig()) st = st.filter(q => q.type !== 'dag');
     // (G2) «Spol til …»: bare det som haster, pluss målet selv
@@ -543,8 +545,11 @@ body.krig #flytgruppe{ display:none; } body.spill #flytgruppe{ top:auto; bottom:
   (rot.LEIR_MENY = rot.LEIR_MENY || []).push((hode, { el: e2, knapp: kn }) => {
     hode.appendChild(e2('h3', { 'data-fane': 'mål' }, 'Mål · tid og flyt'));
     hode.appendChild(e2('div', { klasse: 'dagbok' }, '⏭ ved fartsknappene spoler til neste hendelse som krever deg (et lag du sendte er framme, bygg ferdig, fienden nær, alarm, ny dag, et kort som venter på svar) og går så ned til 1×.'));
-    const b = kn('Senk farten selv ved alarm, kontakt og ferdig bygg: ' + (valg.auto ? 'på' : 'av'), () => { valg.auto = !valg.auto; lagre(); if (rot.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); b.textContent = 'Senk farten selv ved alarm, kontakt og ferdig bygg: ' + (valg.auto ? 'på' : 'av'); });
+    const b = kn('Senk farten selv ved alarm og kontakt: ' + (valg.auto ? 'på' : 'av'), () => { valg.auto = !valg.auto; lagre(); if (rot.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); b.textContent = 'Senk farten selv ved alarm og kontakt: ' + (valg.auto ? 'på' : 'av'); });
     b.id = 'flytauto'; hode.appendChild(b);
+    // (ut8-kr-krig) ferdige bygg senker farten bare når du vil det (av som standard)
+    const bt = () => 'Senk farten også når et bygg er ferdig: ' + (valg.bygg === true ? 'på' : 'av');
+    const b2 = kn(bt(), () => { valg.bygg = valg.bygg !== true; lagre(); b2.textContent = bt(); if (rot.LeirSpill && LeirSpill.visMeny) LeirSpill.visMeny(); }); b2.id = 'flytbygg'; hode.appendChild(b2);
   });
   // kommandolinja nederst på PC: «Alle lag» velger lagene i bildet
   (rot.KOMMANDO_TILLEGG = rot.KOMMANDO_TILLEGG || []).push({ k: 'allelag', navn: 'Velg lag', tittel: 'Velg alle lagene dine som er i bildet (eller Shift + dra en ramme)', fins: () => egne().length > 1 && !(typeof R3 !== 'undefined' && R3 && R3.fot), på: () => gruppe.length > 1, trykk: () => { if (gruppe.length > 1) velg([]); else if (i3d()) velgIBildet3d(); else velgIBildet(); },

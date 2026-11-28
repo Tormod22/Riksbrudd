@@ -283,7 +283,7 @@
       const r = Ressurser.startHogst(R2, { x: v.x, y: v.y, r: H.radius, skog: v.skog }, { x: s.leir.x, y: s.leir.y }); if (r.feil) return null;
       RessursSpill.lagre(); if (RessursSpill.ryddHogst) try { RessursSpill.ryddHogst(); } catch (e) { /* 3D er ikke åpent */ }
       const d = Math.hypot(v.x - s.leir.x, v.y - s.leir.y);
-      logg(`Hogstlaget fant skog ${P.km(d)} ${P.retning(v.x - s.leir.x, v.y - s.leir.y)} for leiren og har begynt å hogge (gir ca. ${(Math.round(r.jobb.mat.tre * 10) / 10).toLocaleString('nb-NO')} m³ tre). ` + (d > Ressurser.REGLER.nær ? 'Folk på «Frakt» bærer treet til leiren. ' : '') + 'Vil du velge stedet selv: Leir → Lager → «Hogst …».');
+      logg(`Hogstlaget fant skog ${P.km(d)} ${P.retning(v.x - s.leir.x, v.y - s.leir.y)} for leiren og har begynt å hogge (gir ca. ${(Math.round(((r.jobb.mat.tømmer || 0) + (r.jobb.mat.tre || 0)) * 10) / 10).toLocaleString('nb-NO')} m³ tømmer). ` + (d > Ressurser.REGLER.nær ? 'Folk på «Frakt» bærer tømmeret til leiren. ' : '') + 'Vil du velge stedet selv: Leir → Lager → «Hogst …».');
       S.hogstMeldt = (S.hogstMeldt || 0) + 1; lagre(); skitten = true;
       return r.jobb;
     } finally { leter = false; }

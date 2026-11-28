@@ -152,8 +152,13 @@
       const [x, y] = midt(best[0], best[1]), a = nr * 2.4, p = nr ? [x + Math.cos(a) * v.r * .3, y + Math.sin(a) * v.r * .3] : [x, y]; tatt.push(p); return p; };
     for (let i = 0; i < nLag; i++) { const a = i / Math.max(1, nLag) * 6.283, tx = L.x + Math.cos(a) * R, ty = L.y + Math.sin(a) * R;
       const p = velg(tx, ty, (x, y) => land(x, y) && helning(x, y) <= BRATT) || velg(tx, ty, land); if (!p) ut.iVann++; ut.lag.push(p || [tx, ty]); }
-    for (let i = 0; i < nKj; i++) { const tx = L.x + 160 + i * 45, ty = L.y - 200;
-      const p = velg(tx, ty, (x, y) => veg(x, y) && land(x, y)) || velg(tx, ty, (x, y) => land(x, y) && helning(x, y) <= .25) || velg(tx, ty, land); if (!p) ut.iVann++; ut.kj.push(p || [tx, ty]); }
+    // (ut8-kr-krig, Ingrid 28. nov: «Speiderbil 1 står 0,9 km fra leiren – kjør den hjem først») kjøretøyene står i leiren: innen
+    // o.kjNær meter (Claudes forslag 250 m – troppene kan bare bruke kjøretøy innen 300 m), på en veg når det finnes en så nær, ellers på
+    // flatt land; først når det ikke finnes land så nær, lenger ut som før
+    const KJ_NÆR = o.kjNær || 250, nær = (i, j) => { const [x, y] = midt(i, j); return Math.hypot(x - L.x, y - L.y) <= KJ_NÆR; };
+    for (let i = 0; i < nKj; i++) { const a = -1.2 + i * .45, tx = L.x + Math.cos(a) * 120, ty = L.y + Math.sin(a) * 120;
+      const p = velg(tx, ty, (x, y) => nær(x, y) && veg(x, y) && land(x, y)) || velg(tx, ty, (x, y) => nær(x, y) && land(x, y) && helning(x, y) <= .25) || velg(tx, ty, (x, y) => nær(x, y) && land(x, y))
+        || velg(tx, ty, (x, y) => veg(x, y) && land(x, y)) || velg(tx, ty, (x, y) => land(x, y) && helning(x, y) <= .25) || velg(tx, ty, land); if (!p) ut.iVann++; ut.kj.push(p || [tx, ty]); }
     return ut;
   }
   // Ferdig: valgene er gyldige og leiren er satt. Pengene settes én gang (STARTPENGER + eventuell bonus, ganget med vanskelighetsgraden).

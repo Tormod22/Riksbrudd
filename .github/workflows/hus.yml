@@ -21,10 +21,12 @@ jobs:
           curl -fL --retry 5 -o norge.osm.pbf https://download.geofabrik.de/europe/norway-latest.osm.pbf \
             || curl -fL --retry 5 -o norge.osm.pbf https://download.openstreetmap.fr/extracts/europe/norway-latest.osm.pbf
           ls -la norge.osm.pbf
-      - name: Byggene og anleggene (med nodene de trenger), og butikkpunktene for seg
+      - name: Byggene, anleggene og industriområdene (med nodene de trenger), og butikk- og industripunktene for seg
         run: |
-          osmium tags-filter -R norge.osm.pbf n/shop n/amenity=fuel,pharmacy,fast_food,restaurant,cafe,marketplace -o punkt.osm.pbf
-          osmium tags-filter norge.osm.pbf w/building r/building w/leisure=pitch,track,playground r/leisure=pitch w/amenity=parking r/amenity=parking w/aeroway=runway,taxiway,apron r/aeroway=apron w/amenity=fuel -o bygg.osm.pbf
+          osmium tags-filter -R norge.osm.pbf n/shop n/amenity=fuel,pharmacy,fast_food,restaurant,cafe,marketplace n/industrial n/craft n/man_made=works,storage_tank,silo,mineshaft,adit n/power=plant,substation -o punkt.osm.pbf
+          osmium tags-filter norge.osm.pbf w/building r/building w/leisure=pitch,track,playground r/leisure=pitch w/amenity=parking r/amenity=parking w/aeroway=runway,taxiway,apron r/aeroway=apron w/amenity=fuel \
+            w/landuse=industrial,quarry,port,harbour,depot,landfill r/landuse=industrial,quarry,port,harbour w/industrial r/industrial w/man_made=works,wastewater_plant r/man_made=works \
+            w/power=plant,substation r/power=plant,substation w/amenity=recycling,waste_transfer_station -o bygg.osm.pbf
           rm norge.osm.pbf && ls -la bygg.osm.pbf punkt.osm.pbf
       - name: Lag fliser
         working-directory: pipeline/fliser

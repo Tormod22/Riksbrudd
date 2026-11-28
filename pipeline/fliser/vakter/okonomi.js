@@ -28,7 +28,7 @@ module.exports = { navn: 'økonomi og region', kjør: async (pg, profil) => {
       // 3: en fiende på ruta truer eller stenger den (står et eget lag ved ruta, blir den «truet»)
       fiende = nyttLag('Vaktprøve', c.x + (l.x - c.x) * .1, c.y + (l.y - c.y) * .1, 'rød'); ENHETER.push(fiende);
       o.rute1 = RS.status().get(id).rute.status;
-      ENHETER.splice(ENHETER.indexOf(fiende), 1); fiende = null; o.rute2 = RS.status().get(id).rute.status;
+      (ENHETER.indexOf(fiende) >= 0 && ENHETER.splice(ENHETER.indexOf(fiende), 1)); fiende = null; o.rute2 = RS.status().get(id).rute.status;
       // 4: hard skatt uten garnison ender i opprør
       RS.settSkatt(id, 'hard'); const gar = Garnison.lagI(by, ENHETER.filter(s => s.side === 'blå')).length > 0;
       for (let i = 0; i < 14; i++) RS.steg(.5); o.opprør = gar ? RS.tilstand().byer[id].uro : Garnison.tilstand(TETTSTEDER, id).eier === null;
@@ -49,7 +49,7 @@ module.exports = { navn: 'økonomi og region', kjør: async (pg, profil) => {
       if (!o.fordel) o.fordelHvorfor = { f, f0, røde: [...TETTSTEDER].filter(([, t]) => t.eier === 'rød').map(([k]) => k).slice(0, 6), id };
     } catch (e) { o.feil = String(e && e.message || e); }
     // tilbake
-    if (fiende && ENHETER.includes(fiende)) ENHETER.splice(ENHETER.indexOf(fiende), 1);
+    if (fiende && ENHETER.includes(fiende)) (ENHETER.indexOf(fiende) >= 0 && ENHETER.splice(ENHETER.indexOf(fiende), 1));
     SS.knapphet = før.knapphet; const H = SS.hyller(), HF = JSON.parse(før.hyller); for (const k of Object.keys(HF)) H[k] = HF[k]; SS.settPriser();
     Leir.REGLER.salg = før.salg; ['tre', 'betong', 'stål'].forEach((v, i) => { Leir.MATERIALER[v].pris = før.priser[i]; });
     TETTSTEDER.delete(id); for (const q of flyttet) { q.e.x = q.x; q.e.y = q.y; q.e.sti = q.sti; }

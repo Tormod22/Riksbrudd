@@ -72,6 +72,8 @@
 
   // ---------- stedene i kartet (tettsteder og bruer fra INFRA) ----------
   let STEDER = null, stederAntall = -1;
+  // (ut8-kr-saga, kritikeren: «Tilbudet står i 0 min til» ble stående) – et tilbud med under ett minutt igjen vises ikke (steget tar det bort)
+  const synligTilbud = k => k.første || !(k.utløper - tid < 1);
   function steder() {
     if (typeof INFRA === 'undefined' || !INFRA) return [];
     const n = (INFRA.tettsted || []).length + (INFRA.bru || []).length; if (STEDER && n === stederAntall) return STEDER;
@@ -223,10 +225,14 @@
     // i opplæringen peker på et tilbud dere klarer – eller på et lite oppdrag
     if (st && fk && st.id === 'neste' && !SK.bruttTekst(fk)) { const v = veienVidere(); if (v) return { ...v, steg: st.id, hjelp: st.tekst(fk, knappFor()) }; }
     if (st && fk) return { tekst: st.lapp(fk), pek: st.id === 'send' || st.id === 'hjem' ? 'kart' : st.pek, k: fk, steg: st.id, hjelp: st.tekst(fk, knappFor()) };
-    const ak = S.sider[ID].aktive.slice().sort((a, b) => a.frist - b.frist)[0];
-    if (ak) { const v = vurder(ak); return { tekst: SK.lappFor(ak, v, tid) + ' · ' + SK.fristTekst(ak, tid), pek: klarTilLevering(ak) || erVare(ak) ? 'selskap' : 'kart', k: ak, hjelp: SK.kravTekst(ak) }; }
+    // (ut8-kr-ro, kritikken: lappen sto et døgn på «Kjøpsavtale: tømmer kommer hvert døgn (1 av 5)») en avtale som går av seg selv
+    // (Neste.avSegSelv: kjøpsavtale, Gråfjell kjører) viker for en kontrakt som trenger dere, og for ledige tilbud
+    const selv = window.Neste && Neste.avSegSelv ? Neste.avSegSelv : (k => k.type === 'kjøp'), akt = S.sider[ID].aktive.slice().sort((a, b) => a.frist - b.frist);
+    const lappK = ak => { const v = vurder(ak); return { tekst: SK.lappFor(ak, v, tid) + ' · ' + SK.fristTekst(ak, tid), pek: klarTilLevering(ak) || erVare(ak) ? 'selskap' : 'kart', k: ak, hjelp: SK.kravTekst(ak) }; };
+    const ak = akt.find(k => !selv(k)); if (ak) return lappK(ak);
     { const v = veienVidere(); if (v) return v; }
     const n = S.tilbud.filter(q => SK.kanTa(q, har(), S.sider[ID]).ok).length;
+    if (!n && akt.length) return lappK(akt[0]);
     return { tekst: n ? `Velg en kontrakt i Selskapet (${n} ledig${n === 1 ? '' : 'e'})` : 'Ingen kontrakter nå – nye tilbud kommer i morgen tidlig', pek: 'selskap', k: null };
   }
   // ---------- (ut8-kr-penger) HVA DERE KLARER NÅ ----------
@@ -241,7 +247,7 @@
     const L = Sp() && Sp().leir, LT = SK.REGLER.lett; if (!L || !LT) return true; const km = Math.hypot(q.sted.x - L.x, q.sted.y - L.y) / 1000 * LT.omveg;
     return !SK.marsjVurdering(q, { km, timer: km / LT.kmt }).advarsel;
   }
-  function klarbare() { return S ? S.tilbud.filter(kanKlare).sort((a, b) => (b.lett ? 1 : 0) - (a.lett ? 1 : 0) || b.betaling - a.betaling) : []; }
+  function klarbare() { return S ? S.tilbud.filter(q => synligTilbud(q) && kanKlare(q)).sort((a, b) => (b.lett ? 1 : 0) - (a.lett ? 1 : 0) || b.betaling - a.betaling) : []; }
   // de små oppdragene (Leir → Mål, spill/spillet-visning.js): { liste, tatt } – samles nå også i Kontrakter
   const småOppdrag = () => { try { const O = window.SpilletSpill && SpilletSpill.O && SpilletSpill.O(); return O && Array.isArray(O.liste) ? O.liste : []; } catch (e) { return []; } };
   const OPD = () => (window.Spillet && Spillet.Oppdrag) || null;
@@ -427,10 +433,14 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
   // står byene ruta går gjennom. Bare for tilbudene som vises (panelet åpent), én om gangen, og svaret huskes (per kontrakt og leir).
   const MARSJ = new Map(); let marsjJobb = null;
   const marsjMål = k => (k.type === 'rydd' && k.sperre ? k.sperre : k.type === 'eskorte' && k.fra && k.fra.slag !== 'leir' ? k.fra : k.sted);
+  // (ut8-kr-saga) Claudes forslag: høyst 20 s på å regne ut marsjen til ett tilbud
+  const MARSJ_FRIST = 20000;
   function marsj(k) {
     const s = Sp(); if (!k || !s || !s.leir || k.første || typeof lagVindu !== 'function' || typeof Terreng === 'undefined') return null;
     const nø = k.id + '|' + Math.round(s.leir.x) + ',' + Math.round(s.leir.y), m = MARSJ.get(nø); if (m) return m;
-    if (!marsjJobb) marsjJobb = regnMarsj(k, nø, s.leir).finally(() => { marsjJobb = null; sistHtml = ''; });
+    // (ut8-kr-saga, kritikeren: «regner ut marsjen …» ble stående) – svarer ikke kartet innen MARSJ_FRIST ms, regnes luftlinja og neste tilbud får tur
+    if (!marsjJobb) marsjJobb = Promise.race([regnMarsj(k, nø, s.leir), new Promise(r => setTimeout(r, MARSJ_FRIST))])
+      .finally(() => { if (!MARSJ.has(nø)) { const d = Math.hypot(marsjMål(k).x - s.leir.x, marsjMål(k).y - s.leir.y); MARSJ.set(nø, { feil: true, venter: false, ingen: false, km: d / 1000, timer: d / 1000 / 3 }); } marsjJobb = null; sistHtml = ''; });
     return { venter: true };
   }
   async function regnMarsj(k, nø, L) {
@@ -487,8 +497,10 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     const sd = S.sider[ID], r = sd.rykte, sum = sd.sum;
     let h = `<button class="lukk" data-s="lukk" aria-label="Lukk">×</button><div class="hode">${egetMerke(58)}<div><div class="kode">Privat militærselskap${fargeord() ? ' · ' + esc(fargeord()) : ''}</div><h2>${esc(egetNavn())}</h2><div class="motto">${esc(SK.rykteTekst(r))}</div></div></div>`;
     { const nv = nivåNå(), nn = SK.nesteNivå(sd);
-      h += `<h3>Nivå ${nv.nr} · ${esc(nv.navn)} <small>betaling ×${String(nv.faktor).replace('.', ',')}</small></h3>`
-        + (nn ? `<div class="nivaa" data-nivaa="${nn.nivå.nr}">Neste nivå: <b>${esc(nn.nivå.navn)}</b> (betaling ×${String(nn.nivå.faktor).replace('.', ',')}, lag på ${nn.nivå.menn}+ til de store holdejobbene). Mangler: ${esc(nn.mangler.join(' og '))}.</div>`
+      // (ut8-kr-ro, kritikken: «to stiger») trinnet står først, nivået (ryktet) som et krav under det – samme linje som i Oversikt
+      let tr = null; try { const R = window.TrinnSpill && window.Trinn ? TrinnSpill.regn() : null; if (R) tr = { R, N: Trinn.nivåLinje(R, nv.nr, SK.REGLER.NIVÅER.length) }; } catch (e) { tr = null; }
+      h += `<h3>${tr ? `Trinn ${tr.R.nr} ${esc(tr.R.trinn.navn)} · rykte: nivå ${nv.nr} · ${esc(nv.navn)}` : `Nivå ${nv.nr} · ${esc(nv.navn)}`} <small>betaling ×${String(nv.faktor).replace('.', ',')}</small></h3>`
+        + (nn ? `<div class="nivaa" data-nivaa="${nn.nivå.nr}">Neste nivå: <b>${esc(nn.nivå.navn)}</b> (betaling ×${String(nn.nivå.faktor).replace('.', ',')}, lag på ${nn.nivå.menn}+ til de store holdejobbene). Mangler: ${esc(nn.mangler.join(' og '))}.${tr && tr.N.krav && !tr.N.ok ? ` Nivået er ryktet som kunde: trinn ${tr.N.trinn} krever nivå ${tr.N.krav}.` : ''}</div>`
           : `<div class="nivaa">Øverste nivå – de beste kontraktene er deres.</div>`);
       const st = SK.trådSteg(S), fk = førsteK();
       if (st && fk) h += `<div class="traad"><small>Første kontrakt · steg ${S.tråd.gjort.length + 1} av ${SK.TRÅD.length}</small><b>${esc(st.tittel)}</b><p>${esc(st.tekst(fk))}</p></div>`; }
@@ -497,8 +509,8 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     h += `<div class="rad"><span>Levert <span class="tall">${sum.levert}</span></span><span>Brutt <span class="tall">${sum.brutt}</span></span><span>Tjent <span class="kr tall">${kr(sum.tjent)}</span></span><span>Bøter <span class="bot tall">${kr(sum.bøter)}</span></span></div>`;
     if (melding) h += `<div class="melding">${esc(melding)}</div>`;
     h += `<h3>Aktive kontrakter <small>${sd.aktive.length} av ${SK.REGLER.maksAktive}</small></h3>` + (sd.aktive.length ? sd.aktive.map(aktivKort).join('') : `<p class="tom">Ingen ennå. Ta et tilbud under.</p>`);
-    // (ut8-kr-penger) tilbudene dere klarer står først (den første kontrakten alltid øverst)
-    { const kl = new Set(klarbare().map(q => q.id)), T = S.tilbud.slice().sort((a, b) => (b.første ? 1 : 0) - (a.første ? 1 : 0) || (kl.has(b.id) ? 1 : 0) - (kl.has(a.id) ? 1 : 0));
+    // (ut8-kr-penger) tilbudene dere klarer står først (den første kontrakten alltid øverst); (nattfiks) bare tilbud som ikke er gått ut
+    { const kl = new Set(klarbare().map(q => q.id)), T = S.tilbud.filter(synligTilbud).sort((a, b) => (b.første ? 1 : 0) - (a.første ? 1 : 0) || (kl.has(b.id) ? 1 : 0) - (kl.has(a.id) ? 1 : 0));
       h += `<h3>Ledige tilbud <small>nye hver morgen</small></h3>` + (T.length ? T.map(tilbudKort).join('') : `<p class="tom">Ingen tilbud nå${steder().length ? '' : ' – kartet har ingen tettsteder eller bruer innen rekkevidde'}.</p>`); }
     // (ut8-kr-penger, Jonas: «de små oppdragene lå et annet sted, i fanen Mål i Leir-menyen») samme oppdrag som i Leir → Mål, her også
     h += småHtml();

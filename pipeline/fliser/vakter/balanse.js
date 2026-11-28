@@ -60,7 +60,7 @@ async function runde5(pg) {
       const b = nyttLag('Røvere vakt5.2', L.x - 640, L.y + 15, 'rød'); b.raid = nr; b.trekker = true; b.trekkerFra = tid - 5; b.bytte = { penger: 77000, lager: { tre: 1.5 }, diesel: 8, mat: 2 }; ENHETER.push(b);
       if (!TL.lagre()) feil.push('lagringen av angrepet feilet');
       // «siden lastes på nytt»: lagene borte, så tilbake
-      ENHETER.splice(ENHETER.indexOf(a), 1); ENHETER.splice(ENHETER.indexOf(b), 1);
+      (ENHETER.indexOf(a) >= 0 && ENHETER.splice(ENHETER.indexOf(a), 1)); (ENHETER.indexOf(b) >= 0 && ENHETER.splice(ENHETER.indexOf(b), 1));
       d.tilbake = TL.tilbake(nr, true);
       const a2 = ENHETER.find(e => e.navn === a.navn && e.raid === nr), b2 = ENHETER.find(e => e.navn === b.navn && e.raid === nr);
       if (d.tilbake !== 2 || !a2 || !b2) feil.push(`røverlagene kom ikke tilbake (${d.tilbake})`);
@@ -75,7 +75,7 @@ async function runde5(pg) {
       // lagene hjemme fyller ammunisjon fra kassa (basen uten olje) og de sårede hviler – mellom angrepene
       const HS = window.HjemmeSpill, s = ENHETER.find(e => e.side === 'blå' && !e.karakter && !e.leirvakt && !e.ombord && Array.isArray(e.menn) && e.menn.length >= 2 && levende(e));
       if (!HS || !window.Hjemme) feil.push('HjemmeSpill mangler');
-      else if (s) { T0.aktiv = 0; for (const e of ENHETER.slice()) if (!før.enheter.includes(e)) ENHETER.splice(ENHETER.indexOf(e), 1); const fiendeR = Hjemme.REGLER.fiende; Hjemme.REGLER.fiende = 0; const fx = [s.x, s.y, s.sti, s.planlegger, s.ammo, s.menn.map(m => m.hp)], B = window.OLJE && OLJE.BASER[0], olje = B ? B.beholdning : 0, p0 = OppstartSpill.tilstand().penger, test = HS.test;
+      else if (s) { T0.aktiv = 0; for (const e of ENHETER.slice()) if (!før.enheter.includes(e)) (ENHETER.indexOf(e) >= 0 && ENHETER.splice(ENHETER.indexOf(e), 1)); const fiendeR = Hjemme.REGLER.fiende; Hjemme.REGLER.fiende = 0; const fx = [s.x, s.y, s.sti, s.planlegger, s.ammo, s.menn.map(m => m.hp)], B = window.OLJE && OLJE.BASER[0], olje = B ? B.beholdning : 0, p0 = OppstartSpill.tilstand().penger, test = HS.test;
         if (p0 < 2e6) OppstartSpill.gi(2e6); const p1 = OppstartSpill.tilstand().penger;
         try { s.x = L.x + 30; s.y = L.y + 10; s.sti = null; s.planlegger = false; s.ammo = .5; s.menn[0].hp = .5; if (B) B.beholdning = 0; HS.test = true; HS.steg(60);
           d.hjemme = { ammo: Math.round(s.ammo * 100), hp: Math.round(s.menn[0].hp * 100), kr: p1 - OppstartSpill.tilstand().penger };
@@ -87,7 +87,7 @@ async function runde5(pg) {
         const ferdig = window.Opplaering && Opplaering.ferdig(OpplaeringSpill.tilstand()); d.hjelpFørst = Hjelp.første(); if (d.hjelpFørst && !ferdig) feil.push('hjelpen åpnet seg selv mens opplæringen går'); if (av) OpplaeringSpill.slå(false); }
     } catch (e) { feil.push('kast: ' + e.message); }
     finally {
-      for (const e of ENHETER.slice()) if (!før.enheter.includes(e)) ENHETER.splice(ENHETER.indexOf(e), 1);
+      for (const e of ENHETER.slice()) if (!før.enheter.includes(e)) (ENHETER.indexOf(e) >= 0 && ENHETER.splice(ENHETER.indexOf(e), 1));
       for (const k of Object.keys(T0)) delete T0[k]; Object.assign(T0, før.T); if (T0.nesteSpill === null) T0.nesteSpill = Infinity; if (T0.nesteEkte === null) T0.nesteEkte = Infinity;
       if (TL.glem) TL.glem(); if (før.frø !== null) frø = før.frø; for (const [e, st, sf, fs] of før.blå) { e.strid = st; if (sf === undefined) delete e.stridFør; else e.stridFør = sf; if (fs === undefined) delete e.forsvar; else e.forsvar = fs; }
       if (før.angrep === null) localStorage.removeItem(TL.NØKKEL); else localStorage.setItem(TL.NØKKEL, før.angrep);
@@ -134,7 +134,7 @@ async function runde4(pg) {
       if (s) { s.x = L.x - 500; s.y = L.y; s.sti = null; s.planlegger = false; delete s.forsvar; delete s.motMål; }
       FS.motSteg(); d.mot = s ? !!s.motMål && Math.abs(Math.hypot(s.motMål.x - rv2.x, s.motMål.y - rv2.y) - Forsvar.R.mot.avstand) < 1 : null; d.vakt = !!FS.vakt();
       if (s && !d.mot) feil.push('laget hjemme gikk ikke mot røverne i leiren'); if (!d.vakt) feil.push('Leirvakta tok ikke opp våpen');
-      T0.aktiv = 0; ENHETER.splice(ENHETER.indexOf(rv2), 1); FS.motFerdig(); FS.opphev(false);
+      T0.aktiv = 0; (ENHETER.indexOf(rv2) >= 0 && ENHETER.splice(ENHETER.indexOf(rv2), 1)); FS.motFerdig(); FS.opphev(false);
       if (s && s.motMål) feil.push('laget gikk ikke tilbake etter røverne');
       // et lag som trakk seg tilbake av seg selv for over 30 min siden og står 1 km unna uten fiender nær, går hjem
       if (s) { s.x = L.x - 1000; s.y = L.y; s.sti = null; s.planlegger = false; s.egetValg = { hva: 'trakk seg tilbake', grunn: 'vakt', t: tid - 31 };
@@ -151,7 +151,7 @@ async function runde4(pg) {
     } catch (e) { feil.push('kast: ' + e.message); }
     finally {
       // alt tilbake
-      for (const e of ENHETER.slice()) if (!før.enheter.includes(e)) ENHETER.splice(ENHETER.indexOf(e), 1);
+      for (const e of ENHETER.slice()) if (!før.enheter.includes(e)) (ENHETER.indexOf(e) >= 0 && ENHETER.splice(ENHETER.indexOf(e), 1));
       for (const [e, x, y, sti, strid, fsv] of før.pos) { e.x = x; e.y = y; e.sti = sti; e.strid = strid; if (fsv) e.forsvar = fsv; else delete e.forsvar; delete e.motMål; delete e.motHerjer; delete e.motTid; e.siktSkitten = true; }
       LS.bygg = LS.bygg.filter(b => før.bygg.some(q => q[0] === b)); for (const [b, hp, arb] of før.bygg) { b.hp = hp; b.arbeid = arb; } LS.nesteJobb = før.nesteJobb;
       Object.assign(LS.lager, før.lager); LS.drivstoff = før.diesel; if (F) { F.mat = før.mat; F.moral = før.moral; F.personer.forEach((p, i) => { if (før.opp[i]) { p.oppgave = før.opp[i][0]; p.helse = før.opp[i][1]; } }); }

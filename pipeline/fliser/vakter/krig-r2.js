@@ -36,7 +36,7 @@ module.exports = { navn: 'krig-r2', kjør: async (pg, profil) => {
       const f = nyttLag('Vaktrøvere', X + 50, Y + 10, 'rød'); f.raid = 99; ENHETER.push(f); nye.push(f); A.menn.push({ ...A.menn[0] }, { ...A.menn[0] }, { ...A.menn[0] });
       TETTSTEDER.delete(id); for (let i = 0; i < 6; i++) sim(.5); f.x = X + 9000; for (let i = 0; i < 4; i++) sim(.5); f.x = X + 50; for (let i = 0; i < 6; i++) sim(.5);
       const ks = LOGG.find(t => /^Kamp om /.test(t)); ut.hvem = !!ks && /står også i tettstedet/.test(ks); ut.hvemTekst = ks || null;
-      ENHETER.splice(ENHETER.indexOf(f), 1); nye.length = 0;
+      (ENHETER.indexOf(f) >= 0 && ENHETER.splice(ENHETER.indexOf(f), 1)); nye.length = 0;
       // (4) og (5) kontrollrommet ute: lag med kontakt vises, uten kontakt ikke; marsjordren varsler
       const KS = window.KontrollromSpill; if (KS && KS.på && KS.på() && KS.modus() === 'ute') { const skjul = s => KROKER.skjul.some(q => q(s));
         A.x = L.x + 900; A.y = L.y; B.x = L.x + 7000; B.y = L.y; A.sti = B.sti = null; await KS.sjekkKontakt(A); await KS.sjekkKontakt(B);

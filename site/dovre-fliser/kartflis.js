@@ -834,11 +834,23 @@ function husomriss(g, z, hs) {
       }
     }
     g.strokeStyle = 'rgba(18,13,8,.75)'; g.lineWidth = z >= 15 ? 1 : .6; g.beginPath(); sti(P); g.stroke();
-    if (z >= 15 && arealM2 > 80) byggmerke(g, t, f.sx, f.sy, Math.max(5, Math.min(12, Math.sqrt(f.areal) * .22)), o.e.k, z);
+    if (z >= 15 && arealM2 > 80) byggmerke(g, t, f.sx, f.sy, Math.max(5, Math.min(12, Math.sqrt(f.areal) * .22)), o.e.k, z, o.e.ind);
   }
 }
 // Kjennetegn på taket når man er nær: kirke (kors), sykehus (rødt kors), flyplass (fly), skole (bok), butikk (handlepose), industri/lager (tannhjul)
-function byggmerke(g, t, x, y, r, k, z) {
+// (ut8-industri) tegn på taket etter industritypen (ind fra byggjobben, IND i spill/industri.js): tømmerstokk, oljedråpe, flamme (gass),
+// fjell (stein og pukk), fisk, båt (verft), lyn (kraft). De andre typene får tannhjulet som før. Strek og fyll er satt av byggmerke.
+const INDMERKE = {
+  1: (g, r) => { g.beginPath(); g.moveTo(-r * .55, -r * .22); g.lineTo(r * .4, -r * .22); g.moveTo(-r * .55, r * .22); g.lineTo(r * .4, r * .22); g.stroke();
+    g.beginPath(); g.ellipse(r * .45, 0, r * .16, r * .22, 0, 0, 6.283); g.stroke(); g.beginPath(); g.arc(-r * .55, 0, r * .22, Math.PI / 2, Math.PI * 1.5); g.stroke(); },
+  3: (g, r) => { g.beginPath(); g.moveTo(0, -r * .62); g.bezierCurveTo(r * .2, -r * .3, r * .45, -r * .02, r * .45, r * .2); g.arc(0, r * .2, r * .45, 0, Math.PI); g.bezierCurveTo(-r * .45, -r * .02, -r * .2, -r * .3, 0, -r * .62); g.fill(); },
+  4: (g, r) => { g.fillStyle = '#e0a24a'; g.beginPath(); g.moveTo(0, -r * .6); g.bezierCurveTo(r * .5, -r * .1, r * .45, r * .55, 0, r * .55); g.bezierCurveTo(-r * .45, r * .55, -r * .5, -r * .05, -r * .1, -r * .25); g.bezierCurveTo(-r * .05, 0, r * .05, -r * .3, 0, -r * .6); g.fill(); },
+  5: (g, r) => { g.beginPath(); g.moveTo(-r * .62, r * .45); g.lineTo(-r * .12, -r * .45); g.lineTo(r * .12, -r * .05); g.lineTo(r * .28, -r * .25); g.lineTo(r * .62, r * .45); g.closePath(); g.stroke(); },
+  6: (g, r) => { g.beginPath(); g.ellipse(-r * .08, 0, r * .4, r * .22, 0, 0, 6.283); g.fill(); g.beginPath(); g.moveTo(r * .28, 0); g.lineTo(r * .6, -r * .25); g.lineTo(r * .6, r * .25); g.closePath(); g.fill(); },
+  9: (g, r) => { g.beginPath(); g.moveTo(-r * .6, r * .1); g.lineTo(r * .6, r * .1); g.lineTo(r * .38, r * .42); g.lineTo(-r * .4, r * .42); g.closePath(); g.fill(); g.beginPath(); g.moveTo(0, r * .1); g.lineTo(0, -r * .6); g.lineTo(r * .35, -r * .05); g.lineTo(0, -r * .05); g.stroke(); },
+  10: (g, r) => { g.fillStyle = '#e8c94a'; g.beginPath(); g.moveTo(r * .12, -r * .62); g.lineTo(-r * .32, r * .08); g.lineTo(-r * .02, r * .08); g.lineTo(-r * .14, r * .62); g.lineTo(r * .32, -r * .1); g.lineTo(r * .02, -r * .1); g.closePath(); g.fill(); },
+};
+function byggmerke(g, t, x, y, r, k, z, ind) {
   const kj = k && BUTIKKER[k];
   if (kj) {
     // kjedebutikk: skilt i kjedens farger med navnet (nær), ellers en prikk med forbokstaven
@@ -850,10 +862,11 @@ function byggmerke(g, t, x, y, r, k, z) {
       g.fillStyle = kj[2]; g.font = `bold ${r * 1.15}px sans-serif`; g.fillText(kj[0][0], 0, r * .05); }
     g.restore(); return;
   }
-  if (![6, 7, 8, 9, 12, 13, 14, 15, 16].includes(t)) return;
+  if (![6, 7, 8, 9, 12, 13, 14, 15, 16].includes(t) && !INDMERKE[ind]) return;
   g.save(); g.translate(x, y); g.fillStyle = 'rgba(20,16,10,.55)'; g.beginPath(); g.arc(0, 0, r, 0, 6.283); g.fill();
   g.strokeStyle = g.fillStyle = '#f1ead9'; g.lineWidth = Math.max(1.2, r * .18); g.lineCap = 'round';
-  if (t === 8) { g.beginPath(); g.moveTo(0, -r * .65); g.lineTo(0, r * .65); g.moveTo(-r * .38, -r * .2); g.lineTo(r * .38, -r * .2); g.stroke(); }
+  if (INDMERKE[ind] && (t === 6 || t === 12 || t === 1 || t === 2 || t === 4 || t === 5)) INDMERKE[ind](g, r);
+  else if (t === 8) { g.beginPath(); g.moveTo(0, -r * .65); g.lineTo(0, r * .65); g.moveTo(-r * .38, -r * .2); g.lineTo(r * .38, -r * .2); g.stroke(); }
   else if (t === 15 || t === 16) {
     // (runde 15) sykehjem: hjerte; legevakt/legesenter: grønt kors (som apotek/legesenter-skilt)
     if (t === 16) { g.fillStyle = '#3a9a5a'; g.fillRect(-r * .16, -r * .55, r * .32, r * 1.1); g.fillRect(-r * .55, -r * .16, r * 1.1, r * .32); }

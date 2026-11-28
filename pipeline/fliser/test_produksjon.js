@@ -97,4 +97,14 @@ ok(P0.verdi({ laget: { tre: 1.1, flis: .7 }, brukt: { tømmer: 2 } }, Leir.MATER
   ok(V.trengs === P0.REGLER.varsel.døgn * (5e5 + V.drift) && V.etter === 17e6 - 12.5e6, 'varselet regner kassa etter kjøpet mot døgnene med drift');
   ok(P0.driftVarsel('brakke', { kasse: 1 }) === null && P0.driftVarsel('vedkløyver', { kasse: 1e8, kost: 1e6, perDøgn: 1e5, inntekt: 1 }).varsel === false, 'bare maskinene, og vedkløyveren med mye penger uten varsel'); }
 
+// (ut8-kr-saga) det som faktisk ble laget siste døgn: et helt døgn, et døgn der saga sto, og en maskin som kom midt på dagen
+{ const PP = require('../../site/dovre-fliser/spill/produksjon.js'), Q = PP.ny(), gå = (P, a, b) => { for (let t = a; t <= b; t += 60) PP.døgnTell(P, t); PP.døgnTell(P, b); };
+  gå(Q, 100, 1400); Q.laget.tre = 10; gå(Q, 1400, 1445); ok(Q.døgn.iGår && Math.abs(Q.døgn.iGår.tre - 10 * 24 / ((1440 - 100) / 60)) < 1e-6, 'døgnet etter: regnet opp fra 22,3 t');
+  Q.laget.tre = 36.4; gå(Q, 1445, 2881); ok(Math.abs(Q.døgn.iGår.tre - 26.4) < 1e-6, 'helt døgn: 26,4 m³');
+  gå(Q, 2881, 4321); ok(Q.døgn.iGår.tre === 0, 'saga sto et døgn: 0');
+  PP.døgnTell(Q, 4320 * 3); ok(Q.døgn.iGår === null, 'hoppet over døgn: ukjent');
+  const R3 = PP.ny(); PP.døgnTell(R3, 0); PP.døgnTell(R3, 2083); ok(R3.døgn.iGår === null, 'klokka hoppet (spillet lastet): ukjent, ikke «laget ingenting»');
+  const R2 = PP.ny(); gå(R2, 1400, 1450); ok(R2.døgn.iGår === null, 'under seks timer: ukjent');
+  ok(PP.fraJSON(JSON.parse(JSON.stringify({ ...Q, versjon: 1 }))).døgn.d === Q.døgn.d, 'døgnet lagres'); }
+
 console.log(feil ? `${feil} FEIL` : 'Alle testene for produksjon.js er ok'); process.exit(feil ? 1 : 0);

@@ -91,8 +91,30 @@
     bs_lysrør: { navn: 'Lysrør', kort: 'Lysrør', kat: 'lampe', stoff: 'stål', lys: 6, kw: -.3, pris: 4000, tid: .05, mat: { stål: .02 }, str: [1], tekst: 'Lyser opp 6 m rundt seg (0,3 kW)' },
     bs_lyskaster: { navn: 'Lyskaster', kort: 'Lyskaster', kat: 'lampe', stoff: 'stål', lys: 14, kw: -1.2, pris: 9000, tid: .08, mat: { stål: .05 }, str: [1], tekst: 'Lyser opp 14 m rundt seg (1,2 kW)' },
     // LAGER INNI: en hyllerekke (1 × 4 ruter) eller pallplass (2 × 2) i et lukket rom gir lagerplass (m³ av hver vare) – Claudes tall
-    bs_hylle: { navn: 'Hyllerekke', kort: 'Hylle', kat: 'lager', stoff: 'stål', l: 4, b: 1, lager: 6, pris: 30000, tid: .15, mat: { stål: .3 }, str: [1], tekst: 'Lagerplass 6 m³ av hver vare i rommet' },
-    bs_pall: { navn: 'Pallplass', kort: 'Paller', kat: 'lager', stoff: 'tre', l: 2, b: 2, lager: 4, pris: 8000, tid: .05, mat: { tre: .2 }, str: [1], tekst: 'Lagerplass 4 m³ av hver vare i rommet' },
+    bs_hylle: { navn: 'Hyllerekke', kort: 'Hylle', kat: 'lager', stoff: 'stål', l: 4, b: 1, lager: 6, ting: 'hyllereol', pris: 30000, tid: .15, mat: { stål: .3 }, str: [1], tekst: 'Lagerplass 6 m³ av hver vare i rommet' },
+    bs_pall: { navn: 'Pallplass', kort: 'Paller', kat: 'lager', stoff: 'tre', l: 2, b: 2, lager: 4, ting: 'pallplass', pris: 8000, tid: .05, mat: { tre: .2 }, str: [1], tekst: 'Lagerplass 4 m³ av hver vare i rommet' },
+    // (ut8-hverdag, 28. nov) LAGRING AV TING (spill/tinglager.js): hyller og skap for hverdagstingene (peanøttsmør, tape, paracet …).
+    // ting = lagringstypen i Tinglager.LAGRING (liter, klima, hva den tar); kjøleskap, kjølerom og frysboks bruker strøm. Pris, mål og kW er Claudes forslag.
+    bs_kjøleskap: { navn: 'Kjøleskap', kort: 'Kjøleskap', kat: 'lager', stoff: 'stål', l: 1, b: 1, lager: 0, ting: 'kjøleskap', kw: -.15, pris: 15000, tid: .05, mat: { stål: .05 }, str: [1], tekst: 'Ferskvarer holder tre ganger så lenge (300 l, 0,15 kW)' },
+    bs_kjølerom: { navn: 'Kjølerom', kort: 'Kjølerom', kat: 'lager', stoff: 'stål', l: 3, b: 2, lager: 0, ting: 'kjølerom', kw: -1, pris: 120000, tid: .4, mat: { stål: .6 }, str: [1], tekst: 'Mye ferskvare (2 500 l, 1 kW)' },
+    bs_frys: { navn: 'Frysboks', kort: 'Frys', kat: 'lager', stoff: 'stål', l: 1, b: 1, lager: 0, ting: 'frysboks', kw: -.2, pris: 12000, tid: .05, mat: { stål: .05 }, str: [1], tekst: 'Frysevarer og kjøtt holder i månedsvis (250 l, 0,2 kW)' },
+    bs_medisinskap: { navn: 'Medisinskap', kort: 'Medisin', kat: 'lager', stoff: 'stål', l: 1, b: 1, lager: 0, ting: 'medisinskap', pris: 6000, tid: .03, mat: { stål: .02 }, str: [1], tekst: 'Låst skap for medisin og hygiene (60 l)' },
+    bs_verktøytavle: { navn: 'Verktøytavle', kort: 'Verktøy', kat: 'lager', stoff: 'tre', l: 2, b: 1, lager: 0, ting: 'verktøytavle', pris: 4000, tid: .03, mat: { tre: .05 }, str: [1], tekst: 'Verktøy på knagger (150 l)' },
+    bs_garderobe: { navn: 'Garderobeskap', kort: 'Garderobe', kat: 'lager', stoff: 'tre', l: 1, b: 1, lager: 0, ting: 'garderobe', pris: 8000, tid: .04, mat: { tre: .1 }, str: [1], tekst: 'Klær holder seg tørre (400 l)' },
+    bs_kiste: { navn: 'Kiste', kort: 'Kiste', kat: 'lager', stoff: 'tre', l: 1, b: 1, lager: 0, ting: 'kiste', pris: 3000, tid: .02, mat: { tre: .05 }, str: [1], tekst: 'Lukket kiste for tørre ting og klær (180 l)' },
+    bs_pallreol: { navn: 'Pallreol', kort: 'Pallreol', kat: 'lager', stoff: 'stål', l: 4, b: 2, lager: 10, ting: 'pallreol', pris: 60000, tid: .3, mat: { stål: .8 }, str: [1], tekst: 'Paller i tre høyder: 10 m³ av hver vare og 3 000 l ting' },
+    bs_tønne: { navn: 'Vanntønne', kort: 'Tønne', kat: 'lager', stoff: 'stål', l: 1, b: 1, lager: 0, ting: 'tønne', pris: 2000, tid: .02, mat: { stål: .02 }, str: [1], tekst: 'Vann i flasker og dunker (200 l)' },
+    // (ut9-mobler, 28. nov) TI HYLLETYPER TIL for tingene (lagringstypene i Tinglager.LAGRING). Priser og mål er Claudes forslag.
+    bs_trehylle: { navn: 'Trehylle', kort: 'Trehylle', kat: 'lager', stoff: 'tre', l: 1, b: 1, lager: 0, ting: 'trehylle', pris: 2500, tid: .03, mat: { tre: .06 }, str: [1], tekst: 'Mat, kjøkkenting og bøker (250 l)' },
+    bs_stålreol: { navn: 'Stålreol', kort: 'Stålreol', kat: 'lager', stoff: 'stål', l: 2, b: 1, lager: 3, ting: 'stålreol', pris: 9000, tid: .06, mat: { stål: .15 }, str: [1], tekst: 'Tunge ting, verktøy og elektro (600 l + 3 m³ materialer)' },
+    bs_vitrine: { navn: 'Glassvitrine', kort: 'Vitrine', kat: 'lager', stoff: 'tre', l: 1, b: 1, lager: 0, ting: 'vitrine', pris: 7000, tid: .04, mat: { tre: .05 }, str: [1], tekst: 'Glass, porselen, bøker og spill (120 l)' },
+    bs_kjøkkenhylle: { navn: 'Kjøkkenhylle', kort: 'Kjøkken', kat: 'lager', stoff: 'tre', l: 1, b: 1, lager: 0, ting: 'kjøkkenhylle', pris: 1500, tid: .02, mat: { tre: .03 }, str: [1], tekst: 'Krydder, glass og bokser (80 l)' },
+    bs_kjølereol: { navn: 'Kjølereol', kort: 'Kjølereol', kat: 'lager', stoff: 'stål', l: 2, b: 1, lager: 0, ting: 'kjølereol', kw: -.5, pris: 45000, tid: .15, mat: { stål: .2 }, str: [1], tekst: 'Åpen kjølereol for ferskvarer (800 l, 0,5 kW)' },
+    bs_verktøyskap: { navn: 'Verktøyskap', kort: 'V-skap', kat: 'lager', stoff: 'stål', l: 1, b: 1, lager: 0, ting: 'verktøyskap', pris: 9000, tid: .04, mat: { stål: .1 }, str: [1], tekst: 'Låst skap for verktøy og elektro (250 l)' },
+    bs_arkivskap: { navn: 'Arkivskap', kort: 'Arkiv', kat: 'lager', stoff: 'stål', l: 1, b: 1, lager: 0, ting: 'arkivskap', pris: 5000, tid: .03, mat: { stål: .08 }, str: [1], tekst: 'Låste skuffer for papirer og kart (150 l)' },
+    bs_smalhylle: { navn: 'Smal hylle', kort: 'Smal', kat: 'lager', stoff: 'tre', l: 1, b: 1, lager: 0, ting: 'smalhylle', pris: 1800, tid: .02, mat: { tre: .04 }, str: [1], tekst: 'Småting og hygiene (120 l)' },
+    bs_hjørnehylle: { navn: 'Hjørnehylle', kort: 'Hjørne', kat: 'lager', stoff: 'tre', l: 1, b: 1, lager: 0, ting: 'hjørnehylle', pris: 1600, tid: .02, mat: { tre: .03 }, str: [1], tekst: 'Liten hylle i hjørnet (90 l)' },
+    bs_tønnestativ: { navn: 'Tønnestativ', kort: 'Tønner', kat: 'lager', stoff: 'tre', l: 2, b: 1, lager: 0, ting: 'tønnestativ', pris: 6000, tid: .05, mat: { tre: .15 }, str: [1], tekst: 'Tre liggende tønner for vann og drikke (600 l)' },
   };
   // veggene: fire stoff × hel/dør/vindu/port (dør og vindu i 1,2 m, porten 2,4 m i det fine rutenettet; alt 4,8 m i hallrutenettet)
   for (const [st, V] of Object.entries(VEGG)) for (const v of ['hel', 'dør', 'vindu', 'port']) {
@@ -133,7 +155,7 @@
       if (K === 'maskin' || K === 'lager') { const l = (D.l || 1) * U, b = (D.b || 1) * U; fot.splice(0, 4, -l / 2, l / 2, -b / 2, b / 2); }
       if (K === 'lampe') fot.splice(0, 4, -.2, .2, -.2, .2);
       LB.BYGG[id] = { navn: D.navn, pris: D.pris, tid: D.tid, kw: D.kw || 0, del: true, fot, mat: D.mat, tekst: D.tekst || 'Del i byggesettet',
-        ...(K === 'maskin' ? { maskin: true, maskinType: D.maskin, maskinDel: { l: D.l, b: D.b, tung: !!D.tung } } : {}), ...(K === 'lampe' ? { lampe: D.lys } : {}), ...(K === 'lager' ? { hylle: D.lager } : {}) };
+        ...(K === 'maskin' ? { maskin: true, maskinType: D.maskin, maskinDel: { l: D.l, b: D.b, tung: !!D.tung } } : {}), ...(K === 'lampe' ? { lampe: D.lys } : {}), ...(K === 'lager' ? { hylle: D.lager } : {}), ...(D.ting ? { tingLager: D.ting } : {}) };
     }
   }
   registrer(Leir);
@@ -505,7 +527,7 @@
       const iRom = new Set(celler.map(c => c.join(','))), her = q => q.n === e && ruter(q).some(([a, b]) => iRom.has(a + ',' + b));
       r.maskiner = D0.filter(q => kat(q) === 'maskin' && her(q)).map(q => q.id); r.hyller = D0.filter(q => kat(q) === 'lager' && her(q)).map(q => q.id); r.lamper = D0.filter(q => kat(q) === 'lampe' && her(q)).map(q => q.id);
       r.hylleplass = D0.filter(q => kat(q) === 'lager' && her(q)).reduce((s, q) => s + (DELER[q.type].lager || 0), 0);
-      r.type = romType(r, { seng: r.senger, maskin: r.maskiner.length, sag: D0.filter(q => kat(q) === 'maskin' && her(q) && DELER[q.type].maskin === 'sagbruk').length, hylle: r.hyller.length });
+      r.type = romType(r, { seng: r.senger, maskin: r.maskiner.length, sag: D0.filter(q => kat(q) === 'maskin' && her(q) && DELER[q.type].maskin === 'sagbruk').length, hylle: r.hyller.filter(id => { const q = D0.find(d => d.id === id); return q && (DELER[q.type].lager || 0) > 0; }).length });
       if (r.maskiner.length || r.hyller.length) r.navn = r.type.navn + (r.hylleplass ? ` · lager ${r.hylleplass} m³` : '');
       ut.push(r);
     }
@@ -555,7 +577,10 @@
   if (Leir && Leir.lagerplass && !Leir.lagerplass.ekstra) Leir.lagerplass.ekstra = L => { const rb = L && L.romBruk && Object.keys(L.romBruk).length, hy = harHyller(L); if (!rb && !hy) return 0;
     const S = romSum(rom(fraLeir(L, Leir), L.romBruk)); return (rb ? S.lager : 0) + S.hyller; };
 
-  const api = { U, G, H, ETASJER, GROV, SOKKEL, DELER, GAMLE, NYE, STOFF, HUS, erDel, registrer, størrelse, typeFor, celle, ruter, kanter, biter, midt, kantEnder, kantVed, hjørneVed, rad,
+  // (ut8-hverdag) delene i fanen «Maskiner» i byggesett-visning.js: maskinene, lampene, så hyllene og skapene
+  const MASKINFANE = ['bs_sagbenk', 'bs_høvel', 'bs_vedkløyver', 'bs_fyrkjele', 'bs_lysrør', 'bs_lyskaster', 'bs_hylle', 'bs_pall', 'bs_pallreol', 'bs_kjøleskap', 'bs_kjølerom', 'bs_frys', 'bs_medisinskap', 'bs_verktøytavle', 'bs_garderobe', 'bs_kiste', 'bs_tønne',
+    'bs_trehylle', 'bs_stålreol', 'bs_vitrine', 'bs_kjøkkenhylle', 'bs_kjølereol', 'bs_verktøyskap', 'bs_arkivskap', 'bs_smalhylle', 'bs_hjørnehylle', 'bs_tønnestativ'];
+  const api = { MASKINFANE, U, G, H, ETASJER, GROV, SOKKEL, DELER, GAMLE, NYE, STOFF, HUS, erDel, registrer, størrelse, typeFor, celle, ruter, kanter, biter, midt, kantEnder, kantVed, hjørneVed, rad,
     nøkkel, indeks, norm, punkter, støttet, plassering, forslag, spenn, rasVedRiving, lagHus, husDeler, husForslag, dreiDel, tilMal, malGyldig, rom, ROMBRUK, ROMTYPER, romType, romSum, høyder, fraBygg, fraLeir, plassFor,
     KANT, RUTE, kat, TING, fotRuter, tingFeil, BETONG, harHyller };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

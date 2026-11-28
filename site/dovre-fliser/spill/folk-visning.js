@@ -93,9 +93,11 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
   }
   let sistHtml = '';
   function vis() {
-    if (!åpen) return; const ny = el('div'); fyll(ny);
+    // (ut8-kr-telefon, Jonas: «Gi lønnstillegg» virket ikke på 60×) lederne, jobbtavla og søkerne kaller vis() fra KROKER.sim – heller ikke
+    // da tegnes panelet på nytt mens en finger er nede på det (eller rett etter, se spill/trykkvakt.js); delene som ikke er endret, blir stående
+    if (!åpen) return; if (window.pekerNede && pekerNede(panel)) return; const ny = el('div'); fyll(ny);
     if (ny.innerHTML === sistHtml && panel.firstChild) return;
-    const rulle = panel.scrollTop; sistHtml = ny.innerHTML; panel.innerHTML = ''; panel.append(...ny.childNodes); panel.scrollTop = rulle;
+    const rulle = panel.scrollTop; sistHtml = ny.innerHTML; if (window.Trykkvakt) Trykkvakt.bytt(panel, ny); else { panel.innerHTML = ''; panel.append(...ny.childNodes); } panel.scrollTop = rulle;
   }
   // (runde 4) små portretter i lista over folkene: portrettmotoren (Samfunn.portrettSVG, fast per person – samme ansikt som i
   // personkortet). Bildet lages én gang per person som en blob-adresse, så innerHTML holder seg kort og lik mellom tegningene
@@ -154,8 +156,9 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
     // RUNDE 13 (kritiker H: «+ på Vakt tok en fra Bygg uten å si det»): siste flytting står her til neste endring
     if (flyttet) panel.append(el('div', { klasse: 'status', id: 'folkflyttet' }, flyttet));
     for (const o of FR.OPPGAVER) {
+      // (ut8-kr-saga, kritikeren: «Hogst tempo 0») – 0 betyr at ingen er i arbeid der akkurat nå, ikke at jobben står for alltid
       const antall = F.personer.filter(p => p.oppgave === o).length, a = FR.arbeidere(F, o), t = FR.tempo(F, o), O = FR.OPPGAVE[o];
-      const info = o === 'bygg' ? lagTekst(a) + (a ? ` · tempo ${nf(FR.byggTempo(F), 2)}` : '') : o === 'fri' ? O.tekst : a ? `tempo ${nf(t, 2)} · ${O.tekst.toLowerCase()}` : O.tekst;
+      const info = o === 'bygg' ? lagTekst(a) + (a ? ` · tempo ${nf(FR.byggTempo(F), 2)}` : '') : o === 'fri' ? O.tekst : a ? `${t < .005 ? 'ingen i arbeid akkurat nå (fri, spiser eller på vei)' : 'tempo ' + nf(t, 2)} · ${O.tekst.toLowerCase()}` : O.tekst;
       const minus = knapp('−', () => flytt(o, FR.minus), { 'aria-label': `Færre på ${O.navn.toLowerCase()}`, 'data-o': o, klasse: 'minus', title: minusHjelp(o) });
       const pluss = knapp('+', () => flytt(o, FR.pluss), { 'aria-label': `Flere på ${O.navn.toLowerCase()}`, 'data-o': o, klasse: 'pluss', title: plussHjelp(o) });
       minus.disabled = !antall; pluss.disabled = o === 'fri' ? n - antall === 0 : antall === n;

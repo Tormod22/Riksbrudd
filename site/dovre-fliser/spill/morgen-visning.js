@@ -243,9 +243,11 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     // én kortkø for alle kortene med valg: står et annet kort oppe, venter morgenmøtet (det haster: dagen er i gang)
     if (rot.Kortkø && Kortkø.ta && !Kortkø.ta('morgenkort', true, vis)) { kort.classList.remove('på'); vistNøkkel = ''; Kortkø.be('morgenkort', vis, { tittel: 'Morgenmøtet' }); return; }
     const nøkkel = JSON.stringify([K.dag, K.steg, K.valgt]); if (nøkkel === vistNøkkel && kort.classList.contains('på')) return; vistNøkkel = nøkkel;
-    kort.replaceChildren(el('h3', {}, 'Morgenmøtet ', el('small', {}, `· dag ${K.dag}`)));
+    // (ut8-kr-krig, Ingrid 28. nov: «Morgenmøtet og "Viktig beslutning: en forlatt tankbil" i samme kort, med forsvarsbanneret oppå»)
+    // den store beslutningen er sitt eget kort, som kommer etter en pause (velg) – uten møtets overskrift, røverlinja og «I dag»
+    kort.replaceChildren(el('h3', {}, K.steg === 0 ? 'Morgenmøtet ' : 'Viktig beslutning ', el('small', {}, `· dag ${K.dag}`)));
     // RUNDE 14 (kritiker I): røverne står i første linje – med samme tid som varselet – og «Forsvar leiren nå» er første valg
-    const rd = raidNå(); if (rd) kort.append(el('div', { klasse: 'mraid', id: 'morgenraid' }, '⚠ ' + rd.tekst));
+    const rd = K.steg === 0 ? raidNå() : null; if (rd) kort.append(el('div', { klasse: 'mraid', id: 'morgenraid' }, '⚠ ' + rd.tekst));
     if (rd && !rd.satt && (rd.aktiv || rd.min <= R.raid.forsvar) && K.steg === 0 && !K.valg.some(v => v.id === 'forsvar'))
       { // (kritikerløkka r1) forhåndsvurderingen (ForsvarSpill.prognose) står i valget, og tida er når de drar ut – som brikka og banneret
         const P = rot.ForsvarSpill && ForsvarSpill.prognose ? ForsvarSpill.prognose() : null;
@@ -263,8 +265,8 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
       K.valg.slice(0, vis3).forEach((v, i) => { const b = knappEl(v.t, v.følge, () => velg(i)); b.setAttribute('data-tast', String(i + 1)); valg.append(b); });
       valg.append(knappEl(K.valg.length ? 'Ingen endring i dag' : 'Videre', '', () => velg(-1), 'mingen'));
     } else {
-      const st = K.stor; if (K.valgt) kort.append(el('div', { klasse: 'mrapport' }, el('p', { klasse: 'igaar' }, 'I dag: ' + K.valgt)));
-      kort.append(el('div', { klasse: 'mstor' }, el('h3', {}, 'Viktig beslutning: ' + st.tittel), el('p', {}, st.tekst)));
+      const st = K.stor;
+      kort.append(el('div', { klasse: 'mstor' }, el('h3', {}, st.tittel), el('p', {}, st.tekst)));
       st.valg.forEach((v, i) => { const b = knappEl(v.t, v.følge, () => velgStor(i)); b.setAttribute('data-tast', String(i + 1)); valg.append(b); });
     }
     kort.append(valg);
@@ -283,7 +285,14 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     if (v) { t = brukDag(v); logg('Morgenmøtet: ' + t); } else t = 'Ingen endring i dag.';
     S.sistValg = v ? v.id : 'ingen'; K.valgt = t;
     if (K.stor) K.steg = 1; else K.ferdig = true;
-    lagre(); lagreLeir(); vis(); }
+    lagre(); lagreLeir();
+    // (ut8-kr-krig) ett kort om gangen: møtet lukkes, og den store beslutningen kommer som et eget kort etter STOR_PAUSE sekunder
+    // (eller straks fra brikka «Et kort venter»). I testene (navigator.webdriver uten MorgenSpill.test) straks, som før.
+    if (K.stor && auto() && (navigator.webdriver !== true || api.køTest === true)) { storVent = performance.now() + STOR_PAUSE * 1000; lukk();
+      if (rot.Kortkø && Kortkø.be) Kortkø.be('morgenkort', () => { storVent = 0; vis(); }, { tittel: 'Viktig beslutning: ' + K.stor.tittel }); return; }
+    vis(); }
+  // Claudes forslag: 45 sekunder ekte tid mellom morgenmøtet og den store beslutningen
+  const STOR_PAUSE = 45; let storVent = 0;
   function velgStor(i) { const K = S.kort; if (!K || K.steg !== 1) return; const v = K.stor.valg[i]; const t = brukStor(K.stor, v); logg(K.stor.tittel + ': ' + t);
     S.storSist = K.dag; S.storId = K.stor.id; (S.storHist = S.storHist || {})[K.stor.id] = K.dag; K.ferdig = true; lagre(); lagreLeir(); vis(); }
 
@@ -312,7 +321,7 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     // dagbokas rapport for i dag (før gårsdagens utfall skrives inn i dagboka)
     const db = rot.DagbokSpill && DagbokSpill.siste ? DagbokSpill.siste() : null;
     for (const t of igår) { logg('Morgenmøtet: ' + t); if (rot.DagbokSpill && DagbokSpill.noter) DagbokSpill.noter(t); }
-    const nå = snapOppgjør(); let oppgjør = null; try { if (S.oppFør && nå && rot.Oppgjor) { const r = Oppgjor.tekst(S.oppFør, nå); oppgjør = r ? r.tekst : null; } } catch (e) { oppgjør = null; } S.oppFør = nå;
+    const nå = snapOppgjør(); let oppgjør = null; try { if (S.oppFør && nå && rot.Oppgjor) { const r = Oppgjor.tekst(S.oppFør, nå, { utenTropp: true }); oppgjør = r ? r.tekst : null; } } catch (e) { oppgjør = null; } S.oppFør = nå;
     if (!(auto() || tving)) { lagre(); return { igår }; }
     const s = situasjon(); if (!s || !s.folk) { lagre(); return { igår }; }
     const rapport = [];
@@ -426,7 +435,7 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(koblSkjermlag, 0)); else setTimeout(koblSkjermlag, 0);
   // et kort som venter (et annet kort sto oppe), kommer fram straks plassen er ledig; SamfunnSpill kan komme etter oss
   setInterval(() => { if (!klar || !S) return; koblValg(); sjekkFold(); const K = S.kort;
-    if (K && !K.ferdig && auto() && !kort.classList.contains('på') && rot.Kortkø && !Kortkø.åpent()) vis();
+    if (K && !K.ferdig && auto() && !kort.classList.contains('på') && rot.Kortkø && !Kortkø.åpent() && performance.now() >= storVent) vis();
     // et kort med hastverk fra en annen modul (forræderen) har kommet oppå: morgenmøtet viker og venter
     if (kort.classList.contains('på') && rot.Kortkø) { const a = ['hendelse', 'samfunnkort', 'formkort', 'krigkort'].find(id => { const e = document.getElementById(id); return e && e.classList.contains('på'); });
       if (a) { kort.classList.remove('på'); vistNøkkel = ''; Kortkø.ferdig('morgenkort'); Kortkø.be('morgenkort', vis, { tittel: 'Morgenmøtet', først: true }); } } }, 1000);

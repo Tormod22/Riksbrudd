@@ -15,7 +15,9 @@
   // b: { bølge (bølger startet), aktiv (bølgen som pågår, 0 = ingen), herjet (bølger som endte med herjing), friske, såret, falne
   //      (egne menn i lagene), slåttUt (egne lag slått ut), bygg: [{ id, navn, hp }], hus (gjennomsøkt), folk, mat, matDøgn }
   // ferdige bølger = bølge − (aktiv ? 1 : 0); slått tilbake = ferdige − herjet (sabotører som slapp unna regnes også som herjet)
-  function tekst(før, nå) {
+  // o.utenTropp (ut8-kr-krig, Ingrid 28. nov: morgenmøtet dag 2 sa «Hanne Dahl … gikk inn i Speidertropp 1» – det gjorde hun selv dag 1
+  // kl. 06:01): folk som gikk inn i en tropp, er ikke nyheter i morgenrapporten (de står heller ikke som «ikke lenger i leiren»)
+  function tekst(før, nå, o = {}) {
     if (!før || !nå) return null;
     const deler = [], ferdig = b => (b.bølge || 0) - (b.aktiv ? 1 : 0);
     const nyeFerdig = Math.max(0, ferdig(nå) - ferdig(før)), nyeHerjet = Math.max(0, (nå.herjet || 0) - (før.herjet || 0)), slått = Math.max(0, nyeFerdig - nyeHerjet);
@@ -42,7 +44,7 @@
     const hus = Math.max(0, (nå.hus || 0) - (før.hus || 0)); if (hus) deler.push(`${hus} ${hus === 1 ? 'hus' : 'hus'} gjennomsøkt`);
     // (runde 12, kritiker F: «2 har dratt» sier ikke hvem eller hvorfor) – med navnene i bildene: hvem som gikk inn i en tropp, døde/falt
     // eller forlot gjengen (lav moral når folk.js telte dem i F.borte); uten navn (gamle bilder) som før
-    if (Array.isArray(før.navn) && Array.isArray(nå.navn)) deler.push(...folkTekst(før, nå));
+    if (Array.isArray(før.navn) && Array.isArray(nå.navn)) deler.push(...folkTekst(før, nå, o));
     else { const folk = (nå.folk || 0) - (før.folk || 0); if (folk) deler.push(folk > 0 ? `${folk} ${folk === 1 ? 'ny' : 'nye'} i gjengen` : `${-folk} har forlatt leiren`); }
     const hendte = deler.length;
     const stor = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -54,12 +56,12 @@
   const kort = l => (l.length > 4 ? og([...l.slice(0, 3), `${l.length - 3} til`]) : og(l));
   // folkTekst(før, nå): før/nå.navn = navnene i folket; nå.tropp = { navn: lagnavn } (folk som står i en tropp), nå.døde = { navn: 'falt'|'døde' }
   // (lista over døde i Samfunn), før/nå.borte = folk.js sin teller for dem som har forlatt gjengen fordi moralen var for lav
-  function folkTekst(før, nå) {
+  function folkTekst(før, nå, o = {}) {
     const ut = [], nå1 = new Set(nå.navn), før1 = new Set(før.navn), gått = før.navn.filter(n => !nå1.has(n)), nye = nå.navn.filter(n => !før1.has(n));
     const tropp = {}, falt = [], døde = [], dro = [];
     for (const n of gått) { const t = nå.tropp && nå.tropp[n], d = nå.døde && nå.døde[n];
       if (t) (tropp[t] = tropp[t] || []).push(n); else if (d === 'falt') falt.push(n); else if (d) døde.push(n); else dro.push(n); }
-    for (const [t, l] of Object.entries(tropp)) ut.push(`${kort(l)} gikk inn i ${t}`);
+    if (!o.utenTropp) for (const [t, l] of Object.entries(tropp)) ut.push(`${kort(l)} gikk inn i ${t}`);
     if (falt.length) ut.push(`${kort(falt)} falt`);
     if (døde.length) ut.push(`${kort(døde)} døde`);
     // (kritikerløkka r2: alle som manglet ble kalt «forlot gjengen», også en tropp som manglet etter omlasting) – «forlot gjengen» bare så

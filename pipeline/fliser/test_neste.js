@@ -17,4 +17,11 @@ const k = (slag, tekst, x) => ({ slag, tekst, ...(x || {}) });
 { const L = N.sorter([null, k('mål', ''), ...Array.from({ length: 10 }, (_, i) => k('mål', 'Mål ' + i))]); ok(L.length === N.REGLER.maks, 'tomme kilder tas bort, høyst ' + N.REGLER.maks + ' linjer'); }
 { const L = N.sorter([k('mål', 'Bygg kontrollrommet'), k('trinn', 'Bygg 2 bygg til i leiren (mot trinn 2: Leverandør)'), k('tilbud', 'Velg en kontrakt')]);
   ok(L.map(q => q.slag).join(',') === 'tilbud,trinn,mål' && L[1].navn === 'Veien videre', 'steget mot neste trinn står under tilbudene og over målene (fase Ø0)'); }
+// (ut8-kr-ro) en avtale som går av seg selv (kjøpsavtale), står under trinnet og målene – også med kort frist
+{ const kjøp = { tekst: 'Kjøpsavtale: tømmer kommer hvert døgn (1 av 5)', slag: 'kontrakt', igjen: 120, l0: { k: { type: 'kjøp' } } };
+  const L = N.sorter([kjøp, k('trinn', 'Nå nivå 3 «Etablert»: lever flere kontrakter'), k('mål', 'Ha 20 m³ planker')]);
+  ok(L.map(q => q.slag).join(',') === 'trinn,mål,kontrakt' && N.slagFor(L[2]) === 'avtale' && L[2].navn === 'Avtale', 'kjøpsavtalen viker for trinnet og målet: ' + L.map(q => q.navn).join(','));
+  ok(N.avSegSelv({ type: 'kjøp' }) && N.avSegSelv({ type: 'lever', frakt: {} }) && !N.avSegSelv({ type: 'lever' }) && !N.avSegSelv({ type: 'avtale' }) && !N.avSegSelv(null), 'avSegSelv: kjøpsavtale og frakt, ikke levering eller leveranseavtale');
+  const lev = { tekst: 'Send 20 m³ planker til Otta', slag: 'kontrakt', igjen: 120, l0: { k: { type: 'lever' } } };
+  ok(N.slagFor(lev) === 'kontraktSnart', 'en levering dere må gjøre selv, haster fortsatt'); }
 console.log(feil ? feil + ' FEIL' : 'alle testene for neste.js er ok'); process.exit(feil ? 1 : 0);

@@ -66,3 +66,16 @@ console.log('ok   strategi: område, stilling, seier, fronter, neste trekk og tr
   a.ok(med[0].by.navn === 'Elverum' && med[1].sterk && med[1].anbefalt === 36 && !med[0].sterk, 'Løten (35 mann) trekkes ned: ' + med.map(t => t.by.navn + (t.sterk ? '*' : '')).join(', '));
   a.strictEqual(S2.anbefalt(9, 7), 9, 'inntaket krever 9, bygdevernet 7: 9'); a.strictEqual(S2.anbefalt(4, 7), 8, 'bygdevernet 7: minst 8'); a.strictEqual(S2.anbefalt(5, 0), 5);
   console.log('ok   strategi (R2-løkka): for sterke steder trekkes ned, ett tall for kravet'); }
+// (ut8-kr-krig, Ingrid 28. nov) forslaget med marsjrute gjennom fiendtlige tettsteder står ikke først
+{ const a = require('assert'), S2 = require('../../site/dovre-fliser/spill/strategi.js');
+  const byer = [{ id: 1, navn: 'Vingrom', x: 5000, y: 0, folk: 300 }, { id: 2, navn: 'Fåberg', x: 7000, y: 0, folk: 250 }];
+  const egne = [1, 2].map(i => ({ x: 0, y: 0, navn: 'L' + i, lag: { menn: Array.from({ length: 5 }, () => ({ hp: 1 })) } }));
+  const uten = S2.trekk('blå', byer, () => null, egne, []); a.strictEqual(uten[0].by.navn, 'Vingrom', 'uten rute: Vingrom først (nærmest og størst)');
+  const ruteAv = b => (b.id === 1 ? { mann: 24, navn: 'Lillehammer og Vingnes', tekst: 'Lillehammer (bygdevern ca. 14 mann) og Vingnes (bygdevern ca. 10 mann)' } : null);
+  const med = S2.trekk('blå', byer, () => null, egne, [], undefined, null, null, ruteAv);
+  a.strictEqual(med[0].by.navn, 'Fåberg', 'ruta til Vingrom går gjennom Lillehammer: Fåberg først – ' + med.map(t => t.by.navn).join(', '));
+  const v = med.find(t => t.by.id === 1); a.ok(v.rute && v.rute.mann === 24 && v.sterk, 'Vingrom har ruta med (24 mann) og er for sterkt for 10 mann');
+  a.ok(!med.find(t => t.by.id === 2).rute, 'Fåberg har trygg rute');
+  // en feil i ruteAv ødelegger ikke forslagene
+  const feil = S2.trekk('blå', byer, () => null, egne, [], undefined, null, null, () => { throw new Error('x'); }); a.strictEqual(feil[0].by.navn, 'Vingrom');
+  console.log('ok   strategi (ut8-kr-krig): farlig marsjrute står ikke først'); }
