@@ -93,8 +93,12 @@ module.exports = {
       // verdien for børsen
       const v = LedereSpill.verdi(); ut.data.verdi = v; if (!(v.antall >= 2 && v.kr > 0)) feil.push('verdi() gir ' + JSON.stringify(v));
       // panelet viser delen
-      FolkSpill.åpne && FolkSpill.åpne(); await new Promise(r => setTimeout(r, 300));
+      // (28. nov, ut9-kontroll) åpne(true), ikke åpne() som blar – og lukk panelet igjen hvis det var lukket (det sto oppe for vaktene etterpå:
+      // husvinduet og «Velkommen tilbake» venter mens Folk er åpent)
+      const fm = document.getElementById('folkmeny'), folkVar = !!(fm && fm.classList.contains('på'));
+      FolkSpill.åpne && FolkSpill.åpne(true); await new Promise(r => setTimeout(r, 300));
       if (!document.querySelector('#ledere')) feil.push('delen «Ledere» står ikke i Folk-panelet');
+      if (!folkVar && FolkSpill.åpne) FolkSpill.åpne(false);
     } catch (e) { feil.push('unntak: ' + e.message); }
     finally { tilbake(); }
     if (OppstartSpill.tilstand().penger !== før.penger) feil.push('pengene ble ikke satt tilbake');

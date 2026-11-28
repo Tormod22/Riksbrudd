@@ -21,7 +21,13 @@ module.exports = {
         T.s = []; T.åpnet = {}; T.doser = {};
         const P = TS.plasser(); ut.plasser = P.some(q => q.id === 'b' + hylle.id && q.type === 'hyllereol') && P.some(q => q.id === 'b' + kjøl.id && q.type === 'kjøleskap');
         // 1) leting i et kjøkken gir mat-ting, og de havner i hylla
-        const f = Leting.funn('hus', 120, 31, { rom: ['kjøkken'] }), f2 = f.tomt ? Leting.funn('hus', 120, 32, { rom: ['kjøkken'] }) : f;
+        // (28. nov, ut9-kontroll) i full kontroll har leiren alt et lagertelt/en container fra vaktene før – den passer tørre ting like godt
+        // og har lavere id, så tingene havner der (riktig etter reglene). Prøven gjøres derfor med hylla og kjøleskapet som eneste
+        // lagringsplasser: de andre byggene med lagring tas bort til steg 1 er ferdig (alle byggene settes tilbake i finally uansett).
+        const vårePl = new Set(['b' + hylle.id, 'b' + kjøl.id, 'ute']), andreLager = new Set(P.filter(q => !vårePl.has(q.id) && q.bygg).map(q => q.bygg));
+        if (andreLager.size) { const behold = L.bygg.filter(b => !andreLager.has(b)); L.bygg.length = 0; for (const b of behold) L.bygg.push(b); }
+        ut.andreLager = andreLager.size;
+        const f =Leting.funn('hus', 120, 31, { rom: ['kjøkken'] }), f2 = f.tomt ? Leting.funn('hus', 120, 32, { rom: ['kjøkken'] }) : f;
         ut.kjøkkenMat = !!(f2.ting && f2.ting.some(q => ['mat', 'drikke'].includes(Ti.TING[q.id].kat)));
         const fikk = LeteSpill.ta({ mat: 0, tre: 0, betong: 0, stål: 0, diesel: 0, penger: 0, tomt: false, ting: [{ id: 'peanøttsmør', n: 2 }, ...(f2.ting || [])] });
         ut.iHylla = !!(fikk.ting && fikk.ting.some(q => q.id === 'peanøttsmør' && q.p === 'b' + hylle.id)) && TL.antall(T, 'peanøttsmør') >= 2;

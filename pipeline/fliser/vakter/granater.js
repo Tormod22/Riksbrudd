@@ -43,7 +43,7 @@ module.exports = {
         ENHETER.push(a); a.ammo = .2; BK.fyllSteg(); a.ammo = 1; BK.fyllSteg(); (ENHETER.indexOf(a) >= 0 && ENHETER.splice(ENHETER.indexOf(a), 1)); ut.fylt = a.granater; ok(a.granater === B.Lagkamp.start(a), `granatene ble ikke etterfylt med ammunisjonen (${a.granater})`);
         // ---------- (2) 3D ----------
         if (!R || !R.ut || !R.hindre || !window.Gange || !window.SpilletSpill) { ut.i3d = 'ikke prøvd (3D er av)'; return ut; }
-        const varPå3d = typeof på3d !== 'undefined' && på3d, varGår = !!R.fot, K = SpilletSpill.K(), hp0 = K.hp, bane0 = { x: R.bane.x, y: R.bane.y };
+        const varPå3d = typeof på3d !== 'undefined' && på3d, varGår = !!R.fot, K = SpilletSpill.K(), hp0 = K.hp, bane0 = { x: R.bane.x, y: R.bane.y }, utStart = R.ut;
         ut.tilbake3d = () => {};
         try {
           if (!varPå3d) slå3d(true); if (!R.fot) Gange.start(); await vent(300); ok(!!R.fot, 'gange startet ikke'); if (!R.fot) return ut;
@@ -63,9 +63,16 @@ module.exports = {
           for (let i = 0; i < 60 && BK.flyr().some(q => q.fiende); i++) await vent(100);
           ut.smell = { igjen: BK.flyr().filter(q => q.fiende).length, hp: Math.round(K.hp), smell: BK.smellTall() - sm0, siste: BK.sisteSmell() }; ok(ut.smell.igjen === 0 && ut.smell.smell === 1 && K.hp < 100, 'fiendens granat gikk ikke av eller skadet deg ikke: ' + JSON.stringify(ut.smell)); K.hp = 100;
           // (25. nov) nytt utsnitt mens granaten flyr: den flyttes over og går av (før forsvant den uten smell – ustabil vakt på telefon)
+          // (28. nov, ut9-kontroll) i full kontroll kan et ekte utsnitt være under bygging (vaktene før flyttet kameraet): det settes da inn mens
+          // granaten flyr, og vakta satte etterpå tilbake det GAMLE utsnittet oppå det nye. Vent til byggingen er ferdig først; blir et ekte utsnitt
+          // likevel satt inn underveis, skal granaten være flyttet dit (samme regel), og det nye utsnittet beholdes.
+          for (let i = 0; i < 300 && R.bygger; i++) await vent(100);
           { const sm1 = BK.smellTall(); e.sistGranat = -99; e.granater = Math.max(1, e.granater || 0); const g2 = BK.fiendeKast(e), u0 = R.ut, u1 = Object.assign(Object.create(Object.getPrototypeOf(u0)), u0, { cx: u0.cx + 100 });
-            if (g2) { R.ut = u1; R.bane.x -= 100; for (let i = 0; i < 60 && BK.flyr().some(q => q.fiende); i++) await vent(100); R.ut = u0; R.bane.x += 100; }
-            ut.nyttUt = { g: !!g2, smell: BK.smellTall() - sm1, flyttet: !!g2 && g2.ut === u1 }; ok(ut.nyttUt.g && ut.nyttUt.smell === 1 && ut.nyttUt.flyttet, 'granaten forsvant da utsnittet ble byttet: ' + JSON.stringify(ut.nyttUt)); K.hp = 100; }
+            let ekte = null;
+            if (g2) { R.ut = u1; R.bane.x -= 100; for (let i = 0; i < 60 && BK.flyr().some(q => q.fiende); i++) await vent(100);
+              if (R.ut === u1) { R.ut = u0; R.bane.x += 100; } else ekte = R.ut; }
+            ut.nyttUt = { g: !!g2, smell: BK.smellTall() - sm1, flyttet: !!g2 && (g2.ut === u1 || (!!ekte && g2.ut === ekte)), ekteUtsnitt: !!ekte, bygger: !!R.bygger };
+            ok(ut.nyttUt.g && ut.nyttUt.smell === 1 && ut.nyttUt.flyttet, 'granaten forsvant da utsnittet ble byttet: ' + JSON.stringify(ut.nyttUt)); K.hp = 100; }
           // dekning: prøvevegg 2 m foran deg, smellet 8 m foran (bak veggen) og 8 m bak deg
           const lx = R.bane.x + fx * 2, ly = R.bane.y + fy * 2, P = [[lx - rx * 4, ly - ry * 4], [lx + rx * 4, ly + ry * 4], [lx + rx * 4 + fx * .4, ly + ry * 4 + fy * .4], [lx - rx * 4 + fx * .4, ly - ry * 4 + fy * .4]];
           const o = { P, bb: [Math.min(...P.map(p => p[0])), Math.min(...P.map(p => p[1])), Math.max(...P.map(p => p[0])), Math.max(...P.map(p => p[1]))] };
@@ -78,7 +85,7 @@ module.exports = {
         } finally {
           for (const [k, q] of lagt) { const L = R.hindre.get(k), i = L ? L.indexOf(q) : -1; if (i >= 0) L.splice(i, 1); }
           for (const f of BK.flyr().splice(0)) if (f.mesh && f.mesh.parent) f.mesh.parent.remove(f.mesh);
-          K.hp = hp0; R.bane.x = bane0.x; R.bane.y = bane0.y; if (!varGår && R.fot) Gange.stopp(); if (!varPå3d) slå3d(false); if (BK.lesHindre) BK.lesHindre();
+          K.hp = hp0; if (R.ut === utStart || !varPå3d) { R.bane.x = bane0.x; R.bane.y = bane0.y; } if (!varGår && R.fot) Gange.stopp(); if (!varPå3d) slå3d(false); if (BK.lesHindre) BK.lesHindre();
         }
       } catch (err) { ut.feil.push('kastet: ' + (err && err.message)); }
       finally {

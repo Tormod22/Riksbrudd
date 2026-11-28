@@ -104,7 +104,11 @@ module.exports = {
         try { if (window.Byggesett && Byggesett.tilstand().åpen) Byggesett.lukk(); } catch (e) { /* uten byggesett */ }
         OS.lukk(); OS.test = test0; HellingVis.test = htest0;
         // leiren og kassa som før (bygget fra prøven og materialene tas bort)
-        const L1 = JSON.parse(L0); for (const k of Object.keys(L)) if (!(k in L1)) delete L[k]; Object.assign(L, L1); S.penger = penger0; OS.lagre(); if (LeirSpill.lagre) LeirSpill.lagre();
+        const L1 = JSON.parse(L0); for (const k of Object.keys(L)) if (!(k in L1)) delete L[k]; Object.assign(L, L1);
+        // (28. nov, ut9-kontroll) Object.assign la en kopi av folket i L.folk, mens Folk-modulen fortsatt endret sitt eget objekt – etter denne vakta ble
+        // «+» på Maskiner (og alt annet med folk) ikke lagret i resten av kontrollen (kr-saga). FolkSpill.start leser folket fra leiren igjen og kobler dem sammen.
+        if (window.FolkSpill && FolkSpill.start) FolkSpill.start();
+        S.penger = penger0; OS.lagre(); if (LeirSpill.lagre) LeirSpill.lagre();
         if (LeirSpill.oppdater3d) try { LeirSpill.oppdater3d(true); } catch (e) { /* 3D av */ }
         Object.assign(kam, kam0); valgt = valgt0; skitten = true; if (window.visPanel) visPanel();
         try { if (utk0 === null) localStorage.removeItem(OS.UTKAST); else localStorage.setItem(OS.UTKAST, utk0); } catch (e) { /* ingen lagring */ }
