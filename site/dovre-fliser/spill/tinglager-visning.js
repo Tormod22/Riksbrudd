@@ -297,7 +297,7 @@ body.kort #tingpanel{ left:6px; right:6px; width:auto; top:auto; bottom:calc(6px
       g.fillStyle = 'rgba(16,13,8,.8)'; g.fillRect(X - w / 2, Y + .35 / m, w, 4); g.fillStyle = a > .95 ? '#e8c46a' : '#9fc46a'; g.fillRect(X - w / 2, Y + .35 / m, w * a, 4); } });
   { const f = KROKER && KROKER.tegn ? KROKER.tegn[KROKER.tegn.length - 1] : null; if (f) { f.over = true; f.bygg = true; } }
 
-  Object.assign(ut, { klar: () => klar && !!T, T: () => T, last, lagre, steg, plasser, leggInnFunn, funnLinjer, åpne, erÅpen: () => åpen, vis, kom,
+  Object.assign(ut, { plass: () => (åpen ? valgtPlass : null), klar: () => klar && !!T, T: () => T, last, lagre, steg, plasser, leggInnFunn, funnLinjer, åpne, erÅpen: () => åpen, vis, kom,
     heling: () => heling, moral: () => moralNå, tempo: () => tempoNå, matIAlt: () => (T ? TL.matIAlt(T) : 0), spist: () => spistAkk, nullstill: () => { T = TL.ny(); lagre(); vis(true); } });
   window.TinglagerSpill = ut;
 })();

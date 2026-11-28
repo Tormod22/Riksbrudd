@@ -41,6 +41,8 @@
       varer({ l: L - .08, d: dy - .06, y0: yc - dy / 2 + .03, nivåer: nv, hv: o.hv || Math.max(.15, (nv[1] || H) - nv[0] - .06) });
     };
     const O = HY.OPPSETT[typ];
+    // (ut9-mobler3) et lukket skap du har åpnet i lagerpanelet (Vis bare denne plassen) står åpent, med tingene synlige
+    const TS = window.TinglagerSpill, åpen = ferdig && !!(TS && TS.plass && TS.plass() === 'b' + d.id);
     switch (typ) {
       case 'hyllereol': reol(l - .2, 0, .6, O.nivåer, 2.1, F.stål, F.lystTre, { hv: .42 }); return;
       case 'trehylle': reol(Math.min(1.1, l - .1), -b / 2 + .3, .34, O.nivåer, 2.0, F.tre, F.tre, { bak: F.mørktre }); return;
@@ -93,12 +95,19 @@
         for (const q of [.23, 1.28, 2.33]) { if (!(inn.fyll > 0)) break; for (const x of [-l / 2 + .25, .1]) if (x + 1.1 < l / 2) K(x, x + 1.1, -.4, .4, q, q + .14, F.pall); }
         paller({ l: l - .5, d: b - .4, nivåer: [.37, 1.42, 2.47], hv: .75 }); return; }
       // lukkede skap: som før, men litt finere
-      case 'kjøleskap': K(-.35, .35, -.35, .32, 0, 1.85, F.hvit); K(-.34, .34, .32, .35, .02, 1.12, F.lys); K(-.34, .34, .32, .35, 1.14, 1.83, F.lys); K(.26, .29, .35, .38, .8, 1.05, F.grå); K(.26, .29, .35, .38, 1.2, 1.45, F.grå); return;
-      case 'frysboks': K(-.52, .52, -.35, .35, .04, .84, F.hvit); K(-.53, .53, -.36, .36, .84, .9, F.lys); K(-.45, -.3, .36, .39, .76, .82, F.grå); K(-.5, .5, -.33, .33, 0, .04, F.mørk); return;
+      case 'kjøleskap': if (åpen) { K(-.35, .35, -.35, -.31, 0, 1.85, F.hvit); for (const x of [-.35, .31]) K(x, x + .04, -.35, .3, 0, 1.85, F.hvit); K(-.35, .35, -.35, .3, 0, .08, F.hvit); K(-.35, .35, -.35, .3, 1.78, 1.85, F.hvit);
+          for (const q of [.45, .85, 1.25]) K(-.31, .31, -.31, .28, q - .015, q, F.glass); K(.31, .35, .3, .98, .02, 1.83, F.lys); varer({ l: .58, d: .55, y0: -.3, nivåer: [.08, .45, .85, 1.25], hv: .3 }); return; }
+        K(-.35, .35, -.35, .32, 0, 1.85, F.hvit); K(-.34, .34, .32, .35, .02, 1.12, F.lys); K(-.34, .34, .32, .35, 1.14, 1.83, F.lys); K(.26, .29, .35, .38, .8, 1.05, F.grå); K(.26, .29, .35, .38, 1.2, 1.45, F.grå); return;
+      case 'frysboks': if (åpen) { K(-.52, .52, -.35, .35, .04, .5, F.hvit); for (const y of [-.35, .3]) K(-.52, .52, y, y + .05, .5, .84, F.hvit); for (const x of [-.52, .47]) K(x, x + .05, -.35, .35, .5, .84, F.hvit);
+          K(-.53, .53, -.4, -.36, .84, 1.5, F.lys); varer({ l: .95, d: .6, y0: -.3, nivåer: [.5], hv: .3 }); return; }
+        K(-.52, .52, -.35, .35, .04, .84, F.hvit); K(-.53, .53, -.36, .36, .84, .9, F.lys); K(-.45, -.3, .36, .39, .76, .82, F.grå); K(-.5, .5, -.33, .33, 0, .04, F.mørk); return;
       case 'kjølerom': K(-l / 2 + .05, l / 2 - .05, -b / 2 + .05, b / 2 - .05, 0, 2.4, F.hvit); K(-.45, .45, b / 2 - .05, b / 2 - .02, .05, 2.05, F.lys); K(.3, .36, b / 2 - .02, b / 2 + .04, 1, 1.25, F.stål);
         K(-l / 2 + .05, l / 2 - .05, -b / 2 + .05, b / 2 - .05, 2.4, 2.45, F.grå); K(-l / 2 + .2, -l / 2 + .8, -.3, .3, 2.45, 2.75, F.grå); return;
-      case 'kiste': K(-.45, .45, -.25, .25, 0, .42, F.mørktre); K(-.47, .47, -.27, .27, .42, .52, F.tre); for (const x of [-.32, .28]) K(x, x + .04, -.27, .27, 0, .53, F.mørk); K(-.05, .05, .27, .29, .34, .44, F.stål); return;
-      case 'tønne': K(-.31, .31, -.31, .31, 0, .92, F.blå); K(-.33, .33, -.33, .33, .3, .34, F.mørk); K(-.33, .33, -.33, .33, .64, .68, F.mørk); return;
+      case 'kiste': if (åpen) { K(-.45, .45, -.25, .25, 0, .06, F.mørktre); for (const y of [-.25, .21]) K(-.45, .45, y, y + .04, .06, .42, F.mørktre); for (const x of [-.45, .41]) K(x, x + .04, -.25, .25, .06, .42, F.mørktre);
+          K(-.47, .47, -.31, -.27, .42, .96, F.tre); varer({ l: .82, d: .42, y0: -.21, nivåer: [.06], hv: .3 }); return; }
+        K(-.45, .45, -.25, .25, 0, .42, F.mørktre); K(-.47, .47, -.27, .27, .42, .52, F.tre); for (const x of [-.32, .28]) K(x, x + .04, -.27, .27, 0, .53, F.mørk); K(-.05, .05, .27, .29, .34, .44, F.stål); return;
+      case 'tønne': if (åpen) { K(-.31, .31, -.31, .31, 0, .9, F.blå); K(-.28, .28, -.28, .28, .9, .92, F.mørk); K(.33, .37, -.31, .31, 0, .64, F.blå); varer({ l: .5, d: .5, y0: -.25, nivåer: [.62], hv: .28, maks: 6 }); return; }
+        K(-.31, .31, -.31, .31, 0, .92, F.blå); K(-.33, .33, -.33, .33, .3, .34, F.mørk); K(-.33, .33, -.33, .33, .64, .68, F.mørk); return;
     }
     return false;
   }
@@ -131,9 +140,21 @@
   // ---------- 3D på nytt når fyllingen har endret seg et trinn (Byggesett.lag3d) ----------
   let sistTrinn = '';
   function trinnNøkkel() { const TS = window.TinglagerSpill, T = TS && TS.T && TS.T(), TL = window.Tinglager, Ti = window.Ting; if (!T || !TL || !TS.plasser) return '';
-    const ut = []; for (const P of TS.plasser()) { if (!P.bygg) continue; ut.push(P.id + ':' + HY.trinn(HY.innhold(T, P.id, P.liter, Ti.TING).fyll)); } return ut.join(','); }
+    const ut = [TS.plass ? 'å' + (TS.plass() || '') : '']; for (const P of TS.plasser()) { if (!P.bygg) continue; ut.push(P.id + ':' + HY.trinn(HY.innhold(T, P.id, P.liter, Ti.TING).fyll)); } return ut.join(','); }
   setInterval(() => { try { const R = typeof R3 !== 'undefined' ? R3 : null; if (!R || !R.ut || !window.THREE || R.bygger || !window.Byggesett || !Byggesett.lag3d) return;
     const n = trinnNøkkel(); if (n === sistTrinn) return; const før = sistTrinn; sistTrinn = n; if (før) { Byggesett.lag3d(); if (typeof skitten !== 'undefined') skitten = true; } } catch (e) { /* 3D ikke klart */ } }, 2000);
 
-  window.Hyller3d = { bygg, tegn2d, innhold, trinnNøkkel, F, FARGE2D };
+  // (ut9-mobler3) ÅPNE SKAP I HUSENE: når lutpanelet (spill/lut-visning.js) viser et lukket skap, settes window.MØBEL_ÅPEN = { i, type, k, fyll },
+  // og interiøret i det bygget lages på nytt (Interior3d.bygOm) med døra åpen og tingene synlige (spill/interior3d.js). Lukkes panelet, lukkes døra.
+  const LUKKET = { kjøleskap: 1, skap: 1, garderobe: 1, tønne: 1, fryseboks: 1 };
+  let sistÅpen = '', sistLeir = '';
+  function åpentNå() { const LS = window.LutSpill; if (!LS || !LS.erÅpen || !LS.erÅpen() || !LS.aktiv) return null; const c = LS.aktiv(); if (!c || !LUKKET[c.type] || c.k < 0 || !c.nk) return null;
+    const i = +String(c.nk).split(':')[0]; if (!isFinite(i)) return null; const n = c.B && typeof c.B === 'object' ? Object.keys(c.B.t || c.B).length : 2; return { i, type: c.type, k: c.k, fyll: Math.min(1, .15 + n * .15) }; }
+  setInterval(() => { try { const I3 = window.Interior3d; if (!I3 || !I3.bygOm) return;
+    const å = åpentNå(), n = å ? `${å.i}:${å.type}:${å.k}:${å.fyll}` : ''; if (n !== sistÅpen) { const før = window.MØBEL_ÅPEN; window.MØBEL_ÅPEN = å; sistÅpen = n; if (før && (!å || før.i !== å.i)) I3.bygOm(før.i); if (å) I3.bygOm(å.i); }
+    // leirens bygg med interiør: lag det på nytt når tingene i leiren har endret seg et trinn
+    const P = (I3.aktivP ? I3.aktivP() : []).filter(q => q.leir && q.bygg); const ln = P.map(q => { const v = I3.leirVarer(q); return q.bygg.i + ':' + (v ? HY.trinn(v.fyll) + v.kat.map(x => x.kat).join('') : ''); }).join(',');
+    if (ln !== sistLeir) { const før = sistLeir; sistLeir = ln; if (før) for (const q of P) I3.bygOm(q.bygg.i); } } catch (e) { /* 3D ikke klart */ } }, 600);
+
+  window.Hyller3d = { åpentNå, bygg, tegn2d, innhold, trinnNøkkel, F, FARGE2D };
 })();
