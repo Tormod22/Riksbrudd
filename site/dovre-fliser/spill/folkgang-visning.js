@@ -39,7 +39,10 @@
     const R = window.RessursSpill && RessursSpill.tilstand ? RessursSpill.tilstand() : null;
     const ctx = { F, L, leir: m, kart: kartNå(L, m), RJ: R && Array.isArray(R.jobber) ? R.jobber : [], nær: window.Ressurser && Ressurser.REGLER ? Ressurser.REGLER.nær : 150,
       hva: p => { const n = window.JobberSpill ? JobberSpill.nå(p) : null; return n ? n.hva : p.oppgave === 'fri' ? 'fri' : 'arbeid'; } };
+    // (F3) bærerne og bruksplassene (spill/baering-visning.js): målKrok gir målet, etter[] kjøres rett etter hvert steg
+    const FS = window.FolkgangSpill; if (FS.målKrok) ctx.mål = FS.målKrok;
     FG.steg(G, ctx, dtSek); G.tid = nåTid();
+    for (const f of FS.etter) { try { f(G, dtSek, ctx); } catch (e) { FS.feil = e.message; } }
   }
   // dt i spillminutter fra løkka; regnes 4 ganger i sekundet (REGLER.takt), høyst 10 spillminutter om gangen (en skjult fane, rask spoling)
   KROKER.sim.push(dt => {
@@ -109,5 +112,5 @@
   // teksten ved personen i Folk-panelet: bare når den sier noe mer enn døgnplanen (går til …, står fast …) og plassene er ferske
   function gjør(p) { const s = G.pers[p.id]; if (!s || !fersk() || s.oppgave !== p.oppgave || (s.framme && !s.fast && !s.går)) return ''; return FG.tekst(G, p); }
   window.FolkgangSpill = { på: true, aktiv, tilstand: () => G, steg, plass, plass2d, tekst: p => FG.tekst(G, p), gjør, fastLinjer, fersk, visKort: id => { const F = Fo(), p = F && F.personer.find(q => q.id === id); visKort(p || null); return !!p; },
-    farge, FARGE, nullstill: () => { G = FG.ny(); kart = null; }, kart: () => kart };
+    farge, FARGE, nullstill: () => { G = FG.ny(); kart = null; }, kart: () => kart, målKrok: null, etter: [] };
 })();
