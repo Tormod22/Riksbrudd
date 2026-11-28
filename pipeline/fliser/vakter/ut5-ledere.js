@@ -11,6 +11,7 @@ module.exports = {
     // husk alt som kan endres
     const før = { S: JSON.parse(JSON.stringify(LedereSpill.tilstand())), F: JSON.parse(JSON.stringify(F)), penger: S0.penger, test: LedereSpill.test,
       by: window.ByavtaleSpill ? JSON.parse(JSON.stringify(ByavtaleSpill.tilstand())) : null, J: window.JobberSpill ? JSON.parse(JSON.stringify(JobberSpill.tilstand())) : null,
+      lager: JSON.parse(JSON.stringify(L.lager || {})), plan: JSON.parse(JSON.stringify(L.plan || [])),
       status: window.ProduksjonSpill ? ProduksjonSpill.siste().status : null, sistKey: null };
     let prøveby = null, lagetInfra = false;
     const tilbake = () => {
@@ -19,7 +20,7 @@ module.exports = {
       // personene: oppgave, lønn og ledelse som før (samme objekter – andre moduler holder på dem)
       for (const p of F.personer) { const q = før.F.personer.find(x => x.id === p.id); if (!q) continue; p.oppgave = q.oppgave;
         for (const n of ['lønn', 'ledelse']) { if (n in q) p[n] = q[n]; else delete p[n]; } }
-      F.mat = før.F.mat;
+      F.mat = før.F.mat; L.lager = JSON.parse(JSON.stringify(før.lager)); L.plan = JSON.parse(JSON.stringify(før.plan));
       const d = OppstartSpill.tilstand().penger - før.penger; if (d > 0) OppstartSpill.betal(d); else if (d < 0) OppstartSpill.gi(-d);
       if (før.by && window.ByavtaleSpill) ByavtaleSpill.sett(før.by);
       if (før.J && window.JobberSpill) JobberSpill.sett(før.J);
@@ -48,14 +49,16 @@ module.exports = {
       KOMMANDO({ type: 'lederSelv', nøkkel: null, på: false });
       // 3) KASSEREREN stopper et kjøp under minimum (spillerens eget kjøp)
       KOMMANDO({ type: 'lederUtnevn', rolle: 'kasserer', person: b.id });
-      const kassa = OppstartSpill.tilstand().penger, min = [20e6, 10e6, 5e6, 2e6].find(v => v < kassa) || 0;
-      KOMMANDO({ type: 'lederRegel', nøkkel: 'kasserer', regel: 'minimum', verdi: min });
-      // så mye mat at kjøpet tar kassa under minimum
-      const rasjoner = Math.ceil((kassa - min) / FolkRegler.R.matPris) + 10;
-      const r3 = KOMMANDO({ type: 'kjøpMat', rasjoner });
+      const min = 5e6; KOMMANDO({ type: 'lederRegel', nøkkel: 'kasserer', regel: 'minimum', verdi: min });
+      // kassa like over minimum (tas tilbake til slutt): 400 000 kr over
+      const k0 = OppstartSpill.tilstand().penger; if (k0 > min + 4e5) OppstartSpill.betal(k0 - min - 4e5); else OppstartSpill.gi(min + 4e5 - k0);
+      const stålPris = Leir.MATERIALER.stål.pris, lite = KOMMANDO({ type: 'kjøpMateriale', materiale: 'stål', mengde: Math.max(.1, Math.floor(1e5 / stålPris * 10) / 10) });
+      if (/Kasserer/.test(lite.feil || '')) feil.push('kassereren stoppet et lite kjøp over minimum');
+      const r3 = KOMMANDO({ type: 'kjøpMateriale', materiale: 'stål', mengde: Math.ceil(6e5 / stålPris) });
       ut.data.kasse = r3.feil || 'gikk gjennom';
       if (r3.ok || !/Kasserer/.test(r3.feil || '')) feil.push('kassereren stoppet ikke kjøpet: ' + (r3.feil || 'ok'));
-      if (!KOMMANDO({ type: 'kjøpMat', rasjoner: 5 }).ok) feil.push('kassereren stoppet et lite kjøp over minimum');
+      // mat stopper kassereren aldri (folk må spise)
+      if (!KOMMANDO({ type: 'kjøpMat', rasjoner: 150 }).ok) feil.push('kassereren (eller noe annet) stoppet maten');
       KOMMANDO({ type: 'lederAv', nøkkel: 'kasserer' }); if (b.lønn > 0) feil.push('lønna ble ikke satt tilbake');
       // 4) FORMANNEN flytter en person til saga når den står for «venter på folk» (maskinens status lagt inn for vakta)
       if (window.ProduksjonSpill) {

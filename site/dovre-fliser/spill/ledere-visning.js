@@ -88,7 +88,8 @@
     const t = `${LR.tittel(A)} stopper kjøpet: kassa skal ha minst ${mill(A.regler.minimum)} kr (nå ${mill(penger)}, ${hva} koster ${kr(pris)}).`;
     LR.notér(S, nåTid(), 'kasserer', t); lagre(); return t;
   }
-  const KJØP = { kjøpMat: 'maten', kjøpDiesel: 'dieselen', kjøpMateriale: 'materialene', bygg: 'bygget', byggPlan: 'bygget', ansett: 'ansettelsen' };
+  // kjøpene kassereren passer på. Mat og diesel stoppes aldri (folk må spise, og strømmen holder leiren i gang) – Claudes valg.
+  const KJØP = { kjøpMateriale: 'materialene', bygg: 'bygget', byggPlan: 'bygget', ansett: 'ansettelsen' };
   function pakkKasse() {
     if (!window.Kommando || !Kommando.def) return;
     for (const [type, hva] of Object.entries(KJØP)) { const d = Kommando.def(type); if (!d || d.lederPakket) continue; const før = d.sjekk;
@@ -256,7 +257,7 @@
   function rolleRad(rolle, del, tittel, { el, knapp }) {
     const k = LR.nøkkel(rolle, del), A = S.ledere[k], R = LR.ROLLER[rolle];
     const rad = el('div', { klasse: 'lrad', 'data-leder': k });
-    const t = el('div', {}, el('b', {}, tittel), el('small', {}, A ? lederlinje(A) + ` · ${kr(person(rolle, del, LR.ref(A))?.lønn || 0)} i døgnet` : `Ingen – ${R.tekst.toLowerCase()}. Du styrer selv.`));
+    const t = el('div', {}, el('b', {}, tittel), el('small', {}, A ? lederlinje(A) + (betales(rolle, del) ? ` · ${kr(person(rolle, del, LR.ref(A))?.lønn || 0)} i døgnet` : ' · startlag (ingen lønn)') : `Ingen – ${R.tekst.toLowerCase()}. Du styrer selv.`));
     rad.append(t);
     if (A) {
       if (A.selvTil != null && nåTid() < A.selvTil) rad.append(el('small', { klasse: 'selv' }, 'Du styrer selv til i morgen kl. 06.'));
@@ -272,11 +273,14 @@
     if (velger === k) rad.append(kandBoks(rolle, del, k, { el, knapp }));
     return rad;
   }
+  // lønn betales for folket i leiren og for egne tropper (s.fraFolk); startlagene får ingen lønn i spillet
+  const betales = (rolle, del) => rolle !== 'troppsjef' || !!(finnLag(del) && finnLag(del).fraFolk);
   // knappene med kandidatene (de dyktigste først) for nøkkelen k
   function kandBoks(rolle, del, k, { el, knapp }) {
     const R = LR.ROLLER[rolle], K = kandidater(rolle, del).sort((a, b) => b.l - a.l).slice(0, 6), boks = el('div', { klasse: 'kand' });
     if (!K.length) boks.append(el('small', {}, 'Ingen ledige.'));
-    for (const c of K) boks.append(knapp(`${c.navn.split(' ')[0]} · ${LR.des(c.l, 2)} · ${kr(LR.lederLønn(c.lønn, c.l))}`, () => { velger = null; const r = kom({ type: 'lederUtnevn', rolle, del, person: c.id }); melde(r.ok && r.svar && r.svar.A ? `${c.navn} er ${R.navn.toLowerCase()}.` : (r.feil || (r.svar && r.svar.feil) || 'Fikk ikke utnevnt.')); },
+    const lønn = betales(rolle, del), kortNavn = c => (K.filter(q => q.navn.split(' ')[0] === c.navn.split(' ')[0]).length > 1 ? c.navn.split(' ')[0] + ' ' + (c.navn.split(' ')[1] || '').slice(0, 1) + '.' : c.navn.split(' ')[0]);
+    for (const c of K) boks.append(knapp(`${kortNavn(c)} · ${LR.des(c.l, 2)}` + (lønn ? ` · ${kr(LR.lederLønn(c.lønn, c.l))}` : ''), () => { velger = null; const r = kom({ type: 'lederUtnevn', rolle, del, person: c.id }); melde(r.ok && r.svar && r.svar.A ? `${c.navn} er ${R.navn.toLowerCase()}.` : (r.feil || (r.svar && r.svar.feil) || 'Fikk ikke utnevnt.')); },
       { 'data-kand': `${k}|${c.id}`, title: `${c.navn}: ledelse ${LR.des(c.l, 2)} (${LR.dyktighetOrd(c.l)}), krever ${kr(LR.lederLønn(c.lønn, c.l))} i døgnet som leder` }));
     return boks;
   }
