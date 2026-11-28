@@ -188,12 +188,17 @@
     STAT.bygget++; STAT.byggMs += performance.now() - t0; a.ferdig = true;
   }
   function kast(R) { const a = aktiv; if (!a) return; for (const me of [a.trapp, ...a.nett.values()]) { if (!me) continue; if (R && R.scene) R.scene.remove(me); me.geometry.dispose(); }
+    if (a.møbler1) { a.pl.møbler = a.møbler1; a.møbler1 = null; }
     if (a.P && a.P.inne) delete a.P.inne.over;
     // interiøret i 1. etasje vises igjen (det kan ha vært skjult mens du var høyere oppe)
     for (const o of window.Interior3d && Interior3d.aktive ? Interior3d.aktive() : []) if (o.plan === a.pl) for (const me of o.nett) if (me !== o.ytre && me !== o.funn) me.visible = true;
     aktiv = null; settEtasje2D(null, 1); }
   // hvilke etasjer som vises: din og den under; den over mens du står i trappa
-  function synlig(a) { const på = a.trappNå !== null && a.trappNå !== undefined, Es = E(), t = på ? a.m.trapper.find(q => q.id === a.trappNå) : null;
+  // Møblene i 1. etasje (skap du kan åpne, møbler du kan plukke opp) er ikke der når du står i en annen etasje: listen i planen
+  // byttes ut med en tom en så lenge (lut-visning.js og mobler-visning.js leser P.inne.møbler), og settes tilbake i 1. etasje
+  function møbler1(a) { const ute = a.n !== 1; if (ute && !a.møbler1) { a.møbler1 = a.pl.møbler; a.pl.møbler = []; }
+    else if (!ute && a.møbler1) { a.pl.møbler = a.møbler1; a.møbler1 = null; } }
+  function synlig(a) { møbler1(a); const på = a.trappNå !== null && a.trappNå !== undefined, Es = E(), t = på ? a.m.trapper.find(q => q.id === a.trappNå) : null;
     // (etasjen over vises også når du står ved foten av en trapp opp – ellers ser du himmelen gjennom trapphullet)
     for (const [n, me] of a.nett) me.visible = !!t && (n === t.fra || n === t.til) || n === a.n || n === forrige(a, a.n) || (a.vedOpp && n === neste(a, a.n));
     // interiøret i 1. etasje (interior3d) vises når du er i 1. etasje, i kjelleren eller i 2.

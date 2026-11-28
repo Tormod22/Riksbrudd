@@ -100,6 +100,8 @@ module.exports = {
             // en yttervegg i 2. etasje stopper deg (ingen dør der)
             const wv = e2.vegger.find(q => q.type !== 'skille'), mx = (wv.a[0] + wv.b[0]) / 2 + ox, my = (wv.a[1] + wv.b[1]) / 2 + oy;
             ok(Interior.blokkert(P.inne, mx, my), 'ytterveggen i 2. etasje stopper deg ikke'); ok(!Interior.blokkert(P.inne, kr.x, kr.y), 'du står fast der du står');
+            // møblene i 1. etasje er ikke «her» i 2. etasje (skap og plukk opp leser P.inne.møbler)
+            ut.møbler2 = P.inne.møbler.length; ok(ut.møbler2 === 0, '1. etasjes møbler kan nås fra 2. etasje');
             // leting i 2. etasje i 3D (samme kommando som i 2D; knappen #etasjeknapp)
             { const hh = E2.husAv(i); ok(hh && E2.let2d(hh, 2), 'letingen i 2. etasje startet ikke i 3D'); for (let q = 0; q < 30 && E2.S.leter; q++) { E2.spol(); await vent(150); }
               ut.lett3d = !!(hh && E2.erLett(hh, 2)); ok(ut.lett3d, '2. etasje ble ikke gjennomsøkt i 3D'); if (window.LeteSpill && LeteSpill.lukkFunn) LeteSpill.lukkFunn(); }
@@ -107,7 +109,7 @@ module.exports = {
             const nedM = [t.nede[0] + ox, t.nede[1] + oy];
             for (let s = 0; s < 400; s++) { const a = Math.atan2(-(nedM[0] - kr.x), nedM[1] - kr.y); Bevegelse.steg(kr, { fram: 1, side: 0, retning: a }, .05, verden); Etasjer3d.steg(); if (Math.hypot(nedM[0] - kr.x, nedM[1] - kr.y) < .15) break; }
             for (let s = 0; s < 30; s++) { Bevegelse.steg(kr, { fram: 0, side: 0, retning: 0 }, .05, verden); Etasjer3d.steg(); }
-            ut.ned = { etasje: Etasjer3d.etasje(), z: Math.round((kr.z - g0) * 100) / 100 }; ok(Etasjer3d.etasje() === 1 && Math.abs(kr.z - g0) < .15, 'ned trappa: ' + JSON.stringify(ut.ned));
+            ut.ned = { etasje: Etasjer3d.etasje(), z: Math.round((kr.z - g0) * 100) / 100, møbler: P.inne.møbler.length }; ok(P.inne.møbler.length > 0, 'møblene i 1. etasje kom ikke tilbake'); ok(Etasjer3d.etasje() === 1 && Math.abs(kr.z - g0) < .15, 'ned trappa: ' + JSON.stringify(ut.ned));
             ut.stat = Etasjer3d.STAT;
           } finally {
             Etasjer3d.kast(); Interior3d.glem(P); for (const [kk, oo] of lagt) { const A = R.hindre.get(kk), j = A ? A.indexOf(oo) : -1; if (j >= 0) A.splice(j, 1); }
