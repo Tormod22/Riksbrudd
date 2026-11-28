@@ -257,7 +257,7 @@
     // kursen og grafen
     const st = m.stemning, sv = K.verdi;
     h += `<h3>Kursen${m.notert ? ' på Gråbørsen' : ' (anslått – ikke notert)'}</h3><div class="fi-boks"><div class="fi-linje">Kurs per andel <b class="bo-tall">${kr(K.meg)}</b> · børsverdi <b class="bo-tall">${mill(børs)}</b> · din del <b class="bo-tall">${mill(Bo.minDel(B, børs))}</b></div>`
-      + `<div class="fi-linje">Stemningen <b class="${st >= 1 ? 'bo-opp' : 'bo-ned'}">${st >= 1 ? '+' : '−'}${pst(Math.abs(st - 1) * 100)}</b> · eiendeler ${mill(sv.eiendeler)} · to ukers resultat ${mill(sv.inntekt)}${sv.trygghet < 1 ? ` · angrep trekker ${pst((1 - sv.trygghet) * 100)}` : ''}</div>`
+      + `<div class="fi-linje">Stemningen <b class="${st >= 1 ? 'bo-opp' : 'bo-ned'}">${st >= 1 ? '+' : '−'}${pst(Math.abs(st - 1) * 100)}</b> · eiendeler ${mill(sv.eiendeler)} · ukas resultat ${mill(sv.inntekt)}${sv.trygghet < 1 ? ` · angrep trekker ${pst((1 - sv.trygghet) * 100)}` : ''}</div>`
       + '<div class="bo-graf" data-bo-graf="1"></div><p class="fi-mangler">Opp: leverte kontrakter, nye byer, seire og eksport. Ned: brudd, tapte byer, angrep på leiren, et nei til eierne og utbytte som uteblir.</p></div>';
     // eierne
     h += '<h3>Eierne</h3><div class="fi-boks">' + eierStolpe();

@@ -92,7 +92,7 @@
   function penger(verdier, side, tid, R = REGLER.penger, o = {}) {
     R = R || REGLER.penger; o = o || {};
     const opp = o.oppkjøpt || {}, kjøpte = Object.entries(opp).find(([, r]) => r === side);
-    if (opp[side]) return { fremdrift: 0, nådd: false, verdi: tall(verdier && verdier[side]), foran: false, størst: opp[side], mangler: [`Selskapet er kjøpt opp av ${opp[side]}`], oppkjøpt: opp[side] };
+    if (opp[side]) return { fremdrift: 0, nådd: false, verdi: tall(verdier && verdier[side]), foran: false, størst: opp[side], mangler: [`Selskapet er kjøpt opp av ${({ rød: 'Ravnsund', grønn: 'Mosevakt' })[opp[side]] || opp[side]}`], oppkjøpt: opp[side] };
     if (kjøpte && !(Number.isFinite(tid) && tid < tall(R.tidligst))) return { fremdrift: 1, nådd: true, verdi: tall(verdier && verdier[side]), foran: true, størst: side, mangler: [], oppkjøp: kjøpte[0] };
     const v = tall(verdier && verdier[side]), andre = Object.entries(verdier || {}).filter(([s]) => s !== side).map(([s, x]) => [s, tall(x)]);
     const størst = andre.reduce((m, q) => (q[1] > m[1] ? q : m), [null, -Infinity]), foran = v > størst[1];

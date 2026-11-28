@@ -17,15 +17,15 @@ sjekk(B.firmaVerdi({ ...storlia, konkurs: 100 }).verdi === 0, 'konkurs = 0');
 sjekk(B.firmaVerdi({ ...storlia, helse: 20 }).resultat === 0, 'konkurstruet: ingen resultat');
 sjekk(B.kurs(20e6, 1) === 200000 && B.kurs(20e6, 9) === Math.round(200000 * R.stemning.maks), 'kursen = verdi / 100 × stemning (med tak)');
 const sv = B.selskapVerdi({ eiendeler: 60e6, andeler: 2e6, ukeNetto: 5e6, angrep: 1 });
-sjekk(sv.verdi === Math.round((62e6 + 10e6) * .95 / 1e4) * 1e4, 'ditt selskap: eiendeler + to ukers resultat × trygghet: ' + sv.verdi);
+sjekk(sv.verdi === Math.round((62e6 + 5e6) * .95 / 1e4) * 1e4, 'ditt selskap: eiendeler + ukas resultat × trygghet: ' + sv.verdi);
 sjekk(B.selskapVerdi({ eiendeler: 60e6, ukeNetto: -50e6 }).verdi === 42e6, 'tap trekker høyst 30 % av eiendelene');
 
 // ---------- stemningen ----------
 const o = { stemning: 1 };
 B.endreStemning(o, B.stemningEndring({ levert: 2, brutt: 0, byer: 1 }));
-sjekk(Math.abs(o.stemning - 1.1) < 1e-9, 'to leverte og en by: + 10 % (' + o.stemning + ')');
+sjekk(Math.abs(o.stemning - 1.05) < 1e-9, 'to leverte og en by: + 5 % (' + o.stemning + ')');
 o.stemning = 1; B.endreStemning(o, B.stemningEndring({ brutt: 1, byer: -1, angrep: 1 }));
-sjekk(o.stemning < .86, 'brudd, tapt by og angrep: ned (' + o.stemning + ')');
+sjekk(o.stemning < .9, 'brudd, tapt by og angrep: ned (' + o.stemning + ')');
 o.stemning = 1.5; B.tilbake(o); sjekk(o.stemning < 1.5 && o.stemning > 1.4, 'stemningen drar mot 1');
 const S0 = B.ny({ x: 0, y: 0 });
 let f = B.tellerForskjell(S0, { levert: 4, brutt: 1 }); sjekk(f.levert === 0 && f.brutt === 0, 'første gang: ingen forskjell');

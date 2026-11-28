@@ -7,7 +7,7 @@
  * VERDI OG ANDELER: hvert selskap (ditt, firmaene i spill/firma.js, Ravnsund og Mosevakt) har en verdi og 100 andeler.
  *   - Firmaene: grunnverdi per firma × økonomien (helsa) × trygghet rundt hjemstedet (rival eier byen, fiende nær, kamp) × handelen med dere.
  *     Resultatet per uke (7 spilldøgn) er en del av verdien; eierne får utbytte av det. Konkurs = verdt 0.
- *   - Ditt selskap: eiendelene (kassa, bygg, lager, kjøretøy – som spill/seier.js – pluss andelene dine i andre) + to ukers resultat,
+ *   - Ditt selskap: eiendelene (kassa, bygg, lager, kjøretøy – som spill/seier.js – pluss andelene dine i andre) + ukas resultat,
  *     ganget med tryggheten (angrep på leiren den siste uka trekker ned).
  *   - Rivalene: anslaget fra spill/seier.js (kassa, hovedkvarter, tettsteder, lag, kjøretøy).
  *   KURSEN per andel = verdi / 100 × stemningen. Stemningen (0,5–1,8) flytter seg hvert døgn: opp ved leverte kontrakter, nye byer, seire
@@ -62,17 +62,20 @@
       varer: { tømmer: { tømmer: 6 }, mat: { mat: 30 }, drivstoff: { diesel: 400 }, gruve: { stein: 8 }, sjømat: { mat: 25 }, bygg: { planker: 4 }, kraft: { kr: 40000 }, frakt: { kr: 30000 }, verksted: { stål: 1 }, handel: { kr: 25000 } },
     },
     selskap: {
-      // to ukers resultat (netto inn − ut siste 7 døgn × 2) regnes inn i verdien, men trekker høyst 30 % av eiendelene ned
-      inntektUker: 2, inntektGulv: -.3,
+      // ukas resultat (netto inn − ut siste 7 døgn) regnes inn i verdien, men trekker høyst 30 % av eiendelene ned
+      inntektUker: 1, inntektGulv: -.3,
       // et angrep på leiren den siste uka: × (1 − angrep), høyst angrepTak
       angrep: .05, angrepTak: .2,
     },
     // stemningen (ganges med kursen): grenser, hvor fort den drar mot 1 per døgn, og hva hendelsene gjør
-    stemning: { start: 1, min: .5, maks: 1.8, tilbake: .08,
-      levert: .03, by: .04, tapt: -.05, seier: .015, eksport: .02, brudd: -.06, angrep: -.04, rykte: -.03, nei: -.05, utbytteBetalt: .01, utbytteUte: -.08, ønskeHoldt: .02, ønskeBrutt: -.03 },
-    notering: { min: 10, maks: 40, beholde: 50, rabatt: .1 },
+    // (økonomitesten 28. nov: med +3 % per levert kontrakt og 8 % tilbake per døgn lå stemningen fast på ca. 1,6 for en som leverte hver dag –
+    // nå ca. 1,1)
+    stemning: { start: 1, min: .5, maks: 1.8, tilbake: .15,
+      levert: .01, by: .03, tapt: -.04, seier: .005, eksport: .01, brudd: -.05, angrep: -.04, rykte: -.03, nei: -.05, utbytteBetalt: .01, utbytteUte: -.08, ønskeHoldt: .02, ønskeBrutt: -.03 },
+    // rabatt: investorene betaler kursen minus Gråbørsens meglere og «tilretteleggere» (økonomitesten 28. nov: 10 % ga for mye kontanter på én gang)
+    notering: { min: 10, maks: 40, beholde: 50, rabatt: .15 },
     // utbytte: eierne utenfor venter så stor del av sin del av børsverdien hver uke
-    utbytte: { forventet: .01 },
+    utbytte: { forventet: .015 },
     emisjon: { maks: 15, rabatt: .12, minEgne: 35 },
     tilbakekjøp: { påslag: .06 },
     rival: {
