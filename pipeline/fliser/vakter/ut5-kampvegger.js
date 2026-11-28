@@ -19,7 +19,8 @@ module.exports = {
       const S0 = OppstartSpill.tilstand(), lx = S0.leir.x, ly = S0.leir.y, L = LeirSpill.tilstand();
       const blå = ENHETER.find(s => s.side === 'blå' && !s.karakter && levende(s)), rød = ENHETER.find(s => s.side !== 'blå' && Array.isArray(s.menn));
       ok(blå && rød, 'fant ikke et blått og et fiendtlig lag'); if (!(blå && rød)) return ut;
-      const lag0 = [blå, rød].map(s => ({ s, x: s.x, y: s.y, sti: s.sti, her: s.her, øy: s.øyneEkstra, etg: s.husEtasje }));
+      const lag0 = [blå, rød].map(s => ({ s, x: s.x, y: s.y, sti: s.sti, her: s.her, øy: s.øyneEkstra, etg: s.husEtasje, hp: s.menn.map(m => m.hp), ut: s.slattUtMeldt }));
+      const kar = window.SpilletSpill && SpilletSpill.K ? SpilletSpill.K() : null, karHp = kar ? kar.hp : null;
       const før = { kam: { x: kam.x, y: kam.y, m: kam.m }, logg: localStorage.getItem(P2.NØKKEL), ot: localStorage.getItem(HS.NØKKEL), lager: Object.assign({}, L.lager), test: HS.test, vis: HS.S.visVern };
       const rekt = (x, y, a, b) => [[x, y], [x + a, y], [x + a, y + b], [x, y + b]];
       const Pv1 = rekt(lx + 90, ly + 60, 12, 8), Pv2 = rekt(lx + 90, ly - 90, 18, 10), e1 = { i: i1, t: 0, h: 9 }, e2 = { i: i2, t: 10, h: 12 };
@@ -56,6 +57,10 @@ module.exports = {
         const sm = HS.smellVed(q2.vegg[0], q2.vegg[1], 'sprengstoff', 1), lg = P2.logg().hus[i2] || [];
         ut.spreng = sm && sm.tekst; ok(lg.some(d => d.del === 'åpning' && d.type === 'hull'), 'sprengstoff laget ikke hull: ' + JSON.stringify(lg) + ' ' + (sm && sm.tekst));
         ok(P2.modell(i2).etasjer.find(e => e.n === 1).åpninger.some(o => o.type === 'hull' && o.tilstand === 'ødelagt'), 'hullet står ikke i modellen');
+        // i 3D: din egen granat (BakkekampSpill.smell -> Effekter3d.eksplosjon) mot trehusets vegg setter spor i loggen
+        if (typeof på3d !== 'undefined' && på3d && window.BakkekampSpill && BakkekampSpill.smell) { const n0 = (P2.logg().hus[i1] || []).length;
+          BakkekampSpill.smell(q1.vegg[0], q1.vegg[1]); const n1 = (P2.logg().hus[i1] || []).length; ut.granat3d = n1 - n0;
+          ok(n1 > n0, 'granaten i 3D satte ingen spor i trehuset'); }
         // barrikadene forsinker inntaket: fienden 40 m fra trehuset med laget inne
         still(blå, midt(Pv1)); blå.husEtasje = 1; HS.plasser(); const c1 = midt(Pv1); still(rød, [c1[0], c1[1] + 40]);
         HS.S.inntak.clear(); HS.inntakSteg(); const k = blå.hus.k + '>' + rød.navn, f0 = HS.S.inntak.get(k) && HS.S.inntak.get(k).f;
@@ -81,7 +86,8 @@ module.exports = {
           ok(/Vern:/.test(t) && /Ta over huset som/.test(t) && /Kaserne/.test(t), 'plantegningen viser ikke vern og «Ta over huset»: ' + ut.rad); }
       } catch (e) { ut.feil.push('unntak: ' + (e && e.stack || e)); }
       finally {
-        for (const q of lag0) { q.s.x = q.x; q.s.y = q.y; q.s.sti = q.sti; q.s.her = q.her; delete q.s.hus; delete q.s.husVern; if (q.øy === undefined) delete q.s.øyneEkstra; else q.s.øyneEkstra = q.øy; if (q.etg === undefined) delete q.s.husEtasje; else q.s.husEtasje = q.etg; q.s.siktSkitten = true; }
+        if (kar && karHp !== null) kar.hp = karHp;
+        for (const q of lag0) { q.s.menn.forEach((m, k) => { m.hp = q.hp[k]; }); q.s.slattUtMeldt = q.ut; q.s.x = q.x; q.s.y = q.y; q.s.sti = q.sti; q.s.her = q.her; delete q.s.hus; delete q.s.husVern; if (q.øy === undefined) delete q.s.øyneEkstra; else q.s.øyneEkstra = q.øy; if (q.etg === undefined) delete q.s.husEtasje; else q.s.husEtasje = q.etg; q.s.siktSkitten = true; }
         HS.S.inntak.clear(); HS.S.slit.clear(); HS.S.visVern = før.vis; HS.test = før.test;
         P2.fjernPrøve(i1); P2.fjernPrøve(i2); P2.S.fokus = null;
         if (før.logg === null) localStorage.removeItem(P2.NØKKEL); else localStorage.setItem(P2.NØKKEL, før.logg); P2.lesInn();
