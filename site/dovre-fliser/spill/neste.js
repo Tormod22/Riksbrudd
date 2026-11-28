@@ -15,11 +15,11 @@
   // frist går foran opplæringen; ledige tilbud står over målene. Et opplæringssteg du har utsatt («Senere», eller ugjort lenge) synker.
   // (fase Ø0, 28. nov) trinn = steget mot neste av de fire trinnene (spill/trinn.js): over målene, under alt som haster
   const REGLER = {
-    prio: { angrep: 100, tråd: 90, kontraktSnart: 80, opplæring: 70, kontrakt: 60, scenario: 55, tilbud: 50, utsatt: 45, trinn: 42, mål: 40 },
+    prio: { angrep: 100, tråd: 90, kontraktSnart: 80, opplæring: 70, kontrakt: 60, scenario: 55, tilbud: 50, investor: 48, utsatt: 45, trinn: 42, mål: 40 },
     snart: 360,      // spillminutter: en aktiv kontrakt med kortere frist enn dette er «snart»
     maks: 6,         // så mange linjer i lista
   };
-  const NAVN = { angrep: 'Angrep', tråd: 'Første kontrakt', kontraktSnart: 'Kontrakt', kontrakt: 'Kontrakt', opplæring: 'Opplæring', utsatt: 'Opplæring', scenario: 'Scenario', tilbud: 'Selskapet', trinn: 'Veien videre', mål: 'Mål' };
+  const NAVN = { angrep: 'Angrep', tråd: 'Første kontrakt', kontraktSnart: 'Kontrakt', kontrakt: 'Kontrakt', opplæring: 'Opplæring', utsatt: 'Opplæring', scenario: 'Scenario', tilbud: 'Selskapet', investor: 'Investor', trinn: 'Veien videre', mål: 'Mål' };
   // kilde: { id, slag, tekst, hjelp, igjen (spillminutter til fristen), utsatt (opplæring), trykk }
   function slagFor(k) { if (k.slag === 'kontrakt' && Number.isFinite(k.igjen) && k.igjen <= REGLER.snart) return 'kontraktSnart'; if (k.slag === 'opplæring' && k.utsatt) return 'utsatt'; return k.slag; }
   const prioritet = k => { const s = slagFor(k); return Number.isFinite(REGLER.prio[s]) ? REGLER.prio[s] : 10; };
@@ -62,6 +62,8 @@
     // målene (spill/maal.js) – neste mål i kapittelet du er i (krigen om regionen er det siste kapittelet)
     try { const M = rot.MaalSpill, st = M && M.stilling ? M.stilling() : null;
       if (st && st.neste && rot.Maal) { let T = null; try { T = M.bilde(); } catch (e) { T = null; } ut.push({ id: 'mål', slag: 'mål', tekst: Maal.tekstNå(st.neste, T), hjelp: Maal.hjelpNå ? Maal.hjelpNå(st.neste, T) : st.neste.hjelp, trykk: åpneMål }); } } catch (e) { /* uten mål */ }
+    // (Ø7, ut5-bors) andre moduler kan legge til en linje: window.NESTE_KILDER = [() => kilde | null] (investorenes ønsker)
+    for (const f of rot.NESTE_KILDER || []) { try { const k = f(); if (k && k.tekst) ut.push(k); } catch (e) { /* neste gang */ } }
     return ut;
   }
   // lista regnes høyst hvert sekund (lappen spør hvert halve sekund; målenes øyeblikksbilde koster litt)

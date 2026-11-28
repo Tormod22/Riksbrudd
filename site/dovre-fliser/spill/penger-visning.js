@@ -100,6 +100,7 @@
     [/^penger-visning$/, 'vedlikehold', 'vedlikehold'],
     [/^(leir|leir-visning|lager-visning|leirvirkning|kommando|kommando-visning|anleggsarbeid-visning|anleggsarbeid|taster|byggesett|byggesett-visning|strom-visning)$/, 'bygg', 'bygg',
       [[/drivstoff|diesel/i, 'diesel', 'diesel'], [/materiale/i, 'salg', 'materialer'], [/^selg/i, 'salg', 'salg'], [/reparer/i, 'reparasjoner', 'reparasjoner']]],
+    [/^bors/, 'børs og investorer', 'børs og investorer'],
     [/^region/, 'skatt', 'støtte til tettsteder', [[/^kjøp$/, 'svartebørs', 'svartebørs']]],
     [/^krig/, 'krig og forsvar', 'krig og forsvar', [[/avtale|^fred$|vern/i, 'avtaler', 'avtaler']]],
     [/^(spillet-visning|spillet|marked)/, 'marked og røvere'],
