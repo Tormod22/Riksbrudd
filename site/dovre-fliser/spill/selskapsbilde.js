@@ -56,7 +56,37 @@
   // kroner med «mill.» – samme form som resten av spillet
   const des = v => (Math.round(v * 10) / 10).toFixed(1).replace('.', ',').replace(/,0$/, '');
   const kr = v => { const a = Math.abs(tall(v)), f = v < 0 ? '−' : ''; return f + (a >= 1e6 ? des(a / 1e6) + ' mill. kr' : a >= 1000 ? Math.round(a / 1000) + ' 000 kr' : Math.round(a) + ' kr'); };
-  const Selskapsbilde = { REGLER, uke, byer, viktigste, storliaNå, storliaTekst, kr };
+  // UKAS RESULTAT NÅ (ut8-kr-penger, Jonas: «−23,7 mill. i Oversikt og −12,9 mill. i Eiere samtidig»): én kilde for alle panelene –
+  // dagboka over pengene (PengerSpill) de siste REGLER.uke døgnene. Børsen regner selv med en del av det (tak og uten børsens egne penger),
+  // men viser dette tallet. Gir null uten dagbok (Node).
+  function ukeNå() { const P = rot.PengerSpill; if (!P || !P.døgn || !P.døgnNå || !P.tilstand || !P.tilstand()) return null; return uke(n => P.døgn(n), P.døgnNå()); }
+  // ---------- DRIFTEN (ut8-kr-penger, 28. nov) ----------
+  // Kritikken: «Faste utgifter steg fra 254 000 til 411 000 kr i døgnet … diesel 3 000 kr literen … spillet viser ingen vei ut». Oversikt
+  // får én linje: hva leiren bruker i døgnet, de største postene og et råd med et tilbud dere klarer. poster = { navn: kr per døgn }.
+  // Gir { sum, største: [[navn, kr], …] } (høyst REGLER.driftPoster, størst først, uten poster under 1 000 kr).
+  REGLER.driftPoster = 3;
+  function drift(poster) {
+    const L = Object.entries(poster || {}).map(([k, v]) => [k, Math.max(0, tall(v))]).filter(([, v]) => v >= 1000).sort((a, b) => b[1] - a[1]);
+    return { sum: L.reduce((a, [, v]) => a + v, 0), største: L.slice(0, REGLER.driftPoster) };
+  }
+  // «Leiren bruker ca. 650 000 kr i døgnet – største poster: lønn 240 000 kr, diesel 250 000 kr og vedlikehold 170 000 kr.»
+  function driftTekst(d) {
+    if (!d || !(d.sum > 0)) return 'Leiren bruker nesten ingenting i døgnet ennå.';
+    const p = d.største.map(([k, v]) => `${k} ${kr(v)}`), liste = p.length > 1 ? p.slice(0, -1).join(', ') + ' og ' + p[p.length - 1] : p.join('');
+    return `Leiren bruker ca. ${kr(Math.round(d.sum / 1000) * 1000)} i døgnet – største poster: ${liste}.`;
+  }
+  // rådet under linja. o = { kontrakt: { tittel, kr } | null, oppdrag: { navn, gir } | null, kassa, aktive (kontrakter i gang) }
+  function driftRåd(d, o = {}) {
+    const sum = d && d.sum > 0 ? d.sum : 0, ut = [];
+    if (o.kontrakt) ut.push(`Ta en kontrakt: «${o.kontrakt.tittel}» gir ${kr(o.kontrakt.kr)}${sum ? ` – ca. ${des(o.kontrakt.kr / sum)} døgn med drift` : ''}. Én tropp klarer den.`);
+    else if (tall(o.aktive) > 0) ut.push('Lever kontraktene dere har i gang – det er der pengene kommer fra.');
+    else if (o.oppdrag) ut.push(`Ta et lite oppdrag: «${o.oppdrag.navn}» (gir ${o.oppdrag.gir}). Nye kontrakter kommer i morgen tidlig.`);
+    else ut.push('Nye kontrakter kommer i morgen tidlig. Imens: selg tre dere ikke trenger (Leir → Lager).');
+    if (d && d.største.length && d.største[0][0] === 'diesel') ut.push('Diesel er største post: solceller, batteri og å slå av bygg dere ikke bruker (Leir → Bygg → Strøm) sparer mest.');
+    if (sum && Number.isFinite(o.kassa) && o.kassa < sum * 5) ut.push(o.kassa < sum ? 'Kassa rekker ikke ett døgn til!' : `Kassa rekker ca. ${des(o.kassa / sum)} døgn.`);
+    return ut.join(' ');
+  }
+  const Selskapsbilde = { REGLER, uke, ukeNå, byer, viktigste, storliaNå, storliaTekst, kr, drift, driftTekst, driftRåd };
   if (typeof module !== 'undefined' && module.exports) { module.exports = Selskapsbilde; return; }
   rot.Selskapsbilde = Selskapsbilde;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

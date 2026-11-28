@@ -211,13 +211,21 @@ leggTilDel({ id: 'drift',
 
 // KONTRAKTENE (Selskap): tilbud hver morgen, troppene utfører dem
 const ID = 'blå';
+// (ut8-kr-penger) stedene har nå bygdevernet (vern, bare i tettsteder ingen eier – som spill/krig-visning.js) og garnisonen når et annet
+// selskap holder stedet. Før så modellen bare k.fare: den tok kontrakter for et firma i et tettsted med bygdevern på 10 mann, som spillet
+// kaller «For svakt» (selskap-visning.js forsvarVed). Nå bruker modellen og spillet samme regel (Selskap.forsvarFor).
 function steder(sim) {
-  return [...sim.region.byer.map(b => ({ navn: b.navn, x: b.x, y: b.y, slag: 'tettsted', id: b.id, folk: b.folk, eier: b.eier })), ...sim.region.bruer];
+  return [...sim.region.byer.map(b => ({ navn: b.navn, x: b.x, y: b.y, slag: 'tettsted', id: b.id, folk: b.folk, eier: b.eier,
+    vern: !b.eier && b.vern > 0 ? b.vern : 0, garnison: b.eier && b.eier !== ID ? REGLER.fareMenn : 0, fiender: 0 })), ...sim.region.bruer];
 }
+const stedTil = (sim, k) => steder(sim).find(q => q.navn === k.sted.navn) || k.sted;
+const forsvarK = (sim, k) => (k ? Math.max(k.fare ? REGLER.fareMenn : 0, Selskap.forsvarFor(k, stedTil(sim, k), ID)) : 0);
+// styrken til det lette tilbudet (Selskap.sikreLett): kontrakttroppen (som spillets største lag), minst fire
+const styrke = sim => Math.max(4, ...sim.tropper.filter(t => !t.garnisonI).map(t => friske(t.menn)));
 // det leiren har til kravene i Selskap.kanTa
 function har(sim, k) {
   const ledige = sim.tropper.filter(t => t.hjemme && !t.jobb && !t.garnisonI);
-  return { størsteLag: Math.max(0, ...ledige.map(t => friske(t.menn))), kjøretøy: REGLER.kjøretøy - sim.tropper.filter(t => t.jobb && t.jobb.k && t.jobb.k.type === 'eskorte').length, forsvar: k && k.fare ? REGLER.fareMenn : 0 };
+  return { størsteLag: Math.max(0, ...ledige.map(t => friske(t.menn))), kjøretøy: REGLER.kjøretøy - sim.tropper.filter(t => t.jobb && t.jobb.k && t.jobb.k.type === 'eskorte').length, forsvar: forsvarK(sim, k) };
 }
 // timene en kontrakt tar fra leiren og hjem igjen (anslaget strategiene velger etter)
 function kontraktTimer(k) {
@@ -278,7 +286,7 @@ leggTilDel({ id: 'kontrakter',
         { const T = sim.kontrakter.type[h.k.type] || (sim.kontrakter.type[h.k.type] = { n: 0, kr: 0, timer: 0 }); T.n++; T.kr += kr; T.timer += (sim.t - h.k.godtatt) / 60; } sim.logg(`levert «${h.k.tittel}»: ${mill(kr)}`);
         if (h.rekrutt) FolkR.rekrutter(sim.F, sim.L, () => true, { årstid: sim.årstid });
         // (ut2-balanse) som i spillet (selskap-visning.js kobling): når den første kontrakten er levert, kommer nye tilbud straks
-        if (h.k.første) Selskap.lagTilbud(S, ID, nå, steder(sim), Selskap.lagRand(sim.frø * 613 + nå + 3), { infl: sim.M.infl });
+        if (h.k.første) Selskap.lagTilbud(S, ID, nå, steder(sim), Selskap.lagRand(sim.frø * 613 + nå + 3), { infl: sim.M.infl, styrke: styrke(sim), kjøretøy: REGLER.kjøretøy });
         if (h.motangrep) sim.røverAngrep = true;
         if (tr && tr.jobb) tr.jobb.faser = tr.jobb.faser.filter((f, i) => i < tr.jobb.i || f.hva === 'hjem'); }
       else if (h.type === 'brutt') { const bot = Math.min(h.kr || 0, sim.kasse); sim.betal(bot, 'bøter'); sim.kontrakter.brutt++; sim.logg(`brutt «${h.k.tittel}» (${h.grunn})`); if (tr && tr.jobb) { tr.jobb.tapt = true; tr.jobb.faser = tr.jobb.faser.filter((f, i) => i < tr.jobb.i || f.hva === 'hjem'); } }
@@ -292,7 +300,7 @@ leggTilDel({ id: 'kontrakter',
   },
   døgn(sim) { const S = sim.SK, nå = sim.t;
     Selskap.dagSteg(S, nå, Selskap.lagRand(sim.frø * 977 + nå));
-    Selskap.lagTilbud(S, ID, nå, steder(sim), Selskap.lagRand(sim.frø * 613 + nå + 1), { infl: sim.M.infl }); },
+    Selskap.lagTilbud(S, ID, nå, steder(sim), Selskap.lagRand(sim.frø * 613 + nå + 1), { infl: sim.M.infl, styrke: styrke(sim), kjøretøy: REGLER.kjøretøy }); },
 });
 // taper en kontrakt: godta den med kravene og send troppen
 function taKontrakt(sim, tr, k) {
@@ -303,7 +311,7 @@ function taKontrakt(sim, tr, k) {
 function besteKontrakt(sim, tr) {
   const sd = Selskap.side(sim.SK, ID), h = { ...har(sim, null), størsteLag: friske(tr.menn) }; let best = null, bv = 0;
   if (sd.aktive.length >= Selskap.REGLER.maksAktive) return null;
-  for (const k of sim.SK.tilbud) { const hk = { ...h, forsvar: k.fare ? REGLER.fareMenn : 0 }, kt = Selskap.kanTa(k, hk, sd);
+  for (const k of sim.SK.tilbud) { const hk = { ...h, forsvar: forsvarK(sim, k) }, kt = Selskap.kanTa(k, hk, sd);
     if (!kt.ok || kt.advarsel.length || !rekkerFristen(k)) continue; const v = k.betaling / Math.max(1, kontraktTimer(k)); if (v > bv) { bv = v; best = k; } }
   return best;
 }
@@ -416,7 +424,7 @@ function kontraktTime(sim, tr) {
   // (ut2-balanse) som i spillet: åpner spilleren Selskapet uten tilbud og uten aktive kontrakter, kommer nye tilbud straks – høyst én gang
   // per spilldøgn (Selskap.påfyll, selskap-visning.js vis())
   const S = sim.SK; if (!S.tilbud.length && !Selskap.side(S, ID).aktive.length && Selskap.påfyll(S, Math.floor(sim.t / 1440), ID))
-    Selskap.lagTilbud(S, ID, sim.t, steder(sim), Selskap.lagRand(sim.frø * 613 + sim.t + 7), { infl: sim.M.infl });
+    Selskap.lagTilbud(S, ID, sim.t, steder(sim), Selskap.lagRand(sim.frø * 613 + sim.t + 7), { infl: sim.M.infl, styrke: styrke(sim), kjøretøy: REGLER.kjøretøy });
   const k = førsteK(sim) || besteKontrakt(sim, tr); if (k) taKontrakt(sim, tr, k);
 }
 leggTilStrategi({ id: 'ingenting', navn: 'gjør ingenting', fornuftig: false, tekst: 'startleiren og ti personer; kjøper bare mat og diesel' });

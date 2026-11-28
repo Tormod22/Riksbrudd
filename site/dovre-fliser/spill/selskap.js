@@ -235,7 +235,9 @@
   // et hold for bygdelaget/kommunen i et nært tettsted ingen andre holder (bygdevernet slipper dere inn – spill/krig-visning.js), eller ved
   // en bru, der det ikke står fiender. Fristen får en time ekstra per km (den skal kunne holdes til fots). Alle tallene er Claudes forslag.
   // steder kan ha: vern (bygdevernets mann), fiender (mann dere ser eller nylig så ved stedet), garnison (anslått, når et annet selskap holder det)
-  REGLER.lett = { styrke: 4, maksMeter: 9000, nærmeste: 3, holdSjanse: .5, ekstraPerKm: 1, garnison: 8 };
+  // betaling = som et vanlig tilbud × betaling (en trygg jobb nær leiren betaler litt mindre enn en der troppen må slåss seg fram);
+  // maksNivå: bare så lenge selskapet er på nivå 1–2 (starten, trinn 1–2) – senere skal lagene være sterke nok til de vanlige tilbudene
+  REGLER.lett = { styrke: 4, maksMeter: 9000, nærmeste: 3, holdSjanse: .5, ekstraPerKm: 1, garnison: 8, betaling: .8, maksNivå: 2 };
   // det kjente forsvaret ved stedet for en jobb (mann), samme regel som visningens forsvarVed: bygdevernet teller ikke når jobben er for
   // bygdelaget eller kommunen der (de vet om jobben); en garnison teller når et annet selskap holder stedet
   function forsvarFor(k, sted, id) {
@@ -258,6 +260,7 @@
   const stedFor = (steder, k) => (steder || []).find(q => q && sammeSted(q, k.sted)) || k.sted;
   function sikreLett(S, id, nå, steder, r, o) {
     const sd = side(S, id), L = S.leir || { x: 0, y: 0 }, LT = REGLER.lett, styrke = Math.max(LT.styrke, tall(o.styrke)), nv = nivå(sd);
+    if (nv.nr > LT.maksNivå) return null;
     if (S.tilbud.some(k => klarbar(k, styrke, sd, stedFor(steder, k), o.kjøretøy))) return null;
     const kand = (steder || []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y) && q.navn)
       .map(q => ({ ...q, d: Math.hypot(q.x - L.x, q.y - L.y) })).filter(q => q.d >= REGLER.avstand.min && q.d <= LT.maksMeter)
@@ -273,7 +276,7 @@
     const hold = typ === 'hold' ? T.holdTimer[0] : 0, ekstra = Math.ceil(sted.d / 1000) * LT.ekstraPerKm;
     const timer = (typ === 'hold' ? hold + T.ekstraTimer : T.timer) + ekstra;
     const person = typ === 'hent' ? `${velg(ROLLER, r)} ${velg(FORNAVN, r)} ${velg(ETTERNAVN, r)}` : null;
-    const kr = betaling(typ, sd.rykte, sd.pris, sted.d, hold, nv.faktor, o.infl);
+    const kr = avrund(betaling(typ, sd.rykte, sd.pris, sted.d, hold, nv.faktor, o.infl) * LT.betaling);
     const k = { id: 'k' + (++S.nr), type: typ, giver, status: 'tilbud', tilbudt: Math.round(nå), utløper: Math.round(nå + REGLER.tilbudVarer), timer, hold, betaling: kr,
       bot: avrund(kr * REGLER.bot), sted: { navn: sted.navn, x: Math.round(sted.x), y: Math.round(sted.y), slag: sted.slag || 'tettsted', id: sted.id === undefined ? null : sted.id },
       fra: null, last: null, person, sperre: null, konkurrent: null, side: null, for: id, nivå: nv.nr, lett: true };
