@@ -1666,3 +1666,19 @@ HANDOFF/designdokumentet – kartet er Norge 2023. DESIGNRETNING (21. nov): mode
   (sammendrag-2026-11-26.md: terningkast 3/4 → 4/4, hva som er rettet og hva som gjenstår). Rettingene står i docs/natt/lokke-r1-*.md,
   lokke-r2-*.md og lokke-r3-*.md (én fil per pakke, med vakter i pipeline/fliser/vakter/). Briefene: scratchpad LOKKE-KRITIKER-BRIEF(-LOKAL).md
   og LOKKE-FIKS-BRIEF.md. Ikke publisert før brukeren sier «Publiser».
+  UTBYGGINGEN AV PLANEN (28. nov, brukeren: «start med å bygge ut alt som er nevnt i planen»): docs/plan-selskap-okonomi.md (+ PDF i
+  scratchpad selskapsplan/) – fire spor: økonomi Ø0–Ø9, bygg B0–B7, folk F0–F5, grunnmur G0–G5 og idéene i kapittel 14. Bygget i bølger av
+  hjelpere (brief: scratchpad UT-BRIEF.md), ett notat per pakke i docs/natt/ut1-…ut6-*.md (filer, API-er, tall, valg, hva som ikke er gjort) –
+  LES NOTATET før du endrer en modul. Hovedmodulene: selskapspanel.js/selskapsbilde.js/trinn.js (panelet Selskapet, tast S, fire trinn),
+  jobber.js (jobbtavla, døgnplan, skift), folkgang.js (folk går ekte, stedF), baering.js (bærere, innmating/utmating), oppforsel.js
+  (egenskaper, venner, alarm/tilflukt, brann, ulykker), rekruttering.js (søkere, egen lønn p.lønn, opplæring), ledere.js (leirsjef, formann,
+  forhandler, troppsjef, kasserer), bygning.js (ÉN modell for alle bygg: etasjer, vegger, åpninger, tak, ras), plantegning(-visning).js (2D-
+  plantegning, endringslogg «riksbrudd-bygninger»), husendring.js (rive/åpne/bjelker), etasjer.js/etasjer3d.js, husvern.js/overtak.js (vern per
+  vegg, ta over hus), vei.js (rutenett 1,2 m, rom-kart, veikart), byggesett.js v3 (1,2 m, fire etasjer, stoff, spenn) + fabrikk.js (maskiner i
+  hallen, flyt, lys), produksjon.js (sagbruk, vedkløyver, fyrkjele, høvleri …; tømmer/flis/ved; «tre» = planker), varelager.js (enheter med
+  plass, reservering), vare.js (varekontrakter, frakt), byavtale.js (tillit/frykt/behov, trinn kunde→medlem), firma.js (firmaer, samarbeid,
+  pakter, teknologi), bors.js (andeler, investorer, Gråbørsen), eksport.js (eurokreditt), rival.js (rivalenes økonomi/byavtaler/sabotasje),
+  seier.js (makt, penger, gjenoppbygging + avslutning), tida.js/statistikk.js (spol til, pause, grafer), lyd2d.js, lagringsside.js
+  (IndexedDB under localStorage, LagringStor, versjon/omgjøring). ØKONOMITESTEN: node pipeline/fliser/test_okonomitest.js (okosim.js +
+  okosim-*.js; OKO_STRENG=1, OKO_NYTT_BAND=1) – kjøres i hver fletting; nye økonomidele legger til en okosim-del. Flettingen: scratchpad
+  inn2.sh (løser index.html-tagger, docs, okonomitest-band.json og api-linjer selv). Ikke publisert før brukeren sier «Publiser».

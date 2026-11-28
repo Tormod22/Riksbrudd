@@ -132,3 +132,12 @@ stål) – med 0,3 ga den 3,5 × lønna.
   lonn, morgen, ut1-selskap, start, ui, spill2d, kontrakter, lagring, selskap, ut3-riving, ut2-vei, ut3-rekruttering, ut2-byer – ok.
   `okonomi` feiler («prognose … lik false») – kjent fra før (ut2-sagbruk.md). `ut2-lagring` feilet én gang etter elleve andre vakter i samme
   side («lagringen ble ikke satt tilbake»), men er ok alene, etter `ut6-kjeder` og etter `lagring` – trolig rekkefølge, ikke denne pakka.
+
+## Fletting med claude/nattfiks (fabrikken B5), 28. nov ca. 06:20
+- `produksjon.js`: begge sider er med. `REGLER.maskiner` har høvelen (B5) og de sju nye maskinene, og `rekkefølge` har alle. `VARENAVN` har
+  alle varene, og `alias()`, `base()` og `erMaskin` er fra B5. `råvare()` har `if (M.tillegg) return {}`. `tomTekst`/`venterTekst` bruker
+  `base(t)`, høvelens «venter på saga» og feltet `tom` (via `tomFor`). `oppskrift()` har høvel-grenen og enhetene, og `merke()` likeså.
+- `index.html`: alle skript-taggene (produksjon, kjedene, byggesettet, fabrikken), og `versjon.py` er kjørt.
+- `firma.js`/`firma-visning.js`: teksten om fryselageret sier nå at fiskemottaket kan bygges ved en kai.
+- Prøvd etter flettingen: alle `test_*.js`, økonomitesten (også `OKO_STRENG=1`), og vaktene ut6-kjeder, ut5-fabrikk, ut2-sagbruk og
+  ut4-maskinfolk på PC – alle ok.

@@ -34,7 +34,8 @@
   // tettstedene rundt (leiren, ellers hjemmet til siden) som reglene ser dem
   function byer(side) {
     const L = leir(), h = AI.hjem ? AI.hjem()[side] : null, m = L || (h ? { x: h[0], y: h[1] } : { x: 0, y: 0 }), r = ER.plan.rekkevidde + 20000, ute = ENHETER.filter(kjemper);
-    return alle().filter(b => b.bb[2] > m.x - r && b.bb[0] < m.x + r && b.bb[3] > m.y - r && b.bb[1] < m.y + r).map(b => {
+    // (ut5-rivaler, Ø8) en by siden har avtale med, er ikke et mål (AI.avtaleMed – spill/rival-visning.js)
+    return alle().filter(b => b.bb[2] > m.x - r && b.bb[0] < m.x + r && b.bb[3] > m.y - r && b.bb[1] < m.y + r && !(AI.avtaleMed && AI.avtaleMed(side, b.e.id))).map(b => {
       const [x, y] = AI.inne ? AI.inne(b) : [(b.bb[0] + b.bb[2]) / 2, (b.bb[1] + b.bb[3]) / 2], eier = eierAv(b), folk = b.e.folk || 0;
       // forsvarerne: de andre sidenes lag i tettstedet, og like utenfor (innen 1 km av midten – de kommer til)
       const forsvar = ute.filter(e => e.side !== side && !hvile(side, e.side) && (iBy(b, e.x, e.y) || Math.hypot(e.x - x, e.y - y) <= 1000)).reduce((a, e) => a + sty(e), 0);
@@ -174,7 +175,8 @@
     E.tjen(Ø, folk, min, gr);
     const dEtter = (tid - fredSlutt()) / 1440; if (dEtter < 0) return null;
     const lag = ENHETER.filter(e => e.ai && e.side === side && levende(e)).length;
-    const tak = E.tak(F.lagTak(holder.length, Math.floor(døgn())), dEtter, gr, holder.length);
+    // (ut5-rivaler, Ø8) taket etter hva rivalen har råd til (AI.rådTak – spill/rival-visning.js)
+    const tak0 = E.tak(F.lagTak(holder.length, Math.floor(døgn())), dEtter, gr, holder.length), tak = AI.rådTak ? AI.rådTak(side, tak0) : tak0;
     const biler = AI.ekstraBiler[side].filter(k => KJORETOY.includes(k)).length + (AI.biler && AI.biler[side] && KJORETOY.includes(AI.biler[side]) ? 1 : 0);
     const vogner = KJORETOY.filter(k => k.side === side && k.type === 'stridsvogn').length;
     const hva = E.kjøp(Ø, { lag, tak, lastebiler: biler, stridsvogner: vogner, døgn: døgn(), g: gr }); if (!hva) return null;
