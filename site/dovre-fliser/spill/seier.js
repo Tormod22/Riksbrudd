@@ -104,7 +104,7 @@
   function gjenoppbygging(byer, side, o = {}, R = REGLER.gjenoppbygging) {
     const tid = tall(o.tid), alle = byer || [], total = alle.reduce((s, b) => s + tall(b.folk), 0);
     const mine = alle.filter(b => b.eier === side), ut = [];
-    let okFolk = 0, nOk = 0;
+    let okFolk = 0, nOk = 0, delSum = 0, delFolkSum = 0;
     for (const b of mine) {
       const hvorfor = [];
       if (b.strøm === false) hvorfor.push('uten strøm');
@@ -113,10 +113,13 @@
       const holdt = Number.isFinite(b.holdtFra) ? tid - b.holdtFra : 0;
       if (holdt < R.holdtDøgn * 1440) hvorfor.push(`holdt i ${Math.max(0, Math.round(holdt / 144) / 10).toString().replace('.', ',')} av ${R.holdtDøgn} døgn`);
       const ok = !hvorfor.length; if (ok) { nOk++; okFolk += tall(b.folk); }
-      ut.push({ id: b.id, navn: b.navn, folk: tall(b.folk), ok, hvorfor });
+      // delvis: hvor mye av kravene tettstedet oppfyller (strøm, bruer, lojalitet, tid), så måleren går jevnt og ikke står på 0 i to døgn
+      const del = ok ? 1 : ((b.strøm === false ? 0 : 1) + (tall(b.ødelagt) > 0 ? 0 : 1) + (b.loj === null || b.loj === undefined ? 1 : klem(tall(b.loj) / R.loj)) + klem(holdt / (R.holdtDøgn * 1440))) / 4;
+      delSum += del; delFolkSum += del * tall(b.folk);
+      ut.push({ id: b.id, navn: b.navn, folk: tall(b.folk), ok, del, hvorfor });
     }
     const andel = total ? okFolk / total : 0, forTidlig = tid < tall(R.tidligst);
-    const delBy = klem(nOk / Math.max(R.minByer, mine.length)), delFolk = klem(R.andel > 0 ? andel / R.andel : 0);
+    const delBy = klem(delSum / Math.max(R.minByer, mine.length)), delFolk = klem(R.andel > 0 && total ? delFolkSum / total / R.andel : 0);
     const nådd = mine.length >= R.minByer && nOk === mine.length && andel >= R.andel && !o.sult && !forTidlig;
     const mangler = [];
     if (mine.length < R.minByer) mangler.push(`Hold minst ${R.minByer} tettsteder (nå ${mine.length})`);

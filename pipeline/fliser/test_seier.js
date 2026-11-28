@@ -45,7 +45,8 @@ g = S.gjenoppbygging(B.map(b => (b.id === 'b' ? { ...b, strøm: false } : b)), '
 sjekk(!g.nådd && g.ok === 2 && /B: uten strøm/.test(g.mangler.join()) && g.fremdrift < 1 && g.fremdrift > .5, 'gjenoppbygging: ett uten strøm ' + g.fremdrift);
 g = S.gjenoppbygging(B.map(b => (b.id === 'c' ? { ...b, ødelagt: 2 } : b)), 'blå', { tid: t }); sjekk(!g.nådd && /C: 2 bruer/.test(g.mangler.join()), 'gjenoppbygging: ødelagt bru');
 g = S.gjenoppbygging(B.map(b => (b.id === 'c' ? { ...b, loj: 40 } : b)), 'blå', { tid: t }); sjekk(!g.nådd && /lojalitet 40/.test(g.mangler.join()), 'gjenoppbygging: sult/lojalitet');
-g = S.gjenoppbygging(B.map(b => (b.id === 'a' ? { ...b, holdtFra: t - 600 } : b)), 'blå', { tid: t }); sjekk(!g.nådd && /holdt i/.test(g.mangler.join()), 'gjenoppbygging: nylig tatt');
+g = S.gjenoppbygging(B.map(b => (b.id === 'a' ? { ...b, holdtFra: t - 600 } : b)), 'blå', { tid: t }); sjekk(!g.nådd && /holdt i/.test(g.mangler.join()) && g.fremdrift > .5, 'gjenoppbygging: nylig tatt (delvis fremdrift) ' + g.fremdrift);
+g = S.gjenoppbygging(B.map(b => (b.eier === 'blå' ? { ...b, holdtFra: t } : b)), 'blå', { tid: t }); sjekk(!g.nådd && g.fremdrift > .3 && g.fremdrift < .9, 'gjenoppbygging: alle nettopp tatt gir delvis fremdrift ' + g.fremdrift);
 g = S.gjenoppbygging(B, 'blå', { tid: t, sult: true }); sjekk(!g.nådd && /tom for mat/.test(g.mangler.join()), 'gjenoppbygging: leiren sulter');
 g = S.gjenoppbygging(B, 'blå', { tid: 2 * D }); sjekk(!g.nådd, 'gjenoppbygging: for tidlig');
 g = S.gjenoppbygging(B.slice(0, 2), 'blå', { tid: t }); sjekk(!g.nådd && /minst 3/.test(g.mangler.join()), 'gjenoppbygging: bare to tettsteder');
