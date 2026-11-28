@@ -26,6 +26,7 @@
   const dagNå = () => Math.floor((6 * 60 + nåMin()) / DØGN);
   const sidenavn = s => (window.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER[s] ? Fraksjoner.FRAKSJONER[s].navn : Bo.RIVALER[s] || s);
   const tilf = () => ((typeof Tilfeldig !== 'undefined' && Tilfeldig.verden) || Math.random);
+  const cap = t => String(t).charAt(0).toUpperCase() + String(t).slice(1);
   const pst = v => String(Math.round(v * 10) / 10).replace('.', ',') + ' %';
   let B = Bo.ny(null), leirId = '', klar = false, melding = '', sistLagret = 0;
   // ting som bare gjelder denne økta: når dere sist skjøt med hver rival, angrepene på leiren (spillminutter)
@@ -117,7 +118,7 @@
     for (const h of H) hendelse(h, K);
     // investorene ringer
     const hv = Bo.henvendelse(B, nivå(), nå, K.meg, r);
-    if (hv) { const t = `${hv.inv.navn} (${hv.inv.hvem}) ringer: de ${hv.inv.tekst}${hv.h.kr ? ` – ${mill(hv.h.kr)} for ${hv.h.andel} %` : ''}. Se Selskapet → Eiere.`; logg(t); telefon(t); }
+    if (hv) { const t = `${hv.inv.navn} (${hv.inv.hvem}) ringer: ${cap(hv.inv.tekst)}${hv.h.kr ? ` – ${mill(hv.h.kr)} for ${hv.h.andel} %` : ''}. Se Selskapet → Eiere.`; logg(t); telefon(t); }
     B.meg.kurs = K.meg; lagre(); return H;
   }
   function hendelse(h, K) {
@@ -266,8 +267,10 @@
     // notering / utbytte / emisjon / tilbakekjøp
     if (!m.notert) { const kn = [10, 20, 30, 40].map(p => { const k = Bo.kanNotere(B, p, { nivå: nv }); return knapp(`Noter ${p} % (${mill(p * K.meg * (1 - R.notering.rabatt))})`, 'bo-noter', { p }, k.ok ? '' : 'av'); }).join('');
       const k0 = Bo.kanNotere(B, 10, { nivå: nv }); h += `<div class="fi-del">Notering på Gråbørsen</div><div class="fi-knapper">${kn}</div>` + (k0.ok ? `<p class="fi-mangler">Pengene kommer i kassa med en gang (investorene betaler ${Math.round((1 - R.notering.rabatt) * 100)} % av kursen). Dere beholder over 50 %.</p>` : `<p class="fi-mangler">Krever ${esc(k0.mangler.join(' og '))}.</p>`); }
-    else if (!m.oppkjøpt) { const u = m.uke || { forventet: 0, betalt: 0, frist: nå }, igjen = Math.max(0, u.forventet - u.betalt), d = Math.max(0, Math.ceil((u.frist - nå) / DØGN));
-      h += `<div class="fi-del">Utbytte denne uka</div><div class="fi-linje">Eierne venter <b>${kr(u.forventet)}</b> · betalt ${kr(u.betalt)} · ${d} døgn igjen</div><div class="fi-knapper">${igjen > 0 ? knapp(`Betal utbytte (${kr(igjen)})`, 'bo-utbytte', { kr: igjen }, 'hoved') : '<span class="fi-mangler">Betalt for uka.</span>'}${knapp(`Betal ekstra (${kr(Math.max(100000, u.forventet))})`, 'bo-utbytte', { kr: Math.max(100000, u.forventet) })}</div>`;
+    if (m.uke && !m.oppkjøpt) { const u = m.uke || { forventet: 0, betalt: 0, frist: nå }, igjen = Math.max(0, u.forventet - u.betalt), d = Math.max(0, Math.ceil((u.frist - nå) / DØGN));
+      h += `<div class="fi-del">Utbytte denne uka</div><div class="fi-linje">Eierne venter <b>${kr(u.forventet)}</b> · betalt ${kr(u.betalt)} · ${d} døgn igjen</div><div class="fi-knapper">${igjen > 0 ? knapp(`Betal utbytte (${kr(igjen)})`, 'bo-utbytte', { kr: igjen }, 'hoved') : '<span class="fi-mangler">Betalt for uka.</span>'}${igjen > 0 ? '' : knapp(`Betal ekstra (${kr(Math.max(100000, u.forventet))})`, 'bo-utbytte', { kr: Math.max(100000, u.forventet) })}</div>`;
+    }
+    if (m.notert && !m.oppkjøpt) {
       const ke = Bo.kanEmisjon(B, 10); h += `<div class="fi-del">Emisjon og tilbakekjøp</div><div class="fi-knapper">${[5, 10, 15].map(q => knapp(`Emisjon ${q} % (${mill(q / (1 - q / 100) * K.meg * (1 - R.emisjon.rabatt))})`, 'bo-emisjon', { q }, Bo.kanEmisjon(B, q).ok ? (Bo.kanEmisjon(B, q).under50 ? 'svik' : '') : 'av')).join('')}`
         + `${m.fritt >= 1 ? knapp(`Kjøp tilbake 2 % (${mill(2 * K.meg * (1 + R.tilbakekjøp.påslag))})`, 'bo-tilbake', { n: 2 }) : ''}</div><p class="fi-mangler">Emisjon: nye andeler – mer penger, men dere eier en mindre del.${ke.ok ? '' : ' ' + esc(ke.mangler.join(', '))}</p>`; }
     h += '</div>';
@@ -277,7 +280,7 @@
     if (!inv.length) h += `<p class="rolig">${nv >= R.nivå.investor ? 'Ingen har ringt ennå. Investorene hører om dere når dere leverer.' : `Investorene ringer når selskapet er på nivå ${R.nivå.investor} «Etablert».`}</p>`;
     for (const { q, s } of inv) {
       h += `<div class="fi-boks"><h4>${esc(q.navn)}<small>${esc(q.hvem)}${s.status === 'eier' ? ` · eier ${pst(B.meg.inv[q.id] || 0)}` : s.status === 'långiver' ? ' · långiver' : s.status === 'nei' ? ' · sa nei' : s.status === 'solgt' ? ' · solgte seg ut' : ''}</small></h4>`;
-      if (s.status === 'tilbud') h += `<div class="fi-linje">${esc(q.tekst)}${s.kr ? ` – <b>${mill(s.kr)} for ${s.andel} %</b>` : ''}${s.lån ? ` – <b>${mill(s.lån.kr)}</b>, ${pst(s.lån.rente * 100)} i uka i ${s.lån.uker} uker` : ''}.</div><div class="fi-knapper">${knapp('Si ja', 'bo-inv', { id: q.id, ja: 1 }, 'hoved')}${knapp('Si nei', 'bo-inv', { id: q.id })}</div>`;
+      if (s.status === 'tilbud') h += `<div class="fi-linje">${esc(cap(q.tekst))}${s.kr ? ` – <b>${mill(s.kr)} for ${s.andel} %</b>` : ''}${s.lån ? ` – <b>${mill(s.lån.kr)}</b>, ${pst(s.lån.rente * 100)} i uka i ${s.lån.uker} uker` : ''}.</div><div class="fi-knapper">${knapp('Si ja', 'bo-inv', { id: q.id, ja: 1 }, 'hoved')}${knapp('Si nei', 'bo-inv', { id: q.id })}</div>`;
       else if (s.status !== 'nei') h += `<div class="fi-linje">Fornøyd: <b>${Math.round(s.tilfreds)}</b> av 100</div><div class="fi-maal"><i style="width:${Math.round(s.tilfreds)}%"></i></div>`;
       for (const ø of B.ønsker.filter(x => x.inv === q.id && x.status === 'aktiv')) h += `<div class="fi-ringer">${ø.krav ? 'Krav' : 'Ønske'}: ${esc(Bo.ønskeTekst(ø, { kr: B.meg.uke ? B.meg.uke.forventet : 0 }))} · ${Math.max(0, Math.ceil((ø.frist - nå) / DØGN))} døgn igjen</div>` + (ø.krav ? `<div class="fi-knapper">${knapp('Si nei til kravet (koster kurs)', 'bo-krav', { id: ø.id }, 'svik')}</div>` : '');
       h += '</div>';

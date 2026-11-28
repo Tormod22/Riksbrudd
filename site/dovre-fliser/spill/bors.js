@@ -228,7 +228,7 @@
   // ukas utbytte: det eierne utenfor venter (kr) og fristen
   function forventetUtbytte(B, kursKr) { return avrund(børsverdi(kursKr) * ute(B) / 100 * REGLER.utbytte.forventet); }
   function nyUke(B, nå, kursKr) { return { fra: Math.round(tall(nå)), frist: Math.round(tall(nå)) + UKE * DØGN, forventet: forventetUtbytte(B, kursKr), betalt: 0 }; }
-  function betalUtbytte(B, kr) { const u = B.meg.uke; if (!B.meg.notert || !u) return { ok: false, grunn: 'Selskapet er ikke notert.' }; if (!(kr > 0)) return { ok: false, grunn: 'Ingen sum.' }; u.betalt += Math.round(kr); return { ok: true, kr: Math.round(kr) }; }
+  function betalUtbytte(B, kr) { const u = B.meg.uke; if (!u) return { ok: false, grunn: 'Dere har ingen eiere utenfra ennå.' }; if (!(kr > 0)) return { ok: false, grunn: 'Ingen sum.' }; u.betalt += Math.round(kr); return { ok: true, kr: Math.round(kr) }; }
   // emisjon: q % nye andeler (av det nye totalen) – alle eiere eier en mindre del. Gir { ok, kr }
   function kanEmisjon(B, q) {
     const R = REGLER.emisjon, m = [];
@@ -293,7 +293,9 @@
     if (!ja) { h.status = 'nei'; return { ok: true, kr: 0 }; }
     let kr = 0;
     if (h.andel) { if (B.meg.egne - h.andel <= 50) return { ok: false, grunn: 'Dere må beholde over 50 %.' };
-      B.meg.egne = en(B.meg.egne - h.andel); B.meg.inv[id] = en(tall(B.meg.inv[id]) + h.andel); kr = h.kr; h.status = 'eier'; }
+      B.meg.egne = en(B.meg.egne - h.andel); B.meg.inv[id] = en(tall(B.meg.inv[id]) + h.andel); kr = h.kr; h.status = 'eier';
+      // eierne utenfra venter utbytte hver uke – også før selskapet er notert
+      if (!B.meg.uke) B.meg.uke = nyUke(B, nå, h.kr / h.andel); }
     if (h.lån) { B.meg.lån.push({ id: 'l' + (++B.nr), inv: id, kr: h.lån.kr, rente: h.lån.rente, uker: h.lån.uker, neste: Math.round(nå) + UKE * DØGN, igjen: h.lån.uker }); kr += h.lån.kr; h.status = h.andel ? 'eier' : 'långiver'; }
     const ø = nyttØnske(B, id, q.ønske, nå, rand); return { ok: true, kr, ønske: ø };
   }
@@ -352,7 +354,9 @@
         m.fritt = en(m.fritt - n); m.rival[s] = en(m.rival[s] + n); ut.push({ type: 'rivalKjøpMeg', side: s, n });
       }
       for (const s of ['rød', 'grønn']) if (m.rival[s] > 50 && !m.oppkjøpt) { m.oppkjøpt = s; ut.push({ type: 'oppkjøp', side: s, andel: m.rival[s] }); }
-      // uka: utbytte betalt eller ikke
+    }
+    if (!m.oppkjøpt) {
+      // uka: utbytte betalt eller ikke (eiere utenfra: notert eller investorer)
       if (m.uke && nå >= m.uke.frist) {
         const u = m.uke, ok = u.betalt >= u.forventet, del = u.forventet > 0 ? Math.min(1, u.betalt / u.forventet) : 1;
         const d = ok ? R.stemning.utbytteBetalt : R.stemning.utbytteUte * (1 - del); endreStemning(m, d);

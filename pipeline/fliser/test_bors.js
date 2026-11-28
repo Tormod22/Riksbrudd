@@ -101,6 +101,7 @@ let h = B.henvendelse(S, 3, D, 1e6, () => 0);
 sjekk(h && h.inv.id === 'rederi' && h.h.andel === 10 && h.h.kr === 10e6, 'rederi-eieren vil ha 10 %');
 let sv2 = B.svarInvestor(S, 'rederi', true, D, () => 0);
 sjekk(sv2.ok && sv2.kr === 10e6 && S.meg.egne === 90 && S.meg.inv.rederi === 10 && B.sjekkSum(S) && sv2.ønske && sv2.ønske.type === 'avkastning', 'ja: penger inn, andelen ut, et ønske');
+sjekk(S.meg.uke && S.meg.uke.forventet === 150000 && B.betalUtbytte(S, 150000).ok, 'en investor med andel venter utbytte også før notering');
 h = B.henvendelse(S, 3, 2 * D, 1e6, () => 0);
 sjekk(h && h.inv.id === 'vakt' && h.h.lån && h.h.lån.kr === 12e6, 'sikkerhetsfirmaet tilbyr et lån');
 sv2 = B.svarInvestor(S, 'vakt', true, 2 * D, () => 0);
