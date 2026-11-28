@@ -86,7 +86,11 @@
     // ===== TØMMER OG SAGBRUK =====
     // tømmerstabel: stokker i lag med bark og lyse endeflater, kryssbjelker under
     tømmerstabel: (m, k, b, d, h) => { for (const y of [-d * .7, d * .7]) k(-b, b, y - .1, y + .1, 0, .14, C.tømmer, 'tre');
-      for (let z = .14, j = 0; z < h - .1; z += .34, j++) for (let y = -d + .2 + (j % 2) * .17; y < d - .1; y += .38) { const r = .16 + rf(m, j * 7 + y) * .03; LX(k, -b + rf(m, y + j) * .3, b - rf(m, j + 2 * y) * .3, y, z + r, r, j % 2 ? C.bark : C.tømmer, 'tre'); } },
+      for (let z = .14, j = 0; z < h - .1; z += .36, j++) for (let y = -d + .22 + (j % 2) * .2; y < d - .1; y += .46) { const r = .16 + rf(m, j * 7 + y) * .03, x0 = -b + rf(m, y + j) * .3, x1 = b - rf(m, j + 2 * y) * .3;
+        // stokken som kryss av to kasser (billigere enn LX – stabelen har mange)
+        const f = j % 2 ? C.bark : C.tømmer; k(x0, x1, y - r, y + r, z + r * .45, z + r * 1.55, f, 'tre'); k(x0, x1, y - r * .55, y + r * .55, z, z + r * 2, f, 'tre');
+        // lyse endeflater (sagsnittet) i begge ender
+        for (const x of [x0 - .015, x1]) k(x, x + .015, y - r * .8, y + r * .8, z + r * .2, z + r * 1.8, [.8, .66, .46], 'tre'); } },
     // tømmerbord: stålramme på bein, tre kjeder på tvers som drar stokkene fram, to stokker på
     tømmerbord: (m, k, b, d, h) => { k(-b, b, -d, -d + .2, h - .25, h - .05, C.gul); k(-b, b, d - .2, d, h - .25, h - .05, C.gul); bein(k, -b, b, -d, d, h - .25, C.gul, .14);
       for (const x of [-b * .7, 0, b * .7]) { k(x - .14, x + .14, -d, d, h - .2, h, C.grå); k(x - .1, x + .1, -d, d, h, h + .04, C.mørk); for (let y = -d + .2; y < d; y += .5) k(x - .12, x + .12, y, y + .06, h + .04, h + .1, C.mørk); }
@@ -188,9 +192,9 @@
       for (let i = 0; i < 4; i++) { const z0 = h - .1 - i * .3, x0 = -b + i * (2 * b / 4), x1 = x0 + 2 * b / 4; k(x0, x1, -d, d, z0 - .9 * (i / 4) - .5, z0 - .9 * (i / 4) - .3, C.oransje);
         k(x0, x1, -d + .1, d - .1, z0 - .9 * (i / 4) - .55, z0 - .9 * (i / 4) - .5, C.pukk); }
       for (const s of [-1, 1]) k(-b, b, s * d - .04, s * d + .04, h - 1.3, h - .25, C.oransje); motor(k, -.3, .4, d + .1, h - .8, .2, C.blå); },
-    grushaug: (m, k, b, d, h) => { const r = Math.min(b, d) * .5; for (let q = 0; q < 5; q++) { const s = 1 - q * .19; S(k, rf(m, q) * .2, rf(m, q + 3) * .2, r * s, h * q / 5, h * (q + 1) / 5, q % 2 ? C.pukk : C.stein, 'betong'); } },
-    pukkhaug: (m, k, b, d, h) => { const r = Math.min(b, d) * .5; for (let q = 0; q < 6; q++) { const s = 1 - q * .16; S(k, 0, 0, r * s, h * q / 6, h * (q + 1) / 6, q % 2 ? C.pukk : [.46, .45, .43], 'betong'); }
-      k(-r * .15, r * .15, -r * .15, r * .15, h, h + .08, C.pukk); },
+    // hauger: mange lave lag som smalner jevnt (ser ut som en kjegle), litt skjevt og i to toner
+    grushaug: (m, k, b, d, h) => { const r = Math.min(b, d) * .5, N = 9; for (let q = 0; q < N; q++) { const s = Math.pow(1 - q / N, 1.15) * .98 + .02; S(k, (rf(m, q) - .5) * .25 * q / N, (rf(m, q + 3) - .5) * .25 * q / N, r * s, h * q / N, h * (q + 1) / N, q % 3 ? C.stein : [.52, .5, .46], 'betong'); } },
+    pukkhaug: (m, k, b, d, h) => { const r = Math.min(b, d) * .5, N = 10; for (let q = 0; q < N; q++) { const s = Math.pow(1 - q / N, 1.1) * .97 + .03; S(k, 0, (q / N) * .3, r * s, h * q / N, h * (q + 1) / N, q % 3 ? C.pukk : [.44, .44, .42], 'betong'); } },
     hjullaster: (m, k, b, d, h) => { k(-b * .7, b * .7, -d * .35, d * .55, .6, 1.5, C.gul); k(-b * .75, b * .75, d * .35, d * .55, .6, 1.7, C.gul); k(-b * .6, b * .6, -d * .1, d * .3, 1.5, h - .1, C.gul);
       for (const [x0, x1] of [[-b * .6, -b * .5], [b * .5, b * .6]]) for (const [y0, y1] of [[-d * .1, -d * .08], [d * .28, d * .3]]) k(x0, x1, y0, y1, 1.5, h - .1, C.mørk);
       k(-b * .6, b * .6, -d * .1, d * .3, h - .1, h, C.gul); k(-b * .55, b * .55, -d * .08, d * .28, 1.7, h - .2, C.glass);
