@@ -80,7 +80,7 @@
     if (sk && P.bæres.has(p.id)) { const b = P.bær.get(P.bæres.get(p.id));
       if (b && b.fase === 'bær' && P.syk) return { ...P.syk, k: 'båret:' + p.id, gjør: 'bæres til sykestua' };
       return { k: 'ligger:' + p.id, x: sk.x, y: sk.y, navn: 'der hen ble skadet', gjør: 'ligger skadet – venter på hjelp' }; }
-    if (sk && P.syk) return { ...P.syk, gjør: sk.båret ? 'ligger på sykestua – skadet' : 'går til sykestua – skadet' };
+    if (sk && P.syk) return { ...P.syk, gjør: sk.båret ? 'ligger på sykestua' : 'går til sykestua – skadet' };
     // bæreren
     const b = P.bær.get(p.id);
     if (b) { const q = Fo() && Fo().personer.find(x => x.id === b.skadet), n = q ? fornavn(q) : 'den skadde', s0 = S.skadet[b.skadet];
@@ -114,7 +114,7 @@
     if (!aktiv()) { if (P.alarm || P.slukk.size || P.bær.size || P.rydd.size || P.samling) nullPlan(); return; }
     les(); const F = Fo(), L = Lr(), m = midte(); if (!F || !L || !m) return;
     const nu = performance.now(), dtMin = Math.max(0, dtSek / 60), t = nåTid();
-    if (nu - sistEgen > 3000) { sistEgen = nu; const n = OP.giEgenskaper(F); if (n && window.LeirSpill) LeirSpill.lagre(); }
+    if (F.personer.some(p => !Array.isArray(p.egen))) { const n = OP.giEgenskaper(F); if (n && window.LeirSpill && nu - sistEgen > 3000) { sistEgen = nu; LeirSpill.lagre(); } }
     P.syk = sykestue(L, 'går til sykestua');
     P.samling = samling(L);
     // 1 ALARM
