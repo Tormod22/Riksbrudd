@@ -105,6 +105,11 @@ kontraktVare; samarbeidet løfter ikke de dårligste kjøringene.
 - Nettleser, Dovre-testsiden, PC 1400 × 860 og mobil 390 × 844: fanen Partnere (rivalene med valg for våpenhvile/allianse, teknologien, firmaene med
   økonomi, holdningsmåler, behov, «har sammen», knapper og hva som mangler), våpenhvile via knappen (betalt, ring i kartet «Våpenhvile med Ravnsund
   · 7 døgn»), fast kunde via knappen. Ingen sidefeil (bare de kjente 404 for kartlageret på testsiden). Bilder sett.
+- I det kjørende spillet (AI på, 60×): et rødt lag 2,5 km fra leiren som kjente leiren, valgte «rykker mot leiren din» uten pakt og «holder
+  stillingen» med våpenhvile innen 10 km. Automatikken (FirmaSpill.test = true): Storlia ringte (`riksbrudd-telefon`), fast kunde ga et tilbud,
+  et tilbud som gikk ut ga «1 ubesvart», og et tatt tilbud ble telt som tatt; kortet står i Kontrakter som en vanlig levering.
+- Andre vakter i samme side: ut3-varekontrakt, ut2-byer, ut2-sagbruk, ut2-seier, selskap, kontrakter, kontrakt-r1/r3, krig – ok. **ut1-selskap feiler
+  («Byer viser ingenting») – også på utgangspunktet 7a5f92c uten mine endringer**, altså ikke fra denne pakka.
 - Vakta `pipeline/fliser/vakter/ut4-firmaer.js` (ca. 0,1 s): ok på PC og mobil; satt alt tilbake (pakter 0, holdning 35, 0 tilbud, samme lag og
   kasse). Med feil lagt inn med vilje (en levering ga +0 holdning) sa den «holdningen steg ikke ved levering (35 -> 35)».
 
