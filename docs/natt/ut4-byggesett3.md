@@ -16,6 +16,8 @@
   bjelke.» Søyler settes i hjørnene i rutenettet, to trykk = en søylerad (hver 4,8 m). Bjelker legges som en rad og må hvile på vegg/søyle i begge ender.
 - **Maler** (Hus): Hytte 4,8 × 4,8, Brakke 6 × 9,6, Betongbu 7,2 × 7,2 (betongtak), **Hall 19,2 × 28,8** (blikk, port 4,8 m, søylerad i midten –
   uten den raser blikktaket). «Lagre et bygg som mal» + to trykk rundt et bygg = egen mal (localStorage `riksbrudd-bsmaler`, høyst 12, felles for leirene).
+- **Riv**: river du noe som bærer (en søyle midt i et rom, en vegg), sier byggesettet fra («Uten denne delen raser dekket eller taket over
+  (ca. 12 m²) – rives sammen med det.»), og det som raser, tas ned sammen med det du river (`BS.rasVedRiving`, Bygning.ras før og etter).
 - **Plan**: plantegningen av egne bygg (Bygning.fraByggesett → Plantegning.figur), med etasjeknapper (1.–4. etasje, Loft). Kartet går til byggene.
 - En hall med bare port er et **lager** fra start (rommet kan byttes som før i Leir-menyen); andre lukkede rom er soverom som før.
 
@@ -31,10 +33,11 @@ avvises: «Her står det en større vegg (2,4 m) – riv den først». Nye deler
   `GAMLE`, `NYE`, `STOFF`, `typeFor(grunn, s)`, `størrelse`, `ruter`, `kanter`, `biter`, `punkter`, `norm`, `midt`, `kantEnder`, `kantVed(o,x,y,akse,s)`,
   `hjørneVed`, `rad(o, type, A, B, { r, avstand })`, `indeks`, `støttet`, `plassering`, `forslag`, `spenn(alle, nyeIder)`, `HUS` (malene), `lagHus`,
   `husDeler`/`husForslag(deler, mal|navn, i, j, rot)`, `dreiDel`, `tilMal`, `malGyldig`, `rom`, `ROMBRUK`, **`ROMTYPER`/`romType(rom, ting)`**,
-  `romSum`, `høyder`, `fraBygg`, `fraLeir`, `plassFor`, `kat`, `KANT`, `RUTE`.
+  `romSum`, `høyder`, `fraBygg`, `fraLeir`, `plassFor`, `rasVedRiving`, `kat`, `KANT`, `RUTE`.
+  Spennsjekken tar bare med delene nær de nye (halve stålspennet + 2 ruter): 928 deler (fire haller + seks brakker) – 335 ms → 7–9 ms per forslag.
 - `site/dovre-fliser/spill/byggesett-visning.js` – visningen (verktøylinja, 2D, plantegning, 3D, egne maler). `window.Byggesett` har i tillegg
   `planModell`, `egneMaler`, `lagreMal`, `typeNå`.
-- `pipeline/fliser/test_byggesett.js` – skrevet om (45 sjekker).
+- `pipeline/fliser/test_byggesett.js` – skrevet om (50 sjekker).
 - `pipeline/fliser/vakter/ut4-byggesett3.js` – vakta (ca. 0,7 s).
 - `docs/natt/ut4-byggesett3-hjelp.json` – hjelpetekst (seks emner, gruppe «Leiren»).
 
@@ -71,8 +74,9 @@ Søyle tre 3 000 / betong 6 000 / stål 5 000; bjelke tre 4 000 / stål 6 000 pe
 (115 m³ betong – lageret må være stort nok, ellers sier kjøpet «Lageret er fullt»).
 
 ## Prøvd
-- Node: test_byggesett (45 ok), test_bygning (RASK), test_vei (RASK), test_folkgang, test_plantegning, test_leir, test_kommando, test_folk,
+- Node: test_byggesett (50 ok), test_bygning (RASK), test_vei (RASK), test_folkgang, test_plantegning, test_leir, test_kommando, test_folk,
   test_byggevisning, test_husendring – 0 feil.
+- Egen mal i nettleseren (telefon): hytte bygget → «Lagre et bygg som mal» + to trykk → «Eget bygg 1» (48 deler) valgt → lagt ut et annet sted uten feil.
 - Nettleser (Dovre-testsiden, PC 1400 × 860 og mobil 390 × 844): vakta ut4 ok på begge (0,7–0,8 s); med vilje lagt inn feil (tre-spenn 20 m) → vakta
   feiler («for bredt tretak ble ikke avvist»). Vaktene ut2-vei (etter regex-rettingen), ut3-folkgar, ut2-hus2d, ut3-riving ok i samme økt.
   Bilder: hall + brakke i 2D, plantegningen, verktøylinja på telefon (fanene på to linjer), 3D av hall, betonghus i to etasjer, trerom med søylerad.
@@ -80,7 +84,6 @@ Søyle tre 3 000 / betong 6 000 / stål 5 000; bjelke tre 4 000 / stål 6 000 pe
 ## Ikke gjort
 - Søyler/bjelker vises bare som enkle bokser; trappa i 3D har ikke hull i dekket over (dekket mangler bare der – det ser ut som et hull).
 - Loftet er bare i modellen (plantegningen viser «Loft» når bygget er minst 7,6 m bredt med saltak); det er ingen trapp/stige opp til loftet.
-- Riving sjekker ikke spennet (river du en søyle under et tak, raser ingenting – Bygning.ras brukes bare når noe nytt legges).
 - Ingen maskiner (B5): `ROMTYPER` er kroken – `ByggesettRegler.ROMTYPER.unshift({ id: 'fabrikk', navn: 'Fabrikk', passer: (r, t) => t.maskin > 0 })`
   og `romType(rom, { seng, maskin })`.
 - `leir.js` tilMal/fraMal er ikke endret: de tar fortsatt ikke med byggesettdeler; egne byggesett-maler ligger i `riksbrudd-bsmaler`.
