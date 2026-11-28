@@ -136,7 +136,10 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
 
   // ---------- kontraktene: panelet fra selskap-visning.js lånes inn i fanen ----------
   let lånt = false;
-  function lånInn() { const sel = $('selskap'); if (!sel || !window.SelskapSpill) return false; if (sel.parentNode !== innleid) innleid.appendChild(sel); lånt = true; if (!sel.classList.contains('på')) SelskapSpill.vis(true); return true; }
+  function lånInn() { const sel = $('selskap'); if (!sel || !window.SelskapSpill) return false; if (sel.parentNode !== innleid) innleid.appendChild(sel); lånt = true; if (!sel.classList.contains('på')) SelskapSpill.vis(true);
+    // den første kontrakten venter på «Ta»: knappen rulles fram (den står under rykte og pris)
+    try { const l = SelskapSpill.lapp ? SelskapSpill.lapp() : null, t = l && l.steg === 'ta' && l.k ? sel.querySelector(`[data-s="ta"][data-id="${l.k.id}"]`) : null; if (t) { const r = t.getBoundingClientRect(), q = sel.getBoundingClientRect(); sel.scrollTop += r.top - q.top - q.height / 3; } } catch (e) { /* */ }
+    return true; }
   function giTilbake(lukkOgså) { const sel = $('selskap'); if (!lånt) return; lånt = false; if (sel && sel.parentNode === innleid) document.body.appendChild(sel); if (lukkOgså !== false && sel && sel.classList.contains('på') && window.SelskapSpill) SelskapSpill.vis(false); }
 
   function tegn(tving) {
