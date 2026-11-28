@@ -31,3 +31,12 @@ Gren `claude/ut7-fikse` (fra `claude/nattfiks`). Tre feil fra kjøringen før re
 ## Annet
 - ut5-bors og ut5-oppforsel (F4): grønne på PC (kn.js).
 - Fellesfiler endret: `site/dovre-fliser/index.html` bare versjonsmerkene (versjon.py) for interior.js, etasjer3d.js og ytelse.js.
+
+## Siste kjøring (SJEKK_PROFIL=PC, 28. nov ca. 07:30, 1209 s): 2 feil
+Rettet og grønne nå: «måling av ytelse» (halv oppløsning 420 av 840), «interiør» (du går inn, står på gulvet), «terreng» (hallen
+avvist i lia), ut5-bors og F4. Igjen (nye siden snap-ut6, ikke rettet – tiden rakk ikke):
+- «spill i 2D» (vakter/spill2d.js): `{"mangler":true,"hva":"karakter"}` – ingen levende karakter (ENHETER med e.karakter) når vakta går.
+- «etasjer (2D og 3D)» (vakter/ut3-etasjer.js): «ingen karakter i kartet» (Spill2D.karakter() er null) – samme årsak.
+- Begge går grønt når vaktene lokke-r1 … regnskap, spill2d kjøres alene etter en ny start (karakteren lever hele veien), og karakteren
+  lever etter interiørsjekken (prøvd). Karakteren forsvinner altså et sted i 3D-delen av sjekk.js eller i en vakt a–l. Neste steg: skriv
+  ut `ENHETER.find(e => e.karakter)` etter hver vakt i kjørVakter (eller kn2.js i scratchpad natt/ut7-fikse med vaktene a–l).
