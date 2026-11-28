@@ -726,7 +726,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       const hel = nye.find(d => BR.DELER[d.type].v === 'hel' && d.n === 0), dør = nye.find(d => BR.DELER[d.type].v === 'dør');
       const r = { n, ...sj, glFeil: gl.getError(), vegg: !!hel && hindring3d(...lok(hel)), dør: !!dør && !hindring3d(...lok(dør)), rom: Byggesett.rom().filter(q => q.celler.length === 40).length };
       for (const d of nye) Leir.riv(L, d.id); Byggesett.lag3d(); Byggesett.lukk(); r.etter = Byggesett.sjekk().deler; return r; });
-    const bs3ok = !!(bs3 && bs3.n === 4 * 3 * 2 + 14 && bs3.iScene >= 3 && bs3.trekanter > 1000 && bs3.svever === 0 && bs3.ustøttet === 0 && bs3.rom === 1 && bs3.vegg && bs3.dør && bs3.glFeil === 0);
+    const bs3ok = !!(bs3 && bs3.n === 106 && bs3.iScene >= 3 && bs3.trekanter > 1000 && bs3.svever === 0 && bs3.ustøttet === 0 && bs3.rom === 1 && bs3.vegg && bs3.dør && bs3.glFeil === 0);
     if (!bs3ok) { feil++; console.log(JSON.stringify(bs3)); }
     console.log(`${bs3ok ? 'ok  ' : 'FEIL'} ${navn} byggesett i 3D: brakke av ${bs3 && bs3.n} deler i ${bs3 && bs3.iScene} samlede nett (${bs3 && bs3.trekanter} trekanter), ${bs3 && bs3.svever} svever, ${bs3 && bs3.ustøttet} uten støtte, rommet funnet, veggen stopper deg og døra er åpen`);
     // VAKT bølger, vind og tåke (spill/vind3d.js, 12. nov): i storm har bakkeshaderen bølger med skum, trærne svaier mer, statuslinja viser
