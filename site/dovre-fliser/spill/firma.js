@@ -165,11 +165,24 @@
     return { f, endring: d, levert: k.status === 'levert' };
   }
 
+  // ---------- (ut5-bors, Ø7) eierskap fra Gråbørsen (spill/bors.js) ----------
+  // api.rabatt = navn => faktor (0,95 når dere eier minst 10 % av firmaet); uten den er alle prisene som før
+  function rabatt(navn) { const fn = api.rabatt; if (typeof fn !== 'function') return 1; let v = 1; try { v = tall(fn(navn), 1); } catch (e) { v = 1; } return klem(v, .5, 1); }
+  // en ny eier med over halvparten: 'blå' (dere), 'rød'/'grønn' (en rival – samarbeidet med dere tar slutt) eller null. Gir hva som ble avsluttet
+  function eierSkifte(F, f, side) {
+    if (!f) return null; const før = f.eier || null; f.eier = side || null; const slutt = [];
+    if (side && side !== 'blå' && RIVALER[side]) { if (f.fast) { f.fast = null; slutt.push('fast'); } if (f.vern) { f.vern = null; slutt.push('vern'); }
+      if (f.felles && !f.felles.rival) { f.felles.rival = side; slutt.push('felles'); } }
+    return { før, nå: f.eier, slutt };
+  }
+
   // ---------- samarbeid ----------
   const anleggFor = f => (f ? REGLER.ANLEGG[f.bransje] || null : null);
   function kanSamarbeid(F, f, type) {
     const m = [], S = REGLER.samarbeid[type]; if (!f || !S) return { ok: false, mangler: ['ukjent samarbeid'] };
     if (f.konkurs) return { ok: false, mangler: [`${f.navn} er konkurs`] };
+    // (ut5-bors, Ø7) kjøpt opp av en rival på Gråbørsen: ikke noe samarbeid med dere
+    if (f.eier && f.eier !== 'blå' && RIVALER[f.eier]) return { ok: false, mangler: [`${f.navn} er kjøpt opp av ${RIVALER[f.eier]}`], eid: true };
     if (f[type]) return { ok: false, mangler: ['dere har det alt'], har: true };
     if (type === 'felles' && !anleggFor(f)) return { ok: false, mangler: [`${f.navn} har ikke noe anlegg å eie sammen`], ingen: true };
     if (f.holdning < S.holdning) m.push(`holdning ${S.holdning} (nå ${Math.round(f.holdning)})`);
@@ -179,7 +192,7 @@
   }
   // hva samarbeidet koster/gir, som tall: felles = det dere betaler, vern = betaling per døgn
   function vilkår(f, type) {
-    if (type === 'felles') { const A = anleggFor(f); if (!A) return null; const S = REGLER.samarbeid.felles; return { anlegg: A.navn, pris: avrund(A.pris * S.andel), overskudd: avrund(A.overskudd * S.andel, 1000) }; }
+    if (type === 'felles') { const A = anleggFor(f); if (!A) return null; const S = REGLER.samarbeid.felles; return { anlegg: A.navn, pris: avrund(A.pris * S.andel * rabatt(f.navn)), overskudd: avrund(A.overskudd * S.andel, 1000) }; }
     if (type === 'vern') { const S = REGLER.samarbeid.vern; return { kr: S.kr, mann: S.mann, radius: S.radius, døgn: S.døgn }; }
     if (type === 'fast') { const S = REGLER.samarbeid.fast; return { faktor: S.faktor, ubesvart: S.ubesvart }; }
     return null;
@@ -242,7 +255,7 @@
     if (!t.låstOpp) return { ok: false, grunn: 'Ikke låst opp ennå: ' + t.mangler.join(' og ') + '.' };
     if (t.bare) return { ok: false, grunn: 'Kan ikke bygges ennå.' }; if (t.iBruk) return { ok: false, grunn: 'Er alt i bruk.' };
     if (t.manglerBruk.length) return { ok: false, grunn: 'Dere trenger ' + t.manglerBruk.join(' og ') + '.' };
-    F.tekno[id].iBruk = true; return { ok: true, pris: t.pris };
+    F.tekno[id].iBruk = true; return { ok: true, pris: avrund(t.pris * rabatt(t.firma), 1000) };
   }
 
   // ---------- pakter med rivalene ----------
@@ -333,7 +346,7 @@
         if (!f.felles.rival && (ø === 'konkurstruet' ? r() < S.salg : ø === 'presset' ? r() < S.salg / 2 : false)) { f.felles.rival = r() < .5 ? 'rød' : 'grønn'; ut.push({ type: 'solgt', f, til: f.felles.rival }); }
         const kr = A ? avrund(A.overskudd * S.andel * (S.økonomi[ø] || 0) * (f.felles.rival ? S.rivalFaktor : 1), 1000) : 0; f.felles.tjent += kr; if (kr > 0) ut.push({ type: 'felles', f, kr }); }
       // de ringer og tilbyr samarbeid når kravene holder (én gang per type)
-      for (const type of ['fast', 'vern', 'felles']) { if (f.tilbudt[type]) continue; const kv = kanSamarbeid(F, f, type); if (kv.ok) { f.tilbudt[type] = Math.round(nå); ut.push({ type: 'samarbeidTilbud', f, samarbeid: type }); break; } }
+      for (const type of ['fast', 'vern', 'felles']) { if (f.tilbudt[type] || (f.eier && f.eier !== 'blå')) continue; const kv = kanSamarbeid(F, f, type); if (kv.ok) { f.tilbudt[type] = Math.round(nå); ut.push({ type: 'samarbeidTilbud', f, samarbeid: type }); break; } }
     }
     // nye firmaer i byer dere har avtale med
     const N = REGLER.nye;
@@ -370,7 +383,7 @@
     try { if (!d || typeof d !== 'object' || d.versjon !== 1 || !Array.isArray(d.firmaer)) return null;
       const F = ny(d.leir); F.firmaer = [];
       for (const q of d.firmaer) { if (!q || !q.navn) continue; const f = nyttFirma(String(q.navn), { ny: !!q.ny });
-        for (const k of ['bransje', 'hjem', 'konkurs', 'fast', 'felles', 'vern']) if (q[k] !== undefined) f[k] = q[k];
+        for (const k of ['bransje', 'hjem', 'konkurs', 'fast', 'felles', 'vern', 'eier']) if (q[k] !== undefined) f[k] = q[k];
         for (const k of ['helse', 'holdning', 'levert', 'brutt', 'handel', 'handelDøgn', 'vernDøgn', 'fra']) f[k] = tall(q[k], f[k]);
         if (Array.isArray(q.behov)) f.behov = q.behov.map(String); if (q.tilbudt && typeof q.tilbudt === 'object') f.tilbudt = { ...q.tilbudt };
         f.helse = klem(f.helse, 0, 100); f.holdning = klem(f.holdning, 0, 100); F.firmaer.push(f); }
@@ -386,7 +399,7 @@
     } catch (e) { return null; }
   }
 
-  const api = { REGLER, RIVALER, KJENTE, NYE, BRANSJER, ØKONOMIORD, SAMARBEID, hash, lagRand, kroner, ny, nyttFirma, finn, aktive, reserveHjem, hjemsted, sikreHjem, økonomi, økonomiTekst,
+  const api = { rabatt: null, eierSkifte, REGLER, RIVALER, KJENTE, NYE, BRANSJER, ØKONOMIORD, SAMARBEID, hash, lagRand, kroner, ny, nyttFirma, finn, aktive, reserveHjem, hjemsted, sikreHjem, økonomi, økonomiTekst,
     endreHoldning, holdningOrd, registrerKontrakt, anleggFor, kanSamarbeid, vilkår, inngå, fastTilbud, fastSvar, vernTime, avslutt, svik, tekno, låsOpp, brukTekno,
     annen, gjelder, aktivePakter, paktPris, kanPakt, inngåPakt, brytPakt, iPakt, alliert, paktDøgn, døgn, samarbeidTekst, paktTekst, tilJSON, fraJSON };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
