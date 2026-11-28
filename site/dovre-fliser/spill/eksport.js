@@ -218,7 +218,7 @@
   function tittel(k) { const V = REGLER.VARER[k.vare]; return `${k.kjøper.navn} i ${k.kjøper.by} vil ha ${mengdeTekst(k.vare, k.mengde)} ${V.navn} innen ${k.døgn} døgn`; }
   function krav(k, infl) {
     const V = REGLER.VARER[k.vare], kr = Math.round(k.betaling * nettoKurs(infl));
-    return `${k.kjøper.navn} (${k.kjøper.by}, ${k.kjøper.land}) betaler ${nf(k.prisEk)} eurokreditt per ${V.enhet} – ${ekTekst(k.betaling)} i alt (ca. ${Math.round(kr / 1e5) / 10} mill. kr i dag, og eurokreditten taper seg ikke).`
+    return `${k.kjøper.navn} (${k.kjøper.by}, ${k.kjøper.land}) betaler ${nf(k.prisEk)} eurokreditt per ${V.enhet} – ${ekTekst(k.betaling)} i alt (ca. ${nf(Math.round(kr / 1e5) / 10)} mill. kr i dag, og eurokreditten taper seg ikke).`
       + (k.vei === 'sjø' ? ' Kjør varene til en havn. Når alt ligger på kaia, kommer et fraktskip og henter dem. Store laster trenger en stor havn.'
         : ` Kjør varene til en grensestasjon. Med avtale med ${REGLER.grense.firma} koster hver tur litt; uten avtale er det smugling (tollen kan ta lasten).`);
   }
