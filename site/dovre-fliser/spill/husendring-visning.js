@@ -335,7 +335,7 @@
   }
   if (typeof KROKER !== 'undefined' && KROKER.sett3d) KROKER.sett3d.push((u, R) => { try { hull3d(u, R); } catch (e) { console.warn('husendring i 3D:', e); } });
 
-  window.HusEndring = { eier, sjekk, utfør, beskriv, rad, knapper, rivInfo, husFor, handlingFor, trykkKnapp, send, S, hull3d,
+  window.HusEndring = { eier, sjekk, utfør, beskriv, rad, knapper, rivInfo, husFor, handlingFor, trykkKnapp, send, S, hull3d, føre,
     velg: v => { S.valgt = v; S.varsel = null; varVis(); tegnPå(); },
     sjekk3d: () => ({ hull: HULL ? HULL.count : 0, hauger: HAUG ? HAUG.count : 0 }) };
 })();

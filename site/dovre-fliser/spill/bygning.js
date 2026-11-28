@@ -630,7 +630,7 @@
   //   dekke: gjør 'riv' { id (feltet) } · tak: gjør 'riv' { id } · møbel: gjør 'fjern' | 'ødelegg' · etasje: gjør 'riv' (øverste først)
   // Svar: { ok, feil?, advarsel?, materialer { tre, betong, stål, glass }, timer, ras [{ e, del, id }], tekst }
   const NAVN = { vegg: 'vegg', åpning: 'åpning', dekke: 'dekke', tak: 'tak', møbel: 'møbel', søyle: 'søyle', bjelke: 'bjelke', etasje: 'etasjen' };
-  const GJORT = { riv: 'revet', ny: 'ny', tett: 'tettet', barrikader: 'barrikadert', åpne: 'åpnet', fjern: 'tatt bort', ødelegg: 'ødelagt' };
+  const GJORT = { riv: 'revet', ny: 'ny', tett: 'tettet', barrikader: 'barrikadert', åpne: 'åpnet', fjern: 'tatt bort', ødelegg: 'ødelagt', skad: 'skadet' };
   const etNavn = n => n === -1 ? 'kjeller' : 'etasje ' + n;
   function tekst(endring, hus) { const d = endring || {}; return (hus !== undefined ? 'hus ' + hus + ', ' : '') + (d.del === 'tak' ? 'taket' : etNavn(d.e) + (d.del === 'etasje' ? '' : ', ' + (NAVN[d.del] || d.del) + (d.id !== undefined ? ' ' + d.id : ''))) + ': ' + (GJORT[d.gjør] || d.gjør); }
   const legg = (M, mat, k) => { for (const [n, v] of Object.entries(mat)) M[n] = Math.round(((M[n] || 0) + v * k) * 1000) / 1000; };
@@ -689,23 +689,34 @@
     const T = REGLER.rivTid;
     if (d.del === 'vegg') {
       const w = et.vegger[d.id]; if (!w) return nei('Veggen finnes ikke.'); if (!står(w)) return nei('Veggen står ikke lenger.');
-      if (d.gjør !== 'riv') return nei('Ukjent endring for en vegg.');
+      // (B6, ut5-kampvegger) skudd og granater skader en vegg: hel -> skadet -> ødelagt (ødelagt bærer ikke, så det over kan rase)
+      if (d.gjør === 'skad') { w.tilstand = w.tilstand === 'skadet' ? 'ødelagt' : 'skadet'; svar.timer = 0; }
+      else if (d.gjør !== 'riv') return nei('Ukjent endring for en vegg.');
+      else {
       const A = veggAreal(et, w); legg(svar.materialer, REGLER.riving[w.stoff] || {}, A);
       for (const o of et.åpninger) if (o.vegg === w.id && o.type === 'vindu' && o.tilstand === 'hel') legg(svar.materialer, REGLER.rivingVindu, o.b * o.h);
       svar.timer = r2(A * (T[w.stoff] || .05) * (w.bærende ? 2 : 1));
       if (w.bærende && !et.bjelker.some(b => står(b) && b.vegg === w.id)) svar.advarsel = 'Bærende vegg: uten bjelke kan det over rase.';
       w.tilstand = 'revet'; for (const o of et.åpninger) if (o.vegg === w.id) o.tilstand = 'revet';
+      }
     } else if (d.del === 'åpning') {
       if (d.gjør === 'ny') {
         const w = et.vegger[d.vegg]; if (!w || !står(w)) return nei('Veggen finnes ikke.');
         const L = veggL(w), b = d.b || (d.type === 'port' ? 2.4 : d.type === 'vindu' ? 1.2 : .9), t = d.t === undefined ? L / 2 : d.t, type = d.type || 'dør';
-        if (!/^(dør|vindu|port)$/.test(type)) return nei('Ukjent åpning.');
+        if (!/^(dør|vindu|port|hull)$/.test(type)) return nei('Ukjent åpning.');
+        // (B6) et hull etter en granat eller sprengstoff: ingen bjelke, ingen materialer, og det står åpent (tilstand ødelagt)
+        if (type === 'hull') { const hb = Math.min(b, L - .7), ht = Math.max(.3 + hb / 2, Math.min(L - .3 - hb / 2, t));
+          if (et.åpninger.some(o => o.vegg === w.id && o.tilstand !== 'revet' && Math.abs(o.t - ht) < (o.b + hb) / 2)) return nei('Det er en åpning der allerede.');
+          et.åpninger.push({ id: et.åpninger.length, vegg: w.id, t: r2(ht), b: r2(hb), h: r2(Math.min(d.h || 1.2, et.takhøyde - .1)), ned: r2(d.ned === undefined ? .3 : d.ned), type, stoff: w.stoff, sperre: null, tilstand: 'ødelagt', ny: true });
+          svar.id = et.åpninger.length - 1;
+        } else {
         if (t - b / 2 < .3 || t + b / 2 > L - .3) return nei('For nær hjørnet.');
         if (et.åpninger.some(o => o.vegg === w.id && o.tilstand !== 'revet' && Math.abs(o.t - t) < (o.b + b) / 2 + .2)) return nei('Det er en åpning der allerede.');
         if (w.bærende && !d.bjelke) return nei('Bærende vegg: åpningen krever en bjelke over (bjelke: sant).');
         const h = type === 'vindu' ? 1.2 : type === 'port' ? Math.min(REGLER.portHøyde, et.takhøyde - .2) : REGLER.dørHøyde, ned = type === 'vindu' ? .9 : 0;
         et.åpninger.push({ id: et.åpninger.length, vegg: w.id, t: r2(t), b: r2(b), h, ned, type, stoff: åpStoff(type), sperre: null, tilstand: 'hel', ny: true, ...(d.bjelke ? { bjelke: true } : {}) });
         legg(svar.materialer, REGLER.riving[w.stoff] || {}, b * h); svar.timer = r2(b * h * (T[w.stoff] || .05) * 2 + (d.bjelke ? 1 : 0)); svar.id = et.åpninger.length - 1;
+        }
       } else {
         const o = et.åpninger[d.id]; if (!o || o.tilstand === 'revet') return nei('Åpningen finnes ikke.');
         if (d.gjør === 'tett' || d.gjør === 'barrikader') { o.sperre = d.gjør === 'tett' ? 'tettet' : 'planker'; svar.timer = .3; }
