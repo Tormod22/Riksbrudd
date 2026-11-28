@@ -625,7 +625,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
         { const vg = k2.vg || {}, vgok = /vegen/.test(vg.banner || '') && !vg.feil && vg.bygget && vg.uferdig && vg.ferdig && vg.først; if (!vgok) { feil++; console.log(JSON.stringify(vg)); }
           console.log(`${vgok ? 'ok  ' : 'FEIL'} ${navn} grusveg og delegering: vegen ble lagt med tre punkter, teller som veg først når den er ferdig, og «Bygg dette først» flytter jobben fremst`); }
         const kp = k2.plan || {}, kpok = kp.gap === 2 && kp.linjer > 0 && kp.n && kp.n.join() === [kp.n[0], kp.n[0] + 1, kp.n[0] + 1].join() && kp.gratis && kp.bygget === kp.n[2] && kp.tom && kp.flere === kp.bygget && kp.malBygg > 2 && kp.malOk; if (!kpok) feil++;
-        const bs = k2.bs || {}, bsok = bs.åpen && bs.hytte === 16 && bs.bygget === 16 && bs.jobber === 16 && /vegger/.test(bs.lufttak || '') && bs.rad === 3 && bs.rom === 1 && bs.dør === 1 && bs.senger === 2
+        const bs = k2.bs || {}, bsok = bs.åpen && bs.hytte === 48 && bs.bygget === 48 && bs.jobber === 48 && /vegger/.test(bs.lufttak || '') && bs.rad === 6 && bs.rom === 1 && bs.dør === 1 && bs.senger === 2
           && bs.revet === 1 && bs.tilbake > 0 && bs.passer && bs.lukket; if (!bsok) { feil++; console.log(JSON.stringify(bs)); }
         console.log(`${bsok ? 'ok  ' : 'FEIL'} ${navn} byggesett: åpnes fra Leir-menyen, hytte ${bs.bygget} deler som ${bs.jobber} jobber, tak i lufta avvist, rad med ${bs.rad} vegger, ferdig hytte = ${bs.rom} rom med dør og ${bs.senger} senger, revet vegg ga ${bs.tilbake} kr`);
         console.log(`${kpok ? 'ok  ' : 'FEIL'} ${navn} planlegging: skisser gratis, den andre ${kp.gap} m inntil (${kp.linjer} hjelpelinjer), angre/gjør om ${kp.n && kp.n.join('→')}, mal med ${kp.malBygg} bygg kan settes inn, «Bygg hele planen» bygde ${kp.bygget}`);
@@ -724,7 +724,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
       await new Promise(r => { let k = 0; const f = () => (++k > 3 ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); });
       const sj = Byggesett.sjekk(), nye = Byggesett.deler().filter(d => !før.has(d.id)), o = Byggesett.opphav(), lok = d => { const m = BR.midt(o, d); return [m.x - u.cx, m.y - u.cy]; };
       const hel = nye.find(d => BR.DELER[d.type].v === 'hel' && d.n === 0), dør = nye.find(d => BR.DELER[d.type].v === 'dør');
-      const r = { n, ...sj, glFeil: gl.getError(), vegg: !!hel && hindring3d(...lok(hel)), dør: !!dør && !hindring3d(...lok(dør)), rom: Byggesett.rom().filter(q => q.celler.length === 12).length };
+      const r = { n, ...sj, glFeil: gl.getError(), vegg: !!hel && hindring3d(...lok(hel)), dør: !!dør && !hindring3d(...lok(dør)), rom: Byggesett.rom().filter(q => q.celler.length === 40).length };
       for (const d of nye) Leir.riv(L, d.id); Byggesett.lag3d(); Byggesett.lukk(); r.etter = Byggesett.sjekk().deler; return r; });
     const bs3ok = !!(bs3 && bs3.n === 4 * 3 * 2 + 14 && bs3.iScene >= 3 && bs3.trekanter > 1000 && bs3.svever === 0 && bs3.ustøttet === 0 && bs3.rom === 1 && bs3.vegg && bs3.dør && bs3.glFeil === 0);
     if (!bs3ok) { feil++; console.log(JSON.stringify(bs3)); }
