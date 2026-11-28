@@ -57,6 +57,9 @@
   const tilKart = (b, lx, ly) => { const c = Math.cos(b.ret || 0), s = Math.sin(b.ret || 0); return { x: b.x + lx * c - ly * s, y: b.y + lx * s + ly * c }; };
   // { inn: {x,y}, ut: {x,y} | null, bruks: [{x,y}] }
   function plasser(b) {
+    // (B5) en maskin i byggesettet (sagbenk i en hall …): plassene er rutene rett utenfor fotavtrykket (spill/fabrikk.js – Fabrikk.plasser)
+    const FB = rot.Fabrikk || (typeof require === 'function' ? hent('./fabrikk.js') : null);
+    if (FB && LB && LB.BYGG[b.type] && LB.BYGG[b.type].maskinDel) return FB.plasser(b);
     const B = LB && LB.BYGG[b.type], f = (B && B.fot) || [-3, 3, -3, 3], R = REGLER.plass, M = D(b), n = M ? M.folk : 1;
     const yInn = Math.min(f[2] + R.ende, -R.minY), yUt = Math.max(f[3] - R.ende, R.minY), sp = Math.min(R.spredning, Math.max(0, (f[3] - f[2]) / 2 - 1));
     const bruks = []; for (let i = 0; i < n; i++) bruks.push(tilKart(b, f[1] + R.foran, n === 1 ? 0 : -sp + 2 * sp * i / (n - 1)));
@@ -124,7 +127,7 @@
       // råvaren: den første i oppskriften som finnes ved maskinen eller i lageret (fyrkjelen: flis, ellers ved)
       const valg = Dm.inn.map(r => Object.keys(r)[0]); let v = valg.find(q => (Bf.inn[q] || 0) > .05) || valg.find(q => A.har(q) > .01) || valg[0];
       const rom = PR.REGLER.buffer.inn - (Bf.inn[v] || 0) - underveis(b, 'inn', v), turer = Math.floor(rom / last + 1e-9);
-      if (turer > 0) ut.push({ id: `inn:${b.id}:${v}`, retning: 'inn', bygg: b.id, vare: v, turer, haster: !!(st && !st.går && st.grunn === 'tom'),
+      if (v && turer > 0) ut.push({ id: `inn:${b.id}:${v}`, retning: 'inn', bygg: b.id, vare: v, turer, haster: !!(st && !st.går && st.grunn === 'tom'),
         fyll: (Bf.inn[v] || 0) / PR.REGLER.buffer.inn, tekst: `Bær ${vn(v)} til ${navnB(b)}`, blokk: A.har(v) > .01 ? null : `ingen ${vn(v)} på lageret` });
       for (const [w, m] of Object.entries(Bf.ut)) { const igjen = (m || 0) - underveis(b, 'ut', w), n = Math.floor(igjen / last + 1e-9); if (n <= 0) continue;
         ut.push({ id: `ut:${b.id}:${w}`, retning: 'ut', bygg: b.id, vare: w, turer: n, haster: !!(st && !st.går && st.grunn === 'fullt'), fyll: PR.utSum(Bf) / PR.REGLER.buffer.ut,

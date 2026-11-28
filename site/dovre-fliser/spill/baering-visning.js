@@ -113,6 +113,6 @@
   window.addEventListener('riksbrudd-spill', () => { id = ''; les(); });
   window.BaeringSpill = { på: true, test: false, aktiv, tilstand: () => B, mating: () => B.m, kraftPer: () => B.kraftPer, linjer: () => (aktiv() ? BR.linjer(B, Lr()) : []),
     plasser: b => BR.plasser(b), maskinTekst, bæreTekst, status, lagre, les: () => { id = ''; les(); }, tøm: () => { const A = lager(); return A ? BR.tøm(B, A) : null; },
-    ekstraPlasser: L => (aktiv() && window.Produksjon ? Produksjon.maskinene(L).reduce((s, b) => s + (BR.REGLER.bærere[b.type] || 0), 0) : 0),
+    ekstraPlasser: L => (aktiv() && window.Produksjon ? Produksjon.maskinene(L).reduce((s, b) => s + (BR.REGLER.bærere[Produksjon.base ? Produksjon.base(b.type) : b.type] || 0), 0) : 0),
     nullstill: () => { B = BR.ny(); } };
 })();
