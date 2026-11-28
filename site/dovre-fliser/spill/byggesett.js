@@ -576,7 +576,8 @@
     const S = romSum(rom(fraLeir(L, Leir), L.romBruk)); return (rb ? S.lager : 0) + S.hyller; };
 
   // (ut8-hverdag) delene i fanen «Maskiner» i byggesett-visning.js: maskinene, lampene, så hyllene og skapene
-  const MASKINFANE = ['bs_sagbenk', 'bs_høvel', 'bs_vedkløyver', 'bs_fyrkjele', 'bs_lysrør', 'bs_lyskaster', 'bs_hylle', 'bs_pall', 'bs_pallreol', 'bs_kjøleskap', 'bs_kjølerom', 'bs_frys', 'bs_medisinskap', 'bs_verktøytavle', 'bs_garderobe', 'bs_kiste', 'bs_tønne'];
+  // (ut9-maskiner2) flishogger, filetmaskin, ballepresse og steinknuser står etter fyrkjelen
+  const MASKINFANE = ['bs_sagbenk', 'bs_høvel', 'bs_vedkløyver', 'bs_fyrkjele', 'bs_flishogger', 'bs_filetmaskin', 'bs_ballepresse', 'bs_knuser', 'bs_lysrør', 'bs_lyskaster', 'bs_hylle', 'bs_pall', 'bs_pallreol', 'bs_kjøleskap', 'bs_kjølerom', 'bs_frys', 'bs_medisinskap', 'bs_verktøytavle', 'bs_garderobe', 'bs_kiste', 'bs_tønne'];
   const api = { MASKINFANE, U, G, H, ETASJER, GROV, SOKKEL, DELER, GAMLE, NYE, STOFF, HUS, erDel, registrer, størrelse, typeFor, celle, ruter, kanter, biter, midt, kantEnder, kantVed, hjørneVed, rad,
     nøkkel, indeks, norm, punkter, støttet, plassering, forslag, spenn, rasVedRiving, lagHus, husDeler, husForslag, dreiDel, tilMal, malGyldig, rom, ROMBRUK, ROMTYPER, romType, romSum, høyder, fraBygg, fraLeir, plassFor,
     KANT, RUTE, kat, TING, fotRuter, tingFeil, BETONG, harHyller };
