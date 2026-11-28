@@ -73,8 +73,9 @@
     delete pl.naboer; delete pl.bærbare;
   }
   // ---------- nettene ----------
-  const FARGE = { gulv: [.6, .46, .31], kjellergulv: [.5, .5, .48], loftgulv: [.52, .4, .27], vegg: [.88, .86, .8], skille: [.84, .83, .77], kjellervegg: [.66, .66, .63],
-    himling: [.93, .93, .9], loft: [.56, .43, .3], trapp: [.52, .38, .25], gelender: [.3, .22, .15], sperret: [.42, .3, .18], planke: [.62, .46, .26], stige: [.45, .33, .2] };
+  // (veggene i dempet farge: lyse farger med sola inn gjennom vinduene ble helt hvite på bildene fra ekte hus)
+  const FARGE = { gulv: [.56, .42, .28], kjellergulv: [.46, .46, .44], loftgulv: [.5, .38, .26], vegg: [.66, .64, .59], skille: [.62, .61, .56], kjellervegg: [.52, .52, .5],
+    himling: [.74, .74, .71], loft: [.56, .43, .3], trapp: [.52, .38, .25], gelender: [.3, .22, .15], sperret: [.42, .3, .18], planke: [.62, .46, .26], stige: [.45, .33, .2] };
   function lag() { return { pos: [], kol: [] }; }
   const tri = (g, a, b, c, f) => { g.pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]); for (let k = 0; k < 3; k++) g.kol.push(f[0], f[1], f[2]); };
   const fk = (g, a, b, c, d, f) => { tri(g, a, b, c, f); tri(g, a, c, d, f); };
@@ -173,7 +174,7 @@
   function nett(g) {
     if (!g.pos.length) return null; const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(g.pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(g.kol, 3)); geo.computeVertexNormals();
-    if (!MAT) MAT = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, emissive: 0x201e1b });
+    if (!MAT) MAT = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, emissive: 0x15130f });
     const me = new THREE.Mesh(geo, MAT); me.userData.kilde = 'etasjer3d'; STAT.trekanter += g.pos.length / 9; return me;
   }
   // alle etasjene og trappene i huset du står i, i biter
