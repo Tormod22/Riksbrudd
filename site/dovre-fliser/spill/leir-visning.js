@@ -103,7 +103,9 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   const banner = el('div', { id: 'byggvalg' }); document.body.appendChild(banner);
   const leirKnapp = el('button', { id: 'leirknapp', title: 'Bygg leiren' }, 'Leir'); leirKnapp.hidden = true;
   document.querySelector('.knapper').insertBefore(leirKnapp, document.getElementById('meny'));
-  leirKnapp.onclick = () => { meny = !meny; menyEl.classList.toggle('på', meny); leirKnapp.classList.toggle('på', meny); if (meny) { if (window.lukkPanel) lukkPanel(); visMeny(); } };
+  // (ut6-fiksd) menyen starter alltid øverst når den åpnes – før gjorde bare paneler.js det (hvert 120. ms), og under last kunne den gå glipp
+  // av at menyen var lukket et øyeblikk; da sto rullingen igjen og tallflisene øverst var rullet ut av syne
+  leirKnapp.onclick = () => { meny = !meny; menyEl.classList.toggle('på', meny); leirKnapp.classList.toggle('på', meny); if (meny) { menyEl.scrollTop = 0; if (window.lukkPanel) lukkPanel(); visMeny(); } };
   const st = el('div', {}, el('b', { id: 'sStrom' }, '–'), ' ', el('span', {}, 'strøm')); st.hidden = true; document.querySelector('.stats').appendChild(st);
   const matTekst = mat => Object.entries(mat || {}).filter(([, v]) => v > 0).map(([k, v]) => `${String(v).replace('.', ',')} ${LB.MATERIALER[k].enhet} ${LB.MATERIALER[k].navn.toLowerCase()}`).join(', ');
   // (runde 12) samme regel som kjøpet: det som mangler, rundet opp til 0,1 (Leir.manglerPris) – så banneret, byggemenyen og loggen sier det samme
