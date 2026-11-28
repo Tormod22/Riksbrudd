@@ -75,7 +75,10 @@ module.exports = {
           tempo = tempo0 > 0 ? tempo0 : 1; MS.prøve([{ id: 1, type: 'bs_sagbenk', X: u.cx + R.bane.x + 6, Y: u.cy + R.bane.y - 6, a: 0, n: 0, liv: M.LIV.bs_sagbenk }, { id: 2, type: 'transportbånd', X: u.cx + R.bane.x + 9, Y: u.cy + R.bane.y - 6, a: 0, n: 0, liv: M.LIV.transportbånd }]);
           await vent(900); const m1 = MS.matrise(0); await vent(500); const m2 = MS.matrise(0), T1 = MS.tall(); ut.liv = { blad: T1.blad, knast: T1.knast, endret: !!(m1 && m2 && m1.some((v, j) => Math.abs(v - m2[j]) > 1e-4)) };
           ok(T1.blad === 1 && T1.knast > 0 && ut.liv.endret, '3D: sagbladet/båndet går ikke: ' + JSON.stringify(ut.liv));
+          // (ut9-maskiner2) maskinlyden: hørbar nær en maskin som går, borte når den står
+          if (MS.lyd) { ut.liv.lyd = Math.round(MS.lyd().nivå * 1000) / 1000; ok(ut.liv.lyd > 0, '3D: ingen maskinlyd nær sagbenken som går'); }
           MS.prøve([]); await vent(800); ut.liv.stopp = MS.tall().blad; ok(ut.liv.stopp === 0, '3D: bladet er der når maskinen står');
+          if (MS.lyd) { ut.liv.lydStopp = MS.lyd().nivå; ok(ut.liv.lydStopp === 0, '3D: maskinlyden fortsetter når maskinen står'); }
         } finally {
           MS.prøve(null); tempo = tempo0; for (const [k, o] of lagt) { const L = R.hindre.get(k), j = L.indexOf(o); if (j >= 0) L.splice(j, 1); }
           R.bane.x = bane0.x; R.bane.y = bane0.y; if (!varPå) Gange.stopp(); Interior3d.oppdater(true);
