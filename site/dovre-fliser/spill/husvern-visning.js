@@ -69,16 +69,16 @@
       const b = await finnBygg(x, y); if (!b || !b.o || !b.o.e || b.o.e.i == null || !b.P || !inni(b.P, x, y)) return null;
       const Pv = PT.åpent(b.P); if (Pv.length < 3) return null;
       if (typeof form === 'function' && typeof rund === 'function') { const f = form(Pv); if (rund(Pv, f)) return null; }
-      const c = PT.ramme(Pv), h = P2().hus(b.o.e.i) || P2().nyttHus(Pv, b.o.e, PT.tetthet(c, await sentre(c)));
+      const c = PT.senter(b.P), h = P2().hus(b.o.e.i) || P2().nyttHus(Pv, b.o.e, PT.tetthet(c, await sentre(c)));
       return fraKart(h);
     } catch (e) { console.warn('husvern:', e); return null; } finally { slår = false; }
   }
   // sentrene til husene rundt (samme regel som plantegningen: hus-flisene z13 innen 110 m) – for tettheten
   async function sentre(c) {
-    const ut = []; if (typeof hentFlis !== 'function' || typeof span !== 'function' || typeof G === 'undefined' || typeof LAGFILER === 'undefined' || !LAGFILER || !LAGFILER.hus) return ut;
+    const ut = [], sett = new Set(); if (typeof hentFlis !== 'function' || typeof span !== 'function' || typeof G === 'undefined' || typeof LAGFILER === 'undefined' || !LAGFILER || !LAGFILER.hus) return ut;
     const z = 13, sp = span(z), mg = 110, x0 = Math.floor((c[0] - mg - G.x0) / sp), x1 = Math.floor((c[0] + mg - G.x0) / sp), y0 = Math.floor((G.y0 - (c[1] + mg)) / sp), y1 = Math.floor((G.y0 - (c[1] - mg)) / sp);
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { let t = null; try { t = await hentFlis('hus', z, x, y); } catch (e) { t = null; } if (!t || !t.hus) continue;
-      const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096, sett = new Set();
+      const minx = G.x0 + x * sp, maxy = G.y0 - y * sp, k = sp / 4096;
       for (const o of t.hus.obj) { const d = o.deler[0]; if (!d || sett.has(o.e.i)) continue; sett.add(o.e.i); const q = PT.senter(d); ut.push([minx + q[0] * k, maxy - q[1] * k]); } }
     return ut;
   }
@@ -261,7 +261,10 @@
     if (m < 40 && p) { const L = p.logg(), farge = typeof sidefarge === 'function' ? sidefarge('blå', 'farge') : '#5f87c7';
       for (const i of Object.keys(OL.hus)) { const k = L.kart && L.kart[i], h = p.hus(+i), Pv = (h && h.Pv) || (k && k.P); if (!Pv) continue; const o = OL.hus[i];
         g.save(); g.beginPath(); Pv.forEach((q, n) => (n ? g.lineTo(sx(q[0]), sy(q[1])) : g.moveTo(sx(q[0]), sy(q[1])))); g.closePath();
-        g.globalAlpha = .28; g.fillStyle = farge; g.fill(); g.globalAlpha = .95; g.strokeStyle = farge; g.lineWidth = 2; g.stroke();
+        g.globalAlpha = .45; g.fillStyle = farge; g.fill(); g.globalAlpha = 1; g.strokeStyle = farge; g.lineWidth = 2.5; g.stroke();
+        // langt ute er huset bare noen punkter: et merke i leirens farge med lys kant
+        const xs = Pv.map(q => sx(q[0])), ys = Pv.map(q => sy(q[1]));
+        if (Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) < 16) { const c = PT.ramme(Pv); g.fillStyle = farge; g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.5; g.beginPath(); g.rect(sx(c[0]) - 5, sy(c[1]) - 5, 10, 10); g.fill(); g.stroke(); }
         if (m < 3) { const c = PT.ramme(Pv); g.globalAlpha = 1; g.font = '13px "Cormorant Garamond", Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'bottom'; g.fillStyle = '#e7dcc3';
           g.fillText('Vårt · ' + OT.BRUK[o.bruk].navn, sx(c[0]), sy(Math.max(...Pv.map(q => q[1]))) - 3); }
         g.restore(); } }
