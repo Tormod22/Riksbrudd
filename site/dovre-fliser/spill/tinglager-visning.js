@@ -212,7 +212,7 @@ body.kort #tingpanel{ left:6px; right:6px; width:auto; top:auto; bottom:calc(6px
     d.push(`<h3>Hyller og skap</h3>`);
     if (!Pl.length) d.push('<p class="tom">Ingen ennå: et lagertelt eller en container har plass til litt, og byggesettet (fanen Maskiner) har hyllereol, kjøleskap, frysboks, medisinskap, verktøytavle, garderobeskap, kiste, pallreol og vanntønne.</p>');
     for (const q of Pl) { const b = TL.brukt(T, q.id), a = Math.min(100, b / q.liter * 100), D = TL.LAGRING[q.type];
-      d.push(`<div class="plass${valgtPlass === q.id ? ' valgt' : ''}" data-hand="plass" data-plass="${q.id}"><b>${esc(q.navn)}</b> <small${q.kjøler && !q.strøm ? ' class="fare"' : ''}>${Math.round(b)} av ${q.liter} l · ${esc(D.tekst)}${q.kjøler && !q.strøm ? ' · UTEN STRØM – kjøler ikke' : ''}</small><div class="mal"><i style="width:${a.toFixed(0)}%"></i></div></div>`); }
+      d.push(`<div class="plass${valgtPlass === q.id ? ' valgt' : ''}" data-hand="plass" data-plass="${q.id}"><b>${esc(q.navn)}</b> <small${q.kjøler && !q.strøm ? ' class="fare"' : ''}>${Math.round(b)} av ${q.liter} l · ${esc(D.tekst)}${q.kjøler && !q.strøm ? ' · uten strøm – kjøler ikke' : ''}</small><div class="mal"><i style="width:${a.toFixed(0)}%"></i></div></div>`); }
     if (ute > 0) d.push(`<div class="plass${valgtPlass === 'ute' ? ' valgt' : ''}" data-hand="plass" data-plass="ute"><b>Ute i leiren</b> <small class="fare">${Math.round(ute)} l uten lagring – holder kortere. Folkene bærer det inn når det blir plass.</small></div>`);
     const tapt = Object.entries(T.tapt || {}).sort((a, b) => b[1] - a[1]).slice(0, 4); if (tapt.length) d.push(`<p class="tom">Kastet så langt fordi det ble for gammelt: ${tapt.map(([t, n]) => esc(Ti.antall(t, n))).join(', ')}.</p>`);
     return d.join('');
