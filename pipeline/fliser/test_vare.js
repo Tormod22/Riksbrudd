@@ -78,7 +78,11 @@ ut = SK.steg(S, 'blå', 4 * 1440, 1, { [kc.id]: { har: 0 } }); ok(kc.døgn >= 5 
 S = SK.ny(leir); const kk = V.lagEtt(S, 'blå', 'kjøp', 0, { steder, verdi, leir, rand: V.lagRand(11) }, 'tømmer', 'Storlia Tømmer'); S.tilbud.push(kk);
 ok(kk.enhetPris === Math.round(8000 * .92 / 100) * 100 && kk.kostnad === kk.dagKr * kk.døgn && /Kjøpsavtale/.test(kk.tittel), 'kjøpsavtalen: ' + kk.tittel);
 SK.godta(S, 'blå', kk.id, 0, () => .99);
-ut = SK.steg(S, 'blå', 1, 1, { [kk.id]: { penger: 1e9, plass: 5 } }); ok(ut.length === 1 && ut[0].type === 'vareKjøp' && ut[0].får === 5 && ut[0].kr === kk.dagKr, 'første levering straks, bare 5 får plass');
+ut = SK.steg(S, 'blå', 1, 1, { [kk.id]: { penger: 1e9, plass: 5 } }); ok(ut.length === 1 && ut[0].type === 'vareKjøp' && ut[0].får === 5 && ut[0].kr === Math.round(kk.dagKr * 5 / kk.perDøgn / 100) * 100 && ut[0].ikkePlass === kk.perDøgn - 5, 'første levering straks, bare 5 får plass – og bare de 5 betales (ut8-kr-saga)');
+// (ut8-kr-saga) fullt lager: ingenting levert, ingenting betalt, ingen bot, døgnet er ikke levert
+{ const S9 = SK.ny(leir), k9 = V.lagEtt(S9, 'blå', 'kjøp', 0, { steder, verdi, leir, rand: V.lagRand(11) }, 'tømmer', 'Storlia Tømmer'); S9.tilbud.push(k9); SK.godta(S9, 'blå', k9.id, 0);
+  const u9 = SK.steg(S9, 'blå', 1, 1, { [k9.id]: { penger: 1e9, plass: 0 } }); ok(u9.length === 1 && u9[0].type === 'vareKjøp' && u9[0].får === 0 && u9[0].kr === 0 && !k9.mist && !k9.levertDøgn && k9.ikkePlass === k9.perDøgn, 'fullt lager: 0 m³ for 0 kr');
+  const u10 = SK.steg(S9, 'blå', 1441, 1, { [k9.id]: { penger: 1e9, plass: 1e9 } }); ok(u10[0].kr === k9.dagKr && u10[0].får === k9.perDøgn && k9.levertDøgn === 1, 'med plass: hele døgnet betales'); }
 ut = SK.steg(S, 'blå', 1441, 1, { [kk.id]: { penger: 10, plass: 100 } }); ok(ut[0].type === 'vareMist' && ut[0].kr === kk.botDøgn, 'uten penger: bot');
 // diesel i hele 50 liter
 S = SK.ny(leir); const kd = V.lagEtt(S, 'blå', 'kjøp', 0, { steder, verdi, leir, rand: V.lagRand(12) }, 'diesel', 'Tindvik Drivstoff'); ok(kd.perDøgn % 50 === 0 && kd.enhetPris === 2760, 'diesel ' + kd.perDøgn + ' l à ' + kd.enhetPris);
@@ -89,6 +93,14 @@ ok(ks && ks.storlia && ks.fast && ks.vare === 'tømmer' && ks.enhetPris === 5600
 ok(V.storliaTilbud(S, 'blå', 0, { verdi, leir }) === null, 'Storlia bare én gang');
 for (let i = 0; i < 10; i++) SK.dagSteg(S, i * 1440 + 1, () => .01);
 ok(S.tilbud.includes(ks), 'de andre selskapene tar ikke Storlias tilbud');
+// (ut8-kr-saga) rekker() med det maskinen faktisk laget: «laget ingenting siste døgn» og ikke «gir 26,4 m³ per døgn – rekker det»
+{ const kl = { type: 'lever', vare: 'tre', mengde: 30, levert: 0, timer: 48, status: 'tilbud', turer: [], sted: { navn: 'X' } };
+  const a = V.rekker(kl, 0, 0, 0, { kilde: 'sto', maskin: true }); ok(!a.ok && /laget ingenting siste døgn/.test(a.tekst) && !/rekker det/.test(a.tekst), 'saga sto: ' + a.tekst);
+  const b = V.rekker(kl, 0, 26.4, 0, { kilde: 'målt', maskin: true }); ok(b.ok && /laget 26,4 m³ siste døgn/.test(b.tekst), 'målt: ' + b.tekst);
+  const c = V.rekker(kl, 0, 26.4, 0); ok(/gir 26,4 m³ per døgn/.test(c.tekst), 'uten kilde som før: ' + c.tekst); }
+// (ut8-kr-saga) et sted en rival holder, er aldri «rolig»
+{ const kr0 = { type: 'lever', vare: 'flis', mengde: 20, enhetPris: 1000, giver: { navn: 'Dalsnes Kraftlag' }, sted: { navn: 'Lismarka' }, risiko: 'rolig', rival: 'Ravnsund' };
+  ok(/holdes av Ravnsund/.test(V.krav(kr0)) && !/rolig/.test(V.krav(kr0)), 'rival: ' + V.krav(kr0).slice(-120)); }
 const S2 = SK.fraJSON(SK.tilJSON(S)); ok(S2.vare && S2.vare.storlia && S2.tilbud.some(q => q.storlia && q.type === 'kjøp'), 'lagres og leses');
 
 // MORGENTILBUDENE: høyst maksÅpne, aldri to like

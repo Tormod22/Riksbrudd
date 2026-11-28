@@ -27,7 +27,7 @@
   // ---------- lagring (per leir) ----------
   function les() { const n = leirId(); if (n === id) return; id = n; P = PR.ny(); meldt = {};
     try { const d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); if (d && d.leir === n) P = PR.fraJSON(d.P); } catch (e) { /* sperret */ } }
-  function lagre() { if (!id) return; try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: id, P: { versjon: 1, laget: P.laget, brukt: P.brukt, sto: P.sto, gikk: P.gikk } })); } catch (e) { /* fullt */ } }
+  function lagre() { if (!id) return; try { localStorage.setItem(NØKKEL, JSON.stringify({ leir: id, P: { versjon: 1, laget: P.laget, brukt: P.brukt, sto: P.sto, gikk: P.gikk, døgn: P.døgn || null } })); } catch (e) { /* fullt */ } }
 
   // ---------- arbeidskraften: folk på «maskin» × tempo (ferdighet, moral, helse, døgnplanen) ----------
   const kraft = () => { const f = F(); if (!f || !FR) return 0; return FR.arbeidere(f, 'maskin') * (FR.tempo(f, 'maskin') || 0); };
@@ -54,6 +54,63 @@
     return { plasser: M.reduce((s, b) => s + PR.REGLER.maskiner[b.type].folk, 0) + (Mt ? Mt.ekstraPlasser(l) : 0), hva: bær.concat(hva), blokk: alle ? PR.grunnTekst(PR.vil(l, M[0]).grunn, M[0].type) : null };
   };
 
+  // ---------- (ut8-kr-saga) MASKINENE MISTER FOLK ----------
+  // Kritikeren: saga sto med «Folk 0 av 3 · venter på folk» i 29 t etter at folkene på «Maskiner» var flyttet bort – uten et ord.
+  // Nå: (1) når noen forsvinner fra «Maskiner» (flyttet til en annen oppgave, sendt ut, syk, gått inn i en tropp) sier loggen det, og
+  // om maskinene da står («Sagbruket står: Marte Aas er flyttet til bygg – ingen igjen på «Maskiner»»); (2) har maskinene stått uten
+  // noen på «Maskiner» i VAKT_R.tomMin spillminutter, kommer en påminnelse (én gang til noen er satt på igjen) og en varselbrikke;
+  // (3) raden i fanen Produksjon sier hvorfor saga venter på folk (hvem som er på vei, sover, bærer eller kjører en annen maskin).
+  // Det spilleren selv gjør med − / + på «Maskiner», meldes ikke. Tallet er Claudes forslag.
+  const VAKT_R = { tomMin: 45 };
+  let egenFlytt = -1e9;
+  document.addEventListener('click', e => { const t = e.target && e.target.closest && e.target.closest('[data-o="maskin"], #selskapet [data-pr="folk"]'); if (t) egenFlytt = nåTid(); }, true);
+  const oppgNavn = o => (FR && FR.OPPGAVE[o] ? FR.OPPGAVE[o].navn.toLowerCase() : o);
+  const hovedNavn = l => { const M = PR.maskinene(l).filter(b => !b.av); const b = M.find(q => PR.base(q.type) === 'sagbruk') || M[0]; return b ? LB.BYGG[b.type].navn : null; };
+  const vakt = (() => {
+    let før = null, tomFra = null, tomMeldt = false;
+    const bilde = () => { const f = F(); if (!f) return null; const m = new Map(); for (const p of f.personer) if (p.oppgave === 'maskin') m.set(p.id, { navn: p.navn, borte: !!p.borte, arb: FR ? FR.arbeidsfør(p) : true }); return m; };
+    const klare = m => [...m.values()].filter(o => o.arb && !o.borte).length;
+    function sjekk(l) {
+      const nå = bilde(); if (!nå) return; if (!før) { før = nå; return; }
+      const f = F(), del = [];
+      for (const [id, o] of før) { const q = nå.get(id), p = f.personer.find(x => x.id === id);
+        if (!q) del.push(p ? `${o.navn} er flyttet til ${oppgNavn(p.oppgave)}` : `${o.navn} er ikke i leiren lenger`);
+        else if (q.borte && !o.borte) del.push(`${o.navn} er sendt ut fra leiren`);
+        else if (!q.arb && o.arb && !q.borte) del.push(`${o.navn} er for syk til å arbeide`); }
+      const igjen = klare(nå), navn = hovedNavn(l);
+      if (del.length && navn && nåTid() - egenFlytt > 1 && typeof logg === 'function') {
+        const trenger = PR.maskinene(l).filter(b => !b.av).reduce((s, b) => s + PR.REGLER.maskiner[b.type].folk, 0);
+        logg(igjen ? `${navn} mister folk: ${del.join(', ')} – ${igjen} igjen på «Maskiner» (maskinene har plass til ${trenger}).`
+          : `${navn} står: ${del.join(', ')} – ingen igjen på «Maskiner». Sett folk på i Selskap → Produksjon.`); }
+      før = nå;
+      // påminnelsen: maskinene står uten folk
+      const står = PR.maskinene(l).some(b => !b.av && sist && sist.status && sist.status[b.id] && !sist.status[b.id].går);
+      if (igjen > 0 || !navn || !står) { tomFra = null; tomMeldt = false; return; }
+      if (tomFra === null || nåTid() < tomFra) tomFra = nåTid();
+      if (!tomMeldt && nåTid() - tomFra >= VAKT_R.tomMin && typeof logg === 'function') { tomMeldt = true;
+        logg(`${navn} har stått i ${nf((nåTid() - tomFra) / 60, 1)} t: ingen på «Maskiner». Sett folk på i Selskap → Produksjon (+).`); }
+    }
+    return { sjekk, husk: () => { før = bilde(); }, tom: () => (tomFra === null ? 0 : Math.max(0, nåTid() - tomFra)), nullstill: () => { før = null; tomFra = null; tomMeldt = false; } };
+  })();
+  // hvorfor maskinen b venter på folk: «Marte Aas: på vei · Randi Myhre: sover – maskiner fra 06:00»
+  function hvorforFolk(l, b) {
+    const f = F(); if (!f) return ''; const A = f.personer.filter(p => p.oppgave === 'maskin');
+    if (!A.length) return 'ingen på «Maskiner» – trykk + under';
+    const Bs = mating() ? BaeringSpill.tilstand() : null, G = window.FolkgangSpill && FolkgangSpill.tilstand ? FolkgangSpill.tilstand() : null;
+    const om = p => { if (p.borte) return 'borte fra leiren'; if (FR && !FR.arbeidsfør(p)) return 'syk';
+      const n = window.JobberSpill && JobberSpill.nå ? JobberSpill.nå(p) : null; if (n && n.hva !== 'arbeid') return n.tekst;
+      const r = Bs && Bs.rolle[p.id]; if (!r) return 'på vei';
+      if (r.r === 'bær') return 'bærer for maskinene';
+      if (r.bygg !== b.id) { const a = l.bygg.find(q => q.id === r.bygg); return `kjører ${a ? LB.BYGG[a.type].navn.toLowerCase() : 'en annen maskin'}`; }
+      const s = G && G.pers && G.pers[p.id]; return s && s.fast ? `står fast: ${s.fast}` : s && s.ved ? 'på plass' : 'på vei til maskinen'; };
+    return A.slice(0, 4).map(p => `${p.navn}: ${om(p)}`).join(' · ');
+  }
+  // varselbrikka (narhud.js): maskinene står uten folk på «Maskiner»
+  (window.VARSEL_TILLEGG = window.VARSEL_TILLEGG || []).push(() => {
+    const l = L(); if (!l || vakt.tom() < 10) return []; const navn = hovedNavn(l); if (!navn) return [];
+    return [{ i: 'varsel', k: 'fare', t: `${navn} står: ingen folk`, s: 'sett folk på «Maskiner»', f: () => { if (window.SelskapetSpill) SelskapetSpill.vis(true, 'produksjon'); } }];
+  });
+
   // ---------- simuleringen ----------
   function simSteg(dt) {
     const l = L(); if (!l || !(dt > 0)) return; les();
@@ -67,6 +124,10 @@
       if (!s.går && s.grunn && s.grunn !== 'av' && f && f.går && (meldt[bid] === undefined || nåTid() - meldt[bid] > VIS.meldHvert || nåTid() < meldt[bid])) {
         meldt[bid] = nåTid(); if (typeof logg === 'function') logg(`${LB.BYGG[s.type].navn} står: ${s.tekst}.`); }
       if (s.går && f && !f.går && f.grunn && f.grunn !== 'av' && typeof logg === 'function' && meldt[bid] !== undefined) logg(`${LB.BYGG[s.type].navn} går igjen.`); }
+    // (ut8-kr-saga) det som ble laget siste døgn (leveransetilbudene i vare-visning.js)
+    PR.døgnTell(P, nåTid());
+    // (ut8-kr-saga) folk som forsvinner fra «Maskiner», og maskiner som står uten folk
+    try { vakt.sjekk(l); } catch (e) { /* varselet skal aldri stoppe produksjonen */ }
     if (performance.now() - sistLagret > 5000) { sistLagret = performance.now(); lagre(); }
   }
   if (typeof KROKER !== 'undefined') KROKER.sim.push(simSteg);
@@ -116,8 +177,9 @@
     for (const b of M) { const B = LB.BYGG[b.type], R = PR.REGLER.maskiner[b.type], s = sist.status[b.id] || { går: false, tekst: 'venter', folk: 0, drift: 0 };
       const strøm = R.gir ? `gir ${nf(s.kw || 0, 0)} av ${R.gir} kW` : `${R.kw} kW`;
       h += `<div class="by mrad" data-maskin="${b.id}"><span>${esc(B.navn)}<small>${esc(PR.oppskrift(b.type))}</small><small>Folk ${nf(s.folk || 0, 1)} av ${R.folk}${s.kvalitet ? ' (dyktige: +10 %)' : ''} · ${strøm} · slitt ${Math.round((1 - (b.hp || 0)) * 100)} %</small>`
-        + (mating() ? `<small class="mating">${esc(mating().maskinTekst(b))}</small>` : '') + (window.FabrikkSpill && FabrikkSpill.tekst(b.id) ? `<small class="hall">I hallen: ${esc(FabrikkSpill.tekst(b.id))}</small>` : '') + '</span>'
-        + `<em class="${s.går && s.drift >= .98 ? 'grønn' : s.går || b.av ? '' : 'rød'}">${esc(s.går ? s.tekst : b.av ? 'slått av' : s.tekst)}</em>`
+        + (mating() ? `<small class="mating">${esc(mating().maskinTekst(b))}</small>` : '')
+        + (!s.går && !b.av && (s.grunn === 'folk' || !n) ? `<small class="hvorfor">Hvorfor: ${esc(hvorforFolk(l, b))}</small>` : '') + (window.FabrikkSpill && FabrikkSpill.tekst(b.id) ? `<small class="hall">I hallen: ${esc(FabrikkSpill.tekst(b.id))}</small>` : '') + '</span>'
+        + `<em class="${s.går && s.drift >= .98 ? 'grønn' : s.går || b.av ? '' : 'rød'}">${esc(s.går ? s.tekst : b.av ? 'slått av' : !n && !R.tillegg ? 'ingen folk' : s.tekst)}</em>`
         + `<button type="button" data-pr="av" data-id="${b.id}" data-av="${b.av ? '0' : '1'}">${b.av ? 'Slå på' : 'Slå av'}</button></div>`; }
     h += '<ul class="tall">' + VARER.map(([v, navn]) => `<li><span>${navn}</span><b>${nf((l.lager && l.lager[v]) || 0, 1)} av ${plass} m³</b></li>`).join('');
     h += `<li class="prfolk"><span>Folk på «Maskiner»</span><button type="button" data-pr="folk" data-r="minus" aria-label="Færre på maskinene">−</button><b>${n}${trenger ? ' av ' + trenger : ''}</b><button type="button" data-pr="folk" data-r="pluss" aria-label="Flere på maskinene">+</button></li>`;
@@ -148,7 +210,11 @@
   document.addEventListener('click', e => {
     const b = e.target.closest('#selskapet [data-pr]'); if (!b) return; e.stopPropagation(); const s = b.dataset.pr;
     if (s === 'av') { const r = kom({ type: 'maskin', bygg: +b.dataset.id, av: b.dataset.av === '1' }); if (r.ok && typeof logg === 'function') logg(r.svar.av ? 'Maskinen er slått av.' : 'Maskinen er slått på.'); }
-    else if (s === 'folk') { const r = kom({ type: 'folkFlytt', oppgave: 'maskin', retning: b.dataset.r }); if (r.ok && r.svar && typeof logg === 'function') logg(`${r.svar.navn} er nå på ${FR.OPPGAVE[r.svar.oppgave].navn.toLowerCase()}.`); if (window.FolkSpill && FolkSpill.vis) try { FolkSpill.vis(); } catch (er) { /* */ } }
+    else if (s === 'folk') { const r = kom({ type: 'folkFlytt', oppgave: 'maskin', retning: b.dataset.r }); if (r.ok && r.svar && typeof logg === 'function') logg(`${r.svar.navn} er nå på ${FR.OPPGAVE[r.svar.oppgave].navn.toLowerCase()}.`);
+      // (ut8-kr-saga) lagres straks (før ble flyttingen borte ved omlasting – den ble bare lagret hvert 10. spillminutt), og varselet under
+      // skal ikke melde det spilleren selv gjorde
+      if (r.ok) { egenFlytt = nåTid(); vakt.husk(); if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); }
+      if (window.FolkSpill && FolkSpill.vis) try { FolkSpill.vis(); } catch (er) { /* */ } }
     else if (s === 'bygg') { if (window.SelskapetSpill) SelskapetSpill.vis(false); const lk = document.getElementById('leirknapp'), lm = document.getElementById('leirmeny'); if (lk && !(lm && lm.classList.contains('på'))) lk.click(); if (window.LeirSpill && LeirSpill.fane) LeirSpill.fane('bygg'); }
     else if (s === 'bil') { const r = kjøpTømmerbil(); if (typeof logg === 'function') logg(r.feil || `${r.navn} er kjøpt og står ved leiren.`); }
     if (window.SelskapetSpill && SelskapetSpill.tegn) SelskapetSpill.tegn();
@@ -206,5 +272,5 @@
 
   window.ProduksjonSpill = { status: () => sist.status, html, etter, tilstand: () => P, siste: () => sist, kraft, lagre, steg: simSteg, les: () => { id = ''; les(); }, kjøpTømmerbil, oppsett, VIS,
     // for vakta og testene: nullstill tellingene
-    nullstill: () => { P = PR.ny(); sist = { status: {}, kw: 0, varme: 0 }; } };
+    nullstill: () => { P = PR.ny(); sist = { status: {}, kw: 0, varme: 0 }; vakt.nullstill(); }, laget: () => { const l = L(); if (l) { les(); PR.døgnTell(P, nåTid()); } return { iGår: P.døgn ? P.døgn.iGår : null, status: sist.status }; }, hvorforFolk: b => { const l = L(); return l ? hvorforFolk(l, b) : ''; }, vakt };
 })();

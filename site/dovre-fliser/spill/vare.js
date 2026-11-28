@@ -8,7 +8,7 @@
  *   avtale – leveranseavtale: N enheter hver dag i D døgn til fast pris. Kjøperen henter ved leiren hver morgen (døgnet etter at avtalen
  *            ble tatt). Har lageret ikke nok, blir det bot for døgnet; alt levert gir bonus til slutt.
  *   kjøp   – kjøpsavtale: du kjøper N enheter tømmer/diesel/mat hver dag i D døgn til fast pris (trygt når prisene stiger). Leveres til
- *            leiren; det som ikke får plass, beholder selgeren (du betaler likevel). Har kassa ikke pengene, blir det bot for døgnet.
+ *            leiren; det som ikke får plass, tar selgeren med tilbake og betales ikke (ut8-kr-saga). Har kassa ikke pengene, blir det bot.
  * Varene: tre (planker – nøkkelen i leiren heter fortsatt «tre»), tømmer, ved, flis, diesel og mat. Prisene: markedets verdi i dag
  * (visningen gir den) ganget med typens faktor. Tilstanden ligger på kontrakten (k.levert, k.turer, k.døgnGjort, k.mist, k.frakt) og
  * lagres med selskapet («riksbrudd-selskap»).
@@ -154,15 +154,21 @@
   function krav(k) {
     const V = REGLER.VARER[k.vare] || { navn: k.vare };
     if (k.type === 'lever') return `${k.giver.navn} betaler ${prisTekst(k)} for ${mengdeTekst(k.vare, k.mengde)} ${V.navn} levert i ${k.sted.navn} (innen ${REGLER.nær.fram} m) før fristen. Last varene fra leirens lager på en lastebil eller tømmerbil ved leiren og kjør dem dit (flere turer går fint), la et lag bære litt, eller la ${REGLER.frakt.firma} ta det for ${Math.round(REGLER.frakt.andel * 100)} %.`
-      + (k.risiko === 'bakhold' ? ' Det er meldt om bakhold langs ruta – send et lag med bilen. Derfor betaler jobben litt bedre.' : ' Ruta regnes som rolig.');
+      // (ut8-kr-saga) k.rival = navnet på rivalen som holder stedet (settes av visningen): da er ruta aldri «rolig»
+      + (k.rival ? ` ${k.sted.navn} holdes av ${k.rival} – de kan ta lasten og bilen. Ikke send en bil alene: send et sterkt lag med, eller la det være.`
+        : k.risiko === 'bakhold' ? ' Det er meldt om bakhold langs ruta – send et lag med bilen. Derfor betaler jobben litt bedre.' : ' Ruta regnes som rolig.');
     if (k.type === 'avtale') return `${k.giver.navn} henter ${mengdeTekst(k.vare, k.perDøgn)} ${V.navn} ved leiren hvert døgn i ${k.døgn} døgn og betaler ${prisTekst(k)} (${kroner(k.dagKr)} per døgn). Mangler lageret varene når de kommer, blir det bot (${kroner(k.botDøgn)}). Alt levert gir en bonus på ${kroner(k.bonus)} til slutt. Fast pris – også om markedet stiger.`;
-    return `Dere kjøper ${mengdeTekst(k.vare, k.perDøgn)} ${V.navn} hvert døgn i ${k.døgn} døgn til fast pris, ${prisTekst(k)} (${kroner(k.dagKr)} per døgn). Varene kommer til leiren – det som ikke får plass på lageret, beholder ${k.giver.navn} (betales likevel). Mangler kassa pengene, blir det bot (${kroner(k.botDøgn)}). Trygt når prisene stiger, dyrt når de faller.`
+    return `Dere kjøper ${mengdeTekst(k.vare, k.perDøgn)} ${V.navn} hvert døgn i ${k.døgn} døgn til fast pris, ${prisTekst(k)} (${kroner(k.dagKr)} per døgn). Varene kommer til leiren – det som ikke får plass på lageret, tar ${k.giver.navn} med seg tilbake, og det betaler dere ikke for. Mangler kassa pengene, blir det bot (${kroner(k.botDøgn)}). Trygt når prisene stiger, dyrt når de faller.`
       + (k.storlia ? ' Tømmeret blir verdt mye mer som planker: et sagbruk gjør 48 m³ tømmer om til 26 m³ planker og 17 m³ flis i døgnet, og Storlia kjøper plankene.' : '');
   }
   // hva lageret og maskinene rekker: { ok, tekst }. har = på lager nå, perDøgn = det maskinene lager i døgnet, kjøreTimer = tida på vegen
-  function rekker(k, har, perDøgn, kjøreTimer = 0) {
+  // (ut8-kr-saga) o.kilde: 'målt' = det maskinen faktisk laget siste døgn, 'sto' = den laget ingenting siste døgn, 'nå' = farten nå
+  // (ingen hele døgn ennå), 'står' = den står nå; o.maskin = leiren har en maskin som lager varen. Uten o: som før («gir … per døgn»).
+  function rekker(k, har, perDøgn, kjøreTimer = 0, o = {}) {
     const V = REGLER.VARER[k.vare] || { navn: k.vare }, h = Math.max(0, tall(har)), p = Math.max(0, tall(perDøgn));
-    const lager = `Dere har ${mengdeTekst(k.vare, h)}`, maskin = p > 0 ? `, ${k.vare === 'tre' ? 'sagbruket' : k.vare === 'ved' ? 'vedkløyveren' : 'maskinene'} gir ${mengdeTekst(k.vare, p)} per døgn` : '';
+    const mNavn = k.vare === 'tre' ? 'sagbruket' : k.vare === 'ved' ? 'vedkløyveren' : 'maskinene';
+    const lager = `Dere har ${mengdeTekst(k.vare, h)}`, maskin = p > 0 ? `, ${mNavn} ${o.kilde === 'målt' ? 'laget' : o.kilde === 'nå' ? 'gir nå ca.' : 'gir'} ${mengdeTekst(k.vare, p)} ${o.kilde === 'målt' ? 'siste døgn' : 'per døgn'}`
+      : o.maskin && o.kilde === 'sto' ? `, men ${mNavn} laget ingenting siste døgn` : o.maskin && o.kilde === 'står' ? `, men ${mNavn} står nå` : '';
     if (k.type === 'lever') {
       // det som alt er på vegen (egne biler og lag, eller hos fraktfirmaet), regnes som levert her
       const underveis = k.frakt ? tall(k.frakt.mengde) : (k.turer || []).reduce((s, t) => s + tall(t.mengde), 0);
@@ -227,8 +233,14 @@
       if (k.type === 'avtale') {
         if (har >= k.perDøgn - 1e-6) { har -= k.perDøgn; k.levertDøgn = tall(k.levertDøgn) + 1; sd.sum.tjent += k.dagKr; ut.push({ type: 'vareDøgn', k, mengde: k.perDøgn, kr: k.dagKr }); }
         else { k.mist = tall(k.mist) + 1; sd.sum.bøter += k.botDøgn; ut.push({ type: 'vareMist', k, kr: k.botDøgn, mangler: Math.round((k.perDøgn - har) * 10) / 10 }); }
-      } else if (penger >= k.dagKr) { penger -= k.dagKr; const får = Math.max(0, Math.min(k.perDøgn, plass)); plass -= får; k.levertDøgn = tall(k.levertDøgn) + 1; ut.push({ type: 'vareKjøp', k, mengde: k.perDøgn, får, kr: k.dagKr }); }
-      else { k.mist = tall(k.mist) + 1; sd.sum.bøter += k.botDøgn; ut.push({ type: 'vareMist', k, kr: k.botDøgn, mangler: 0 }); }
+      } else {
+        // (ut8-kr-saga, Claudes valg) DET SOM IKKE FÅR PLASS, BETALES IKKE: dere betaler for det som kommer inn på lageret (andelen av
+        // døgnets pris), og resten tar selgeren med seg tilbake. Før betalte dere hele døgnet også for 0 m³ (kritikeren: «112 000 kr for 0 m³»).
+        const får = Math.max(0, Math.min(k.perDøgn, plass)), kr = får >= k.perDøgn - 1e-6 ? k.dagKr : Math.round(k.dagKr * får / k.perDøgn / 100) * 100;
+        if (penger >= kr) { penger -= kr; plass -= får; if (får > 1e-6) k.levertDøgn = tall(k.levertDøgn) + 1; if (får < k.perDøgn - 1e-6) k.ikkePlass = Math.round((tall(k.ikkePlass) + k.perDøgn - får) * 10) / 10;
+          ut.push({ type: 'vareKjøp', k, mengde: k.perDøgn, får, kr, ikkePlass: Math.round((k.perDøgn - får) * 10) / 10 }); }
+        else { k.mist = tall(k.mist) + 1; sd.sum.bøter += k.botDøgn; ut.push({ type: 'vareMist', k, kr: k.botDøgn, mangler: 0 }); }
+      }
     }
     if (tall(k.mist) > k.døgn / 2) { k.bot = 0; return { bryt: 'avtale' }; }
     if (tall(k.døgnGjort) >= k.døgn) { k.sluttKr = k.type === 'avtale' && !tall(k.mist) ? k.bonus : 0; return 'lever'; }

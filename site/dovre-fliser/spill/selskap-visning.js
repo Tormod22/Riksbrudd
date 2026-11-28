@@ -72,6 +72,8 @@
 
   // ---------- stedene i kartet (tettsteder og bruer fra INFRA) ----------
   let STEDER = null, stederAntall = -1;
+  // (ut8-kr-saga, kritikeren: «Tilbudet står i 0 min til» ble stående) – et tilbud med under ett minutt igjen vises ikke (steget tar det bort)
+  const synligTilbud = k => k.første || !(k.utløper - tid < 1);
   function steder() {
     if (typeof INFRA === 'undefined' || !INFRA) return [];
     const n = (INFRA.tettsted || []).length + (INFRA.bru || []).length; if (STEDER && n === stederAntall) return STEDER;
@@ -383,10 +385,14 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
   // står byene ruta går gjennom. Bare for tilbudene som vises (panelet åpent), én om gangen, og svaret huskes (per kontrakt og leir).
   const MARSJ = new Map(); let marsjJobb = null;
   const marsjMål = k => (k.type === 'rydd' && k.sperre ? k.sperre : k.type === 'eskorte' && k.fra && k.fra.slag !== 'leir' ? k.fra : k.sted);
+  // (ut8-kr-saga) Claudes forslag: høyst 20 s på å regne ut marsjen til ett tilbud
+  const MARSJ_FRIST = 20000;
   function marsj(k) {
     const s = Sp(); if (!k || !s || !s.leir || k.første || typeof lagVindu !== 'function' || typeof Terreng === 'undefined') return null;
     const nø = k.id + '|' + Math.round(s.leir.x) + ',' + Math.round(s.leir.y), m = MARSJ.get(nø); if (m) return m;
-    if (!marsjJobb) marsjJobb = regnMarsj(k, nø, s.leir).finally(() => { marsjJobb = null; sistHtml = ''; });
+    // (ut8-kr-saga, kritikeren: «regner ut marsjen …» ble stående) – svarer ikke kartet innen MARSJ_FRIST ms, regnes luftlinja og neste tilbud får tur
+    if (!marsjJobb) marsjJobb = Promise.race([regnMarsj(k, nø, s.leir), new Promise(r => setTimeout(r, MARSJ_FRIST))])
+      .finally(() => { if (!MARSJ.has(nø)) { const d = Math.hypot(marsjMål(k).x - s.leir.x, marsjMål(k).y - s.leir.y); MARSJ.set(nø, { feil: true, venter: false, ingen: false, km: d / 1000, timer: d / 1000 / 3 }); } marsjJobb = null; sistHtml = ''; });
     return { venter: true };
   }
   async function regnMarsj(k, nø, L) {
@@ -455,7 +461,7 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     h += `<div class="rad"><span>Levert <span class="tall">${sum.levert}</span></span><span>Brutt <span class="tall">${sum.brutt}</span></span><span>Tjent <span class="kr tall">${kr(sum.tjent)}</span></span><span>Bøter <span class="bot tall">${kr(sum.bøter)}</span></span></div>`;
     if (melding) h += `<div class="melding">${esc(melding)}</div>`;
     h += `<h3>Aktive kontrakter <small>${sd.aktive.length} av ${SK.REGLER.maksAktive}</small></h3>` + (sd.aktive.length ? sd.aktive.map(aktivKort).join('') : `<p class="tom">Ingen ennå. Ta et tilbud under.</p>`);
-    h += `<h3>Ledige tilbud <small>nye hver morgen</small></h3>` + (S.tilbud.length ? S.tilbud.map(tilbudKort).join('') : `<p class="tom">Ingen tilbud nå${steder().length ? '' : ' – kartet har ingen tettsteder eller bruer innen rekkevidde'}.</p>`);
+    h += `<h3>Ledige tilbud <small>nye hver morgen</small></h3>` + (S.tilbud.some(synligTilbud) ? S.tilbud.filter(synligTilbud).map(tilbudKort).join('') : `<p class="tom">Ingen tilbud nå${steder().length ? '' : ' – kartet har ingen tettsteder eller bruer innen rekkevidde'}.</p>`);
     h += `<h3>De andre selskapene</h3>` + Object.keys(RIVALER).map(s => { const R = RIVALER[s], q = S.sider[s], fr = window.Fraksjoner && Fraksjoner.FRAKSJONER[s];
       const iKart = fr && fr.navn && fr.navn !== R.navn ? ` <span class="kode" style="letter-spacing:.04em">i kartet: ${esc(fr.navn)}</span>` : '';
       return `<div class="rival" data-rival="${s}">${rivalMerke(s, 40)}<div><b>${esc(R.navn)}</b>${iKart}<div class="motto">${esc(R.motto)}</div><p style="margin:2px 0;font-size:13px;color:#d8d1bf">${esc(R.omtale)}</p><div class="rad"><span>${esc(SK.rykteTekst(q.rykte).replace('dere er', 'de er'))}</span><span>Kontrakter <span class="tall">${q.sum.levert}</span></span></div></div></div>`; }).join('');
