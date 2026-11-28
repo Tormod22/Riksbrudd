@@ -120,7 +120,7 @@
     for (const k of T.tilbud.slice()) { if (k.første || k.fast || !k.giver) continue;
       const f = k.giver.slag === 'firma' && Fs && window.Firma ? Firma.finn(Fs, k.giver.navn) : null;
       if (f && Firma.rivalKunde(f, nå()) === side && tilfV() < R.firma.tarFast / 24) { tarTilbud(side, k, ` fra ${f.navn} (de er fast kunde der)`); continue; }
-      if (tilfV() < (R.kontrakt.ekstra[vei] || 0) / 24 / Math.max(1, T.tilbud.length)) tarTilbud(side, k, ''); } }
+      if (tilfV() < (R.kontrakt.ekstra[vei] || 0) / 24 / Math.max(1, T.tilbud.length) * spionF(side).kontrakt) tarTilbud(side, k, spionF(side).kontrakt > 1 ? ' (de visste hva dere bød på)' : ''); } }
   // hver morgen: felles anlegg (overskudd og kjøp) og andeler (børsen)
   function firmaDøgn(side) {
     const Fs = FT(); if (!Fs || !window.Firma) return; const ø = Ø(side); if (!ø) return; const vei = S.sider[side].vei || 'makt'; let endret = false;
@@ -211,14 +211,17 @@
   const påVakt = () => { const Fo = window.FolkSpill && FolkSpill.tilstand ? FolkSpill.tilstand() : null; return Fo && Fo.personer ? Fo.personer.filter(p => p.oppgave === 'vakt' && p.helse >= .4).length : 0; };
   function bak(side) { try { const B = window.SeierSpill && SeierSpill.bilde ? SeierSpill.bilde() : null; if (!B || !B.verdi) return false; return B.verdi.blå.sum > B.verdi[side].sum; } catch (e) { return false; } }
   // o = { tving (sjansen gjelder ikke), stopp (true/false: vaktene stopper den / ikke) }. Gir det som skjedde.
+  // (ut6-spioner) RivalSpill.spion(side) -> { kontrakt, sabotasje, stopp, skade } fra spill/spion-visning.js (en spion i leiren deres); uten: alt 1
+  const spionF = side => { try { const v = api.spion ? api.spion(side) : null; return v && v.sabotasje ? v : { kontrakt: 1, sabotasje: 1, stopp: 1, skade: 1 }; } catch (e) { return { kontrakt: 1, sabotasje: 1, stopp: 1, skade: 1 }; } };
   function sabotér(side, o = {}) {
     const L = window.LeirSpill && LeirSpill.tilstand ? LeirSpill.tilstand() : null, LB = window.Leir; if (!L || !LB) return null; const s = S.sider[side];
-    if (!o.tving && tilfV() >= RV.sabotasjeSjanse({ nå: nå(), sist: s.sistSab, bak: bak(side), pakt: paktMed(side), vakt: påVakt() })) return null;
+    const sp = spionF(side), medSpion = sp.sabotasje > 1;
+    if (!o.tving && tilfV() >= RV.sabotasjeSjanse({ nå: nå(), sist: s.sistSab, bak: bak(side), pakt: paktMed(side), vakt: påVakt(), spion: medSpion ? sp : null })) return null;
     const maskiner = (L.bygg || []).filter(b => LB.BYGG[b.type] && LB.BYGG[b.type].maskin && (!LB.ferdig || LB.ferdig(b))).map(b => ({ id: b.id, type: b.type, hp: b.hp }));
-    const mål = RV.sabotasjeMål(maskiner, { tre: L.lager.tre, betong: L.lager.betong, stål: L.lager.stål }, tilfV()); if (!mål) return null;
+    const mål = RV.sabotasjeMål(maskiner, { tre: L.lager.tre, betong: L.lager.betong, stål: L.lager.stål }, tilfV(), { spion: medSpion ? sp : null }); if (!mål) return null;
     s.sistSab = Math.round(nå());
     const hva = mål.slag === 'maskin' ? (LB.BYGG[mål.type].navn || mål.type).toLowerCase() : (LB.MATERIALER[mål.vare] ? LB.MATERIALER[mål.vare].navn.toLowerCase() : mål.vare) + 'lageret';
-    const stopp = o.stopp !== undefined ? !!o.stopp : påVakt() >= 2 && tilfV() < .5;
+    const stopp = o.stopp !== undefined ? !!o.stopp : påVakt() >= 2 && tilfV() < .5 * sp.stopp;
     if (stopp) { logg(`Vaktene jaget bort en sabotør fra ${navn(side)} ved ${hva}.`); return { ...mål, stoppet: true }; }
     if (mål.slag === 'maskin') LB.skad(L, mål.id, mål.skade); else L.lager[mål.vare] = Math.max(0, Math.round((L.lager[mål.vare] - mål.mengde) * 10) / 10);
     s.sab++;
@@ -227,7 +230,7 @@
     if (brøt) lagreF();
     const nær = holder(side).map(b => ({ b, d: leir() ? Math.hypot(midt(b).x - leir().x, midt(b).y - leir().y) : 0 })).sort((a, b) => a.d - b.d)[0];
     melding(`Sabotasje: noen fra ${navn(side)} har ${mål.slag === 'maskin' ? `ødelagt ${hva} (−${Math.round(mål.skade * 100)} %)` : `stjålet fra ${hva} (${String(mål.mengde).replace('.', ',')})`}.`
-      + (brøt ? ' Pakten med dem er brutt – av dem. Dere kan svare uten å miste rykte.' : '') + ` Svar: send lag mot ${navn(side)}${nær ? ' i ' + nær.b.e.navn : ''}, og sett folk på vakt.`);
+      + (mål.spion ? ' De visste nøyaktig hvor de skulle slå til – har de noen inne i leiren?' : '') + (brøt ? ' Pakten med dem er brutt – av dem. Dere kan svare uten å miste rykte.' : '') + ` Svar: send lag mot ${navn(side)}${nær ? ' i ' + nær.b.e.navn : ''}, og sett folk på vakt.`);
     hend('alarm', `Sabotasje fra ${navn(side)}`); skitten = true; return { ...mål, stoppet: false, pakt: brøt }; }
 
   // ---------- takten ----------

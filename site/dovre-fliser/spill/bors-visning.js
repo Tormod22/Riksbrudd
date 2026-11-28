@@ -114,7 +114,7 @@
     const før = [];
     for (const ø of B.ønsker) if (ø.status === 'aktiv' && ø.type === 'ro' && (B.angrep || []).some(t => t >= ø.fra)) { Bo.lukkØnske(B, ø, 'brutt'); før.push({ type: 'ønske', ø, utfall: 'brutt' }); }
     const H = før.concat(Bo.døgn(B, { nå, rand: r, kurs: { meg: K.meg, rød: K.rød, grønn: K.grønn }, firmaer: firmaer().map(f => ({ navn: f.navn, konkurs: f.konkurs, helse: f.helse, levert: f.levert, bransje: f.bransje })), resultat,
-      sjekk: { angrepSiden: 0, kampMed: kamp, levert: leverte() } }));
+      sjekk: { angrepSiden: 0, kampMed: kamp, levert: leverte() }, ekteRivaler: !!window.RivalSpill }));
     for (const h of H) hendelse(h, K);
     // investorene ringer
     const hv = Bo.henvendelse(B, nivå(), nå, K.meg, r);
@@ -134,6 +134,15 @@
       logg(ok ? `${h.siste ? 'Lånet er betalt tilbake' : 'Renter på lånet betalt'} til ${q ? q.navn : 'långiveren'}: ${kr(sum)}.` : `Dere klarte ikke å betale ${q ? q.navn : 'långiveren'} (${kr(sum)}). De tar ${pst(r.andeler || 0)} av selskapet i stedet.`); }
     else if (h.type === 'ønske') { const q = Bo.investor(h.ø.inv); logg(`${q ? q.navn : 'Investoren'}: ${h.utfall === 'holdt' ? 'fornøyd – ønsket er oppfylt' : 'skuffet – ønsket ble ikke oppfylt'} («${Bo.ønskeTekst(h.ø)}»).`); }
     else if (h.type === 'krav') { const q = Bo.investor(h.ø.inv), t = `${q ? q.navn : 'En eier'} har et krav: ${Bo.ønskeTekst(h.ø)}. Dere kan si nei – det koster kurs.`; logg(t); telefon(t); }
+  }
+  // (ut6-spioner) RIVALENE KJØPER MED EKTE PENGER: spill/rival-visning.js kaller BorsSpill.rivalKjøp(side, kr) (veien «penger», kassa har råd)
+  // og trekker det som ble brukt fra kassa si. Børsens egne tilfeldige rivalkjøp er av når RivalSpill finnes (ekteRivaler i døgnet).
+  function rivalKjøp(side, kr0) {
+    if (!klar) start(); if (!klar) return 0; const K = kurser();
+    const u = Bo.rivalKjøp(B, side, kr0, { meg: K.meg, firma: K.firma }, { firmaer: firmaer().map(f => ({ navn: f.navn, konkurs: f.konkurs })), r: tilf() });
+    for (const h of u.hendelser) hendelse(h, K);
+    if (u.brukt > 0) { B.rivalBrukt = B.rivalBrukt || {}; B.rivalBrukt[side] = (B.rivalBrukt[side] || 0) + u.brukt; lagre(); }
+    return u.brukt;
   }
   // varene fra et firma dere eier: til lageret (Leir.leggInn), maten til folkene, diesel og resten i kroner
   function varer(V) {
@@ -334,7 +343,7 @@
   function seierInn() { if (!klar) start(); if (!klar) return null; const K = kurser(); return Bo.seierInn(B, { meg: K.meg, rød: K.rød, grønn: K.grønn }); }
 
   Object.assign(api, { tilstand: () => B, sett: d => { B = Bo.fraJSON(d) || B; if (!Array.isArray(B.angrep)) B.angrep = []; lagre(); }, nullstill: () => { const s = Sp(); B = Bo.ny(s && s.leir); B.angrep = []; lagre(); },
-    start, lagre, døgn, kurser, seierInn, fane, etter, trykk, flisLinjer, klar: () => klar, kamp, NØKKEL,
+    start, lagre, døgn, kurser, seierInn, rivalKjøp, fane, etter, trykk, flisLinjer, klar: () => klar, kamp, NØKKEL,
     rett: { kjøp: kjøpRett, selg: selgRett, noter: noterRett, utbytte: utbytteRett, emisjon: emisjonRett, tilbakekjøp: tilbakeRett, rival: rivalRett, rykte: rykteRett, investor: investorRett, krav: kravRett } });
   window.BorsSpill = api;
 })();

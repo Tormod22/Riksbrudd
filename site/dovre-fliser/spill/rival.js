@@ -102,15 +102,18 @@
 
   // ---------- sabotasje ----------
   // o = { nå, sist (forrige sabotasje), bak (rivalen ligger bak deg), pakt (dere har pakt), vakt (folk på vakt hos deg) }. Gir sjansen dette døgnet.
+  // (ut6-spioner) o.spion = { sabotasje } fra spill/spion.js (Spion.virkning): en spion i leiren gjør sabotasjen oftere (uten spion som før)
   function sabotasjeSjanse(o = {}) {
     const S = REGLER.sabotasje; if (tall(o.nå) < S.ikkeFør || tall(o.nå) - tall(o.sist, -1e9) < S.pause) return 0;
-    return S.sjanse * (o.bak ? S.bak : 1) * (o.pakt ? S.pakt : 1) * (tall(o.vakt) >= 2 ? S.vakt : 1);
+    return S.sjanse * (o.bak ? S.bak : 1) * (o.pakt ? S.pakt : 1) * (tall(o.vakt) >= 2 ? S.vakt : 1) * (o.spion ? tall(o.spion.sabotasje, 1) : 1);
   }
   // Hva rammes: maskiner = [{ id, type, hp }] (ferdige maskiner i leiren), lager = { tre, betong, stål } (mengder). r = 0–1.
   // Gir { slag: 'maskin', id, type, skade } | { slag: 'lager', vare, mengde } | null
-  function sabotasjeMål(maskiner, lager, r) {
+  // (ut6-spioner) o.spion = { skade } (Spion.virkning): spionen vet hvor det gjør mest vondt – den heleste maskinen, og hardere (uten spion som før)
+  function sabotasjeMål(maskiner, lager, r, o = {}) {
     const S = REGLER.sabotasje, M = (maskiner || []).filter(m => m && tall(m.hp, 1) > .2), V = Object.entries(lager || {}).filter(([, n]) => tall(n) >= 2);
     if (!M.length && !V.length) return null;
+    if (o.spion && M.length) { const m = M.slice().sort((a, b) => tall(b.hp, 1) - tall(a.hp, 1))[0]; return { slag: 'maskin', id: m.id, type: m.type, skade: Math.min(.8, S.maskinSkade * tall(o.spion.skade, 1)), spion: true }; }
     const velgMaskin = M.length && (!V.length || r < .6);
     if (velgMaskin) { const m = M[Math.floor(r / .6 * M.length) % M.length]; return { slag: 'maskin', id: m.id, type: m.type, skade: S.maskinSkade }; }
     const [vare, n] = V[Math.floor(r * V.length) % V.length]; return { slag: 'lager', vare, mengde: Math.round(tall(n) * S.lagerAndel * 10) / 10 };

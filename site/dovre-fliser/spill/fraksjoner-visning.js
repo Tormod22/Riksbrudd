@@ -113,6 +113,9 @@
 
   const MINNE = { rød: { sist: null, hatt: new Set(), leir: false }, grønn: { sist: null, hatt: new Set(), leir: false } }, leir = () => { const S = window.OppstartSpill && OppstartSpill.tilstand(); return S && S.leir ? S.leir : null; };
   AI.minne = MINNE;
+  // (ut6-spioner) AI.leirPunkt(side, leir) -> { x, y, navn } | null: der motstanderen TROR leiren er (falske opplysninger fra en vendt spion,
+  // spill/spion-visning.js). null = den ekte leiren. En spion i leiren setter også AI.minne[side].leir (de vet hvor den er) og .spion = true.
+  AI.leirPunkt = null;
   // VÅPENHVILE (18. nov, spill/krig-visning.js): AI.fred[side] = spillminuttet hvilen varer til. Så lenge ser ikke fraksjonens lag
   // dine lag som fiender, og de går ikke mot leiren din.
   AI.fred = {};
@@ -174,7 +177,7 @@
         .map(e => ({ x: e.x, y: e.y, navn: e.navn, styrke: F.styrke(e, Forsyning.ammo(e)) })).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] : null;
       const pVern = AI.pakter.length ? (x, y) => iPakt(s.side, 'blå', x, y) : null, pFelles = AI.pakter.length && window.Firma ? (AI.pakter.find(p => p.type === 'allianse' && p.side === s.side && Firma.gjelder(p, tid)) || {}).mot || null : null;
       const v = F.velg(s, { vern: pVern, felles: pFelles, overtakF: vmF, fred: regionFred(), småFørst: småFørst(), storbyStengt: AI.storbyStengt ? AI.storbyStengt() : 0, blåMedVarsel: !!AI.leirMedVarsel, mot, iByFiende, side: s.side, byer, fiender: fredTid() && L && s.side !== 'blå' ? fiender.filter(f => Math.hypot(f.x - L.x, f.y - L.y) > 1500) : fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
-        minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L && AI.angripLeir !== false && !AI.leirMedVarsel && !hvile(s.side, 'blå') && !fredTid() ? { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
+        minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L && AI.angripLeir !== false && !AI.leirMedVarsel && !hvile(s.side, 'blå') && !fredTid() ? (AI.leirPunkt ? AI.leirPunkt(s.side, L) : null) || { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
       // (runde 7) lag i en angrepsgruppe følger gruppa (spill/eskalering-visning.js) – unntatt når laget er slått ut eller angriper en fiende det ser
       if (AI.styr) { const o = AI.styr(s, v); if (o) { delete v.mål; Object.assign(v, o); } else if (AI.styrere.length) {
         // (ut5-rivaler, Ø8) andre styrere (spill/rival-visning.js: vokte avtalebyene, holde garnison etter rivalens vei) når eskaleringen ikke styrer laget
