@@ -149,7 +149,7 @@
   }
 
   // ---------- tiden ----------
-  KROKER.sim.push(dt => {
+  function steg(dt) {
     if (!klar) { if (leir()) start(); return; } akk += dt; if (akk < 1) return; const d = akk; akk = 0; const F = Fo(); if (!F) return;
     let lagr = false;
     // spioner som ikke lenger er i leiren (falt, gått, lokket bort)
@@ -178,12 +178,13 @@
     const dag = Math.floor(nå() / 1440); if (sistDag === null) sistDag = dag;
     else if (dag > sistDag) { sistDag = dag; if (auto()) { morgen(); lagr = true; } }
     if (lagr) lagre();
-  });
+  }
+  KROKER.sim.push(steg);
   function morgen() {
     const F = Fo(); if (!F) return; const pider = F.personer.filter(p => !p.karakter).map(p => p.id), L0 = leder(), før = new Set(pider.filter(pid => SP.mistenkt(S, pid)));
     const H = SP.natt(S, { pider, kamera: { antall: kameraer().length, smart: smart(), folk: rom() ? kamFolk() : 0 }, vakt: F.personer.filter(p => p.oppgave === 'vakt' && p.helse >= .4).length, leder: L0 });
     for (const h of H) { const p = person(h.pid); if (!p) continue; const ny = SP.mistenkt(S, h.pid) && !før.has(h.pid);
-      if (ny) melde(`Mistanke: ${h.type === 'leder' && L0 ? `leirsjefen ${fornavn({ navn: L0.navn })} stoler ikke på ${p.navn}` : `${h.grunn.replace(/^\w/, c => c.toUpperCase()).replace('hen', p.navn)}`}. Se «Mistanke» i Folk-panelet.`); }
+      if (ny) melde(`Mistanke: ${h.type === 'leder' && L0 ? `leirsjefen ${fornavn({ navn: L0.navn })} stoler ikke på ${p.navn}` : h.grunn.replace('hen', p.navn)}. Se «Mistanke» i Folk-panelet.`); }
     for (const h of SP.egenDøgn(S)) melde(avslørtEgen(h.side, h.p));
     for (const side of SIDER) if (S.ute[side]) SP.leggFunn(S, side, rapport(side), nå());
     if (window.FolkSpill && FolkSpill.vis) FolkSpill.vis();
@@ -227,7 +228,7 @@
         else if (avsl && s.vendt) rad.append(el('small', {}, 'Brukt til falske opplysninger – rivalen stoler på hen enda.')); }
       ut.push(el('div', { klasse: 'mistanke' + (avsl ? ' avslørt' : ''), 'data-mistenkt': String(p.id) },
         el('div', {}, el('b', {}, p.navn), avsl ? ` – avslørt: sendt av ${navn(s.side)}` : ` – mistanke ${Math.round(M.m)} %`),
-        el('small', {}, M.grunner.length ? M.grunner.join(' · ') : 'ingen klare grunner'), rad)); }
+        el('small', {}, M.grunner.length ? M.grunner.join(' · ').replace(/^./, c => c.toUpperCase()) : 'Ingen klare grunner'), rad)); }
     ut.push(el('div', { klasse: 'status' }, 'En spion gir rivalen innsyn i leiren (hvor den er, kontraktene, sabotasje). Mistanke mot en uskyldig senker moralen.'));
     return ut;
   }
@@ -263,5 +264,5 @@
   }
 
   Object.assign(api, { tilstand: () => S, sett: o => { S = SP.fraJSON(o) || SP.ny(); lagre(); }, nullstill: () => { S = SP.ny(); gaLeir = {}; portTil = {}; nærFør = {}; minne(); lagre(); },
-    start, lagre, koble, morgen, minne, rapport, godVakt, portTil: () => ({ ...portTil }), åpnePort: (side, min = R.port.minutter) => { portTil[side] = nå() + min; }, rett: RETT, NØKKEL });
+    start, lagre, koble, steg, morgen, minne, rapport, godVakt, portTil: () => ({ ...portTil }), åpnePort: (side, min = R.port.minutter) => { portTil[side] = nå() + min; }, rett: RETT, NØKKEL });
 })();
