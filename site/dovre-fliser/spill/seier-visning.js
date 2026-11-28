@@ -159,6 +159,7 @@ body.kort #krigkort.avslutning ul{ grid-template-columns:1fr; }`;
       + linje('Falne', String(T.falne)) + linje('Lag slått ut', String(T.lagUt)) + '</ul>'
       + `<div class="knapper"><button type="button" class="hoved" data-valg="videre">Spill videre</button>`
       + (kunMakt ? '<button type="button" data-valg="region">Større region</button><button type="button" data-valg="sterkere">Sterkere motstander</button>' : '')
+      + (veiId === 'makt' && window.ScenarioSpill && ScenarioSpill.etterspill ? '<button type="button" data-valg="repris">Se krigen på nytt</button>' : '')
       + `<button type="button" class="lett" data-valg="nytt">Nytt spill</button>`
       + `<small>${du ? 'Spill videre i samme verden – seieren huskes.' + (kunMakt ? ' Større region: krigen utvides og må vinnes på nytt. Sterkere motstander: fienden treffer bedre.' : '') : 'Spill videre og prøv å ta det tilbake – du kan fortsatt vinne på en av de andre veiene.'}</small></div></div>`;
     kort.classList.add('på', 'avslutning'); åpen = { vei: veiId, side };
@@ -172,6 +173,7 @@ body.kort #krigkort.avslutning ul{ grid-template-columns:1fr; }`;
     if (pauset && typeof tempo !== 'undefined' && tempo === 0 && $('sp0')) $('sp0').click(); pauset = false;
     if (valg === 'region' && window.StrategiSpill) StrategiSpill.størreRegion();
     else if (valg === 'sterkere' && window.StrategiSpill) StrategiSpill.sterkere();
+    else if (valg === 'repris' && window.ScenarioSpill && ScenarioSpill.etterspill) ScenarioSpill.etterspill();
     else if (valg === 'nytt') { const b = [...document.querySelectorAll('#lagmeny button')].find(q => q.textContent.trim() === 'Nytt spill'); if (b) b.click(); }
     return true;
   }
@@ -187,8 +189,9 @@ body.kort #krigkort.avslutning ul{ grid-template-columns:1fr; }`;
   }
   function takt() {
     const s = Sp(); if (!s || !s.leir) return; les();
-    // kortet ble tatt bort utenom knappene (et annet kort, en vakt): avslutningen regnes som sett
-    { const k = $('krigkort'); if (åpen && (!k || !k.classList.contains('på') || !k.classList.contains('avslutning'))) { const q = åpen; åpen = null; pauset = false; if (k) k.classList.remove('avslutning'); SE.husk(S, q.side, q.vei, nå(), 'lukket'); lagre(); } }
+    // kortet ble tatt bort utenom knappene (et annet kort tok plassen, en vakt): ingenting huskes – er veien fortsatt nådd, kommer
+    // avslutningen igjen når plassen er ledig
+    { const k = $('krigkort'); if (åpen && (!k || !k.classList.contains('på') || !k.classList.contains('avslutning'))) { åpen = null; pauset = false; if (k) k.classList.remove('avslutning'); } }
     const endret = tell(), B = bilde(true); if (!B) { if (endret) lagre(); return; }
     // fremdrift som har falt, glemmes (S.aktiv), så samme seier kan meldes igjen senere
     // et lagret spill som alt hadde fått krigskartets seierkort, får ikke avslutningen for makt på nytt
