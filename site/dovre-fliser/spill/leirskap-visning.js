@@ -37,7 +37,7 @@
   let her = null;
   function oppdater() { const T = TS(), åpen = T && T.erÅpen && T.erÅpen(); her = !åpen ? nærmeste() : null;
     // (lutens knapp for en hylle ved siden av skjules imens, så E ikke står på to knapper)
-    document.body.classList.toggle('skapnær', !!her);
+    document.body.classList.toggle('skapnær', !!her || !!(åpen && T.plass && S.les(T.plass())));
     if (!her) { knapp.classList.remove('på'); return; } const t = `Åpne ${bestemt(her.navn)}${grov() ? '' : ' (E)'}`; if (knapp.textContent !== t) knapp.textContent = t; knapp.classList.add('på'); }
   setInterval(oppdater, 250);
   knapp.addEventListener('click', e => { e.preventDefault(); const q = her || nærmeste(); if (q) { åpne(q.pid); oppdater(); } });
