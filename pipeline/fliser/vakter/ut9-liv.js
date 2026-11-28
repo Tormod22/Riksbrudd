@@ -21,10 +21,13 @@ module.exports = {
           ut.vern = { borte, tilbake: ENHETER.includes(kar) }; if (!ENHETER.includes(kar)) ENHETER.splice(Math.min(i0, ENHETER.length), 0, kar);
           else if (ENHETER.indexOf(kar) !== i0) { ENHETER.splice(ENHETER.indexOf(kar), 1); ENHETER.splice(Math.min(i0, ENHETER.length), 0, kar); }
           krev(ut.vern.borte && ut.vern.tilbake, 'karakteren kom ikke tilbake etter en feil fjerning ' + JSON.stringify(ut.vern)); } }
+      // 1c. (ut9-liv2) lydene i leiren: bare i sine timer, dempet; byene: folk på benker bare om dagen
+      if (window.Leirlyd) krev(Leirlyd.aktiv('hammer', 10) && !Leirlyd.aktiv('hammer', 22) && Leirlyd.aktiv('prat', 19) && Leirlyd.styrke('bjeff', 500) === 0, 'leirlyd: timene eller styrken');
+      if (window.Byliv) krev(Byliv.benkFolk([0, 0, 0, 0, 10, 10, 0, 1], 2, false, false).length === 0, 'byliv: folk på benkene om natta');
       // 2. PRØVELEIREN: en ferdig brakke og et kjøkken litt unna midten, og en byggeplass (lagertelt under arbeid)
       let id = 930000; const legg = (type, x, y, ferdig = true) => { const b = { id: id++, type, x: m.x + x, y: m.y + y, ret: .3, nivå: 1, hp: 1, igjen: ferdig ? 0 : 600, totalt: 600, nr: id, arbeid: null }; L.bygg.push(b); return b; };
-      const brakke = legg('brakke', 40, 40), kjøk = Leir.BYGG.kjøkken ? legg('kjøkken', 60, 20) : null, plass = legg('lagertelt', 30, 70, false);
-      LV.oppdater(); const T = LV.ting(), polys = [brakke, kjøk, plass].filter(Boolean).map(b => Leir.hjørner(b));
+      const brakke = legg('brakke', 40, 40), kjøk = Leir.BYGG.kjøkken ? legg('kjøkken', 60, 20) : null, plass = legg('lagertelt', 30, 70, false), tårn = legg('vakttårn', 75, 55), krom = legg('kontrollrom', 95, 25);
+      LV.oppdater(); const T = LV.ting(), polys = [brakke, kjøk, plass, tårn, krom].filter(Boolean).map(b => Leir.hjørner(b));
       ut.ting = { snor: T.filter(t => t.k === 'snor' && t.bygg === brakke.id).length, ved: T.filter(t => t.bygg === plass.id).length, iBygg: T.filter(t => polys.some(P => LL.avstPoly(P, t.x, t.y) < t.r - .01)).length };
       krev(ut.ting.snor === 1, 'ingen vasketøysnor ved den nye brakka ' + JSON.stringify(ut.ting));
       krev(ut.ting.ved >= 2, 'for få kasser/verktøy ved byggeplassen ' + JSON.stringify(ut.ting));
@@ -45,6 +48,15 @@ module.exports = {
         krev(s && s.iBygg === 0 && s.svever === 0, '3D: noe står i et bygg eller svever ' + JSON.stringify(s));
         krev(s && s.vinduer > 0, '3D: ingen lys i vinduene om natta ' + JSON.stringify(s));
         krev(!kjøk || LV.kilder().some(k => k.id === kjøk.id), '3D: kjøkkenet har ingen pipe');
+        // (ut9-liv2) kontrollrommet og vakttårnet har lys, og lyskasteren feier om natta
+        ut.d3.lysTyper = [...new Set(LV.vinduer().map(v => v.type))]; krev(['kontrollrom', 'vakttårn'].every(t => ut.d3.lysTyper.includes(t)) && (!kjøk || ut.d3.lysTyper.includes('kjøkken')), '3D: mangler vinduer ' + JSON.stringify(ut.d3.lysTyper));
+        krev(s.stråler >= 1, '3D: lyskasteren lyser ikke om natta');
+        // om dagen: kråker (på mønet eller ved bålet) og katten ved brakka, ingen lyskaster
+        tid = ((12 - 6 + 24) % 24) * 60; if (window.NATT) NATT.mørke = 0; await vent(700); const s2 = LV.sjekk(); ut.d3.dag = { kråker: s2.kråker, katt: s2.ting.katt + s2.ting.kattL, stråler: s2.stråler, iBygg: s2.iBygg, svever: s2.svever };
+        krev(s2.kråker >= 1 && ut.d3.dag.katt === 1 && s2.stråler === 0 && s2.iBygg === 0 && s2.svever === 0, '3D: om dagen ' + JSON.stringify(ut.d3.dag));
+        // byene: de som sitter, sitter på en benk (bare når utsnittet har benker)
+        if (window.Byliv3d && window.Gate3d) { const B = Gate3d.punkter(R3.ut).benk || [], Sb = Byliv3d.sitter(); ut.d3.by = { benker: B.length / 4, sitter: Sb.length };
+          krev(Sb.every(p => { for (let k = 0; k < B.length; k += 4) if (Math.hypot(p.x - B[k], p.y - B[k + 1]) < .6) return true; return false; }), '3D: noen sitter ikke på en benk ' + JSON.stringify(ut.d3.by)); }
         const seng = window.Folk3d && Folk3d.plassVed ? Folk3d.plassVed(brakke, 0, 'seng') : null, bord = kjøk && window.Folk3d ? Folk3d.plassVed(kjøk, 1, 'bord') : null;
         ut.d3.seng = seng ? { ligger: !!seng.ligger, inne: LL.inni(Leir.hjørner(brakke), seng.x, seng.y) } : null; ut.d3.bord = bord ? { sitter: !!bord.sitter, nær: Math.hypot(bord.x - kjøk.x, bord.y - kjøk.y) < 8, iVeggen: LL.inni(Leir.hjørner(kjøk), bord.x, bord.y) } : null;
         // interiøret lages bare for bygg nær kameraet (Interior3d) – mangler planen, kan plassene ikke prøves her
@@ -54,7 +66,7 @@ module.exports = {
     finally {
       L.bygg.splice(0, L.bygg.length, ...JSON.parse(bygg0)); L.neste = neste0; tid = tid0; if (window.NATT) NATT.mørke = mørke0; LV.oppdater(); if (typeof skitten !== 'undefined') skitten = true;
     }
-    const d3 = ut.d3 ? `; 3D: ${ut.d3.ting.snor} snor, ${ut.d3.ting.kasse + ut.d3.ting.verktøy + ut.d3.ting.bukk} kasser/verktøy, ${ut.d3.vinduer} vinduer med lys, ${ut.d3.røykKilder} piper, køya ${ut.d3.seng ? 'inne' : '–'}, benken ${ut.d3.bord ? 'ved kjøkkenet' : '–'}` : ' (3D av)';
+    const d3 = ut.d3 ? `; 3D: ${ut.d3.ting.snor} snor, ${ut.d3.ting.kasse + ut.d3.ting.verktøy + ut.d3.ting.bukk} kasser/verktøy, ${ut.d3.vinduer} vinduer med lys (${(ut.d3.lysTyper || []).join('/')}), lyskaster ${ut.d3.stråler}, kråker ${ut.d3.dag ? ut.d3.dag.kråker : '–'}, katt ${ut.d3.dag ? ut.d3.dag.katt : '–'}, benkefolk ${ut.d3.by ? ut.d3.by.sitter : '–'}, ${ut.d3.røykKilder} piper, køya ${ut.d3.seng ? 'inne' : '–'}, benken ${ut.d3.bord ? 'ved kjøkkenet' : '–'}` : ' (3D av)';
     return { ok: !ut.feil.length, tekst: ut.feil.length ? ut.feil.join('; ') : `karakteren kom tilbake etter feil fjerning: ${ut.vern ? ut.vern.tilbake : '–'}; vasketøy ved brakka, ${ut.ting.ved} ting ved byggeplassen, 0 i bygg; hund ${ut.hund.n} (gikk ${ut.hund.gikk || 0} m, ligger om natta ${!!ut.hund.natt})` + d3, data: ut };
   }),
 };
