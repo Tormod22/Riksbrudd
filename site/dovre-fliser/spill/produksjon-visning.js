@@ -158,6 +158,15 @@
     // (2D-stilen for maskinene står i leir2d.js STIL)
     const G = window.LEIR2_GRUPPER; if (Array.isArray(G) && !G.some(g => g[0] === 'Produksjon')) G.push(['Produksjon', ['sagbruk', 'vedkløyver', 'fyrkjele']]);
     else if (!G) window.LEIR2_GRUPPER = [['Produksjon', ['sagbruk', 'vedkløyver', 'fyrkjele']]];
+    // 3D: sagbruket = verkstedhallen med to tømmerstabler og en flishaug på plassen foran (modellene fra modeller.js/modeller-leir2.js)
+    const M = window.MODELLER; if (M && M.LEIR2 && M.LEIR2.tømmer && M.verksted && M.samle && !M.LEIR2.sagbruk) {
+      M.LEIR2.sagbruk = () => {
+        const v = M.verksted([false, false]), deler = [v], kast = [v];
+        for (const [x, y] of [[9.2, -4.6], [9.2, -1.8]]) { const t = M.LEIR2.tømmer({}); if (t.userData.fjern) kast.push(t.userData.fjern); const k = t.clone(); k.translate(x, y, 0); deler.push(k); kast.push(t, k); }
+        const haug = new THREE.ConeGeometry(2, 1.5, 12).toNonIndexed(); haug.rotateX(Math.PI / 2); haug.translate(9.6, 3.6, .75);
+        const n = haug.attributes.position.count, c = new Float32Array(n * 3); for (let i = 0; i < n; i++) c.set([.72, .6, .42], i * 3); haug.setAttribute('color', new THREE.BufferAttribute(c, 3)); deler.push(haug); kast.push(haug);
+        const g = M.samle(deler); for (const q of kast) q.dispose(); return g; };
+      if (LB.BYGG.sagbruk) LB.BYGG.sagbruk.modell = 'sagbruk'; }
     tømmerbilType(); kilder(); registrer();
     // fanen Produksjon er ikke lenger «kommer»
     if (window.Selskapsbilde && Selskapsbilde.REGLER) { const f = Selskapsbilde.REGLER.FANER.find(q => q.id === 'produksjon'); if (f) f.klar = true; }

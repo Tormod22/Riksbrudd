@@ -53,8 +53,10 @@ byggelista under «Produksjon» (`LEIR2_GRUPPER`), har ikon (`Ikoner.BYGG`: sag/
 - **Kommando** `maskin { bygg, av }` (registrert fra produksjon-visning.js) slår en maskin av/på; folk flyttes med den vanlige `folkFlytt`.
 - Stopp meldes én gang i loggen («Sagbruk står: tom for tømmer.»), og «… går igjen.».
 - Tellingene lagres per leir i `riksbrudd-produksjon` (`{ leir, P: { laget, brukt, sto, gikk } }`).
-- 2D: over hver maskin et lite tall («1,1 m³/t», «30 kW»), grønt når den går; zoomet inn står grunnen under. 3D: bare gjenbrukte
-  modeller (verksted/container/aggregat) – ingen tømmerstabel ennå.
+- 2D: over hver maskin et lite tall («1,1 m³/t», «30 kW»), grønt når den går; zoomet inn står grunnen under. 3D: sagbruket er
+  verkstedhallen med to tømmerstabler (LEIR2.tømmer) og en flishaug på plassen foran (`MODELLER.LEIR2.sagbruk`, lagt inn fra
+  produksjon-visning.js; uten modeller-leir2.js brukes verkstedet). Vedkløyveren er en container, fyrkjelen et aggregat (gjenbrukt).
+- KVALITET (planen 4.3): snittferdigheten til dem på «maskin» over 1,2 gir 10 % mer ut av sagbruk og vedkløyver (`REGLER.kvalitet`).
 
 ### 3. Tømmerbil
 `Kjoretoy.TYPER.tømmerbil` (kopi av lastebilen, 70 km/t, 13 m; settes fra produksjon-visning.js). Kjøpes i fanen Produksjon
@@ -135,8 +137,8 @@ Resultat (60 frø, sommer, kassa i mill. kr, median [10–90 %]):
 
 ## IKKE gjort
 - Tømmerbilen er ikke kjørt en tur i nettleseren (bare Node-testen med falsk Kjoretoy).
-- 3D: ingen egen sagbruksmodell, tømmerstabel eller flishaug (gjenbrukte modeller). Ikke sett på i 3D.
-- Høvleri (nivå 2), kvalitet (ferdighet over 1,2 gir 10 % mer), maskinlyd, maskiner i byggesettets haller (B5), bærejobber (F3).
+- 3D: vedkløyver og fyrkjele har ingen egne modeller. Sett på bilde i 3D (Dombås-testsiden): sagbruket med stabler og flishaug, ingen feil.
+- Høvleri (nivå 2), maskinlyd, maskiner i byggesettets haller (B5), bærejobber (F3).
 - Tømmerkontrakt fra Storlia Tømmer som låser opp saga (Ø2) – saga kan bygges med en gang.
 - «Spol til saga er tom» / pause når en maskin står (Tida) – ikke lagt inn.
 - Tekstene som fortsatt sier «tre» (se punkt 1) – må endres sammen med testene/vaktene som leser dem.
