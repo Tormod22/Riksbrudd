@@ -124,7 +124,7 @@
     window.logg = function (t) { try { LOGG.push({ t: nå(), s: String(t) }); if (LOGG.length > VIS.loggLinjer) LOGG.shift(); } catch (e) { /* */ } return l0.apply(this, arguments); }; window.logg.kjede = true; }
   function saker(d, renter) {
     const S = [], l = L();
-    try { const M = window.SpilletSpill && SpilletSpill.M ? SpilletSpill.M() : null; if (M && window.Spillet) S.push({ slag: 'marked', tekst: Spillet.Marked.tekst(M) }); } catch (e) { /* */ }
+    try { const M = window.SpilletSpill && SpilletSpill.M ? SpilletSpill.M() : null; if (M && window.Spillet) { const t = Spillet.Marked.tekst(M); if (!/små endringer/.test(t)) S.push({ slag: 'marked', tekst: t }); } } catch (e) { /* */ }
     try { const n = handelsByer(); if (n.length) S.push({ slag: 'by', tekst: n.length === 1 ? `${n[0].navn} handler med dere – gårdene selger korn og varer` : `${n.length} byer handler med dere` }); } catch (e) { /* */ }
     try { if (window.BorsSpill && BorsSpill.klar && BorsSpill.klar()) { const B = BorsSpill.tilstand(), k = BorsSpill.kurser(); if (B && B.meg && B.meg.notert) S.push({ slag: 'børs', tekst: `kursen deres står i ${kr(k.meg)}` + (B.meg.stemning >= 1.05 ? ' – det er god stemning' : B.meg.stemning <= .95 ? ' – investorene er urolige' : '') }); } } catch (e) { /* */ }
     try { const SS = window.SelskapSpill && SelskapSpill.tilstand ? SelskapSpill.tilstand() : null, r = SS && SS.sider && SS.sider.blå ? SS.sider.blå.rykte || SS.sider.blå : null; if (r && window.Selskap && Number.isFinite(r.pålitelig)) S.push({ slag: 'rykte', tekst: Selskap.rykteTekst(r) }); } catch (e) { /* */ }

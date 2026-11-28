@@ -20,7 +20,7 @@
   const frø = (dag, t) => { let h = 2166136261 ^ (dag | 0); for (const c of String(t)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return ((h >>> 0) % 10007) / 10007; };
   const velg = (liste, dag, t) => liste[Math.floor(frø(dag, t) * liste.length) % liste.length];
   const rens = t => String(t || '').replace(/\s+/g, ' ').trim().replace(/^(Markedet|Gråbørsen):\s*/i, '');
-  const punktum = t => (/[.!?]$/.test(t) ? t : t + '.');
+  const punktum = t => { const u = /[.!?]$/.test(t) ? t : t + '.'; return u.charAt(0).toUpperCase() + u.slice(1); };
 
   // saker = [{ slag, tekst, vekt? }]. Gir avisa for dagen.
   function lag(saker, dag, leir = '') {
