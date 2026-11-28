@@ -81,7 +81,7 @@
 
   // ---------- trykk på en person ----------
   const css = document.createElement('style');
-  css.textContent = `#folkgangkort{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp, 56px) + 8px); z-index:40; max-width:min(92vw, 380px);
+  css.textContent = `#folkgangkort{ position:fixed; left:50%; transform:translateX(-50%); top:calc(var(--topp, 56px) + 8px); z-index:40; max-width:min(92vw, 380px); min-width:min(92vw, 300px); box-sizing:border-box;
     background:rgba(20,22,19,.94); color:#efe7d2; border:1px solid rgba(240,215,154,.35); border-radius:8px; padding:8px 30px 8px 12px; font-size:14px; line-height:1.35; box-shadow:0 4px 16px rgba(0,0,0,.45); }
     #folkgangkort b{ font-size:15px; } #folkgangkort small{ display:block; opacity:.75; } #folkgangkort .gjor{ display:block; margin-top:2px; }
     #folkgangkort .fast{ color:#e8a35a; } #folkgangkort i{ display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:-1px; }
@@ -135,15 +135,15 @@
   const nyttNavn = n => String(n || '').split(' ')[0];
   function ordreRett(k) {
     const F = Fo(), p = F && F.personer.find(q => q.id === k.person); if (!p) return { feil: 'Fant ikke personen.' };
-    if (k.hva === 'stopp') { const O = FG.stopp(G, p.id); if (O && O.type === 'gjør') tilbake(p, O); return { ok: true, stoppet: !!O }; }
+    if (k.hva === 'stopp') { const O = FG.stopp(G, p.id); if (O && O.type === 'gjør') tilbake(p, O); lagreOrdre(); return { ok: true, stoppet: !!O }; }
     if (k.hva === 'gå') { if (!Number.isFinite(k.x) || !Number.isFinite(k.y)) return { feil: 'Ugyldig sted.' };
       const før = G.ordre[p.id]; if (før && før.type === 'gjør') tilbake(p, før);
-      FG.gi(G, p.id, { type: 'gå', x: k.x, y: k.y, e: 1 }); return { ok: true }; }
+      FG.gi(G, p.id, { type: 'gå', x: k.x, y: k.y, e: 1 }); lagreOrdre(); return { ok: true }; }
     if (k.hva === 'gjør') { if (!FR || !FR.OPPGAVER.includes(k.oppgave) || k.oppgave === 'fri') return { feil: 'Ukjent oppgave.' };
       const før = G.ordre[p.id], fra = før && før.type === 'gjør' ? før.fra : p.oppgave, J = window.JobberSpill && JobberSpill.tilstand ? JobberSpill.tilstand() : null;
       const lås = før && før.type === 'gjør' ? før.lås : J && J.lås ? J.lås[p.id] || null : null;
       p.oppgave = k.oppgave; if (J && J.auto && window.KOMMANDO) KOMMANDO({ type: 'jobbLås', person: p.id, jobb: k.oppgave });
-      FG.gi(G, p.id, { type: 'gjør', oppgave: k.oppgave, fra, lås, til: nåTid() + FG.REGLER.ordreMin }); if (window.LeirSpill) LeirSpill.lagre(); return { ok: true }; }
+      FG.gi(G, p.id, { type: 'gjør', oppgave: k.oppgave, fra, lås, til: nåTid() + FG.REGLER.ordreMin }); lagreOrdre(); if (window.LeirSpill) LeirSpill.lagre(); return { ok: true }; }
     return { feil: 'Ukjent ordre.' };
   }
   // oppgaven og låsen tilbake etter «Gjør dette nå»
@@ -157,9 +157,20 @@
     const p = F.personer.find(q => q.id === h.id); if (!p) return;
     if (h.type === 'framme') logg(`${nyttNavn(p.navn)} er framme der du sa – jobbtavla tar over igjen.`);
     else if (h.type === 'fast') logg(`${nyttNavn(p.navn)} kommer ikke dit du pekte: ${h.grunn}.`);
-    else if (h.type === 'ferdig') { tilbake(p, h.ordre); logg(`${nyttNavn(p.navn)} er ferdig med det du ba om – tilbake til ${FR && FR.OPPGAVE[p.oppgave] ? FR.OPPGAVE[p.oppgave].navn.toLowerCase() : p.oppgave}.`); }
+    else if (h.type === 'ferdig') { tilbake(p, h.ordre); lagreOrdre(); logg(`${nyttNavn(p.navn)} er ferdig med det du ba om – tilbake til ${FR && FR.OPPGAVE[p.oppgave] ? FR.OPPGAVE[p.oppgave].navn.toLowerCase() : p.oppgave}.`); }
     if (valgtId === p.id) visKort(p);
   }
+  // «Gjør dette nå» huskes per leir («riksbrudd-ordre»), så en lagret/lastet leir ikke blir stående med den lånte oppgaven og låsen:
+  // ved lasting gis ordren på nytt (tida som er igjen) eller, når tida er ute, får personen oppgaven og låsen tilbake. «Gå hit» huskes ikke.
+  const ORDRE = 'riksbrudd-ordre';
+  function lagreOrdre() { const S = window.OppstartSpill && OppstartSpill.tilstand(); if (!S || !S.leir) return; const liste = Object.entries(G.ordre).filter(([, O]) => O.type === 'gjør').map(([id, O]) => ({ id: +id, ...O }));
+    try { if (liste.length) localStorage.setItem(ORDRE, JSON.stringify({ leir: Math.round(S.leir.x) + ',' + Math.round(S.leir.y), liste })); else localStorage.removeItem(ORDRE); } catch (e) { /* fullt */ } }
+  window.addEventListener('riksbrudd-spill', () => { let o = null; try { o = JSON.parse(localStorage.getItem(ORDRE) || 'null'); } catch (e) { o = null; } const S = window.OppstartSpill && OppstartSpill.tilstand(), F = Fo();
+    if (!o || !S || !S.leir || !F || o.leir !== Math.round(S.leir.x) + ',' + Math.round(S.leir.y)) return;
+    // (gangen starter på nytt for denne leiren her, ellers ville første steg ha tømt ordrene)
+    leirNøkkel = o.leir; G = FG.ny(); kart = null;
+    for (const O of o.liste || []) { const p = F.personer.find(q => q.id === O.id); if (!p) continue; if (O.til > nåTid()) FG.gi(G, p.id, { type: 'gjør', oppgave: O.oppgave, fra: O.fra, lås: O.lås, til: O.til }); else tilbake(p, O); }
+    lagreOrdre(); });
   function registrer() {
     if (!window.Kommando || registrer.ferdig) return; registrer.ferdig = true;
     Kommando.registrer('personOrdre', { leir: true, sjekk: k => (Number.isFinite(k.person) ? null : 'Ugyldig person.'), utfør: k => ordreRett(k),
