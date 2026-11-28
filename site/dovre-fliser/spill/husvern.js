@@ -127,7 +127,7 @@
     let best = null; for (const w of e.vegger) { if (!står(w)) continue; const q = nærVegg(w, x, y); if (q.d <= G.radius && (!best || q.d < best.q.d)) best = { w, q }; }
     if (!best) return { endringer: [], tekst: '' };
     const { w, q } = best, lett = !w.bærende, tre = w.stoff === 'tre' || w.stoff === 'blikk', ut = [];
-    const hull = () => { const o = e.åpninger.find(a => a.vegg === w.id && a.tilstand !== 'revet' && Math.abs(a.t - q.s) <= a.b / 2 + .3);
+    const hull = () => { const o = e.åpninger.filter(a => a.vegg === w.id && a.tilstand !== 'revet' && Math.abs(a.t - q.s) < (a.b + G.hull) / 2 + .05).sort((a, b) => Math.abs(a.t - q.s) - Math.abs(b.t - q.s))[0];
       const nytt = t => ({ e: e.n, del: 'åpning', gjør: 'ny', vegg: w.id, type: 'hull', t: r2(t), b: G.hull, h: G.hullH || 1.2, ned: slag === 'sprengstoff' ? 0 : .3, smell: slag });
       if (!o) { ut.push(nytt(q.s)); return; }
       if (o.sperre) { ut.push({ e: e.n, del: 'åpning', id: o.id, gjør: 'åpne', smell: slag }); return; }

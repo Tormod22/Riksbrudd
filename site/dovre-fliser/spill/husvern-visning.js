@@ -250,7 +250,7 @@
   if (window.Leir && Leir.lagerplass) { const ek = Leir.lagerplass.ekstra; Leir.lagerplass.ekstra = L => (ek ? ek(L) || 0 : 0) + sum().lager; }
 
   // ---------- 2D: overtatte hus i leirens farge, og vernet i plantegningen ----------
-  const FV = { sterk: '#8fb38a', middels: '#d6b35e', svak: '#c8704f' };
+  const FV = { sterk: '#6fbf9a', middels: '#e08a3c', svak: '#d0563c' };
   const nivå = st => (st >= .6 ? 'sterk' : st >= .3 ? 'middels' : 'svak');
   const harLag = i => alle().some(s => s && s.hus && s.hus.i === i);
   function tegn(g, vx0, vy1) {
@@ -328,6 +328,6 @@
   });
 
   lesInn();
-  Object.assign(api, { aktiv, husVed, slåOpp, settHus, vernFor, smellVed, plasser, inntakSteg, taOver, kjør, registrer, sum, overtatt: () => OL, lesInn, lagre, NØKKEL, modellAv, egne, rad, klikk, føre });
+  Object.assign(api, { aktiv, husVed, slåOpp, settHus, vernFor, smellVed, plasser, inntakSteg, taOver, kjør, registrer, sum, overtatt: () => OL, lesInn, lagre, NØKKEL, modellAv, egne, rad, klikk, føre, tegn });
   window.HusvernSpill = api;
 })();
