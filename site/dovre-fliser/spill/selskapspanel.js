@@ -43,7 +43,7 @@
   function regnTrinn() { les(); return TR.regn(trinnBilde(), H.høyest); }
   function navn() { const s = Sp(), f = s && s.fraksjon; return (f && f.navn) || (window.Fraksjoner && Fraksjoner.FRAKSJONER && Fraksjoner.FRAKSJONER.blå && Fraksjoner.FRAKSJONER.blå.navn) || 'Ditt selskap'; }
   function uke() { const P = window.PengerSpill; if (!P || !P.døgn || !P.døgnNå || !P.tilstand || !P.tilstand()) return null; return B.uke(n => P.døgn(n), P.døgnNå()); }
-  function byListe() { const SS = window.SelskapSpill, st = SS && SS.steder ? SS.steder() : [], G = window.Garnison, R = window.RegionSpill && RegionSpill.tilstand ? RegionSpill.tilstand() : null;
+  function byListe() { const SS = window.SelskapSpill; let st = []; try { st = SS && SS.steder ? SS.steder() : []; } catch (e) { st = []; } const G = window.Garnison, R = window.RegionSpill && RegionSpill.tilstand ? RegionSpill.tilstand() : null;
     return B.byer(st, id => (G && typeof TETTSTEDER !== 'undefined' ? G.tilstand(TETTSTEDER, id).eier : null), id => (R && R.byer && R.byer[id] && G && typeof TETTSTEDER !== 'undefined' && G.tilstand(TETTSTEDER, id).eier === 'blå' ? R.byer[id].loj : null)); }
   function viktigste() { try { const N = window.NesteSpill; return N && N.liste ? B.viktigste(N.liste().filter(k => k.slag !== 'trinn')) : []; } catch (e) { return []; } }
 
@@ -170,7 +170,7 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     const f = e.target.closest('.sfaner button'); if (f) { e.stopPropagation(); velgFane(f.dataset.fane, true); return; }
     const b = e.target.closest('[data-sp]'); if (!b) return; e.stopPropagation(); const s = b.dataset.sp;
     if (s === 'lukk') vis(false);
-    else if (s === 'gå') { const k = viktigste()[+b.dataset.i]; if (!k) return; if (k.l0) { vis(false); if (window.SelskapSpill && SelskapSpill.følgLapp) SelskapSpill.følgLapp(); } else if (k.trykk) { vis(false); k.trykk(); } }
+    else if (s === 'gå') { const k = viktigste()[+b.dataset.i]; if (!k) return; if (k.l0) { if (k.l0.pek === 'selskap') { velgFane('kontrakter'); return; } vis(false); if (window.SelskapSpill && SelskapSpill.følgLapp) SelskapSpill.følgLapp(); } else if (k.trykk) { vis(false); k.trykk(); } }
     else if (s === 'by') { const by = byListe().find(q => String(q.id) === b.dataset.id); if (by && Number.isFinite(by.x)) { if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false); kam.x = by.x; kam.y = by.y; if (kam.m > 20) kam.m = 12; skitten = true; if (smal()) vis(false); } }
     else if (s === 'region') { vis(false); RegionSpill.åpne(); }
     else if (s === 'krig') { vis(false); const k = $('krigknapp'); if (k) k.click(); }
@@ -214,7 +214,10 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
   setInterval(() => { if (performance.now() - sistTrinnSjekk < 1900) return; sistTrinnSjekk = performance.now(); try { sjekkTrinn(); } catch (e) { /* */ } }, 2000);
   // spill/neste.js spør her: steget mot neste trinn (når ingenting mer akutt står foran det i lista)
   function lappInfo() { if (!Sp() || !Sp().leir) return null; const R = regnTrinn(); if (!R.steg) return null;
-    return { tekst: R.steg.tekst, hjelp: R.steg.hjelp, om: R.steg.om, trinn: R.nr, trykk: () => vis(true, 'oversikt') }; }
+    return { tekst: R.steg.tekst, hjelp: R.steg.hjelp, om: R.steg.om, trinn: R.nr, trykk: () => gåTilSteg(R.steg.om) }; }
+  // trykk på steget: dit det gjøres – Leir → Bygg for bygg, fanen Byer for tettsteder, fanen Kontrakter for kontraktene
+  function gåTilSteg(om) { if (om === 'leir') { const lk = $('leirknapp'), lm = $('leirmeny'); if (lk && !(lm && lm.classList.contains('på'))) lk.click(); if (window.LeirSpill && LeirSpill.fane) LeirSpill.fane('bygg'); return; }
+    vis(true, om === 'by' ? 'byer' : om === 'kontrakt' ? 'kontrakter' : 'oversikt'); }
   window.TrinnSpill = { regn: regnTrinn, bilde: trinnBilde, lappInfo, høyest: () => (les(), H.høyest) };
 
   // ---------- DEN FØRSTE HALVTIMEN: «Storlia Tømmer har hørt om dere» ----------
