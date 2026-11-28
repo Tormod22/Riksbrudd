@@ -297,6 +297,8 @@
       S.byer[id] = { tillit: klem(+b.tillit || 0, 0, 100), frykt: klem(+b.frykt || 0, 0, 100), kontrakter: Math.max(0, +b.kontrakter || 0), brudd: +b.brudd || 0,
         avtale: b.avtale && TRINN.includes(b.avtale.trinn) ? b.avtale : null, rival: b.rival && (b.rival.side === 'rød' || b.rival.side === 'grønn') ? b.rival : null,
         forhandler: b.forhandler || null, hjelp: b.hjelp || null, sistHjelp: b.sistHjelp, makt: !!b.makt, stengtTil: +b.stengtTil || 0 };
+      // (ut8-kr-ro) frieriet byen alt har gitt dere et tilbud for (spill/byavtale-visning.js byOppdrag)
+      if (Number.isFinite(+b.oppdragFor) && b.oppdragFor !== null) S.byer[id].oppdragFor = +b.oppdragFor;
       // (ut5-rivaler) byen som har sagt opp en rival
       if (b.rivalStengt && (b.rivalStengt.side === 'rød' || b.rivalStengt.side === 'grønn') && Number.isFinite(+b.rivalStengt.til)) S.byer[id].rivalStengt = { side: b.rivalStengt.side, til: +b.rivalStengt.til };
       if (b.rivalKunde && (b.rivalKunde.side === 'rød' || b.rivalKunde.side === 'grønn')) S.byer[id].rivalKunde = { side: b.rivalKunde.side, fra: +b.rivalKunde.fra || 0, kontrakter: +b.rivalKunde.kontrakter || 1 }; }
