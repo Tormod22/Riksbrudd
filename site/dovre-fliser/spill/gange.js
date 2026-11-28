@@ -128,7 +128,8 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     // et valgt lag: ved siden av laget som før; uten karakter (eller uten reglene): der kameraet ser
     if (!G || !kar || kar.ombord || (valgt && !valgt.karakter && iUt(valgt))) { start(); return; }
     const X = u.cx + b.x, Y = u.cy + b.y, d = Math.hypot(X - kar.x, Y - kar.y), v = G.valg(d);
-    if (v.type === 'her') { klarGå(kar.x, kar.y, start); return; }
+    // (ut8-kr-hus) står karakteren inne i et hus i 2D, starter du inne i huset (i etasjen den står i)
+    if (v.type === 'her') { const ih = iHus2d(kar); if (ih) innHer(ih); else klarGå(kar.x, kar.y, start); return; }
     const h = document.createElement('h3'), p = document.createElement('p'); h.textContent = 'Hvor vil du gå?';
     p.textContent = `Kameraet ser på et sted ${d >= 1000 ? (d / 1000).toFixed(1).replace('.', ',') + ' km' : Math.round(d / 10) * 10 + ' m'} fra deg.` + (v.type === 'forLangt' ? ' Det er for langt å gå i ett strekk – gå i etapper, eller send et lag med en ordre.' : '');
     const valg = [];
@@ -154,7 +155,17 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     if (!best || !kar || !window.Gaavalg) return null; const a = best.a || 0, bx = best.X + Math.cos(a) * 3.5, by = best.Y + Math.sin(a) * 3.5;
     return { navn: best.type === 'heli' ? 'helikopteret' : 'feltbilen', X: bx, Y: by, min: Gaavalg.reiseMin(Math.hypot(bx - kar.x, by - kar.y)) }; }
   // Gå der karakteren står (kartet rundt ham bygges først når det trengs – se klarGå)
-  function gåHer(kar) { klarGå(kar.x, kar.y, () => { lukkValg(); start(); }); }
+  function gåHer(kar) { const ih = iHus2d(kar); if (ih) { innHer(ih); return; } klarGå(kar.x, kar.y, () => { lukkValg(); start(); }); }
+  // (ut8-kr-hus, kritikeren Jonas: «2D sa Du er i 1. etasje, men Gå her satte meg utenfor huset – og etter tre forsøk sto jeg inne i en
+  // trestamme») Står karakteren inne i et hus i 2D (Etasjer2D: huset og etasjen), settes du ved døra, går inn og står der karakteren sto –
+  // i samme etasje (etasjer3d.js bygger etasjene; Etasjer3d.sett). Gir { i, P (omrisset i kartets meter), mx, my, x, y, n } eller null.
+  function iHus2d(kar) {
+    const E2 = window.Etasjer2D; if (!kar || !E2 || !E2.S || E2.S.hus === null || E2.S.hus === undefined || !E2.husAv) return null;
+    const h = E2.husAv(E2.S.hus); if (!h || !h.Pv || !window.Interior || !Interior.inni(h.Pv, kar.x, kar.y)) return null;
+    let mx = 0, my = 0; for (const [x, y] of h.Pv) { mx += x; my += y; }
+    return { i: h.i, P: h.Pv, mx: mx / h.Pv.length, my: my / h.Pv.length, x: kar.x, y: kar.y, n: E2.etasjeI ? E2.etasjeI(h) : 1 };
+  }
+  function innHer(ih) { klarGå(ih.mx, ih.my, () => { lukkValg(); vedDøra(ih, { x: ih.x, y: ih.y, n: ih.n, i: ih.i }); }, 'Henter kartet rundt huset …'); }
   function venteSteg() {
     if (venterKart && r3()) { const kar = venterKart; if (!R3.bygger && iUt(kar)) { lukkValg(); start(); } }
     utSteg();
@@ -564,7 +575,7 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     klarGå(h.mx, h.my, () => vedDøra(h), 'Henter kartet rundt huset …');
   }
   // Huset i 3D-utsnittet (samme nummer, ellers det nærmeste med dør), og du settes foran døra med blikket mot den
-  function vedDøra(h) {
+  function vedDøra(h, mål) {
     const u = R3.ut, kar = karakter(), G = window.Gaavalg; if (!u || !kar) return;
     const x = h.mx - u.cx, y = h.my - u.cy; let P = null, bd = 40; const sett = new Set();
     for (let a = Math.floor((x - 40) / 20); a <= Math.floor((x + 40) / 20); a++) for (let c = Math.floor((y - 40) / 20); c <= Math.floor((y + 40) / 20); c++)
@@ -575,7 +586,7 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     kar.x = u.cx + fx; kar.y = u.cy + fy; kar.sti = null; R3.bane.x = fx; R3.bane.y = fy;
     start(); if (!R3.fot) return;
     const k = kropp; if (k) R3.fot.a = G.kurs(k.x, k.y, I.x, I.y); R3.fot.pitch = -.05;
-    innVent = { P, t0: performance.now() };
+    innVent = { P, t0: performance.now(), mål: mål || null };
     logg('Du står ved døra og går inn …');
   }
   // venter på at interiøret er bygget (interior3d.js lager det for det nærmeste bygget), så går dørhjelpen inn for deg
@@ -585,11 +596,33 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
     if (!v.P.inne && !v.tvang && window.Interior3d && Interior3d.oppdater) { v.tvang = true; Interior3d.oppdater(true); }
     // interiøret er laget: du settes rett innenfor døra med blikket inn i huset (med programvare-grafikk tok det over et minutt å gå de
     // tre metrene gjennom døra med dørhjelpen); er plassen innenfor sperret, går dørhjelpen inn som før
+    if (v.mål && v.P.inne && v.P.inne.inngang && innTilMål(v)) return;
     if (v.P.inne && v.P.inne.inngang) { const I = v.P.inne.inngang, inn = I.inn || Gaavalg.dørVei(I, true)[1];
       if (!(typeof hindring3d === 'function' && hindring3d(inn[0], inn[1]))) { innVent = null; kropp.x = inn[0]; kropp.y = inn[1]; kropp.vx = kropp.vy = 0; R3.bane.x = inn[0]; R3.bane.y = inn[1];
         R3.fot.a = Gaavalg.kurs(I.x, I.y, inn[0], inn[1]); R3.fot.pitch = -.05; logg('Du er inne. Let gjennom huset (E), eller gå ut gjennom døra bak deg.'); return; }
       const q = dørNå(); if (q && q.inn && q.P === v.P && !dørHjelp) { innVent = null; dørEl.onclick(new Event('click')); return; } }
     if (v.P.utenInne || performance.now() - v.t0 > Gaavalg.REGLER.inn.vent * 1000) { innVent = null; logg(v.P.utenInne ? 'Dette bygget har ingen innside du kan gå inn i.' : 'Døra er der «Inngang»-merket står – gå mot den, eller trykk «Gå inn».'); }
+  }
+  // (ut8-kr-hus) inne: til plassen karakteren sto på i 2D. 1. etasje: der (eller rett innenfor døra når plassen er sperret av et møbel).
+  // Andre etasjer: du settes på plassen og venter til etasjene i 3D er bygget (Etasjer3d), så settes etasjen og høyden. Svarer true når
+  // innVent er ferdig. Etter INN_ETG.vent sekunder uten etasjer står du i 1. etasje, og det sies fra. Claudes forslag.
+  const INN_ETG = { vent: 25 };
+  function innTilMål(v) {
+    const u = R3.ut, M = v.mål, x = M.x - u.cx, y = M.y - u.cy, I = v.P.inne.inngang, inn = I.inn || Gaavalg.dørVei(I, true)[1], E = window.Etasjer;
+    const sett = (px, py) => { kropp.x = px; kropp.y = py; kropp.vx = kropp.vy = 0; R3.bane.x = px; R3.bane.y = py; };
+    const terr = (a, b) => (hoyde3d(u.cx + a, u.cy + b) - u.h0) * R3.EX;
+    const iHuset = window.Interior3d && Interior3d.inne && Interior3d.inne(x, y) === v.P;
+    if (!M.n || M.n === 1 || !E || !window.Etasjer3d) {
+      innVent = null; if (iHuset && !(typeof hindring3d === 'function' && hindring3d(x, y))) sett(x, y); else sett(inn[0], inn[1]);
+      R3.fot.a = Gaavalg.kurs(I.x, I.y, inn[0], inn[1]); R3.fot.pitch = -.05; logg('Du er inne – der du sto i kartet. Let gjennom huset (E), eller gå ut gjennom døra.'); return true; }
+    if (!v.inneT) { v.inneT = performance.now(); sett(iHuset ? x : inn[0], iHuset ? y : inn[1]); R3.fot.a = Gaavalg.kurs(I.x, I.y, inn[0], inn[1]); R3.fot.pitch = -.05; }
+    const A = Etasjer3d.aktiv && Etasjer3d.aktiv();
+    if (A && A.h && A.h.i === M.i && A.m && A.m.etasjer.some(e => e.n === M.n)) {
+      if (Etasjer3d.ferdig) Etasjer3d.ferdig(); Etasjer3d.sett(M.n); if (iHuset) sett(x, y);
+      const z = window.Interior3d && Interior3d.høyde ? Interior3d.høyde(kropp.x, kropp.y, terr) : null; if (z !== null && Number.isFinite(z)) { kropp.z = z; kropp.vz = 0; }
+      innVent = null; const et = E.etasje(A.m, M.n); logg(`Du er ${et ? E.iNavn(et) : 'inne'} – der du sto i kartet.`); return true; }
+    if (performance.now() - v.inneT > INN_ETG.vent * 1000) { innVent = null; sett(inn[0], inn[1]); logg('Etasjene i huset er ikke klare i 3D ennå – du står i 1. etasje. Gå opp trappa.'); return true; }
+    return true;
   }
   // ---------- PILA MOT INNGANGEN (runde 8, kritikken: «fant ikke Gå inn ved låven etter Reis hit») ----------
   // Står du ute nær et bygg, peker en pil under siktet mot den nærmeste døra: «Inngang 14 m ↗» (og «rundt huset» når døra er på
@@ -611,7 +644,8 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
   // (runde 12, kritiker E: «Inngang 45 m · rundt huset →» uten noe hus i nærheten – huset sto bak ham) Pila står bare når huset selv
   // er foran deg (midten innen synVinkel grader fra blikket) eller du står helt inntil det (nær meter), og den sier hvilket bygg:
   // «Låve 45 m». Claudes forslag.
-  const PIL = { synVinkel: 55, nær: 12 };
+  const PIL = { synVinkel: 55, nær: 12, bytt: 4 };
+  let pilHus = null;
   const BYGGNAVN = { hus: 'Bolig', hytte: 'Hytte', leil: 'Boligblokk', kontor: 'Kontorbygg', skole: 'Skole', sykehus: 'Sykehus', butikk: 'Butikk', industri: 'Industribygg', lager: 'Lager', låve: 'Låve', uthus: 'Uthus', kirke: 'Kirke', hangar: 'Hangar', terminal: 'Terminal',
     brakke: 'Brakka', kontrollrom: 'Kontrollrommet', storkjøkken: 'Kjøkkenet', sykestue: 'Sykestua', verksted: 'Verkstedet', lagertelt: 'Lagerteltet', container: 'Containeren', drivhus: 'Drivhuset' };
   const byggNavn = P => BYGGNAVN[P.leir] || BYGGNAVN[P.bygg && P.bygg.kl] || 'Bygg';
@@ -624,7 +658,12 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
   function pekerSteg() {
     pekerNå = null; if (!r3() || !R3.fot || !kropp || fører || !window.Gaavalg || reise) return;
     if (window.Interior3d && Interior3d.inne && Interior3d.inne(kropp.x, kropp.y)) return;
-    pekerNå = nærmesteInngang(kropp.x, kropp.y, Gaavalg.REGLER.peker.maks);
+    const forrige = pilHus; pekerNå = nærmesteInngang(kropp.x, kropp.y, Gaavalg.REGLER.peker.maks);
+    // (ut8-kr-hus, kritikeren: «merket skiftet mellom Bolig 8 m og Låve 9 m for det samme huset») – det var to bygg på samme gård, og pila
+    // hoppet til den inngangen som var nærmest akkurat da. Nå holder pila seg på bygget den viste, til et annet bygg er minst PIL.bytt m nærmere.
+    if (pekerNå && forrige && pekerNå.P !== forrige && forrige.dør && !forrige.utenInne && forrige.bygg) { const I = inngangFor(forrige), d = Math.hypot(I.x - kropp.x, I.y - kropp.y);
+      if (d <= Gaavalg.REGLER.peker.maks && d <= pekerNå.d + PIL.bytt) pekerNå = { P: forrige, I, d }; }
+    pilHus = pekerNå ? pekerNå.P : null;
     // midten av huset og avstanden til nærmeste hjørne (til pilNå)
     if (pekerNå) { const P = pekerNå.P; let mx = 0, my = 0, kant = Infinity; for (const [x, y] of P) { mx += x; my += y; kant = Math.min(kant, Math.hypot(x - kropp.x, y - kropp.y)); } pekerNå.mx = mx / P.length; pekerNå.my = my / P.length; pekerNå.kant = kant; }
     if (etterReise && performance.now() - etterReise > 10000) etterReise = 0;
@@ -634,7 +673,7 @@ html body.gaar.kort #alarm > span:first-child small{ display:none; } html body.g
   function flytt(x, y, finnLedig) { if (!r3() || !R3.fot || !R3.ut) return false; const b = R3.bane; b.x = x; b.y = y; if (finnLedig) ledig(R3.ut, b); kropp = null; kroppU = null; return true; }
   // (runde 8) gåInn(h) – reis til huset og gå inn; venter() – kartet rundt deg bygges før du går; inngangPil() – pila mot nærmeste inngang
   // ({ d, rel, vender, vis, tekst } eller null); klarGå(X, Y, ferdig) – bygg utsnittet for gange først når det trengs
-  window.Gange = { vedKarakter: () => vedKar, gåVenter: () => gåVenter, start, stopp, kamera, startValg, reis, valgÅpen, lukkValg, reiser: () => reise, gåInn, vedDøra, klarGå, venter: () => !!venterUt, innVenter: () => !!innVent,
+  window.Gange = { iHus2d, innHer, vedKarakter: () => vedKar, gåVenter: () => gåVenter, start, stopp, kamera, startValg, reis, valgÅpen, lukkValg, reiser: () => reise, gåInn, vedDøra, klarGå, venter: () => !!venterUt, innVenter: () => !!innVent,
     inngangPil: () => { const n = pekerNå; if (!n || !kropp || !r3() || !R3.fot) return null; return pilNå(n); }, oppdaterPil: pekerSteg, dørNå, dørHjelp: () => dørHjelp, kortVenter, visKort, noeÅpent, oppdaterKnapper: () => { dørKnapp(); kortVarsel(); }, peker, kropp: () => kropp, åpenRetning, vannVed, flytt, ligg: settLigg,
     // stillingen din: 'stå', 'huk' eller 'ligg'
     stilling: () => (kropp && kropp.ligg ? 'ligg' : kropp && kropp.huk ? 'huk' : 'stå'),
