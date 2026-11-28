@@ -174,9 +174,10 @@
     if (!t.ok) { siste.unshift({ navn, t: +nå.toFixed(2), spilt: false, grunn: t.grunn, hva: o.hva || '' }); siste.length = Math.min(siste.length, 30); return false; }
     sist[navn] = nå; if (TELLES.includes(navn)) { hist.push(nå); while (hist.length && nå - hist[0] > 60) hist.shift(); }
     teller[navn] = (teller[navn] || 0) + 1;
-    const m = motor(), kan = KANAL[navn] === 'kart' ? kanKart : kanMeld, på = !!(m && Lyd.på() && REGLER.trinn[valg[KANAL[navn]]] > 0 && !document.hidden);
-    if (m && LYDER[navn]) { try { LYDER[navn](m.ac, kan, m.ac.currentTime + .02); } catch (e) { /* lyden skal aldri stoppe spillet */ } }
-    siste.unshift({ navn, t: +nå.toFixed(2), spilt: på, grunn: på ? '' : !m ? 'lyden er ikke startet' : 'dempet', hva: o.hva || '' }); siste.length = Math.min(siste.length, 30);
+    const m = motor(), kan = KANAL[navn] === 'kart' ? kanKart : kanMeld, dempet = !(m && Lyd.på() && REGLER.trinn[valg[KANAL[navn]]] > 0 && !document.hidden);
+    if (m && LYDER[navn] && !dempet) { try { LYDER[navn](m.ac, kan, m.ac.currentTime + .02); } catch (e) { /* lyden skal aldri stoppe spillet */ } }
+    const grunn = !m ? 'lyden er ikke startet (venter på et trykk)' : dempet ? 'dempet' : m.ac.state !== 'running' ? 'nettleseren holder lyden igjen' : '';
+    siste.unshift({ navn, t: +nå.toFixed(2), spilt: !grunn, grunn, hva: o.hva || '' }); siste.length = Math.min(siste.length, 30);
     return true;
   }
 
@@ -196,15 +197,17 @@
   window.addEventListener('riksbrudd-telefon', e => hør('telefon', { hva: (e.detail && e.detail.tekst) || 'telefon' }));
   // Storlia-kortet (spill/selskapspanel.js legger #storliakort rett i body)
   new MutationObserver(liste => { for (const m of liste) for (const n of m.addedNodes) if (n.id === 'storliakort') hør('telefon', { hva: 'Storlia Tømmer' }); }).observe(document.body || document.documentElement, { childList: true });
-  // pengene: OppstartSpill.gi/betal pakkes inn når spillet er klart (etter dagboka i spill/penger-visning.js, som pakker dem inn først)
+  // pengene: OppstartSpill.gi/betal pakkes inn én gang når spillet er klart – FØR dagboka i spill/penger-visning.js (den pakker dem inn
+  // etter et setTimeout og leser kallstakken etter at kallet er gjort; ligger denne innpakningen ytterst, blir alt «annet» i dagboka)
+  let koblet = false;
   function kobleKasse() {
-    const O = rot.OppstartSpill; if (!O || !O.gi || O.gi.lyd) return;
+    const O = rot.OppstartSpill; if (koblet || !O || !O.gi || !O.betal) return; koblet = true;
     const kassa = () => { const s = O.tilstand && O.tilstand(); return s && Number.isFinite(s.penger) ? s.penger : 0; };
     const pakk = f0 => { const f = function () { const a = kassa(), r = f0.apply(this, arguments); try { const l = pengeLyd(kassa() - a); if (l) hør(l, { hva: Math.round(kassa() - a) + ' kr' }); } catch (e) { /* ingen lyd */ } return r; };
       for (const k of Object.keys(f0)) f[k] = f0[k]; f.lyd = true; return f; };
     O.gi = pakk(O.gi); O.betal = pakk(O.betal);
   }
-  window.addEventListener('riksbrudd-spill', () => setTimeout(kobleKasse, 60));
+  window.addEventListener('riksbrudd-spill', kobleKasse);
 
   // ---------- hvert kvarter sekund: bakgrunnen og maskinene ----------
   let tordenNeste = 0, kjeleNeste = 0;
@@ -219,6 +222,8 @@
       if (nær > 0) { const L = rot.LeirSpill && LeirSpill.tilstand && LeirSpill.tilstand(), ps = rot.ProduksjonSpill && ProduksjonSpill.siste ? ProduksjonSpill.siste() : null, ls = rot.LeirSpill && LeirSpill.siste ? LeirSpill.siste() : null;
         const går = b => b.type === 'aggregat' ? !!(ls && ls.agg > 0 && (!rot.Leir || !Leir.virker || Leir.virker(b))) : !!(ps && ps.status && ps.status[b.id] && ps.status[b.id].går);
         mk = maskiner(L ? L.bygg : [], går); }
+      // vakta kan late som maskiner går (Lyd2d.test.maskiner = { sag, kjele }) – leiren har ingen sag ved start
+      if (nær > 0 && Lyd2d.test && Lyd2d.test.maskiner) for (const k of Object.keys(mk)) mk[k] = Math.max(mk[k], Lyd2d.test.maskiner[k] || 0);
     }
     NV.nær = nær; NV.maskiner = mk;
     const m = M || motor(); if (!m) return;
