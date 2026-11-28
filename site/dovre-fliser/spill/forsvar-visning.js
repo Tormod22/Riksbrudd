@@ -133,6 +133,7 @@ body:not(.gaar) #alarm.på > span:first-child small{ white-space:normal; }
 #alarm > .alinje button{ min-height:30px; } body.kort #alarm > .alinje .lang{ display:none; }
 body.gaar #alarm > .alinje{ display:none; }
 body.kort #alarm{ top:calc(var(--topp,58px) + 42px); font-size:13.5px; padding:5px 8px; } body.krig #alarm{ display:none; }
+body:has(#morgenkort.på) #alarm.stille, body:has(#hendelse.på) #alarm.stille, body:has(#samfunnkort.på) #alarm.stille, body:has(#loggvelkommen) #alarm.stille{ display:none; }
 body.gaar #alarm.på{ flex-wrap:nowrap; padding:3px 8px; gap:6px; font-size:12.5px; max-width:min(560px, calc(100vw - 16px)); } body.gaar #alarm > span:first-child{ min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:none; } body.gaar #alarm.fjern{ display:none; }
 #leirmeny .forsvar .sum{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; } #leirmeny .forsvar .strek{ height:11px; background:#2e281e; margin:3px 0 6px; } #leirmeny .forsvar .strek i{ display:block; height:100%; background:#8fc46a; } #leirmeny .forsvar.svak .strek i{ background:#e8a46a; } #leirmeny .forsvar.middels .strek i{ background:#c9b26a; }
@@ -234,6 +235,8 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     // (kritikerløkka r1) prognosen, din karakter ute, og ⏭-linja står i det samme banneret (Jonas: «tre bannere om samme angrep»)
     const st0 = r.length ? status() : null, P = r.length && st0 && !st0.iLeiren ? prognose() : null, U = r.length ? uteNå() : null, SL = stoppNå();
     const nøkkel = [tekst, liten, satt, P ? P.tekst : '', U ? U.tekst : '', SL ? SL.tekst : '', window.pekerNede && pekerNede(alarm)].join('|'); alarm.classList.add('på'); alarm.classList.toggle('satt', satt); if (nøkkel === sistAlarm) return; if (window.pekerNede && pekerNede(alarm)) return; sistAlarm = nøkkel;
+    // (ut8-kr-krig, Ingrid 28. nov: «forsvarsbanneret oppå morgenmøtet») «Forsvaret er satt» uten røvere i kartet viker for et pausekort
+    alarm.classList.toggle('stille', !r.length);
     alarm.replaceChildren(el('span', {}, el('b', {}, tekst), ' ', el('small', {}, liten)));
     if (!satt) alarm.append(kn('Forsvar leiren', () => sett(false), { id: 'forsvarknapp' })); else alarm.append(el('small', {}, 'lagene holder stillingen'), kn(r.length || !øv ? 'Opphev' : 'Avslutt øvelsen', () => opphev(false), { klasse: 'rolig', id: 'opphevknapp' }));
     if (r.length && sett2.length) alarm.append(kn('Vis', () => { const e = sett2.slice().sort((a, b) => Math.hypot(a.x - L.x, a.y - L.y) - Math.hypot(b.x - L.x, b.y - L.y))[0]; if (typeof på3d !== 'undefined' && på3d) return; kam.x = (e.x + L.x) / 2; kam.y = (e.y + L.y) / 2; kam.m = Math.max(1.5, Math.hypot(e.x - L.x, e.y - L.y) * 1.6 / Math.min(VW, VH)); skitten = true; }, { klasse: 'rolig' }));

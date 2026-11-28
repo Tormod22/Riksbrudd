@@ -138,8 +138,16 @@ body.kort #loggvelkommen{ top:calc(var(--topp,44px) + 4px); font-size:13px; padd
     // «Fortsett»: spillet går videre i farten det hadde før velkomsten (bare når den selv satte pause)
     if (gjenoppta && tempoFør > 0 && fart() === 0) { const p = document.getElementById('sp0'); if (p) p.click(); if (typeof tempo !== 'undefined' && tempo !== tempoFør) tempo = tempoFør; }
     tempoFør = 0; }
+  // (ut8-kr-krig, Ingrid 28. nov: «Velkommen tilbake legger seg oppå Selskapet-panelet») står et stort panel oppe (Selskapet, Krig,
+  // Leir, Folk, Tropper, Deg), venter velkomsten til det er lukket; åpnes et slikt panel mens velkomsten står, viker den og kommer igjen etterpå
+  const PANELER = ['selskap', 'krig', 'leirmeny', 'folkmeny', 'tropppanel', 'karakterark', 'verdenpanel'];
+  const panelÅpent = () => PANELER.some(id => { const e = document.getElementById(id); return e && e.classList.contains('på') && e.getClientRects().length > 0; });
+  let venterO = null, venterVakt = 0, venterTempo = 0;
+  function velkommenEtterPanel(o) { venterO = o; if (venterVakt) return;
+    venterVakt = setInterval(() => { if (panelÅpent()) return; clearInterval(venterVakt); venterVakt = 0; const q = venterO; venterO = null; velkommen(q); }, 400); }
   function velkommen(o) {
     if (!o) return; lukkVelkommen(false);
+    if (panelÅpent()) { velkommenEtterPanel(o); return; }
     if (['formkort', 'krigkort', 'morgenkort'].some(id => { const e = document.getElementById(id); return e && e.classList.contains('på'); })) return;
     // et kort i køen (hendelse, folket) som alt står oppe, viker og kommer straks etter velkomsten
     if (rot.Kortkø && Kortkø.vik) Kortkø.vik();
@@ -151,7 +159,7 @@ body.kort #loggvelkommen{ top:calc(var(--topp,44px) + 4px); font-size:13px; padd
     const rad = el('div', 'rad'); rad.append(kn('Hele loggen', () => { lukkVelkommen(false); visHele(true); }, 'loggvelkommen-hele'), kn('Fortsett', () => lukkVelkommen(true), 'loggvelkommen-ok')); b.appendChild(rad);
     document.body.appendChild(b);
     // pause mens den står oppe
-    tempoFør = 0; if (fart() > 0) { const p = document.getElementById('sp0'); if (p) { tempoFør = fart(); p.click(); } }
+    tempoFør = venterTempo; venterTempo = 0; if (fart() > 0) { const p = document.getElementById('sp0'); if (p) { tempoFør = fart(); p.click(); } }
     tidVed = nåTid();
     // (kritikerløkka r3, Jonas på PC: «angrepspanelet ligger oppå Velkommen tilbake ved innlasting under angrep») – står angrepslinja
     // (#alarm) eller et annet varsel øverst, legger velkomsten seg rett under den
@@ -161,7 +169,9 @@ body.kort #loggvelkommen{ top:calc(var(--topp,44px) + 4px); font-size:13px; padd
     vakt = setInterval(() => { if (!document.getElementById('loggvelkommen')) { clearInterval(vakt); vakt = 0; return; } under();
       // et annet kort eller møte står oppe, eller spillet går igjen: velkomsten lukkes
       const annet = ['formkort', 'krigkort', 'morgenkort'].some(id => { const e = document.getElementById(id); return e && e.classList.contains('på') && e.getClientRects().length > 0; });
-      if (annet || nåTid() > tidVed + .01 || fart() > 0) { tempoFør = 0; lukkVelkommen(false); } }, 200);
+      if (annet || nåTid() > tidVed + .01 || fart() > 0) { tempoFør = 0; lukkVelkommen(false); return; }
+      // (ut8-kr-krig) et stort panel er åpnet oppå: velkomsten viker og kommer igjen når panelet er lukket
+      if (panelÅpent()) { venterTempo = tempoFør; lukkVelkommen(false); velkommenEtterPanel(o); } }, 200);
   }
   // hele loggen: nyeste først, gruppert per dag
   const hel = el('div'); hel.id = 'logghel'; hel.setAttribute('role', 'dialog'); hel.setAttribute('aria-label', 'Hele loggen'); document.body.appendChild(hel);
