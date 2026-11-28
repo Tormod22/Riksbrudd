@@ -10,6 +10,7 @@
 (function () {
   const JR = window.Jobber, FR = window.FolkRegler; if (!JR || !FR) return;
   const NØKKEL = 'riksbrudd-jobber';
+  const åpnePers = new Set();
   let J = JR.ny(), leirNøkkel = '', sistFordelt = -1e9, skitten = true, visTavle = false, sistBytt = '';
   const Fo = () => (window.FolkSpill ? FolkSpill.tilstand() : null);
   const Lr = () => (window.LeirSpill ? LeirSpill.tilstand() : null);
@@ -89,7 +90,8 @@
 #folkmeny .jt .nu{ font-size:13px; color:var(--ink-dim); margin:3px 0; }
 #folkmeny .person .gjor{ color:#c9b98f; } #folkmeny .person .gjor.sover{ color:#8d9bb0; } #folkmeny .person .gjor.spiser{ color:#c9a86a; }
 #folkmeny .person .jtp{ display:inline-flex; flex-wrap:wrap; gap:3px; margin-left:4px; vertical-align:middle; }
-#folkmeny .person .jtp button{ min-height:26px; padding:0 6px; font-size:12px; }
+#folkmeny .person .jtp button{ min-height:28px; padding:0 7px; font-size:12px; line-height:1.2; }
+#folkmeny .person .jtvalg{ display:flex; margin:3px 0 0; color:var(--ink-dim); font-size:12px; align-items:center; } #folkmeny .person .jtvalg button.av{ color:#e8a46a; border-color:#a0603a; }
 body.kort #folkmeny .jt .prio button{ min-height:32px; min-width:32px; }`;
   document.head.appendChild(css);
   const NAVN = t => (FR.OPPGAVE[t] ? FR.OPPGAVE[t].navn : t);
@@ -151,11 +153,15 @@ body.kort #folkmeny .jt .prio button{ min-height:32px; min-width:32px; }`;
     const ut = [], n = nå(p);
     if (n) ut.push(el('span', { klasse: 'gjor ' + (n.hva === 'søvn' ? 'sover' : n.hva === 'mat' ? 'spiser' : ''), title: n.plan ? 'Døgnplan: ' + n.plan : '' }, ' · ' + n.tekst));
     if (J.auto) {
-      const b = el('span', { klasse: 'jtp' }), lås = J.lås[p.id];
-      if (lås) b.append(knapp(`🔒 ${NAVN(lås)} ×`, () => kom({ type: 'jobbLås', person: p.id, jobb: null }), { title: 'Låst til jobben – trykk for å la tavla velge', 'data-las': String(p.id) }));
-      for (const t of J.ute[p.id] || []) b.append(knapp(`aldri ${NAVN(t).toLowerCase()} ×`, () => kom({ type: 'jobbUte', person: p.id, jobb: t, ute: false }), { title: 'Utelukket fra jobben – trykk for å ta bort', 'data-ute': String(p.id) }));
-      if (!(J.ute[p.id] || []).includes(p.oppgave) && JR.TYPER.includes(p.oppgave) && !lås) b.append(knapp(`aldri ${NAVN(p.oppgave).toLowerCase()}`, () => kom({ type: 'jobbUte', person: p.id, jobb: p.oppgave, ute: true }), { title: 'Personen skal aldri ha denne jobben', 'data-aldri': String(p.id) }));
+      // låst og utelukket står som brikker (trykk = ta bort); «Jobber …» åpner valgene for personen
+      const b = el('span', { klasse: 'jtp' }), lås = J.lås[p.id], ute = J.ute[p.id] || [];
+      if (lås) b.append(knapp(`låst: ${NAVN(lås).toLowerCase()} ×`, () => kom({ type: 'jobbLås', person: p.id, jobb: null }), { title: 'Låst til jobben – trykk for å la tavla velge', 'data-las': String(p.id) }));
+      for (const t of ute) b.append(knapp(`aldri ${NAVN(t).toLowerCase()} ×`, () => kom({ type: 'jobbUte', person: p.id, jobb: t, ute: false }), { title: 'Utelukket fra jobben – trykk for å ta bort', 'data-ute': String(p.id) }));
+      b.append(knapp(åpnePers.has(p.id) ? 'Lukk' : 'Jobber …', () => { if (åpnePers.has(p.id)) åpnePers.delete(p.id); else åpnePers.add(p.id); FolkSpill.vis(); }, { title: 'Velg hvilke jobber personen aldri skal ha', 'data-jvalg': String(p.id) }));
       ut.push(b);
+      if (åpnePers.has(p.id)) { const v = el('span', { klasse: 'jtp jtvalg' }, 'Aldri: ');
+        for (const t of JR.TYPER) { const er = ute.includes(t); v.append(knapp((er ? '✕ ' : '') + NAVN(t), () => kom({ type: 'jobbUte', person: p.id, jobb: t, ute: !er }), { klasse: er ? 'av' : '', 'data-aldri': p.id + ':' + t })); }
+        ut.push(v); }
     }
     return ut;
   }

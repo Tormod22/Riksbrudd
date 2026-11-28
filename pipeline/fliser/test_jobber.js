@@ -83,7 +83,7 @@ for (const [n, pl] of Object.entries(J0.PLANER)) {
 ok(J0.timer(J0.PLANER.dag) === 9 && J0.PLANER.dag.some(q => q[0] === 17 && q[2] === 'mat') && J0.PLANER.dag.some(q => q[0] === 22 && q[1] === 6 && q[2] === 'søvn'), 'dagplanen: arbeid 07–11 og 12–17, middag 17, søvn 22–06');
 const Fd = kopi(F), Jd = J0.ny(); Jd.skift.bygg = 'dag';
 const bygger = Fd.personer.find(p => p.oppgave === 'bygg'), fri = Fd.personer.find(p => p.oppgave === 'fri'), vakt = Fd.personer.find(p => p.oppgave === 'vakt');
-ok(J0.nå(Jd, Fd, bygger, kl(9)).tekst === 'arbeider – bygg' && J0.nå(Jd, Fd, bygger, kl(17, 30)).tekst === 'spiser middag' && J0.nå(Jd, Fd, bygger, kl(2)).tekst === 'sover' && J0.nå(Jd, Fd, bygger, kl(20)).tekst === 'fri', 'byggeren: arbeider 09, spiser middag 17:30, fri 20, sover 02');
+ok(J0.nå(Jd, Fd, bygger, kl(9)).tekst === 'arbeider – bygg' && J0.nå(Jd, Fd, bygger, kl(17, 30)).tekst === 'spiser middag' && J0.nå(Jd, Fd, bygger, kl(2)).tekst === 'sover – bygg fra 07:00' && J0.nå(Jd, Fd, bygger, kl(20)).tekst === 'fri – bygg fra 07:00', 'byggeren: arbeider 09, spiser middag 17:30, fri 20, sover 02 (og sier når arbeidet begynner)');
 ok(J0.nå(Jd, Fd, fri, kl(9)).hva === 'fri' && J0.nå(Jd, Fd, vakt, kl(9)).hva === 'arbeid' && J0.nå(Jd, Fd, vakt, kl(3)).hva === 'arbeid', 'den som har fri, har fri på dagen; én vakt: døgnvakt');
 ok(J0.faktor(Jd, Fd, 'bygg', kl(2)) === 0 && Math.abs(J0.faktor(Jd, Fd, 'bygg', kl(9)) - 24 / 9) < 1e-9 && J0.faktor(Jd, Fd, 'vakt', kl(2)) === 1 && J0.faktor(Jd, Fd, 'kjøkken', kl(2)) === 1, 'dagskift: tempo 0 om natta, 24/9 om dagen; vakt og kjøkken regnes som før');
 for (const s of ['dag', 'to', 'døgn']) { const Js = J0.ny(); Js.skift.bygg = s; const snitt = J0.døgnSnitt(Js, Fd, 'bygg', 1);

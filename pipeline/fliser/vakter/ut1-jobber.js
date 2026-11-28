@@ -29,7 +29,7 @@ module.exports = {
         JS.sett({ auto: false, skift: { bygg: 'dag' } }); JS.test = true; const b = F.personer.find(p => FR.arbeidsfør(p)); b.oppgave = 'bygg';
         tid = 20 * 60; const natt = FR.tempo(F, 'bygg'), nattTekst = JS.nå(b).tekst;
         tid = 27 * 60; const dag = FR.tempo(F, 'bygg'), dagTekst = JS.nå(b).tekst;
-        ut.døgn = natt === 0 && dag > 1 && nattTekst === 'sover' && dagTekst === 'arbeider – bygg';
+        ut.døgn = natt === 0 && dag > 1 && /^sover/.test(nattTekst) && dagTekst === 'arbeider – bygg';
         FolkSpill.vis(); const vf = document.getElementById('visfolk'); if (vf && !/Skjul/.test(vf.textContent)) vf.click();
         ut.person = [...document.querySelectorAll('#folkmeny .person .gjor')].some(e => /arbeider – bygg/.test(e.textContent)); if (vf && /Skjul/.test(document.getElementById('visfolk').textContent)) document.getElementById('visfolk').click();
         // nattskift: døgnet rundt gir litt lavere moral

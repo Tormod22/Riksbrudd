@@ -196,9 +196,14 @@
     const h = klokke(tid), pl = planFor(J, F, p), seg = pl.plan.find(q => iSeg(h, q[0], q[1])) || [0, 24, 'fri'];
     let hva = seg[2];
     if (J && J.døgn === false) hva = p.oppgave === 'fri' ? 'fri' : 'arbeid';
-    const tekst = hva === 'arbeid' ? `arbeider – ${NAVN(p.oppgave).toLowerCase()}` : hva === 'mat' ? (h >= 16 && h < 20 ? 'spiser middag' : 'spiser') : HVA[hva];
+    let tekst = hva === 'arbeid' ? `arbeider – ${NAVN(p.oppgave).toLowerCase()}` : hva === 'mat' ? (h >= 16 && h < 20 ? 'spiser middag' : 'spiser') : HVA[hva];
+    // fri eller sover, men har en jobb: når arbeidet begynner igjen (så «fri» ikke forveksles med oppgaven «Fri»)
+    const neste = hva !== 'arbeid' && J && J.døgn !== false && TYPER.includes(p.oppgave) ? nesteArbeid(pl.plan, h) : null;
+    if (neste !== null && hva !== 'mat') tekst += ` – ${NAVN(p.oppgave).toLowerCase()} fra ${String(Math.floor(neste)).padStart(2, '0')}:${String(Math.round((neste % 1) * 60)).padStart(2, '0')}`;
     return { hva, tekst, plan: pl.navn };
   }
+  // Når begynner neste arbeidsøkt (time 0–24), eller null
+  function nesteArbeid(plan, h) { let best = null, bd = 99; for (const q of plan) if (q[2] === 'arbeid') { const d = ((q[0] - h) % 24 + 24) % 24; if (d > 0 && d < bd) { bd = d; best = q[0]; } } return best; }
   // Faktoren for en produksjonsjobb nå: (summen av ARBEID_K for dem som er i arbeid) / (alle arbeidsføre på jobben).
   // 1 for turnus og kjøkken, for jobber uten folk og når døgnplanen er av. ARBEID_K = 24 / arbeidstimer × dagsverk[skift].
   function faktor(J, F, t, tid) {
