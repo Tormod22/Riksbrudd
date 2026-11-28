@@ -22,7 +22,10 @@
   const farge = o => FARGE[o] || '#bbbbb2';
 
   // ---------- kroken til folk.js ----------
-  if (FR) FR.stedF = (F, o) => (F && F === Fo() && aktiv() ? FG.stedF(G, F, o) : 1);
+  // (plassene er regnet 4 ganger i sekundet; er tida flyttet mer enn FERSK spillminutter siden – spoling, tester som setter klokka –
+  // er de ikke ferske, og arbeidet regnes som før til neste steg)
+  const FERSK = 2, nåTid = () => (typeof tid !== 'undefined' ? tid : 0), fersk = () => G.tid !== undefined && Math.abs(nåTid() - G.tid) <= FERSK;
+  if (FR) FR.stedF = (F, o) => (F && F === Fo() && aktiv() && fersk() ? FG.stedF(G, F, o) : 1);
 
   // ---------- oppdateringen ----------
   function kartNå(L, m) {
@@ -36,7 +39,7 @@
     const R = window.RessursSpill && RessursSpill.tilstand ? RessursSpill.tilstand() : null;
     const ctx = { F, L, leir: m, kart: kartNå(L, m), RJ: R && Array.isArray(R.jobber) ? R.jobber : [], nær: window.Ressurser && Ressurser.REGLER ? Ressurser.REGLER.nær : 150,
       hva: p => { const n = window.JobberSpill ? JobberSpill.nå(p) : null; return n ? n.hva : p.oppgave === 'fri' ? 'fri' : 'arbeid'; } };
-    FG.steg(G, ctx, dtSek);
+    FG.steg(G, ctx, dtSek); G.tid = nåTid();
   }
   // dt i spillminutter fra løkka; regnes 4 ganger i sekundet (REGLER.takt), høyst 10 spillminutter om gangen (en skjult fane, rask spoling)
   KROKER.sim.push(dt => {
@@ -100,6 +103,8 @@
   // plassen til en person for folk3d.js: { x, y, e, a, går, inne (byggtype), bygg (id), hva, framme } eller null
   function plass(p) { const s = G.pers[p.id]; if (!s) return null; return { x: s.x, y: s.y, e: s.e || 1, a: s.a || 0, går: s.går, inne: s.inne, bygg: s.mål ? s.mål.bygg : null, hva: s.hva, framme: s.framme, sover: s.hva === 'søvn' }; }
 
-  window.FolkgangSpill = { på: true, aktiv, tilstand: () => G, steg, plass, plass2d, tekst: p => FG.tekst(G, p), fastLinjer, visKort: id => { const F = Fo(), p = F && F.personer.find(q => q.id === id); visKort(p || null); return !!p; },
+  // teksten ved personen i Folk-panelet: bare når den sier noe mer enn døgnplanen (går til …, står fast …) og plassene er ferske
+  function gjør(p) { const s = G.pers[p.id]; if (!s || !fersk() || s.oppgave !== p.oppgave || (s.framme && !s.fast && !s.går)) return ''; return FG.tekst(G, p); }
+  window.FolkgangSpill = { på: true, aktiv, tilstand: () => G, steg, plass, plass2d, tekst: p => FG.tekst(G, p), gjør, fastLinjer, fersk, visKort: id => { const F = Fo(), p = F && F.personer.find(q => q.id === id); visKort(p || null); return !!p; },
     farge, FARGE, nullstill: () => { G = FG.ny(); kart = null; }, kart: () => kart };
 })();

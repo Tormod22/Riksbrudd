@@ -190,7 +190,8 @@
   // Andelen av dem på oppgaven o som er i arbeidstida og FRAMME (1 når ingen er i arbeidstida – døgnplanen gir da 0 uansett)
   function stedF(G, F, o) {
     if (!G || !F) return 1; let n = 0, f = 0;
-    for (const p of F.personer) { if (p.oppgave !== o) continue; const s = G.pers[p.id]; if (!s || s.hva !== 'arbeid') continue; n++; if (s.framme) f++; }
+    // (en person som nettopp har fått ny oppgave, er ikke regnet ennå – telles ikke før neste steg)
+    for (const p of F.personer) { if (p.oppgave !== o) continue; const s = G.pers[p.id]; if (!s || s.hva !== 'arbeid' || s.oppgave !== o) continue; n++; if (s.framme) f++; }
     return n ? f / n : 1;
   }
   // Hva personen gjør nå og hvorfor: «går til byggeplassen – bygger brakke», «spiser», «sover», «står fast: rommet har ingen dør»

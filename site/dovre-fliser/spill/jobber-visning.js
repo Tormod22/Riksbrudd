@@ -153,7 +153,7 @@ body.kort #folkmeny .jt .prio button{ min-height:32px; min-width:32px; }`;
   // Ved hver person: hva hen gjør nå, og (når tavla fordeler) låst / utelukket
   function personDel(p, { el, knapp }) {
     // (F2) hva personen gjør der hen er (går til …, står fast …) fra spill/folkgang-visning.js, ellers døgnplanens tekst
-    const ut = [], n = nå(p), gang = window.FolkgangSpill ? FolkgangSpill.tekst(p) : '';
+    const ut = [], n = nå(p), gang = window.FolkgangSpill ? FolkgangSpill.gjør(p) : '';
     if (n) ut.push(el('span', { klasse: 'gjor ' + (n.hva === 'søvn' ? 'sover' : n.hva === 'mat' ? 'spiser' : ''), title: n.plan ? 'Døgnplan: ' + n.plan : '' }, ' · ' + (gang || n.tekst)));
     if (J.auto) {
       // låst og utelukket står som brikker (trykk = ta bort); «Jobber …» åpner valgene for personen
