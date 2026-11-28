@@ -107,12 +107,13 @@
     return Math.round(grunnpris(t, folk) * H.pris * lf * bf * tf * vf / 1000) * 1000;
   }
   // Kan byen gå til dette trinnet nå? Gir null eller en grunn (norsk tekst)
-  function kanTrinn(b, t, side = 'blå') {
+  // eid = byen er alt din (tatt med makt): da kan den bli medlem uten beskyttelse og handel først
+  function kanTrinn(b, t, side = 'blå', eid = false) {
     const K = REGLER.trinn[t]; if (!K || t === 'kunde') return 'Ukjent avtale.';
     const nå = trinn(b);
     if (b.avtale && b.avtale.oppsagt) return 'Byen har sagt opp avtalen og vil ikke forhandle nå.';
     if (rang(nå) >= rang(t)) return { beskyttelse: 'Dere har alt en beskyttelsesavtale.', handel: 'Dere har alt en handelsavtale.', medlem: 'Byen er alt medlem.' }[nå] || 'Dere har alt en avtale.';
-    if (K.krever && rang(nå) < rang(K.krever)) return `Krever en ${K.krever === 'beskyttelse' ? 'beskyttelsesavtale' : 'handelsavtale'} først.`;
+    if (K.krever && rang(nå) < rang(K.krever) && !(eid && t === 'medlem')) return `Krever en ${K.krever === 'beskyttelse' ? 'beskyttelsesavtale' : 'handelsavtale'} først.`;
     if ((b.tillit || 0) < K.tillit) return `Byen stoler ikke nok på dere: tillit ${Math.round(b.tillit)} av ${K.tillit}.`;
     if (K.fryktUnder !== undefined && (b.frykt || 0) >= K.fryktUnder) return `Byen er redd dere: frykt ${Math.round(b.frykt)} (må under ${K.fryktUnder}).`;
     return null;
@@ -120,7 +121,7 @@
   // FORHANDLINGEN. tilbud: { trinn, pris (kr per døgn byen betaler; ikke for medlem), løfte, varighet }, om: { folk, behov, holdning, rivalPris }
   // Gir { svar: 'ja'|'nei'|'motbud', grunn, motbud: { pris } | null, verdi }
   function forhandle(b, tilbud, om = {}) {
-    const t = tilbud.trinn, feil = kanTrinn(b, t); if (feil) return { svar: 'nei', grunn: feil, motbud: null, verdi: 0 };
+    const t = tilbud.trinn, feil = kanTrinn(b, t, 'blå', !!om.eid); if (feil) return { svar: 'nei', grunn: feil, motbud: null, verdi: 0 };
     const H = HOLDNING[om.holdning] || HOLDNING.forsiktig, frykt = b.frykt || 0;
     if (H.fryktNei !== undefined && frykt > H.fryktNei) return { svar: 'nei', grunn: 'Byrådet lar seg ikke true. Frykten må ned først.', motbud: null, verdi: 0 };
     if (!REGLER.varigheter.includes(+tilbud.varighet)) return { svar: 'nei', grunn: 'Varigheten må være 7, 14 eller 30 døgn.', motbud: null, verdi: 0 };
