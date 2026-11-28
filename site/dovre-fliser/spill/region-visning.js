@@ -45,7 +45,9 @@
     if (!tving && performance.now() - statusTid < 3000) return STATUS; statusTid = performance.now();
     const M = mine(), l = leir(), ut = new Map(); if (!l) { STATUS = ut; return ut; }
     const P = M.map(by => ({ id: by.e.id, navn: by.e.navn, x: midt(by).x, y: midt(by).y })), fi = fiender(), eg = egne();
-    M.forEach((by, i) => { const b = RG.by(S, by.e.id), rute = RG.rute(P[i], P, l, fi, eg, veger);
+    // (Ø3 byene på laget) et tettsted som blir ditt uten avtale (tatt med makt), får lojaliteten byavtalen sier (api.startLoj, spill/byavtale-visning.js:
+    // tillit 10 og frykt 80 – ikke i testene); medlemmene får sin tillit. Uten byavtalen som før (lojStart).
+    M.forEach((by, i) => { const ny = !S.byer[by.e.id] || S.byer[by.e.id].tapt, b = RG.by(S, by.e.id, ny && api.startLoj ? api.startLoj(by.e.id) : undefined), rute = RG.rute(P[i], P, l, fi, eg, veger);
       ut.set(by.e.id, { by, b, type: typeAv(by), strøm: strøm(by), garnison: garnison(by), rute }); });
     // (runde 4) tettsteder du har mistet, merkes: tar du dem igjen, er lojaliteten lavere (Region.REGLER.lojGjentatt)
     // (bare når kartdataene er lest og eierskapet er hentet fra lagringen – ti sekunder etter start)
@@ -108,7 +110,9 @@
       b.loj = RG.lojSteg(b.loj, st, d);
       // (R3-løkka) døgn holdt: skatten kjøres inn (Region.innkjøring)
       b.holdt = (Number.isFinite(+b.holdt) ? +b.holdt : 0) + d;
-      const o = RG.opprør(b.loj, q.garnison);
+      // (Ø3) et medlem gjør ikke opprør (det sier heller opp avtalen, spill/byavtale-visning.js), og en by som er redd dere (frykt fra 50) og har
+      // en garnison, er lydig: ingen uro (api.lydig)
+      const o = b.medlem || (q.garnison && api.lydig && api.lydig(q.by.e.id)) ? null : RG.opprør(b.loj, q.garnison);
       if (o === 'tapt') { TETTSTEDER.set(q.by.e.id, { eier: null, inntar: null }); b.loj = R.lojEtterOpprør; b.uro = false; b.skatt = 'vanlig'; statusTid = -1e9; skitten = true;
         logg(`OPPRØR i ${navn}! Folket har jaget skatteoppkreverne dine, og tettstedet er nøytralt igjen. Hard skatt uten garnison går ikke i lengden.`); continue; }
       if (o === 'uro' && !b.uro) { b.uro = true; logg(`Uro i ${navn}: folk nekter å levere. Garnisonen holder tettstedet, men det gir bare halvparten til skatten lettes.`); }
@@ -431,5 +435,15 @@ body.smal #region, body.kort #region{ left:0; right:0; top:auto; bottom:0; width
   window.addEventListener('riksbrudd-spill', () => setTimeout(start, 0));
   Object.assign(api, { glemFordel: () => { fordelTid = -1e9; BYID = null; }, start, åpne, lukk, erÅpen: () => åpen, vis, tilstand: () => S, status: () => status(true), sum, steg, lever, nyttDøgn, sisteSkatt, skattDøgn, girFor: id => { const q = status(true).get(id); return q ? girNå(q) : null; }, inntekt: id => inntektFor(byMedId(id) || byMedId(+id)), inntektTekst: id => inntektTekst(byMedId(id) || byMedId(+id)), settSkatt, settAlle, kjøp, brukMedisin, veksle, gjenoppbygg, typeAv, omgivelser, lagre, fordel, pyntKrig,
     børsNå: ider => { S.børs = { tilbud: ider.filter(id => RG.Bors.VARER[id]), dag: Math.floor(S.døgn) }; vis(true); }, sett: n => { S = RG.fraJSON(n); statusTid = -1e9; vis(true); }, klar: () => klar });
+  // (Ø3 byene på laget, spill/byavtale-visning.js) avtalebetalinger og handelsvarer går i potten og kommer fram med lever() som skatten;
+  // medlemmene blir dine med tilliten som lojalitet og betaler full skatt med en gang (de valgte dere)
+  Object.assign(api, {
+    leggIPott: (g, d = 1) => { for (const k of RG.VARER) if (g && g[k]) S.pott[k] = (S.pott[k] || 0) + g[k] * d; },
+    typeFor: id => { const by = byMedId(id) || byMedId(+id); return by ? typeAv(by) : 'bygd'; },
+    lojFor: id => (S.byer[id] && !S.byer[id].tapt ? S.byer[id].loj : null),
+    settLoj: (id, v) => { const b = S.byer[id]; if (b && !b.tapt) { b.loj = Math.max(0, Math.min(100, v)); lagre(); } },
+    nyttMedlem: (id, loj) => { TETTSTEDER.set(id, { eier: 'blå', inntar: null }); const b = RG.by(S, id, loj); b.loj = loj; b.medlem = true; b.uro = false; b.holdt = R.innkjøring.døgn; statusTid = -1e9; lagre(); skitten = true; },
+    ikkeMedlem: id => { const b = S.byer[id]; if (b) b.medlem = false; TETTSTEDER.set(id, { eier: null, inntar: null }); if (b) RG.mistet(S, id); statusTid = -1e9; lagre(); skitten = true; },
+    startLoj: null, lydig: null });
   window.RegionSpill = api;
 })();

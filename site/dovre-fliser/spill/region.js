@@ -295,7 +295,7 @@
   function mistet(S, id) { const b = S.byer[id]; if (!b || b.tapt) return false; b.tapt = true; return true; }
   function settSkatt(S, id, skatt) { if (!SKATT[skatt]) return false; by(S, id).skatt = skatt; return true; }
   function fraJSON(d) { const S = ny(); if (!d || typeof d !== 'object') return S;
-    for (const [id, b] of Object.entries(d.byer || {})) S.byer[id] = { loj: klem(+b.loj || 0, 0, 100), skatt: SKATT[b.skatt] ? b.skatt : 'vanlig', uro: !!b.uro, tapt: !!b.tapt, gjentatt: +b.gjentatt || 0,
+    for (const [id, b] of Object.entries(d.byer || {})) S.byer[id] = { loj: klem(+b.loj || 0, 0, 100), skatt: SKATT[b.skatt] ? b.skatt : 'vanlig', uro: !!b.uro, tapt: !!b.tapt, gjentatt: +b.gjentatt || 0, medlem: !!b.medlem,
       // lagret før R3-løkka (uten holdt): regnes som innkjørt, så et lagret spill betaler som før
       holdt: Number.isFinite(+b.holdt) && b.holdt !== null && b.holdt !== undefined ? Math.max(0, +b.holdt) : REGLER.innkjøring.døgn };
     for (const k of VARER) if (d.pott && d.pott[k] > 0) S.pott[k] = +d.pott[k];
