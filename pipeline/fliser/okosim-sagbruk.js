@@ -25,7 +25,8 @@ O.leggTilDel({ id: 'sagbruk',
     if (!PR.maskinene(sim.L).length) return;
     if (!sim.prod) { sim.prod = { P: PR.ny(), kw: 0, varme: 0 }; SIM.set(sim.L, sim); }
     const kl = (6 + sim.t / 60) % 24, s = Leir.steg(sim.L, 0, kl >= 6 && kl < 20 ? 1 : 0);
-    const r = PR.steg(sim.prod.P, sim.L, O.REGLER.stegMin, { kraft: kraft(sim), mangler: s.mangler }); sim.prod.kw = r.kw; sim.prod.varme = r.varme;
+    const A = sim.F.personer.filter(p => p.oppgave === 'maskin' && FolkR.arbeidsfør(p)), ferdighet = A.length ? A.reduce((q, p) => q + (p.ferd.maskin || 0), 0) / A.length : 0;
+    const r = PR.steg(sim.prod.P, sim.L, O.REGLER.stegMin, { kraft: kraft(sim), mangler: s.mangler, ferdighet }); sim.prod.kw = r.kw; sim.prod.varme = r.varme;
     // saga alene: timer i drift og timer den sto, per grunn
     for (const q of Object.values(r.status)) if (q.type === 'sagbruk') { sim.prod.sagGikk = (sim.prod.sagGikk || 0) + q.drift; const g = q.grunn; if (g && q.drift < 1) { const S = sim.prod.sagSto = sim.prod.sagSto || {}; S[g] = (S[g] || 0) + 1 - q.drift; } }
   },

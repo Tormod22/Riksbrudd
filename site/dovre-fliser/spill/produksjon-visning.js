@@ -31,6 +31,8 @@
 
   // ---------- arbeidskraften: folk på «maskin» × tempo (ferdighet, moral, helse, døgnplanen) ----------
   const kraft = () => { const f = F(); if (!f || !FR) return 0; return FR.arbeidere(f, 'maskin') * (FR.tempo(f, 'maskin') || 0); };
+  // snittferdigheten til dem som arbeider på maskinene (kvaliteten: over 1,2 gir 10 % mer)
+  const ferdighet = () => { const f = F(); if (!f || !FR) return 0; const A = f.personer.filter(p => p.oppgave === 'maskin' && FR.arbeidsfør(p)); return A.length ? A.reduce((s, p) => s + ((p.ferd && p.ferd.maskin) || 0), 0) / A.length : 0; };
 
   // ---------- krokene i reglene ----------
   LB.maskinKW = l => (l === L() ? sist.kw : 0);
@@ -49,7 +51,7 @@
     const l = L(); if (!l || !(dt > 0)) return; les();
     if (!PR.maskinene(l).length) { sist = { status: {}, kw: 0, varme: 0 }; return; }
     const mangler = window.LeirSpill && LeirSpill.siste ? LeirSpill.siste().mangler : new Set();
-    const før = sist.status; sist = PR.steg(P, l, dt, { kraft: kraft(), mangler });
+    const før = sist.status; sist = PR.steg(P, l, dt, { kraft: kraft(), mangler, ferdighet: ferdighet() });
     // et stopp meldes én gang (ny grunn), ikke oftere enn hvert 30. spillminutt per maskin
     for (const [bid, s] of Object.entries(sist.status)) { const f = før[bid];
       if (!s.går && s.grunn && s.grunn !== 'av' && f && f.går && (meldt[bid] === undefined || nåTid() - meldt[bid] > VIS.meldHvert || nåTid() < meldt[bid])) {
@@ -102,7 +104,7 @@
     if (!M.length) h += '<div class="krav"><div>Ingen maskiner ennå.</div><small>Bygg et sagbruk i Leir → Bygg (gruppen Produksjon). Hogst gir tømmer – saga gjør det til planker. Uten saga kan tømmeret selges billig.</small></div>';
     for (const b of M) { const B = LB.BYGG[b.type], R = PR.REGLER.maskiner[b.type], s = sist.status[b.id] || { går: false, tekst: 'venter', folk: 0, drift: 0 };
       const strøm = R.gir ? `gir ${nf(s.kw || 0, 0)} av ${R.gir} kW` : `${R.kw} kW`;
-      h += `<div class="by mrad" data-maskin="${b.id}"><span>${esc(B.navn)}<small>${esc(PR.oppskrift(b.type))}</small><small>Folk ${nf(s.folk || 0, 1)} av ${R.folk} · ${strøm} · slitt ${Math.round((1 - (b.hp || 0)) * 100)} %</small></span>`
+      h += `<div class="by mrad" data-maskin="${b.id}"><span>${esc(B.navn)}<small>${esc(PR.oppskrift(b.type))}</small><small>Folk ${nf(s.folk || 0, 1)} av ${R.folk}${s.kvalitet ? ' (dyktige: +10 %)' : ''} · ${strøm} · slitt ${Math.round((1 - (b.hp || 0)) * 100)} %</small></span>`
         + `<em class="${s.går && s.drift >= .98 ? 'grønn' : s.går || b.av ? '' : 'rød'}">${esc(s.går ? s.tekst : b.av ? 'slått av' : s.tekst)}</em>`
         + `<button type="button" data-pr="av" data-id="${b.id}" data-av="${b.av ? '0' : '1'}">${b.av ? 'Slå på' : 'Slå av'}</button></div>`; }
     h += '<ul class="tall">' + VARER.map(([v, navn]) => `<li><span>${navn}</span><b>${nf((l.lager && l.lager[v]) || 0, 1)} av ${plass} m³</b></li>`).join('');

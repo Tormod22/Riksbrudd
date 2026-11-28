@@ -29,6 +29,8 @@
     },
     rekkefølge: ['fyrkjele', 'sagbruk', 'vedkløyver'],
     slitasje: .0015,          // hp per driftstime (en maskin i full drift er halvslitt etter ca. 14 døgn: da går den med halv fart til den er reparert)
+    // KVALITET (planen 4.3): dyktige folk (snittferdighet på «maskin» over 1,2) gir 10 % mer ut av sagbruket og vedkløyveren
+    kvalitet: { grense: 1.2, bonus: .1 },
     tømmerbil: { pris: 2.5e6 },   // kjøpes i fanen Produksjon; 20 m³ per tur (Ressurser.REGLER.tømmerbil)
   };
   const GRUNNER = ['av', 'ødelagt', 'fullt', 'tom', 'folk', 'strøm', 'slitt'];
@@ -66,11 +68,12 @@
     return { r };
   }
 
-  // Ett steg på dt spillminutter. ctx: { kraft (folk × tempo på «maskin»), mangler (Set av bygg-id uten strøm fra Leir.steg) }.
+  // Ett steg på dt spillminutter. ctx: { kraft (folk × tempo på «maskin»), mangler (Set av bygg-id uten strøm fra Leir.steg),
+  // ferdighet (snittferdigheten til dem på «maskin», for kvaliteten) }.
   // Gir { status: { id: { type, går, drift (0–1), grunn, tekst, inn, ut, folk, kw } }, kw (strøm fra kjelene nå), varme (fyringssteder) }
   // og endrer L.lager, b.hp og P (tellingene).
   function steg(P, L, dt, ctx = {}) {
-    const t = dt / 60, mangler = ctx.mangler || new Set(); let kraft = Math.max(0, ctx.kraft || 0), kw = 0, varme = 0;
+    const t = dt / 60, mangler = ctx.mangler || new Set(), K = REGLER.kvalitet, kval = ctx.ferdighet > K.grense ? 1 + K.bonus : 1; let kraft = Math.max(0, ctx.kraft || 0), kw = 0, varme = 0;
     const status = {};
     for (const b of maskinene(L)) {
       const M = REGLER.maskiner[b.type], v = vil(L, b, kraft), s = { type: b.type, går: false, drift: 0, grunn: null, tekst: '', inn: {}, ut: {}, folk: 0, kw: 0 };
@@ -92,7 +95,8 @@
         if (drift > 1e-6) {
           s.går = true; s.drift = drift;
           for (const [vare, m] of Object.entries(v.r)) { const q = m * t * drift; L.lager[vare] = Math.max(0, har(L, vare) - q); s.inn[vare] = m * drift; P.brukt[vare] = (P.brukt[vare] || 0) + q; }
-          for (const [vare, m] of Object.entries(M.ut)) { const q = m * t * drift; L.lager[vare] = har(L, vare) + q; s.ut[vare] = m * drift; P.laget[vare] = (P.laget[vare] || 0) + q; }
+          for (const [vare, m] of Object.entries(M.ut)) { const q = Math.min(m * t * drift * kval, plass(L, vare)); L.lager[vare] = har(L, vare) + q; s.ut[vare] = q / t; P.laget[vare] = (P.laget[vare] || 0) + q; }
+          s.kvalitet = kval > 1;
           if (M.gir) { s.kw = M.gir * drift; kw += s.kw; varme += M.varme * drift; }
           s.kwBruk = M.kw * drift;
           if (b.hp > 0 && REGLER.slitasje > 0) b.hp = Math.max(.05, b.hp - REGLER.slitasje * t * drift);

@@ -39,6 +39,10 @@ function leir(typer = ['sagbruk']) { const L = Leir.ny(); typer.forEach((t, i) =
   // lite tømmer: bruker det som er og står resten av timen
   const L3 = leir(), P3 = P0.ny(); L3.lager.tømmer = 1; s = P0.steg(P3, L3, 60, { kraft: 3 }).status[1]; ok(s.går && nær(s.drift, .5) && nær(L3.lager.tømmer, 0) && nær(P3.sto.tom, .5), 'halvt med tømmer: halv drift'); }
 
+// kvalitet: snittferdighet over 1,2 gir 10 % mer ut
+{ const L = leir(), P = P0.ny(); L.lager.tømmer = 10; const s = P0.steg(P, L, 60, { kraft: 3, ferdighet: 1.3 }).status[1];
+  ok(nær(L.lager.tre, 1.21) && nær(L.lager.flis, .77) && nær(L.lager.tømmer, 8) && s.kvalitet, `dyktige folk: ${L.lager.tre.toFixed(2)} m³ planker av 2 m³ tømmer`); }
+
 // slitt: under halv hp går den med halv fart, og grunnen er «slitt»
 { const L = leir(), P = P0.ny(); L.lager.tømmer = 10; L.bygg[0].hp = .4; const s = P0.steg(P, L, 60, { kraft: 3 }).status[1];
   ok(s.går && nær(s.drift, .5) && s.grunn === 'slitt' && /slitt/.test(s.tekst) && nær(P.sto.slitt, .5), `slitt maskin: ${s.tekst}`); }
