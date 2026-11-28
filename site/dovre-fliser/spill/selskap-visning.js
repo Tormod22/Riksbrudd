@@ -205,9 +205,13 @@
   function lapp() {
     if (!klar || !S) return null; const st = SK.trådSteg(S), fk = førsteK();
     if (st && fk) return { tekst: st.lapp(fk), pek: st.id === 'send' || st.id === 'hjem' ? 'kart' : st.pek, k: fk, steg: st.id, hjelp: st.tekst(fk, knappFor()) };
-    const ak = S.sider[ID].aktive.slice().sort((a, b) => a.frist - b.frist)[0];
-    if (ak) { const v = vurder(ak); return { tekst: SK.lappFor(ak, v, tid) + ' · ' + SK.fristTekst(ak, tid), pek: klarTilLevering(ak) || erVare(ak) ? 'selskap' : 'kart', k: ak, hjelp: SK.kravTekst(ak) }; }
+    // (ut8-kr-ro, kritikken: lappen sto et døgn på «Kjøpsavtale: tømmer kommer hvert døgn (1 av 5)») en avtale som går av seg selv
+    // (Neste.avSegSelv: kjøpsavtale, Gråfjell kjører) viker for en kontrakt som trenger dere, og for ledige tilbud
+    const selv = window.Neste && Neste.avSegSelv ? Neste.avSegSelv : (k => k.type === 'kjøp'), akt = S.sider[ID].aktive.slice().sort((a, b) => a.frist - b.frist);
+    const lappK = ak => { const v = vurder(ak); return { tekst: SK.lappFor(ak, v, tid) + ' · ' + SK.fristTekst(ak, tid), pek: klarTilLevering(ak) || erVare(ak) ? 'selskap' : 'kart', k: ak, hjelp: SK.kravTekst(ak) }; };
+    const ak = akt.find(k => !selv(k)); if (ak) return lappK(ak);
     const n = S.tilbud.filter(q => SK.kanTa(q, har(), S.sider[ID]).ok).length;
+    if (!n && akt.length) return lappK(akt[0]);
     return { tekst: n ? `Velg en kontrakt i Selskapet (${n} ledig${n === 1 ? '' : 'e'})` : 'Ingen kontrakter nå – nye tilbud kommer i morgen tidlig', pek: 'selskap', k: null };
   }
   // trykk på lappen: gjør det som står (åpner panelet, Tropper, Leir – eller viser stedet og velger laget)

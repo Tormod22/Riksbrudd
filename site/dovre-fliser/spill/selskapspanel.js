@@ -84,7 +84,7 @@
 #selskapet .by{ display:flex; gap:8px; align-items:center; padding:5px 0; border-bottom:1px solid #3a3226; font-size:14px; } #selskapet .by > span{ flex:1; min-width:0; } #selskapet .by small{ display:block; color:#8f8a7c; font-size:12.5px; }
 #selskapet .by em{ font-style:normal; font-size:12.5px; padding:1px 7px; border-radius:9px; border:1px solid #5a4a2a; color:#c8bfa9; flex:none; }
 #selskapet .by em.blå{ border-color:#5d86c0; color:#bcd0ee; } #selskapet .by em.rød{ border-color:#b0443a; color:#e7b3a3; } #selskapet .by em.grønn{ border-color:#5f8a45; color:#b9d48a; }
-#selskapet .knapperad{ display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; } #selskapet .notis{ margin:8px 0 0; font-size:13px; color:#d8cba0; font-style:italic; }
+#selskapet .laast{ margin:2px 0 4px; font-size:13.5px; color:#a89970; } #selskapet .knapperad{ display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; } #selskapet .notis{ margin:8px 0 0; font-size:13px; color:#d8cba0; font-style:italic; }
 body.kort #selskapet{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8px + env(safe-area-inset-right,0px)); width:auto; top:auto; bottom:calc(64px + env(safe-area-inset-bottom,0px)); max-height:min(70vh, calc(100% - var(--topp,44px) - 76px)); border-radius:8px 8px 4px 4px; background:#16120c; }
 body.kort #selskapet .shode{ padding:8px 44px 4px 10px; } body.kort #selskapet .shode .smerke{ width:34px; height:34px; } body.kort #selskapet .shode h2{ font-size:18px; }
 body.kort #selskapet .sfaner button{ padding:0 8px; font-size:13.5px; min-height:38px; }
@@ -116,15 +116,20 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     if (sd && sd.sum) h += linje('Kontrakter', `${sd.sum.levert} levert`, '', `${sd.aktive ? sd.aktive.length : 0} aktive, ${S && S.tilbud ? S.tilbud.length : 0} ledige tilbud`);
     h += linje('Folk', F ? String(F.personer.length) : '–'); h += linje('Lag', String(egneLag().length));
     h += linje('Tettsteder', String(trinnBilde().tettsteder));
-    // (Ø7, ut5-bors) verdien og kursen på Gråbørsen
-    try { if (window.BorsSpill && BorsSpill.flisLinjer) for (const q of BorsSpill.flisLinjer()) h += linje(q[0], q[1], q[3] || '', q[2]); } catch (e) { /* uten børs */ }
+    // (Ø7, ut5-bors) verdien og kursen på Gråbørsen – (ut8-kr-ro, kritikken: «for mye på en gang») først fra trinn 3 (LÅST.børs);
+    // før det står bare en rolig linje nederst i Oversikt (fanen Eiere har alt som før)
+    const børsÅpen = R.nr >= LÅST.børs;
+    try { if (børsÅpen && window.BorsSpill && BorsSpill.flisLinjer) for (const q of BorsSpill.flisLinjer()) h += linje(q[0], q[1], q[3] || '', q[2]); } catch (e) { /* uten børs */ }
     h += '</ul>';
     h += `<h3>Veien videre</h3><ol class="trinn">` + TR.REGLER.TRINN.map(t => `<li class="${t.nr < R.nr ? 'gjort' : t.nr === R.nr ? 'nå' : ''}" data-trinn="${t.nr}"><i>${t.nr < R.nr ? '✓' : t.nr}</i><div><b>${esc(t.navn)}</b><small>${esc(t.nr === R.nr ? 'Dere er ' + t.du + '. ' + t.hva : t.hva)}</small></div></li>`).join('') + '</ol>';
     if (R.neste) h += `<div class="krav" data-neste="${R.neste.nr}"><div>For trinn ${R.neste.nr}, ${esc(R.neste.navn)}:</div>` + R.krav.map(k => `<div class="${k.ok ? 'ok' : 'mangler'}">${k.ok ? '✓' : '○'} ${esc(k.tekst)}</div>`).join('') + (R.steg ? `<small>${esc(R.steg.hjelp)}</small>` : '') + '</div>';
     else h += `<div class="krav"><div class="ok">Dere har nådd det siste trinnet.</div><small>Eksport, investorer og børsen kommer i senere faser.</small></div>`;
     if (H.storlia && R.nr <= 2) h += `<p class="notis">Storlia Tømmer har hørt om dere. Hold leveransene jevne – de følger med.</p>`;
-    // (ut4-eksport, Ø6) eksportordrene, havn/grense og eurokreditten (spill/eksport-visning.js)
-    try { if (window.EksportSpill && EksportSpill.oversiktHtml) h += EksportSpill.oversiktHtml(); } catch (e) { /* uten eksport */ }
+    // (ut4-eksport, Ø6) eksportordrene, havn/grense og eurokreditten (spill/eksport-visning.js) – (ut8-kr-ro) bare når eksporten er
+    // åpen (trinn 3, eller en havn/grensestasjon nær leiren – EksportSpill.åpenNå), eller dere alt har ordrer eller eurokreditt
+    try { if (window.EksportSpill && EksportSpill.oversiktHtml) { if (eksportÅpen()) h += EksportSpill.oversiktHtml();
+      else if (!børsÅpen) h += `<h3 id="eksport">Eksport og børs</h3><p class="rolig laast" data-laast="eksport">Låses opp på trinn ${LÅST.børs} (${esc(TR.REGLER.TRINN[LÅST.børs - 1].navn)}).</p>`;
+      else h += `<h3 id="eksport">Eksport</h3><p class="rolig laast" data-laast="eksport">Eksportordrene kommer når dere har en havn som tar skip eller en grensestasjon nær leiren.</p>`; } } catch (e) { /* uten eksport */ }
     // (28. nov, pakke «seier») de tre veiene til seier: makt, penger og gjenoppbygging (spill/seier-visning.js)
     try { if (window.SeierSpill && SeierSpill.oversiktHtml) h += SeierSpill.oversiktHtml(); } catch (e) { /* uten seier */ }
     const V = viktigste();
@@ -140,6 +145,11 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     h += `<div class="knapperad">${window.RegionSpill && RegionSpill.åpne ? '<button type="button" data-sp="region">Regionen</button>' : ''}${$('krigknapp') ? '<button type="button" data-sp="krig">Krigskartet</button>' : ''}</div>`;
     return h;
   }
+  // (ut8-kr-ro) det som er låst i Oversikt til trinnet er nådd (Claudes forslag: eksport og børs på trinn 3 «Makt i regionen», som
+  // eksportordrene i spill/eksport.js og investorene i spill/bors.js på nivå 3)
+  const LÅST = { børs: 3 };
+  function eksportÅpen() { const E = window.EksportSpill; if (!E) return false; try { const S = E.tilstand ? E.tilstand() : null;
+    if (S && ((S.tilbud && S.tilbud.length) || (S.aktive && S.aktive.length) || S.ek >= 1)) return true; return !!(E.åpenNå && E.åpenNå()); } catch (e) { return true; } }
   const kommer = f => `<div class="rolig"><b>${esc(f.kommer)}</b>${esc(f.mer)}</div>`;
   // (ut8-kr-ro, kritikken: to stiger) trinnet er overskriften, ryktenivået står under som et krav: «Rykte: nivå 1 av 3 for trinn 3»
   function nivåLinje(R, nr) { const SK = window.Selskap, maks = SK && SK.REGLER && SK.REGLER.NIVÅER ? SK.REGLER.NIVÅER.length : 4;
