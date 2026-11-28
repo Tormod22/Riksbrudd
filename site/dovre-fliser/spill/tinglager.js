@@ -20,6 +20,8 @@
 (function (rot) {
   'use strict';
   const Ting = typeof module !== 'undefined' && module.exports ? require('./ting.js') : rot.Ting;
+  // (ut10-skap) skapene i leirens egne bygg er egne plasser (spill/leirskap.js)
+  const Skap = () => (typeof module !== 'undefined' && module.exports ? require('./leirskap.js') : rot.Leirskap);
   const TI = Ting.TING;
 
   // Claudes forslag, alle sammen
@@ -59,6 +61,11 @@
     smalhylle: { navn: 'Smal hylle', liter: 120, klima: 'tørt', tar: null, passer: ['hygiene', 'tørt'], tekst: 'Smal hylle for småting – passer på badet' },
     hjørnehylle: { navn: 'Hjørnehylle', liter: 90, klima: 'tørt', tar: null, passer: ['hygiene', 'fritid'], tekst: 'Liten hylle i hjørnet' },
     tønnestativ: { navn: 'Tønnestativ', liter: 600, klima: 'tørt', tar: { lag: ['vann'], kat: ['drikke'] }, passer: ['vann', 'drikke'], tekst: 'Tre liggende tønner – vann og drikke' },
+    // (ut10-skap, 28. nov) skapene i leirens egne bygg (spill/leirskap.js) – liter er Claudes forslag
+    klesskap: { navn: 'Klesskap', liter: 200, klima: 'tørt', tar: { kat: ['klær', 'hygiene', 'fritid', 'medisin'] }, passer: ['klær'], tekst: 'Klær og personlige ting' },
+    kommode: { navn: 'Kommode', liter: 100, klima: 'tørt', tar: { kat: ['klær', 'hygiene', 'medisin', 'fritid', 'kontor'] }, passer: ['klær', 'hygiene'], tekst: 'Skuffer for småting' },
+    skoskap: { navn: 'Skoskap', liter: 50, klima: 'tørt', tar: { kat: ['klær'] }, passer: ['klær'], tekst: 'Sko og støvler' },
+    overskap: { navn: 'Overskap', liter: 60, klima: 'tørt', tar: { kat: ['mat', 'drikke', 'kjøkken'] }, passer: ['mat', 'kjøkken'], tekst: 'Tørrmat og kjøkkenting' },
     // standardplassen i leirens egne bygg
     lagertelt: { navn: 'Lagerteltet', liter: 600, klima: 'tørt', tar: null, passer: ['tørt', 'vann', 'verktøy'], tekst: 'Kasser og hyller i teltet' },
     container: { navn: 'Containeren', liter: 1200, klima: 'tørt', tar: null, passer: ['tørt', 'vann', 'verktøy', 'klær'], tekst: 'Hyller i containeren' },
@@ -80,11 +87,17 @@
   // o.strøm(b) = har bygget strøm (ellers antas ja). o.ute: ta med «ute» (standard ja)
   function plasser(Leir, L, o = {}) {
     const ut = [];
+    const S = Skap();
     for (const b of (L && L.bygg) || []) {
-      const B = Leir && Leir.BYGG ? Leir.BYGG[b.type] : null, type = (B && B.tingLager) || STANDARD[b.type]; if (!type || !LAGRING[type]) continue;
+      const B = Leir && Leir.BYGG ? Leir.BYGG[b.type] : null, type = (B && B.tingLager) || STANDARD[b.type], skap = S ? S.plasser(b) : [];
+      if ((!type || !LAGRING[type]) && !skap.length) continue;
       const ferdig = Leir && Leir.ferdig ? Leir.ferdig(b) : !(b.igjen > 0); if (!ferdig) continue;
-      const D = LAGRING[type], strøm = D.strøm !== undefined ? (o.strøm ? !!o.strøm(b) : true) : true;
-      ut.push({ id: 'b' + b.id, type, navn: D.navn, liter: D.liter, klima: D.strøm !== undefined && !strøm ? 'tørt' : D.klima, strøm, kjøler: D.strøm !== undefined, låst: !!D.låst, tar: D.tar, passer: D.passer, bygg: b });
+      const plass = (pid, t, navn, ekstra) => { const D = LAGRING[t], strøm = D.strøm !== undefined ? (o.strøm ? !!o.strøm(b) : true) : true;
+        ut.push({ id: pid, type: t, navn, liter: D.liter, klima: D.strøm !== undefined && !strøm ? 'tørt' : D.klima, strøm, kjøler: D.strøm !== undefined, låst: !!D.låst, tar: D.tar, passer: D.passer, bygg: b, ...ekstra }); };
+      if (type && LAGRING[type]) plass('b' + b.id, type, LAGRING[type].navn);
+      // (ut10-skap) skapene i bygget: «Kjøleskap 2 i kjøkkenet» – egne plasser, byggets standardplass står som før
+      const bn = B && B.navn ? B.navn.toLowerCase() : b.type;
+      for (const q of skap) if (LAGRING[q.type]) plass(q.id, q.type, `${LAGRING[q.type].navn}${q.nr ? ' ' + q.nr : ''} (${bn})`, { skap: { møbel: q.møbel, k: q.k } });
     }
     if (o.ute !== false) ut.push({ id: 'ute', type: 'ute', navn: LAGRING.ute.navn, liter: Infinity, klima: 'ute', strøm: true, låst: false, tar: null, passer: [], bygg: null });
     return ut;

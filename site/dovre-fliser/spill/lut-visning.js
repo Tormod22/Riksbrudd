@@ -114,7 +114,10 @@
     const kl = P.leir ? (L.LEIR[P.bygg.kl] ? P.bygg.kl : 'brakke') : P.bygg.kl, liste = [];
     // (runde 12) «Se i skapene» etter letingen: alle beholderne i bygget, ikke bare de innen rekkevidde (helHus = byggets nummer)
     const hel = helHus !== null && helHus === P.bygg.i;
+    // (ut10-skap) i leirens egne bygg er skapene plasser i tinglageret (spill/leirskap.js, Lageret-panelet) – luten viser dem bare når det ligger noe der fra før
+    const LB0 = P.leir && rot.Leirskap && rot.LeirSpill ? (LeirSpill.tilstand() || { bygg: [] }).bygg.find(q => 9000000 + q.id === P.bygg.i) : null;
     for (const b of L.beholdere(P.inne, P.bygg.i)) { const av = L.avstand(b.m, x, y); if (av > R.nær && !hel) continue; const nk = b.nk;
+      if (LB0 && Leirskap.finn(LB0, b.type, b.k) && !(L.kg(innholdAv(nk, 'brakke', b.type, P.bygg.i, b.k, nærLeir(P)), VEKT) > 0)) continue;
       liste.push({ nk, type: b.type, navn: b.navn, tittel: b.tittel, kg: b.kg, kald: !!b.kald, av, P, B: innholdAv(nk, P.leir ? 'brakke' : kl, b.type, P.bygg.i, b.k, nærLeir(P)), m: b.m }); }
     // (i hele huset: de med noe i først, så de tomme)
     if (hel) liste.sort((a, b) => (L.kg(a.B, VEKT) > 0 ? 0 : 1) - (L.kg(b.B, VEKT) > 0 ? 0 : 1) || a.av - b.av); else liste.sort((a, b) => a.av - b.av);
