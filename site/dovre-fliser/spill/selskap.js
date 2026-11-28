@@ -224,7 +224,63 @@
     }
     // de eldste går ut – aldri den første kontrakten (den har sin egen frist), r3: nye tilbud kommer også mens den ligger der
     while (S.tilbud.length > REGLER.maksTilbud) { const i = S.tilbud.findIndex(q => !q.første && !q.fast); if (i < 0) break; S.tilbud.splice(i, 1); }
+    // (ut8-kr-penger) minst ett tilbud én tropp klarer – ikke for en fast kunde (o.giver), og bare når visningen sier hvor sterk spilleren er
+    if (!o.giver && tall(o.styrke) > 0) { const k = sikreLett(S, id, nå, steder, r, o); if (k) nye.push(k); }
     return nye;
+  }
+  // ---------- ET TILBUD ÉN TROPP KLARER (ut8-kr-penger, 28. nov) ----------
+  // Kritikken (Jonas Bakke, Ingrid Sæther): etter den første kontrakten var alle tilbudene «For svakt: 4 mann mot et forsvar på ca. 10 / 25 /
+  // 50» – bygdevernet i stedet, en garnison eller fiender sett der – og Neste-lappen sto på «Ta en ny kontrakt» i fire døgn mens kassa rant ut.
+  // Nå: finnes ingen åpent tilbud spilleren klarer med det største laget sitt (o.styrke, minst lett.styrke), lages ett: en hentejobb eller
+  // et hold for bygdelaget/kommunen i et nært tettsted ingen andre holder (bygdevernet slipper dere inn – spill/krig-visning.js), eller ved
+  // en bru, der det ikke står fiender. Fristen får en time ekstra per km (den skal kunne holdes til fots). Alle tallene er Claudes forslag.
+  // steder kan ha: vern (bygdevernets mann), fiender (mann dere ser eller nylig så ved stedet), garnison (anslått, når et annet selskap holder det)
+  REGLER.lett = { styrke: 4, maksMeter: 9000, nærmeste: 3, holdSjanse: .5, ekstraPerKm: 1, garnison: 8 };
+  // det kjente forsvaret ved stedet for en jobb (mann), samme regel som visningens forsvarVed: bygdevernet teller ikke når jobben er for
+  // bygdelaget eller kommunen der (de vet om jobben); en garnison teller når et annet selskap holder stedet
+  function forsvarFor(k, sted, id) {
+    if (!k || !sted || k.type === 'forsyning') return 0;
+    const egen = k.giver && k.giver.slag !== 'firma' && k.giver.by != null && k.giver.by === sted.id;
+    let m = tall(sted.fiender);
+    if (sted.slag !== 'bru') { if (!egen) m += tall(sted.vern); if (sted.eier && sted.eier !== id) m += tall(sted.garnison, REGLER.lett.garnison); }
+    return m;
+  }
+  // klarer én tropp på «styrke» mann (og «kjøretøy» egne biler) dette tilbudet? sted = stedet med vern/fiender (ellers k.sted)
+  function klarbar(k, styrke, sd, sted, kjøretøy = 0) {
+    if (!k || k.første || !REGLER.TYPER[k.type] || REGLER.TYPER[k.type].krav) return false;
+    const K = kravFor(k); if (sd && K.nivå > nivå(sd).nr) return false; if (K.menn > tall(styrke)) return false;
+    if (k.type === 'rydd') return false;
+    if (k.type === 'eskorte' && (tall(kjøretøy) < 1 || k.risiko === 'bakhold' || k.fare)) return false;
+    if (k.fare) return false;
+    return forsvarFor(k, sted || k.sted, sd ? sd.id : k.for) < tall(styrke);
+  }
+  // stedet i lista som hører til tilbudet (samme id eller navn), med vern og fiender fra visningen
+  const stedFor = (steder, k) => (steder || []).find(q => q && sammeSted(q, k.sted)) || k.sted;
+  function sikreLett(S, id, nå, steder, r, o) {
+    const sd = side(S, id), L = S.leir || { x: 0, y: 0 }, LT = REGLER.lett, styrke = Math.max(LT.styrke, tall(o.styrke)), nv = nivå(sd);
+    if (S.tilbud.some(k => klarbar(k, styrke, sd, stedFor(steder, k), o.kjøretøy))) return null;
+    const kand = (steder || []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y) && q.navn)
+      .map(q => ({ ...q, d: Math.hypot(q.x - L.x, q.y - L.y) })).filter(q => q.d >= REGLER.avstand.min && q.d <= LT.maksMeter)
+      .filter(q => tall(q.fiender) < styrke && (q.slag === 'bru' || !q.eier || q.eier === id)).sort((a, b) => a.d - b.d);
+    const ledige = kand.filter(q => !opptatt(S, sd, 'hent', q) || (!opptatt(S, sd, 'hold', q) && nv.menn <= styrke)).slice(0, LT.nærmeste);
+    if (!ledige.length) return null;
+    const sted = velg(ledige, r), byer = (steder || []).filter(q => q && q.slag !== 'bru' && Number.isFinite(q.x));
+    const kanHold = nv.menn <= styrke && !opptatt(S, sd, 'hold', sted), kanHent = !opptatt(S, sd, 'hent', sted);
+    const typ = kanHold && (!kanHent || r() < LT.holdSjanse) ? 'hold' : 'hent', T = REGLER.TYPER[typ];
+    // giveren er bygdelaget eller kommunen i stedet (for en bru: det nærmeste tettstedet) – så bygdevernet slipper troppen inn
+    const by = sted.slag !== 'bru' ? sted : byer.slice().sort((a, b) => Math.hypot(a.x - sted.x, a.y - sted.y) - Math.hypot(b.x - sted.x, b.y - sted.y))[0] || null;
+    const giver = by && r() < .5 ? { slag: 'by', navn: `Kommunen i ${by.navn}`, by: by.id === undefined ? null : by.id } : { slag: 'bygd', navn: `Bygdelaget i ${(by || sted).navn}`, by: by && by.id !== undefined ? by.id : null };
+    const hold = typ === 'hold' ? T.holdTimer[0] : 0, ekstra = Math.ceil(sted.d / 1000) * LT.ekstraPerKm;
+    const timer = (typ === 'hold' ? hold + T.ekstraTimer : T.timer) + ekstra;
+    const person = typ === 'hent' ? `${velg(ROLLER, r)} ${velg(FORNAVN, r)} ${velg(ETTERNAVN, r)}` : null;
+    const kr = betaling(typ, sd.rykte, sd.pris, sted.d, hold, nv.faktor, o.infl);
+    const k = { id: 'k' + (++S.nr), type: typ, giver, status: 'tilbud', tilbudt: Math.round(nå), utløper: Math.round(nå + REGLER.tilbudVarer), timer, hold, betaling: kr,
+      bot: avrund(kr * REGLER.bot), sted: { navn: sted.navn, x: Math.round(sted.x), y: Math.round(sted.y), slag: sted.slag || 'tettsted', id: sted.id === undefined ? null : sted.id },
+      fra: null, last: null, person, sperre: null, konkurrent: null, side: null, for: id, nivå: nv.nr, lett: true };
+    k.tittel = tittel(k); S.tilbud.push(k);
+    // maksTilbud: de eldste vanlige går ut, aldri dette
+    while (S.tilbud.length > REGLER.maksTilbud) { const i = S.tilbud.findIndex(q => !q.første && !q.fast && !q.lett); if (i < 0) break; S.tilbud.splice(i, 1); }
+    return k;
   }
   // (ut2-balanse 28. nov) PÅFYLL: åpner spilleren Selskapet uten tilbud og uten aktive kontrakter, kommer nye tilbud straks (selskap-visning.js,
   // så den røde tråden kan gå videre etter den første kontrakten). Før kunne det skje så ofte spilleren ville – én tropp på 60× kunne da ta
@@ -514,7 +570,7 @@
   }
 
   const api = { FIRMA, firmaKilde: null, REGLER, SIDER, ORD, ny, side, endreRykte, ord, rykteTekst, typeVekter, giverVekter, antallTilbud, betaling, lagTilbud, tittel, kravTekst, bruttTekst, retningOrd,
-    godta, lever, bryt, avbryt, steg, dagSteg, marsjVurdering, nivå, nesteNivå, kravFor, kanTa, kravKort, førsteKontrakt, TRÅD, oppdaterTråd, trådSteg, lappFor, hardhendt, settPris, fristTekst, tilJSON, fraJSON, lagRand, påfyll };
+    godta, lever, bryt, avbryt, steg, dagSteg, marsjVurdering, nivå, nesteNivå, kravFor, kanTa, kravKort, førsteKontrakt, TRÅD, oppdaterTråd, trådSteg, lappFor, hardhendt, settPris, fristTekst, tilJSON, fraJSON, lagRand, påfyll, forsvarFor, klarbar, sikreLett };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Selskap = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
