@@ -151,13 +151,14 @@
   function nådd(A) { const ut = []; for (const s of REGLER.SIDER) for (const v of REGLER.VEIER) if (A && A[s] && A[s][v.id] && A[s][v.id].nådd) ut.push({ side: s, vei: v.id }); return ut; }
 
   // ---------- huskingen (ren JSON, per leir) ----------
-  const ny = leir => ({ v: 1, leir: leir || '', holdt: {}, seire: [], aktiv: {}, falne: 0, lagUt: 0, maksBy: 0 });
+  const ny = leir => ({ v: 1, leir: leir || '', holdt: {}, seire: [], aktiv: {}, falne: 0, lagUt: 0, maksBy: 0, sjekketGml: false });
   function fraJSON(d, leir) {
     if (!d || typeof d !== 'object' || d.leir !== leir) return ny(leir);
     const S = ny(leir);
     if (d.holdt && typeof d.holdt === 'object') for (const [k, h] of Object.entries(d.holdt)) if (h && typeof h.eier === 'string' && Number.isFinite(h.fra)) S.holdt[k] = { eier: h.eier, fra: h.fra };
     if (Array.isArray(d.seire)) S.seire = d.seire.filter(q => q && REGLER.SIDER.includes(q.side) && vei(q.vei)).slice(-20).map(q => ({ side: q.side, vei: q.vei, tid: tall(q.tid), valg: q.valg || null }));
     if (d.aktiv && typeof d.aktiv === 'object') for (const [k, v] of Object.entries(d.aktiv)) if (v) S.aktiv[k] = true;
+    S.sjekketGml = !!d.sjekketGml;
     S.falne = Math.max(0, tall(d.falne)); S.lagUt = Math.max(0, tall(d.lagUt)); S.maksBy = Math.max(0, tall(d.maksBy));
     return S;
   }

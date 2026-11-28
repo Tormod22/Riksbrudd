@@ -613,7 +613,7 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
   function les(id) { try { const d = JSON.parse(localStorage.getItem(NØKKEL) || 'null'); meldt = d && d.leir === id ? d : { leir: id, vunnet: false, tapt: false, fare: {} }; } catch (e) { meldt = { leir: id, vunnet: false, tapt: false, fare: {} }; } }
   const lagre = () => { try { localStorage.setItem(NØKKEL, JSON.stringify(meldt)); } catch (e) { /* fullt eller sperret */ } };
   // valg = [[tekst, funksjon, forklaring] …]: knapper på kortet (seieren fører til noe: større region eller sterkere motstander)
-  function visKort(tittel, tekst, valg) { const d = el('div', {}, el('h2', {}, tittel), el('p', {}, tekst)); if (valg && valg.length) { for (const [t, fn, forkl] of valg) { const b = knapp(t, () => { kort.classList.remove('på'); if (fn) fn(); }, { 'data-valg': t }); d.append(el('div', { klasse: 'valg' }, b, forkl ? el('small', {}, forkl) : '')); } } else d.append(knapp('Fortsett', () => kort.classList.remove('på'))); kort.replaceChildren(d); kort.classList.add('på'); if (typeof tempo !== 'undefined' && document.getElementById('sp0') && tempo > 0) document.getElementById('sp0').click(); }
+  function visKort(tittel, tekst, valg) { const d = el('div', {}, el('h2', {}, tittel), el('p', {}, tekst)); if (valg && valg.length) { for (const [t, fn, forkl] of valg) { const b = knapp(t, () => { kort.classList.remove('på'); if (fn) fn(); }, { 'data-valg': t }); d.append(el('div', { klasse: 'valg' }, b, forkl ? el('small', {}, forkl) : '')); } } else d.append(knapp('Fortsett', () => kort.classList.remove('på'))); kort.replaceChildren(d); kort.classList.remove('avslutning'); kort.classList.add('på'); if (typeof tempo !== 'undefined' && document.getElementById('sp0') && tempo > 0) document.getElementById('sp0').click(); }
   // (R1-løkka 26. nov) der egne lag blir slått ut (alle døde eller ingen friske igjen), huskes i meldt.tap per leir (høyst 12, ett døgn),
   // så «Neste trekk» ikke foreslår stedet på nytt med en gang (Strategi.REGLER.tap)
   const iLive = new Map();
@@ -631,14 +631,17 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
     vis(false); if (!auto()) return; const R = S.REGLER;
     for (const s of T.ut.fare) if (!meldt.fare[s]) { meldt.fare[s] = true; lagre(); logg(`${fraksjon(s).navn} holder nå ${S.prosent(T.st.sider[s].andel)} % av folket i området – de vinner ved ${S.prosent(R.seier)} %. Åpne krigskartet (Krig).`); }
     for (const s of Object.keys(meldt.fare)) if (!T.ut.fare.includes(s) && T.st.sider[s] && T.st.sider[s].andel < R.fare - .05) { delete meldt.fare[s]; lagre(); }
-    if (T.ut.vinner === 'blå' && !meldt.vunnet) { meldt.vunnet = true; meldt.seire = (meldt.seire || 0) + 1; lagre(); seierKort(a); }
-    else if (T.ut.vinner && T.ut.vinner !== 'blå' && !meldt.tapt) { meldt.tapt = true; lagre(); visKort(`${fraksjon(T.ut.vinner).navn} har overtaket`, `De holder ${S.prosent(T.st.sider[T.ut.vinner].andel)} % av folket i området. Ta tettsteder tilbake for å snu krigen.`); }
+    // (28. nov, pakke «seier») avslutningen for makt – og for de to andre veiene – vises av spill/seier-visning.js (SeierSpill), ikke her
+    const gamleKort = !window.SeierSpill;
+    if (T.ut.vinner === 'blå' && !meldt.vunnet) { meldt.vunnet = true; meldt.seire = (meldt.seire || 0) + 1; lagre(); if (gamleKort) seierKort(a); }
+    else if (T.ut.vinner && T.ut.vinner !== 'blå' && !meldt.tapt) { meldt.tapt = true; lagre(); if (gamleKort) visKort(`${fraksjon(T.ut.vinner).navn} har overtaket`, `De holder ${S.prosent(T.st.sider[T.ut.vinner].andel)} % av folket i området. Ta tettsteder tilbake for å snu krigen.`); }
     else if (T.ut.vinner !== 'blå' && meldt.vunnet && a < R.seier - .08) { meldt.vunnet = false; lagre(); } }
   // SEIEREN FØRER TIL NOE (natt 18. nov): fortsett som nå, ta en større region (flere tettsteder, seieren må vinnes på nytt), eller møt en
   // sterkere motstander (fienden treffer 25 % bedre per valg – ScenarioSpill.sterkere). Valgene huskes per leir.
   function størreRegion() { meldt.nivå = (meldt.nivå || 0) + 1; meldt.vunnet = false; meldt.fare = {}; lagre(); byNøkkel = ''; const B = område(); logg(`Krigen utvides: området er nå ${Math.round((B.radius || 0) / 1000)} km rundt leiren, med ${B.length} tettsteder.`); sist = ''; vis(true); skitten = true; return B.length; }
   function sterkere() { const n = window.ScenarioSpill && ScenarioSpill.sterkere ? ScenarioSpill.sterkere() : null; logg(n ? `Motstanderne har samlet seg: de treffer nå ${Math.round(n * 100)} % av det vanlige.` : 'Motstanderne samler seg.'); return n; }
-  function seierKort(a) { const n = meldt.seire || 1; if (window.DagbokSpill && DagbokSpill.noter) DagbokSpill.noter(`Seier nr. ${n}: ${fraksjon('blå').navn} holder ${S.prosent(a)} % av folket i området.`);
+  function seierKort(a) { if (window.SeierSpill && SeierSpill.vis) return SeierSpill.vis('makt', 'blå');
+    const n = meldt.seire || 1; if (window.DagbokSpill && DagbokSpill.noter) DagbokSpill.noter(`Seier nr. ${n}: ${fraksjon('blå').navn} holder ${S.prosent(a)} % av folket i området.`);
     visKort('Området er ditt', `${fraksjon('blå').navn} holder ${S.prosent(a)} % av folket i området. Du har vunnet denne krigen. Hva nå?`, [
       ['Større region', størreRegion, 'Krigen utvides til flere tettsteder lenger unna. Du må vinne på nytt.'],
       ['Sterkere motstander', sterkere, 'Samme område, men fienden treffer bedre.'],
