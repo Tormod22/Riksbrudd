@@ -144,7 +144,7 @@
     RANG.clear(); if (gang) { const grp = new Map(); for (let i = 0; i < nV; i++) { const g = gang.plass(VO[i]); if (!g || !g.inne || g.bygg === null || g.bygg === undefined) continue;
       const k = g.bygg + (g.sover || g.hva === 'søvn' ? 's' : g.hva === 'mat' ? 'm' : ''), n = grp.get(k) || 0; grp.set(k, n + 1); RANG.set(i, n); } }
     flokk.start();
-    figurer.forEach((p, i) => { let går = 0; const q = pers(i), G = SLAG[p.slag] || SLAG.voksen, syk = !!(q && q.syk);
+    figurer.forEach((p, i) => { let går = 0; p.stilling = ''; const q = pers(i), G = SLAG[p.slag] || SLAG.voksen, syk = !!(q && q.syk);
       const gq = gang && i < nV && q ? gang.plass(q) : null;
       if (gq) går = følg(p, i, gq, bygg, meg, regel, R, u, dt, G.fart * (syk ? .7 : 1), q); else {
       // et nytt utsnitt: plassen inne gjelder ikke lenger (høyden er regnet fra det gamle) – gå ut døra
