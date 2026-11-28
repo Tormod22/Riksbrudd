@@ -102,6 +102,8 @@
     s.lønn = krav(s);
     const B = REGLER.bud; if (beste(s) >= B.ferdighet && r() < B.sjanse) { const rv = REGLER.rivaler[Math.floor(r() * REGLER.rivaler.length)];
       s.bud = { rival: rv.id, navn: rv.navn, lønn: rund(s.lønn * (B.påslag[0] + r() * (B.påslag[1] - B.påslag[0])), REGLER.lønn.steg) }; }
+    // (ut6-spioner) kroken api.nySøker(s, tid): spill/spion-visning.js kan gjøre søkeren til en spion (egen tilfeldighet; uten kroken som før)
+    if (api.nySøker) api.nySøker(s, tid);
     return s;
   }
   // MORGEN: søkere med bud kan gå til rivalen, nye søkere kommer, og en misfornøyd kan bli lokket. Gir { nye, tilRival, lokk, hendelser }.
@@ -139,6 +141,8 @@
     const p = { id: F.neste++, navn: s.navn, alder: s.alder, yrke: s.yrke, ferd: { ...s.ferd }, oppgave: 'fri', helse: 1, lojal: s.lojal, seng: false, lønn: l, egen: (s.egen || []).slice() };
     if (o.byOver) p.lojal = Math.min(1, p.lojal + .05);
     F.personer.push(p); S.søkere.splice(S.søkere.indexOf(s), 1); S.ansatt++;
+    // (ut6-spioner) kroken api.ansattKrok(s, p, tid): en spion blant søkerne kommer inn i leiren (spill/spion-visning.js)
+    if (api.ansattKrok) api.ansattKrok(s, p, o.tid);
     if (iNød) { if (FR.arbeidere(F, 'bygg') < FR.R.nødBygg) p.oppgave = 'bygg'; F.moral = Math.max(F.moral, FR.R.nødMoral); F.misnøye = 0; }
     if (tom) F.sist = { ...F.sist, tom: false };
     return { person: p, pris, lønn: l, byOver: !!o.byOver };
@@ -235,7 +239,7 @@
       utfør: (k, c) => ferdig(c, 'opplæring', k.ferdighet ? startOpplæring(F(c), L(c), k.person, k.ferdighet, M.mangler ? M.mangler(side(c)) : null) : stoppOpplæring(F(c), k.person)),
       beskriv: k => (k.ferdighet ? 'sender en på opplæring' : 'tar en ut av opplæringen') });
   }
-  const api = { lokkF: null, ulykkeMinus: null, REGLER, EGENSKAPER, ny, fraJSON, rng, beste, krav, lønn, forventet, antall, egenskaper, lagSøker, morgen, steg, kanAnsette, ansettLønn, ansett,
+  const api = { lokkF: null, ulykkeMinus: null, nySøker: null, ansattKrok: null, REGLER, EGENSKAPER, ny, fraJSON, rng, beste, krav, lønn, forventet, antall, egenskaper, lagSøker, morgen, steg, kanAnsette, ansettLønn, ansett,
     misfornøyd, lokkSjekk, svarLokk, personF, plasser, elever, startOpplæring, stoppOpplæring, skoleSteg, mesterSteg, registrerKommandoer };
   if (NODE) module.exports = api; else rot.Rekruttering = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

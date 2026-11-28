@@ -333,8 +333,10 @@
       else if (a.du > 0 && dag % UKE === 0) { const kr = utbytteFirma(a.du, res); if (kr > 0) { a.utbytte += kr; ut.push({ type: 'utbytte', navn: f.navn, kr }); } }
     }
     // rivalene kjøper andeler i firmaene (kappløpet om Storlia)
+    // (ut6-spioner) om.ekteRivaler: rivalenes økonomi (spill/rival-visning.js) kjøper selv med penger fra kassa (rivalKjøp) – da kjøper de ikke tilfeldig her
     const levende = (om.firmaer || []).filter(f => !f.konkurs);
     for (const s of ['rød', 'grønn']) {
+      if (om.ekteRivaler) break;
       if (!levende.length || r() >= R.rival.firmaSjanse) continue;
       const vekt = levende.map(f => R.rival.firmaVekt[f.navn] || 1), sum = vekt.reduce((a, b) => a + b, 0); let x = r() * sum, f = levende[0];
       for (let i = 0; i < levende.length; i++) { x -= vekt[i]; if (x <= 0) { f = levende[i]; break; } }
@@ -349,6 +351,7 @@
       for (const [id, n] of Object.entries(m.inv)) { const h = B.investorer[id]; if (!h || n <= 0 || h.tilfreds >= R.rival.misfornøyd) continue;
         const s = m.rival.rød <= m.rival.grønn ? 'rød' : 'grønn'; m.rival[s] = en(m.rival[s] + n); m.inv[id] = 0; h.status = 'solgt'; ut.push({ type: 'investorSelger', inv: id, side: s, n }); }
       for (const s of ['rød', 'grønn']) {
+        if (om.ekteRivaler) break;
         let p = R.rival.megSjanse; if (m.egne < 50) p *= 2; if (m.stemning < R.rival.lavKurs) p *= 1.5;
         if (m.fritt <= 0 || r() >= p) continue; const [a0, a1] = R.rival.megKjøp, n = Math.min(m.fritt, a0 + Math.floor(r() * (a1 - a0 + 1)));
         m.fritt = en(m.fritt - n); m.rival[s] = en(m.rival[s] + n); ut.push({ type: 'rivalKjøpMeg', side: s, n });
@@ -374,6 +377,31 @@
     for (const ø of B.ønsker) { if (ø.status !== 'aktiv') continue; const u = vurderØnske(ø, nå, { ...(om.sjekk || {}), forventet: m.uke ? m.uke.forventet : 0, utbytte: m.uke ? m.uke.betalt : 0 }); if (u) { lukkØnske(B, ø, u); ut.push({ type: 'ønske', ø, utfall: u }); } }
     if (B.ønsker.length > 40) B.ønsker = B.ønsker.filter(ø => ø.status === 'aktiv').concat(B.ønsker.filter(ø => ø.status !== 'aktiv').slice(-20));
     return ut;
+  }
+  // ---------- (ut6-spioner) RIVALENE KJØPER MED EKTE PENGER ----------
+  // rivalKjøp(B, side, kr, kurs, o): rivalen har «kr» fra kassa si (spill/rival-visning.js) og kjøper andeler til kursen. Er dere notert og det
+  // finnes frie andeler, kjøper de i dere (høyst megKjøp[1] % om gangen, og bare når kursen er lav eller dere eier under halvparten – ellers
+  // i et firma); ellers i et firma (Storlia teller tre ganger, høyst firmaKjøp[1] %). kurs = { meg, firma: { navn: { kurs } } } (kr per %).
+  // o = { firmaer: [{ navn, konkurs }], r }. Gir { brukt, hendelser } – hendelsene er de samme som døgn() gir (rivalKjøpMeg, rivalKjøpFirma, firmaEier, oppkjøp).
+  function rivalKjøp(B, side, kr, kurs = {}, o = {}) {
+    const R = REGLER.rival, ut = [], r = o.r || lagRand(Math.floor(tall(kr)) + 31), m = B.meg; let brukt = 0; kr = Math.max(0, tall(kr));
+    if (!['rød', 'grønn'].includes(side) || kr <= 0) return { brukt, hendelser: ut };
+    const km = tall(kurs.meg), lyst = m.egne < 50 || m.stemning < R.lavKurs || r() < .5;
+    if (m.notert && !m.oppkjøpt && m.fritt > 0 && km > 0 && lyst) {
+      const n = en(Math.min(m.fritt, R.megKjøp[1], Math.floor(kr / km * 10) / 10));
+      if (n >= .1) { m.fritt = en(m.fritt - n); m.rival[side] = en(m.rival[side] + n); brukt = Math.round(n * km); ut.push({ type: 'rivalKjøpMeg', side, n, kr: brukt });
+        if (m.rival[side] > 50 && !m.oppkjøpt) { m.oppkjøpt = side; ut.push({ type: 'oppkjøp', side, andel: m.rival[side] }); }
+        return { brukt, hendelser: ut }; }
+    }
+    const levende = (o.firmaer || []).filter(f => f && !f.konkurs && fri(B, f.navn) > 0 && kurs.firma && kurs.firma[f.navn] && tall(kurs.firma[f.navn].kurs) > 0);
+    if (!levende.length) return { brukt, hendelser: ut };
+    const vekt = levende.map(f => R.firmaVekt[f.navn] || 1), sum = vekt.reduce((a, b) => a + b, 0); let x = r() * sum, f = levende[0];
+    for (let i = 0; i < levende.length; i++) { x -= vekt[i]; if (x <= 0) { f = levende[i]; break; } }
+    const kf = tall(kurs.firma[f.navn].kurs), n = en(Math.min(fri(B, f.navn), R.firmaKjøp[1], Math.floor(kr / kf * 10) / 10));
+    if (n < .1) return { brukt, hendelser: ut };
+    const a = firma(B, f.navn), før = eierAv(a); a[side] = en(a[side] + n); brukt = Math.round(n * kf); ut.push({ type: 'rivalKjøpFirma', side, navn: f.navn, n, kr: brukt });
+    const etter = eierAv(a); if (etter !== før) { a.eier = etter; ut.push({ type: 'firmaEier', navn: f.navn, side: etter }); }
+    return { brukt, hendelser: ut };
   }
   // lån betalt / ikke betalt (visningen kaller etter «renter»). Ikke betalt: långiveren tar andeler til kursen
   function lånBetalt(B, l, ok, kursKr) {
@@ -416,7 +444,7 @@
     } catch (e) { return null; }
   }
 
-  const api = { REGLER, RIVALER, OPPDRAGSTYPER, hash, lagRand, kroner, mill, ny, firma, ute, investorAndeler, sjekkSum, firmaVerdi, kurs, selskapVerdi, børsverdi, minDel,
+  const api = { rivalKjøp, REGLER, RIVALER, OPPDRAGSTYPER, hash, lagRand, kroner, mill, ny, firma, ute, investorAndeler, sjekkSum, firmaVerdi, kurs, selskapVerdi, børsverdi, minDel,
     stemningEndring, endreStemning, tilbake, tellerForskjell, fri, virkning, eierAv, kanKjøpe, kjøp, selg, utbytteFirma, kanNotere, noter, forventetUtbytte, nyUke, betalUtbytte,
     kanEmisjon, emisjon, tilbakekjøp, kjøpRival, selgRival, rykte, størsteRival, investor, nyttØnske, ønskeTekst, henvendelse, svarInvestor, vurderØnske, lukkØnske, aktiveEiere,
     døgn, lånBetalt, seierInn, tilJSON, fraJSON };
