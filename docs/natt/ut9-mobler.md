@@ -20,7 +20,7 @@ Valgene i rommene er faste per rom via `hash(pl.i, …)` (ikke `tilf()`), så sa
 (overskap, vifte, krydderhylle, speilskap, verktøyvegg): sperrer aldri, ingen skygge på gulvet. Møblene har nå `rolle` (rommet de står i).
 Skoskap sperrer ikke (gangen ble stengt i én leilighet i test_interior.js da det sperret); kommode i gangen er tatt ut av samme grunn.
 `lut.js` BEHOLDERE har 13 nye møbler man kan åpne (garderobe, kommode, overskap, skoskap, stålreol, gondol, drikkekjøler, frysedisk,
-speilskap, verkstedbenk, vitrineskap, skjenk, safe).
+speilskap, verkstedbenk, vitrineskap, skjenk, safe). Medisin i dem er holdt lav (ut9-mobler2): et vanlig hus skal gi 0,1–0,4 førstehjelp (test_balanse.js) – speilskapet har mest småting, ikke medisin.
 
 ## 2. Ti nye hylletyper i leiren (spill/tinglager.js LAGRING + spill/byggesett.js NYE)
 | del | lagring | liter | tar / passer |
