@@ -81,23 +81,26 @@
 
   // ---------- 2: tapte klikk leveres ----------
   const klikkbar = n => (n && n.closest ? n.closest(KLIKKBAR) : null);
-  rot.addEventListener('pointerdown', e => { if (e.button > 0) { ned = null; return; } const k = klikkbar(e.target); ned = k ? { k, sig: nøkkel(k), x: e.clientX, y: e.clientY, klikk: false } : null; }, true);
-  rot.addEventListener('pointercancel', () => { ned = null; sistOpp = null; }, true);
+  rot.addEventListener('pointerdown', e => { if (!e.isTrusted) return; sp('ned', e.pointerType + ' ' + Math.round(e.clientX) + ',' + Math.round(e.clientY) + ' ' + (e.target.id || e.target.tagName)); if (e.button > 0) { ned = null; return; } const k = klikkbar(e.target); ned = k ? { k, sig: nøkkel(k), x: e.clientX, y: e.clientY, klikk: false } : null; }, true);
+  rot.addEventListener('pointercancel', e => { if (e.isTrusted) { ned = null; sistOpp = null; } }, true);
   function finnLik(n, x, y) {
     if (!n || n.k.isConnected) return null;
     const under = document.elementFromPoint(x, y), k = klikkbar(under);
     return k && k !== n.k && nøkkel(k) === n.sig && !k.disabled ? k : null;
   }
   function lever(n, k) { if (n.klikk) return; n.klikk = true; api.levert++; try { k.click(); } catch (x) { /* knappen feilet selv */ } }
+  // de siste avgjørelsene (for feilsøking og vakta): [hva, tekst]
+  const spor = api.spor = []; const sp = (h, t) => { spor.push([h, t]); if (spor.length > 12) spor.shift(); };
   rot.addEventListener('pointerup', e => {
-    sistOpp = { t: performance.now(), el: e.target };
+    // (andre moduler sender egne pointer-hendelser – de er ikke fingeren)
+    if (!e.isTrusted) return; sp('opp', e.pointerType + ' ' + Math.round(e.clientX) + ',' + Math.round(e.clientY)); sistOpp = { t: performance.now(), el: e.target };
     const n = ned; if (!n) return; n.ux = e.clientX; n.uy = e.clientY;
     if (Math.hypot(e.clientX - n.x, e.clientY - n.y) > REGLER.flytt) { ned = null; return; }
     // kom ikke nettleserens eget klikk (mus: knappen ble byttet mens den var nede), leveres det her
-    setTimeout(() => { if (ned !== n || n.klikk) return; const k = finnLik(n, n.ux, n.uy); if (k) lever(n, k); }, REGLER.ventKlikk);
+    setTimeout(() => { if (ned !== n || n.klikk) { sp('vent', ned !== n ? 'ny peker' : 'klikket kom'); return; } const k = finnLik(n, n.ux, n.uy); sp('vent', k ? 'levert' : n.k.isConnected ? 'samme knapp' : 'ingen lik ved ' + Math.round(n.ux) + ',' + Math.round(n.uy) + ' (' + ((document.elementFromPoint(n.ux, n.uy) || {}).tagName || '-') + ')'); if (k) lever(n, k); }, REGLER.ventKlikk);
   }, true);
   rot.addEventListener('click', e => {
-    const n = ned; if (!n || !e.isTrusted) return;
+    const n = ned; if (!n || !e.isTrusted) return; sp('klikk', (e.target.id || e.target.tagName) + (n.k.isConnected ? ' (samme)' : ' (byttet)'));
     // klikket gikk til den nye knappen (berøring treffer det som står der fingeren slapp): ferdig
     if (n.k.isConnected || (n.klikk)) { n.klikk = true; return; }
     const k = finnLik(n, e.clientX, e.clientY);
