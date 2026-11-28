@@ -120,6 +120,8 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     if (R.neste) h += `<div class="krav" data-neste="${R.neste.nr}"><div>For trinn ${R.neste.nr}, ${esc(R.neste.navn)}:</div>` + R.krav.map(k => `<div class="${k.ok ? 'ok' : 'mangler'}">${k.ok ? '✓' : '○'} ${esc(k.tekst)}</div>`).join('') + (R.steg ? `<small>${esc(R.steg.hjelp)}</small>` : '') + '</div>';
     else h += `<div class="krav"><div class="ok">Dere har nådd det siste trinnet.</div><small>Eksport, investorer og børsen kommer i senere faser.</small></div>`;
     if (H.storlia && R.nr <= 2) h += `<p class="notis">Storlia Tømmer har hørt om dere. Hold leveransene jevne – de følger med.</p>`;
+    // (28. nov, pakke «seier») de tre veiene til seier: makt, penger og gjenoppbygging (spill/seier-visning.js)
+    try { if (window.SeierSpill && SeierSpill.oversiktHtml) h += SeierSpill.oversiktHtml(); } catch (e) { /* uten seier */ }
     const V = viktigste();
     h += '<h3>Det viktigste nå</h3>' + (V.length ? '<ul class="viktig">' + V.map((k, i) => `<li><em>${i + 1}</em><span>${esc(k.tekst)}</span>${k.l0 || k.trykk ? `<button type="button" data-sp="gå" data-i="${i}">Gå til</button>` : ''}</li>`).join('') + '</ul>' : '<p class="rolig">Ingenting haster akkurat nå.</p>');
     return h;
