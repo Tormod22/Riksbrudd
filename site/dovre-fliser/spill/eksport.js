@@ -27,6 +27,11 @@
       ved: { navn: 'ved', enhet: 'm³', ek: 13, mengde: [30, 120], steg: 10, plass: 1 },
       stål: { navn: 'stål', enhet: 't', ek: 85, mengde: [5, 25], steg: 5, plass: 1 },
       diesel: { navn: 'diesel', enhet: 'l', ek: 4, mengde: [2000, 8000], steg: 500, plass: .01 },
+      // (ut6-kjeder, fase Ø9) varene fra de nye kjedene – Claudes forslag (frossen fisk er den klassiske eksportvaren)
+      frossenfisk: { navn: 'frossen fisk', enhet: 't', ek: 55, mengde: [10, 60], steg: 5, plass: 1 },
+      mel: { navn: 'mel', enhet: 't', ek: 22, mengde: [10, 50], steg: 5, plass: 1 },
+      pukk: { navn: 'pukk', enhet: 'm³', ek: 11, mengde: [40, 160], steg: 20, plass: 1 },
+      deler: { navn: 'deler', enhet: 't', ek: 160, mengde: [2, 8], steg: 1, plass: 1 },
     },
     // planker og tømmer først (det brukeren nevnte); ved, stål og diesel når så mange eksportordre er levert
     førstVarer: ['tre', 'tre', 'tømmer'], senereVarer: ['tre', 'tømmer', 'ved', 'stål', 'diesel'], senereEtter: 2,
@@ -119,7 +124,9 @@
   // lager én ordre. o: { rand, vei ('sjø' | 'grense'), størst (største skip dere kan laste: plassenheter), vare }
   function lagOrdre(S, nå, o = {}) {
     const r = o.rand || lagRand(S.nr * 977 + Math.floor(nå) + 3), vei = o.vei || (r() < .6 ? 'sjø' : 'grense');
-    const vare = o.vare || velg(S.sum.levert >= REGLER.senereEtter ? REGLER.senereVarer : REGLER.førstVarer, r), V = REGLER.VARER[vare];
+    // (ut6-kjeder) api.ekstraVarer() -> varene leiren lager i de nye kjedene (frossen fisk, mel …); tom liste = som før (samme terning)
+    const ekstra = S.sum.levert >= REGLER.senereEtter && api.ekstraVarer ? (api.ekstraVarer() || []).filter(v => REGLER.VARER[v]) : [];
+    const vare = o.vare || velg((S.sum.levert >= REGLER.senereEtter ? REGLER.senereVarer : REGLER.førstVarer).concat(ekstra), r), V = REGLER.VARER[vare];
     // mengden: innenfor varens spenn, men aldri mer enn den største havna tar (sjø) eller halve spennet (grense: mange turer med lastebil)
     let [a, b] = V.mengde; if (vei === 'grense') b = a + (b - a) / 2;
     if (vei === 'sjø' && o.størst > 0) b = Math.min(b, o.størst / V.plass);
@@ -240,7 +247,7 @@
     for (const k of S.aktive) { k.turer = Array.isArray(k.turer) ? k.turer : []; k.iHavn = tall(k.iHavn); k.levert = tall(k.levert); }
     S.lager = { helideler: Math.max(0, Math.floor(tall(d.lager && d.lager.helideler))) }; S.sum = { ...ny().sum, ...(d.sum || {}) }; return S; }
 
-  const api = { REGLER, KJØPERE, GRENSER, ny, skipTar, grenserNær, åpen, lagOrdre, morgen, ta, utFeil, iHavn, turPris, overGrensa, steg, avbryt, kurs, nettoKurs, veksle, kjøpUte, iKroner,
+  const api = { ekstraVarer: null, REGLER, KJØPERE, GRENSER, ny, skipTar, grenserNær, åpen, lagOrdre, morgen, ta, utFeil, iHavn, turPris, overGrensa, steg, avbryt, kurs, nettoKurs, veksle, kjøpUte, iKroner,
     tittel, krav, status, ekTekst, mengdeTekst, plass, tilJSON, fraJSON, lagRand };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else rot.Eksport = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
