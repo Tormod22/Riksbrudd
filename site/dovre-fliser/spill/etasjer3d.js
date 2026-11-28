@@ -13,7 +13,9 @@
 (function () {
   const r3 = () => (typeof R3 !== 'undefined' ? R3 : null), E = () => window.Etasjer, PT = () => window.Plantegning2D;
   // ms = arbeid per bilde, BORT = så langt fra huset før etasjene kastes (m); HALL = klasser uten etasjer (ingen modell)
-  const BIT = { ms: 6, BORT: 25, maksModeller: 12 };
+  // nær = så nær huset før modellen lages (m)
+  const BIT = { ms: 6, BORT: 25, nær: 12 };
+  const avst = (R, P) => { const k = window.Gange && Gange.kropp ? Gange.kropp() : null, x = k ? k.x : R.bane.x, y = k ? k.y : R.bane.y; return Interior.inni(P, x, y) ? 0 : Interior.avstKant(P, x, y); };
   const HALL = { industri: 1, lager: 1, låve: 1, kirke: 1, hangar: 1, terminal: 1, lagerhall: 1 };
   const STAT = { modeller: 0, modellMs: 0, lengst: 0, bygget: 0, byggMs: 0, trekanter: 0 };
   // aktiv = huset du står i: { P, h, m, ox, oy, g0, nett: Map(n -> Mesh), trapp: Mesh, n, jobb }
@@ -32,6 +34,8 @@
   function* modellG(R, u, P) {
     if (!P || P.leir || !P.bygg || HALL[P.bygg.kl] || !window.Bygning || !PT()) return null;
     const h = hus2d(P, u); if (!h) return null;
+    // hus du bare går forbi, betaler ikke for modellen: den lages først når du er innen BIT.nær m (da bygges interiøret på nytt)
+    if (!h.klar && !h.feil && avst(R, P) > BIT.nær) { P.etasjerVent = true; return null; }
     if (!h.klar && !h.feil) { const t0 = performance.now(), it = Bygning.fraKartG(h.P, h.info); let r, t = t0;
       try { while (!(r = it.next()).done) { const n = performance.now(); STAT.lengst = Math.max(STAT.lengst, n - t); t = n; yield 'etasjer'; } h.m0 = r.value; h.klar = true; }
       catch (e) { h.feil = String(e && e.message || e); console.warn('etasjer:', e); return null; }
@@ -213,6 +217,8 @@
   function ramme(R) {
     if (!R.fot || !R.ut || !window.Interior3d || !E()) { if (aktiv) kast(R); return; }
     const k = window.Gange && Gange.kropp ? Gange.kropp() : null, x = k ? k.x : R.bane.x, y = k ? k.y : R.bane.y;
+    // interiører som ventet på modellen: bygges på nytt (i biter) når du kommer nær
+    for (const P of Interior3d.aktivP ? Interior3d.aktivP() : []) if (P.etasjerVent && avst(R, P) <= BIT.nær) { delete P.etasjerVent; STAT.påNytt = (STAT.påNytt || 0) + 1; Interior3d.glem(P); }
     if (aktiv && (aktiv.u !== R.ut || !aktiv.P.inne || (!Interior.inni(aktiv.P, x, y) && Interior.avstKant(aktiv.P, x, y) > BIT.BORT))) kast(R);
     if (!aktiv) { const P = Interior3d.inne(x, y); if (!P || !P.etasjer || !P.inne) return; const h = PT() && PT().hus(P.etasjer.i), m = h && h.m; if (!m || m.etasjer.length < 2) return;
       aktiv = { P, h, m, u: R.ut, ox: P.etasjer.ox, oy: P.etasjer.oy, g0: P.inne.gulv, nett: new Map(), trapp: null, n: 1, trappNå: null, jobb: null, ferdig: false };

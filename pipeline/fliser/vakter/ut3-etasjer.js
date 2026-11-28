@@ -66,9 +66,14 @@ module.exports = {
           P2.prøvehus(P.map(p => [p[0] + u.cx, p[1] + u.cy]), { i, t: 10, h: 13 });
           try {
             if (!R.fot) Gange.start();
-            const kr = Gange.kropp(); R.bane.x = kr.x = x0 + w / 2; R.bane.y = kr.y = y0 - 3;
+            // først 20 m unna: interiøret kommer, men modellen venter (hus du går forbi, betaler ikke for den)
+            const kr = Gange.kropp(); R.bane.x = kr.x = x0 + w / 2; R.bane.y = kr.y = y0 - 20;
             for (let q = 0; q < 20 && !P.inne; q++) Interior3d.oppdater(true);
             ok(!!P.inne, 'prøvehuset fikk ikke interiør i 3D'); if (!P.inne) return ut;
+            ut.vent = !!P.etasjerVent; ok(P.etasjerVent && !P.etasjer, 'modellen ble laget for et hus 20 m unna');
+            // så nær døra: interiøret bygges på nytt med modellen
+            R.bane.y = kr.y = y0 - 3; Etasjer3d.steg();
+            for (let q = 0; q < 20 && !(P.inne && P.etasjer); q++) Interior3d.oppdater(true);
             ok(!!P.etasjer, 'interiøret fikk ikke byggemodellen (P.etasjer)');
             const h = P2.hus(i), m = h && h.m; ok(m && m.etasjer.length >= 3, 'ingen modell med flere etasjer');
             if (!m || !P.etasjer) return ut;
