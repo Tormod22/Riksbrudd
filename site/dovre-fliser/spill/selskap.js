@@ -266,7 +266,9 @@
     const sd = side(S, id), L = S.leir || { x: 0, y: 0 }, LT = REGLER.lett, styrke = Math.max(LT.styrke, tall(o.styrke)), nv = nivå(sd);
     // bare når selskapet står uten arbeid: ingen kontrakt i gang (har dere en, er det den som gir pengene i dag)
     if (nv.nr > LT.maksNivå || sd.aktive.some(k => !k.første && REGLER.TYPER[k.type] && !REGLER.TYPER[k.type].krav)) return null;
-    if (S.tilbud.some(k => klarbar(k, styrke, sd, stedFor(steder, k), o.kjøretøy, L))) return null;
+    // o.klarbar (fra visningen): dens egen vurdering av et tilbud (kravene, forsvaret og marsjen den har regnet ut) – ellers reglenes anslag
+    const kan = typeof o.klarbar === 'function' ? k => { try { return !!o.klarbar(k); } catch (e) { return false; } } : k => klarbar(k, styrke, sd, stedFor(steder, k), o.kjøretøy, L);
+    if (S.tilbud.some(k => !k.første && kan(k))) return null;
     // nærmest først: fra lett.min (et tettsted like ved leiren er en god første jobb – Ulvik lå 1,3 km fra Jonas' leir), helst innen
     // maksMeter; finnes ingen der, også lenger ut (til avstand.maks) – fristen vokser med avstanden
     const alle = (steder || []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y) && q.navn)

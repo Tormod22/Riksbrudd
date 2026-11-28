@@ -104,7 +104,7 @@
   }
   // spillerens styrke til det lette tilbudet: det største laget, men minst en tropp på fire (folkene kan alltid lage en)
   const styrkeNå = () => Math.max(SK.REGLER.lett ? SK.REGLER.lett.styrke : 4, har().størsteLag || 0);
-  function nyeTilbud(liste) { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, medForsvar(medEier(liste || steder())), null, { infl: infl(), styrke: styrkeNå(), kjøretøy: har().kjøretøy }); lagre(); return n; }
+  function nyeTilbud(liste) { if (!S) return []; const n = SK.lagTilbud(S, ID, tid, medForsvar(medEier(liste || steder())), null, { infl: infl(), styrke: styrkeNå(), kjøretøy: har().kjøretøy, klarbar: kanKlare }); lagre(); return n; }
 
   // ---------- det som legges ut i verden når en kontrakt tas ----------
   const egneLag = () => ENHETER.filter(s => s.side === ID && levende(s) && !s.karakter);
@@ -231,12 +231,15 @@
   }
   // ---------- (ut8-kr-penger) HVA DERE KLARER NÅ ----------
   // tilbudene leiren har det som trengs til, uten advarsel (ikke for svakt, fristen holder) – de lette (Selskap.sikreLett) først, så best betalt
-  function klarbare() {
-    if (!S) return []; const sd = S.sider[ID];
-    return S.tilbud.filter(q => { if (q.første || erVare(q)) return false; const kt = SK.kanTa(q, har(q), sd); if (!kt.ok || (kt.advarsel && kt.advarsel.length)) return false;
-      const m = MARSJ.size ? marsj(q) : null; if (m && !m.venter && !m.feil && SK.marsjVurdering(q, m).advarsel) return false; return true; })
-      .sort((a, b) => (b.lett ? 1 : 0) - (a.lett ? 1 : 0) || b.betaling - a.betaling);
+  // klarer leiren tilbudet nå? Kravene og forsvaret (kanTa uten advarsel), og marsjen: regnet ut (MARSJ) når den finnes, ellers et anslag
+  // (luftlinje × omveg til fots, samme som reglene). En eskorte uten regnet marsj teller ikke (bilen kan stå på andre siden av en fjord).
+  function kanKlare(q) {
+    if (!S || !q || q.første || erVare(q)) return false; const kt = SK.kanTa(q, har(q), S.sider[ID]); if (!kt.ok || (kt.advarsel && kt.advarsel.length)) return false;
+    const m = marsj(q); if (m && !m.venter && !m.feil) return !SK.marsjVurdering(q, m).advarsel; if (q.type === 'eskorte') return false;
+    const L = Sp() && Sp().leir, LT = SK.REGLER.lett; if (!L || !LT) return true; const km = Math.hypot(q.sted.x - L.x, q.sted.y - L.y) / 1000 * LT.omveg;
+    return !SK.marsjVurdering(q, { km, timer: km / LT.kmt }).advarsel;
   }
+  function klarbare() { return S ? S.tilbud.filter(kanKlare).sort((a, b) => (b.lett ? 1 : 0) - (a.lett ? 1 : 0) || b.betaling - a.betaling) : []; }
   // de små oppdragene (Leir → Mål, spill/spillet-visning.js): { liste, tatt } – samles nå også i Kontrakter
   const småOppdrag = () => { try { const O = window.SpilletSpill && SpilletSpill.O && SpilletSpill.O(); return O && Array.isArray(O.liste) ? O.liste : []; } catch (e) { return []; } };
   const OPD = () => (window.Spillet && Spillet.Oppdrag) || null;

@@ -260,4 +260,11 @@ console.log('ut2-balanse: påfyll og eskortebetaling ok');
   // ikke for en fast kunde (o.giver)
   const D = S0.ny({ x: 0, y: 0 }); S0.lagTilbud(D, 'blå', 0, st, S0.lagRand(5), { styrke: 4, antall: 1, giver: { slag: 'firma', navn: 'Storlia Tømmer' } });
   ok(!D.tilbud.some(t => t.lett), 'fast kunde får ikke et ekstra lett tilbud'); }
+// visningens egen vurdering (o.klarbar) bestemmer når den finnes: sier den nei til alt, kommer det lette tilbudet; sier den ja, kommer det ikke
+{ const st = [{ navn: 'A', x: 3000, y: 0, slag: 'tettsted', id: 1 }, { navn: 'B', x: 0, y: 5000, slag: 'tettsted', id: 2 }]; let nei = 0, ja = 0;
+  for (let i = 0; i < 30; i++) { const A = S0.ny({ x: 0, y: 0 }); S0.lagTilbud(A, 'blå', 1440, st, S0.lagRand(i + 7), { styrke: 4, klarbar: () => false }); if (A.tilbud.some(k => k.lett)) nei++;
+    const B = S0.ny({ x: 0, y: 0 }); S0.lagTilbud(B, 'blå', 1440, st, S0.lagRand(i + 7), { styrke: 4, klarbar: () => true }); if (B.tilbud.some(k => k.lett)) ja++; }
+  ok(nei === 30 && ja === 0, `o.klarbar styrer: lett tilbud ${nei} av 30 når ingenting passer, ${ja} når alt passer`);
+  const C = S0.ny({ x: 0, y: 0 }); C.sider.blå.aktive.push({ id: 'x', type: 'hent', frist: 9e9 }); S0.lagTilbud(C, 'blå', 1440, st, S0.lagRand(3), { styrke: 4, klarbar: () => false });
+  ok(!C.tilbud.some(k => k.lett), 'ingen lett tilbud mens en kontrakt er i gang'); }
 console.log('ut8-kr-penger: et tilbud én tropp klarer ok');
