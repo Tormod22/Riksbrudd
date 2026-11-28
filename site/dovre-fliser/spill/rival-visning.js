@@ -36,7 +36,9 @@
   const maksKr = () => (window.Eskalering ? Eskalering.REGLER.økonomi.maksKr : 30e6);
   const leggTil = (side, beløp, hva) => { const ø = Ø(side); if (!ø || !(Math.abs(beløp) > 0)) return; ø.kr = Math.min(maksKr(), ø.kr + beløp); if (hva) S.sider[side].inn[hva] = (S.sider[side].inn[hva] || 0) + beløp; };
   const hend = (type, tekst) => { if (navigator.webdriver) return; try { window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type, tekst } })); } catch (e) { /* eldre nettlesere */ } };
-  const melding = t => { if (window.SpilletSpill && SpilletSpill.varsel) SpilletSpill.varsel(t); else logg(t); };
+  // meldingene til spilleren (de siste ti huskes for vakta: RivalSpill.meldinger)
+  const MELD = [];
+  const melding = t => { MELD.unshift(t); MELD.length = Math.min(MELD.length, 10); if (window.SpilletSpill && SpilletSpill.varsel) SpilletSpill.varsel(t); else logg(t); };
 
   // ---------- det rivalen har ----------
   const lagFor = side => (typeof ENHETER !== 'undefined' ? ENHETER.filter(e => e.ai && e.side === side && levende(e) && Array.isArray(e.menn)) : []);
@@ -262,6 +264,6 @@
   window.addEventListener('pagehide', () => lagre());
   setInterval(() => { if (auto()) lagre(); }, 20000);
 
-  Object.assign(api, { S: () => S, nullstill: () => { S = ny(); VAKT.clear(); }, tak, inntekt, time, døgn, velgVei, sabotér, reparer, tarTilbud, kontrakter, byDøgn, styr, partnerTekst, veiLinje, lagre, les, NØKKEL,
+  Object.assign(api, { S: () => S, meldinger: MELD, sett: d => { S = ny(); if (d && d.sider) for (const sd of SIDER) if (d.sider[sd]) Object.assign(S.sider[sd], d.sider[sd]); }, nullstill: () => { S = ny(); VAKT.clear(); }, tak, inntekt, time, døgn, velgVei, sabotér, reparer, tarTilbud, kontrakter, byDøgn, styr, partnerTekst, veiLinje, lagre, les, NØKKEL,
     vei: side => S.sider[side] ? S.sider[side].vei : null, settVei: (side, v) => { if (S.sider[side] && RV.VEIER.includes(v)) S.sider[side].vei = v; } });
 })();
