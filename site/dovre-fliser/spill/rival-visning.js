@@ -170,23 +170,32 @@
     return vei; }
   // AI-en etter veien: vokte avtalebyene (alle veier, flere mann på «penger»), og «gjenoppbygging» går ikke løs på leiren din men holder
   // det de har. Spørres av fraksjoner-visning.js (AI.styrere) når eskaleringen ikke styrer laget.
-  const VAKT = new Map();   // by-id -> { lag (navn), til }
+  const VAKT = new Map();   // by-id -> { lag (navn), til, p (vaktposten) }
+  // meter utenfor tettstedets kant der vaktposten står (Claudes forslag)
+  const VAKTAVSTAND = 700;
   function styr(s, v) {
     if (!på() || !s.ai || !SIDER.includes(s.side) || F.slåttUt(s) || s.ombord) return null;
     if (['angrip', 'trekk', 'forsyn', 'støtt'].includes(v.hva) || /^garnison/.test(v.tekst || '')) return null;
     const side = s.side, vei = S.sider[side].vei || 'makt', P = RV.PRIORITET[vei] || RV.PRIORITET.makt, t = nå(), RB = window.Byavtale;
-    if (RB) for (const q of avtaleByer(side)) { const r = q.b.rival; if (r.trinn !== 'beskyttelse' && r.trinn !== 'handel') continue;
+    // vaktposten står VAKTAVSTAND m fra midten av byen (innenfor løftets 3 km, men utenfor tettstedet – ellers tar laget byen)
+    const post = (q, f) => { const a = Math.atan2(f.y - q.by.y, f.x - q.by.x), r = Math.max(q.by.r || 300, 300) + VAKTAVSTAND; return { x: q.by.x + Math.cos(a) * r, y: q.by.y + Math.sin(a) * r }; };
+    const vokt = (q, V) => { const p = V.p; return Math.hypot(s.x - p.x, s.y - p.y) > 300 ? { hva: 'samle', x: p.x, y: p.y, tekst: `går til ${q.by.navn} for å holde løftet til byen` } : { hva: 'hold', x: s.x, y: s.y, tekst: `vokter ${q.by.navn} (avtale)` }; };
+    const byerA = RB ? avtaleByer(side).filter(q => q.b.rival.trinn === 'beskyttelse' || q.b.rival.trinn === 'handel') : [];
+    for (const q of byerA) {
       const id = String(q.id), V = VAKT.get(id), lag = V ? ENHETER.find(e => e.navn === V.lag && e.side === side && levende(e)) : null;
-      if (V && V.lag === s.navn) { if (t > V.til) { VAKT.delete(id); continue; }
-        const d = Math.hypot(s.x - q.by.x, s.y - q.by.y);
-        return d > 1200 ? { hva: 'samle', x: q.by.x, y: q.by.y, tekst: `går til ${q.by.navn} for å holde løftet til byen` } : { hva: 'hold', x: s.x, y: s.y, tekst: `vokter ${q.by.navn} (avtale)` }; }
+      if (V && V.lag === s.navn) { if (t > V.til) { VAKT.delete(id); continue; } return vokt(q, V); }
       if (lag && t <= V.til) continue;
       const behov = RB.REGLER.rivalLøfte.mann * P.vokt; if (mannNær(side, q.by, RB.REGLER.radius) >= behov) continue;
       if (Math.hypot(s.x - q.by.x, s.y - q.by.y) > 25000) continue;
-      VAKT.set(id, { lag: s.navn, til: t + 6 * 60 }); return { hva: 'samle', x: q.by.x, y: q.by.y, tekst: `går til ${q.by.navn} for å holde løftet til byen` }; }
+      const V2 = { lag: s.navn, til: t + 6 * 60, p: post(q, s) }; VAKT.set(id, V2); return vokt(q, V2); }
+    // en by de har avtale med, tar de ikke med makt (laget blir stående utenfor i stedet)
+    const målBy = byerA.find(q => (v.hva === 'ta' && String(v.mål) === String(q.id)) || (v.hva === 'hold' && /^(tar|venter på flere for å ta) /.test(v.tekst || '') && v.tekst.includes(q.by.navn)));
+    if (målBy) return { hva: 'samle', ...post(målBy, s), tekst: `holder seg utenfor ${målBy.by.navn} (de har avtale med byen)` };
     if (P.leir === false && v.hva === 'leir') return { hva: 'hold', x: s.x, y: s.y, tekst: 'holder det de har' };
     return null; }
   AI.styrere.push(styr);
+  // eskaleringens angrepsgrupper går ikke mot en by siden har beskyttelse/handel med (eskalering-visning.js spør)
+  AI.avtaleMed = (side, id) => på() && avtaleByer(side).some(q => String(q.id) === String(id) && (q.b.rival.trinn === 'beskyttelse' || q.b.rival.trinn === 'handel'));
   // GJENOPPBYGGING: én sprengt ting nær egne tettsteder repareres per døgn (odeleggelse.js: hel = ingen oppføring i INFRA_TILSTAND)
   function reparer(side) {
     const T = window.INFRA_TILSTAND, ø = Ø(side); if (!T || !T.size || !ø || ø.kr < R.reparer.kr || typeof INFRA === 'undefined' || !INFRA) return null;

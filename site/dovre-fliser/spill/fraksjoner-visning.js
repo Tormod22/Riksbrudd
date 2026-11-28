@@ -144,7 +144,8 @@
       // om bord i lastebilen: gå av når den er framme eller laget ser en fiende nær, ellers kjør videre (tenker hvert minutt)
       if (s.ombord) { const k = s.ombord, nær = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvileHer(s, e) && ser(s, e.x, e.y)).reduce((d, e) => Math.min(d, Math.hypot(e.x - s.x, e.y - s.y)), Infinity);
         if (!KJORETOY.includes(k) || F.gåAv(!k.sti, nær === Infinity ? null : nær)) avBil(s); else { s.ai.neste = 60; continue; } }
-      const byer = byerRundt(s, R.rekkevidde + 5000).map(by => { const [x, y] = inne(by); return { id: by.e.id, navn: by.e.navn, x, y, folk: by.e.folk, eier: eier(by), inni: (X, Y) => Garnison.inni(by, X, Y), mann: Garnison.mannFor ? Garnison.mannFor(by.e.folk) : 0, minst: Garnison.minstFor ? Garnison.minstFor(by.e.folk) : 0 }; });
+      // (ut5-rivaler, Ø8) en by siden har beskyttelse/handel med, er ikke noe å ta (AI.avtaleMed – spill/rival-visning.js)
+      const byer = byerRundt(s, R.rekkevidde + 5000).filter(by => !(AI.avtaleMed && AI.avtaleMed(s.side, by.e.id))).map(by => { const [x, y] = inne(by); return { id: by.e.id, navn: by.e.navn, x, y, folk: by.e.folk, eier: eier(by), inni: (X, Y) => Garnison.inni(by, X, Y), mann: Garnison.mannFor ? Garnison.mannFor(by.e.folk) : 0, minst: Garnison.minstFor ? Garnison.minstFor(by.e.folk) : 0 }; });
       const fiender = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvileHer(s, e) && ser(s, e.x, e.y)).map(e => ({ x: e.x, y: e.y, navn: e.navn, styrke: F.styrke(e, Forsyning.ammo(e)) }))
         .concat(KJORETOY.filter(k => k.side !== s.side && !hvileHer(s, k) && ser(s, k.x, k.y)).map(k => ({ x: k.x, y: k.y, navn: k.navn, styrke: ((window.Enheter && Enheter.REGLER.styrke[k.type]) || 1) * k.antall })));   // stridsvogner skremmer, lastebiler er bytte
       // BEDRE AI (17. nov): det fraksjonen husker og vet – hvor den sist så en fiende, hvilke tettsteder den har mistet, hvem av
