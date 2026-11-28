@@ -136,4 +136,13 @@ ok(prøvebygg.length === nr, nr + ' prøvebygg (' + KART.length + ' klasser × 4
   { const s = typer('kirke', {}, rekt(26, 12)); ok(s.t.has('alter') && s.t.has('kirkebenk') && s.r.has('sakristi'), 'kirke: alter, benkerader og sakristi'); }
   { const s = typer('hytte', {}, rekt(8, 6)); ok(s.t.has('ovn') && (s.r.has('allrom') || s.r.has('stue')), 'hytte: allrom/stue med vedovn'); }
 }
+// INNGANGENE STÅR FRITT (friInngang, ut7): en skillevegg og et sperrende møbel rett innenfor døra tas bort, resten står
+{ const P = rekt(10, 8), pl = I.plan(P, { i: 4242, kl: 'hus', h: 6, dør: dør(P, 0, .5, 1) }), i = pl.inngang, [ix, iy] = i.inn;
+  const vFør = pl.vegger.length, mFør = pl.møbler.length;
+  pl.vegger.push({ ax: i.x - .25 * i.ux, ay: i.y - .25 * i.uy, bx: i.x - .25 * i.ux - 3.6 * i.nx, by: i.y - .25 * i.uy - 3.6 * i.ny });
+  pl.møbler.push({ type: 'skap', x: ix - .3 * i.nx, y: iy - .3 * i.ny, a: 0, b: .8, d: .5, h: 2, sperrer: true });
+  const n = I.friInngang(pl);
+  ok(n === 2 && !I.blokkert(pl, ix, iy) && !I.blokkert(pl, i.x - .25 * i.ux, i.y - .25 * i.uy - .9 * i.ny), 'friInngang: vegg og skap rett innenfor døra tatt bort (' + n + ')');
+  ok(pl.vegger.length === vFør + 1 && pl.møbler.length === mFør, 'friInngang: resten av veggen innover står igjen, de andre veggene og møblene er urørt');
+  ok(I.blokkert(pl, i.x - .25 * i.ux - 3 * i.nx, i.y - .25 * i.uy - 3 * i.ny), 'friInngang: veggen sperrer fortsatt lenger inne'); }
 console.log(feil ? feil + ' FEIL' : 'alle interiørtestene ok'); process.exit(feil ? 1 : 0);

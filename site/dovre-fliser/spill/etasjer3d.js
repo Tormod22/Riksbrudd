@@ -71,6 +71,8 @@
     pl.vegger = vegger; pl.dører = dører;
     pl.møbler = e1.møbler.filter(q => q.tilstand !== 'revet').map(q => ({ type: q.type, x: q.x + ox, y: q.y + oy, a: q.a, b: q.b, d: q.d, h: q.h, sperrer: q.sperrer, f: ((q.id * 2654435761 + pl.i) >>> 0) / 4294967296 }));
     delete pl.naboer; delete pl.bærbare;
+    // inngangene står fritt: 3D-huset har døra der P.dør er, og modellens vegger/møbler kan stå i veien når modellens dør er et annet sted
+    const fri = Interior.friInngang ? Interior.friInngang(pl) : 0; if (fri) STAT.friInngang = (STAT.friInngang || 0) + fri;
   }
   // ---------- nettene ----------
   // (veggene i dempet farge: lyse farger med sola inn gjennom vinduene ble helt hvite på bildene fra ekte hus)
