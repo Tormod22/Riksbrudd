@@ -1,0 +1,5 @@
+[
+  ["Tømmer og planker", "Hogst gir nå tømmer, ikke planker. Tømmeret kan selges billig som det er, eller sages til planker på et sagbruk. Plankene (det som før het «tre») brukes til å bygge og fyre med. Tømmer, flis og ved har egen lagerplass, og kan kjøpes og selges i Leir → Lager.", "Leiren"],
+  ["Sagbruk, vedkløyver og fyrkjele", "Bygg maskinene i Leir → Bygg (gruppen Produksjon). Sagbruket gjør 2 m³ tømmer om til 1,1 m³ planker og 0,7 m³ flis i timen. Vedkløyveren gjør flis til ved. Fyrkjelen brenner flis eller ved og gir 30 kW og varme, så leiren trenger mindre diesel. Maskinene går bare med folk på «Maskiner» (Folk), strøm og noe å arbeide med. Står en maskin, sier fanen Produksjon i Selskapet hvorfor: tom for tømmer, ingen folk, uten strøm, lageret fullt eller slitt.", "Leiren"],
+  ["Tømmerbil", "En tømmerbil (kjøpes i Selskapet → Produksjon) tar 20 m³ tømmer fra et hogstfelt om gangen. Velg «Frakt» når du merker hogstfeltet i Leir → Ressurser.", "Leiren"]
+]

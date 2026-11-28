@@ -43,7 +43,7 @@
   // ---------- (4) tilfluktssteder ----------
   const Tilflukt = { TRE: 3, MAKS: 6, DEKNING: .08, HVILE: 60, HVILE_VENT: 90,
     // kan huset sikres? gir null eller en grunn
-    kan(T, id, tre) { if (T.some(q => q.i === id)) return 'Huset er alt sikret.'; if (T.length >= Tilflukt.MAKS) return `Du har alt ${Tilflukt.MAKS} tilfluktssteder. Gi opp ett først.`; if (tre < Tilflukt.TRE) return `Du trenger ${Tilflukt.TRE} m³ tre på lageret i leiren til planker.`; return null; },
+    kan(T, id, tre) { if (T.some(q => q.i === id)) return 'Huset er alt sikret.'; if (T.length >= Tilflukt.MAKS) return `Du har alt ${Tilflukt.MAKS} tilfluktssteder. Gi opp ett først.`; if (tre < Tilflukt.TRE) return `Du trenger ${Tilflukt.TRE} m³ planker på lageret i leiren til planker.`; return null; },
     nærmeste(T, x, y) { let b = null, bd = Infinity; for (const q of T) { const d = Math.hypot(q.x - x, q.y - y); if (d < bd) { bd = d; b = q; } } return b ? { ...b, meter: bd } : null; },
   };
   // ---------- (5) forfallet ----------
@@ -124,7 +124,7 @@
   document.head.appendChild(css);
   const knapp = document.createElement('button'); knapp.id = 'sikreknapp'; knapp.type = 'button'; document.body.appendChild(knapp);
   knapp.addEventListener('click', e => { e.preventDefault(); if (iTilflukt()) hvil(); else sikre(); });
-  setInterval(() => { const P = klar ? her() : null, t = !P ? '' : iTilflukt() ? 'Hvil her' : `Sikre huset (${Tilflukt.TRE} m³ tre)`; knapp.classList.toggle('på', !!t); if (t && knapp.textContent !== t) knapp.textContent = t; }, 400);
+  setInterval(() => { const P = klar ? her() : null, t = !P ? '' : iTilflukt() ? 'Hvil her' : `Sikre huset (${Tilflukt.TRE} m³ planker)`; knapp.classList.toggle('på', !!t); if (t && knapp.textContent !== t) knapp.textContent = t; }, 400);
   // kartet: et husmerke på tilfluktsstedene; i 3D navnet når du er nær
   KROKER.tegn.push((g, vx0, vy1) => { if (!klar || !T.length || kam.m > 30) return; g.save();
     for (const q of T) { const x = (q.x - vx0) / kam.m, y = (vy1 - q.y) / kam.m; if (x < -20 || y < -20 || x > VW + 20 || y > VH + 20) continue; g.fillStyle = 'rgba(22,18,12,.85)'; g.strokeStyle = '#9fc46a'; g.lineWidth = 1.5;

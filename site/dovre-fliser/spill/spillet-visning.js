@@ -154,11 +154,11 @@
     for (const e of lag) if (levende(e) && !Terreng.slattUt(e.menn) && !e.trekker && !e.flykter && !e.sti && !e.planlegger && Math.hypot(e.x - leir.x, e.y - leir.y) > 160 && tilfV() < .03) ordre(e, leir.x + (tilfV() - .5) * 80, leir.y + (tilfV() - .5) * 80, true); }
 
   // ================= MARKED =================
-  let M = null; const GRUNN = LB && FR ? { tre: LB.MATERIALER.tre.pris, betong: LB.MATERIALER.betong.pris, stål: LB.MATERIALER.stål.pris, diesel: LB.DRIVSTOFF.prisPerLiter, mat: FR.R.matPris, salg: LB.REGLER.salg } : null;
+  let M = null; const GRUNN = LB && FR ? { tre: LB.MATERIALER.tre.pris, betong: LB.MATERIALER.betong.pris, stål: LB.MATERIALER.stål.pris, tømmer: LB.MATERIALER.tømmer ? LB.MATERIALER.tømmer.pris : 8000, flis: LB.MATERIALER.flis ? LB.MATERIALER.flis.pris : 3000, ved: LB.MATERIALER.ved ? LB.MATERIALER.ved.pris : 9000, diesel: LB.DRIVSTOFF.prisPerLiter, mat: FR.R.matPris, salg: LB.REGLER.salg } : null;
   // KNAPPHET (natt til 18. nov): i det ekte spillet (ikke i testene, uten api.knapphet = true) koster tre, betong og stål 1,5 × markedsprisen,
   // og markedet har tomme hyller (Marked.LAGER). Salgsprisen er den samme som før (80 % av markedsprisen = ca. halve kjøpsprisen).
   const dyrt = () => !navigator.webdriver || api.knapphet === true, knapt = () => dyrt() && !!M && klar;
-  function settPriser() { if (!GRUNN || !M) return; const d = dyrt(); for (const v of ['tre', 'betong', 'stål']) LB.MATERIALER[v].pris = Marked.kjøpspris(M, v, GRUNN[v], d); LB.DRIVSTOFF.prisPerLiter = Marked.pris(M, 'diesel', GRUNN.diesel); FR.R.matPris = Marked.pris(M, 'mat', GRUNN.mat); LB.REGLER.salg = d ? Math.round(Marked.SALG / Marked.PÅSLAG * 100) / 100 : Marked.SALG; }
+  function settPriser() { if (!GRUNN || !M) return; const d = dyrt(); for (const v of ['tre', 'betong', 'stål', 'tømmer', 'flis', 'ved']) if (LB.MATERIALER[v]) LB.MATERIALER[v].pris = Marked.kjøpspris(M, v, GRUNN[v], d); LB.DRIVSTOFF.prisPerLiter = Marked.pris(M, 'diesel', GRUNN.diesel); FR.R.matPris = Marked.pris(M, 'mat', GRUNN.mat); LB.REGLER.salg = d ? Math.round(Marked.SALG / Marked.PÅSLAG * 100) / 100 : Marked.SALG; }
   // Kjøpene går gjennom hyllene: Leir.kjøpMateriale, Leir.kjøpDrivstoff og FolkRegler.kjøpMat pakkes inn (alle som kjøper, bruker dem).
   if (LB && FR) {
     const km = LB.kjøpMateriale, kd = LB.kjøpDrivstoff, kf = FR.kjøpMat, husk = () => skriv('riksbrudd-marked', M);

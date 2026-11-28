@@ -14,7 +14,7 @@
     sVaer: ['Været', 'Været nå, temperaturen, vinden og årstiden. Regn, tåke og mørke gjør at lagene ser kortere. Om vinteren trenger folk mer mat og varme.', ''],
     sPenger: ['Kassa', 'Pengene dere har. Bygg, materialer, diesel, mat og nye folk betales herfra.', 'Blir kassa tom, stopper innkjøpene – ikke det som alt er betalt.'],
     sDiesel: ['Diesel til leiren', 'Liter diesel dere har, og hvor mye tankene rommer. Aggregatene bruker diesel for å lage strøm.', 'Rød: tomt, og aggregatene står. Gul: under seks timer igjen – eller fulle tanker.'],
-    sTre: ['Tre', 'Kubikkmeter tre på lager, og hvor mye lageret rommer. Brukes til å bygge og til ved om vinteren.', 'Gul: lageret er fullt. Bygg lagertelt eller container for mer plass.'],
+    sTre: ['Planker', 'Kubikkmeter planker på lager, og hvor mye lageret rommer. Brukes til å bygge og til ved om vinteren.', 'Gul: lageret er fullt. Bygg lagertelt eller container for mer plass.'],
     sBetong: ['Betong', 'Betong på lager, og hvor mye lageret rommer. Brukes i større bygg.', 'Gul: lageret er fullt.'],
     sStaal: ['Stål', 'Stål på lager, og hvor mye lageret rommer. Brukes i master, verksted og forsvarsverk.', 'Gul: lageret er fullt.'],
     sStrom: ['Strøm', 'Hvor mange kilowatt byggene bruker, og hvor mye aggregat, solceller og batteri kan gi.', 'Rød: byggene får ikke nok strøm – noen av dem står. Bygg mer strøm eller slå av bygg.'],

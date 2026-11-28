@@ -23,20 +23,21 @@
   const FR = NODE ? require('./folk.js') : rot.FolkRegler;
 
   // Jobbtypene er oppgavene i folk.js (uten «fri»)
-  const TYPER = ['vakt', 'kjøkken', 'stell', 'bygg', 'verksted', 'overvåking', 'frakt', 'hogst', 'riving'];
+  // (Ø1) «maskin»: sagbruket, vedkløyveren og fyrkjelen (spill/produksjon.js; plassene kommer fra api.maskiner)
+  const TYPER = ['vakt', 'kjøkken', 'stell', 'bygg', 'verksted', 'overvåking', 'frakt', 'hogst', 'riving', 'maskin'];
   // Produksjonsjobbene følger døgnplanen; de andre går i turnus eller lager alle måltidene (regnet hele døgnet)
-  const PRODUKSJON = ['bygg', 'hogst', 'riving', 'frakt', 'verksted'];
+  const PRODUKSJON = ['bygg', 'hogst', 'riving', 'frakt', 'verksted', 'maskin'];
   const TURNUS = ['vakt', 'overvåking', 'stell'];
 
   // REGLER – alle tallene er Claudes forslag (28. nov)
   const REGLER = {
     // prioritet 1 (først) – 5 (sist). Vakt og kjøkken først (leiren skal aldri stå uten), så stell og bygging.
-    prio: { vakt: 1, kjøkken: 1, stell: 2, bygg: 2, verksted: 3, overvåking: 3, frakt: 3, hogst: 3, riving: 4 },
+    prio: { vakt: 1, kjøkken: 1, stell: 2, bygg: 2, verksted: 3, overvåking: 3, frakt: 3, hogst: 3, riving: 4, maskin: 3 },
     // så mange får hvile når tavla fordeler (som startgjengen i folk.js: to av ti har fri; moralen i folk.js vil ha minst 10 % fri)
     friAndel: .2,
     // standard skift: bygg i to skift (byggene tar 0,5–3 timer – med bare dagskift ville en bestilling om kvelden vente til neste morgen),
     // de lange jobbene (hogst, riving, frakt) og verkstedet på dagtid
-    skift: { bygg: 'to', verksted: 'dag', hogst: 'dag', riving: 'dag', frakt: 'dag' },
+    skift: { bygg: 'to', verksted: 'dag', hogst: 'dag', riving: 'dag', frakt: 'dag', maskin: 'to' },
     // hvor mange som har nytte av en jobb (plasser): bygg 2 per byggejobb (ett byggelag), hogst og riving 3 på feltet, frakt 2 bærere,
     // verksted 2 per verksted, overvåking 1 per kontrollrom, kjøkken 1 per 8 personer (som perKokk i folk.js), stell 1 per 3 syke,
     // vakt 1 per vakttårn (minst 1, så leiren aldri står uten vakt)
@@ -87,7 +88,7 @@
     const iDrift = t => ferdig(t).filter(b => LB.virker(b) && !mangler.has(b.id));
     const navnB = b => (LB && LB.BYGG[b.type] ? LB.BYGG[b.type].navn : b.type);
     const RJ = ctx.R && Array.isArray(ctx.R.jobber) ? ctx.R.jobber : [], nær = ctx.nær > 0 ? ctx.nær : 150;
-    const haug = j => ['tre', 'betong', 'stål'].reduce((s, k) => s + ((j.haug && j.haug[k]) || 0), 0);
+    const haug = j => ['tre', 'betong', 'stål', 'tømmer'].reduce((s, k) => s + ((j.haug && j.haug[k]) || 0), 0);
     for (const t of TYPER) {
       const j = { type: t, navn: NAVN(t), plasser: 0, hva: [], blokk: null, ingen: null };
       if (t === 'bygg') { const J = LB && L ? LB.jobber(L) : [];
@@ -107,6 +108,9 @@
         if (!f) j.ingen = 'trenger et verksted';
         else { j.plasser = P.verksted * f; if (!d) j.blokk = 'uten strøm';
           const skadd = bygg.filter(b => LB.ferdig(b) && !b.arbeid && b.hp < 1); j.hva = skadd.length ? skadd.slice(0, 3).map(b => `Reparer ${navnB(b).toLowerCase()}`) : ['Lag stål av skrap']; } }
+      // (Ø1) maskinene: api.maskiner(F, L, ctx) -> { plasser, hva, blokk, ingen } (spill/produksjon-visning.js); uten den: ingen maskiner
+      else if (t === 'maskin') { const m = api.maskiner ? api.maskiner(F, L, ctx) : null;
+        if (m && m.plasser > 0) { j.plasser = m.plasser; j.hva = m.hva || []; j.blokk = m.blokk || null; } else j.ingen = (m && m.ingen) || 'ingen maskiner (bygg et sagbruk)'; }
       else if (t === 'overvåking') { const f = ferdig('kontrollrom').length, d = iDrift('kontrollrom').length;
         if (!f) j.ingen = 'trenger et kontrollrom'; else { j.plasser = P.overvåking * f; j.hva = ['Se gjennom kameraene']; if (!d) j.blokk = 'uten strøm'; } }
       ut.push(j);
@@ -254,7 +258,7 @@
     return K;
   }
 
-  const api = { REGLER, TYPER, PRODUKSJON, TURNUS, PLANER, SKIFT, SKIFTNAVN, PLANNAVN, ny, fraJSON, prio, skift, erUte, lag, fordel, bruk, fastManuelt,
+  const api = { maskiner: null, REGLER, TYPER, PRODUKSJON, TURNUS, PLANER, SKIFT, SKIFTNAVN, PLANNAVN, ny, fraJSON, prio, skift, erUte, lag, fordel, bruk, fastManuelt,
     klokke, timer, turnusPlan, planFor, nå, faktor, moralTillegg, døgnSnitt, registrerKommandoer };
   if (NODE) module.exports = api; else rot.Jobber = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

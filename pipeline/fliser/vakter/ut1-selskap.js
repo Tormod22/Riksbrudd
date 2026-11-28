@@ -35,7 +35,7 @@ module.exports = { navn: 'ut1-selskap: panelet Selskapet, trinnene og Storlia-ko
       SP.velgFane('byer'); await vent(80);
       krev(sel.parentNode === document.body && !sel.classList.contains('på'), 'kontraktpanelet ble ikke satt tilbake');
       krev(P.querySelectorAll('.by').length > 0 || /Ingen tettsteder/.test(P.textContent), 'Byer viser ingenting');
-      SP.velgFane('produksjon'); await vent(60); krev(/Sagbruk og maskiner kommer her/.test(P.textContent), 'Produksjon sier ikke hva som kommer');
+      SP.velgFane('produksjon'); await vent(60); krev(/Sagbruk og maskiner kommer her|Maskinene gjør tømmer om/.test(P.textContent), 'Produksjon sier ikke hva som kommer (eller viser maskinene, Ø1)');
       // ett panel om gangen: Leir lukker Selskapet
       const lk = $('leirknapp'); if (lk) { lk.click(); await vent(700); krev(!SP.erÅpen(), 'Selskapet sto åpent sammen med Leir-menyen'); if ($('leirmeny') && $('leirmeny').classList.contains('på')) lk.click(); await vent(100); }
       // tast S åpner og lukker

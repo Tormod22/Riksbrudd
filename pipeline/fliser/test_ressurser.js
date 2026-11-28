@@ -14,7 +14,7 @@ const leir = { x: 0, y: 0 };
   ok(ind.gruppe === 'stål' && ind.mat.stål > ind.mat.tre && ind.mat.stål > 10, `industri 800 m²: ${JSON.stringify(ind.mat)}`);
   ok(blokk.gruppe === 'betong' && blokk.mat.betong > blokk.mat.tre && blokk.mat.betong > blokk.mat.stål, `blokk 400 m² × 15 m: ${JSON.stringify(blokk.mat)}`);
   ok(!!stor.feil, `5000 m²: «${stor.feil}»`);
-  const h = RS.hogstUtbytte(35, 1); ok(h.mat.tre > 40 && h.mat.tre < 50 && Math.abs(h.timer - h.mat.tre / 3) < .2, `hogstfelt 35 m full skog: ${h.mat.tre} m³, ${h.timer} arbeidstimer`); }
+  const h = RS.hogstUtbytte(35, 1); ok(h.mat.tre === 0 && h.mat.tømmer > 40 && h.mat.tømmer < 50 && Math.abs(h.timer - h.mat.tømmer / 3) < .2, `hogstfelt 35 m full skog gir tømmer (Ø1): ${h.mat.tømmer} m³, ${h.timer} arbeidstimer`); }
 
 // hogst nær leiren: arbeidet går med folkene, tre rett i lageret, feltet huskes og trærne tynnes ut underveis
 { const R = RS.ny(), L = Leir.ny(), leggInn = (k, m) => Leir.leggInn(L, k, m);
@@ -23,10 +23,10 @@ const leir = { x: 0, y: 0 };
   const j = RS.startHogst(R, { x: 80, y: 0, r: 20, skog: 1 }, leir).jobb, ctx = { arbeidere: o => (o === 'hogst' ? 2 : 0), tempo: () => 1, leir, leggInn };
   RS.steg(R, j.arbeid / 2 * 60 / 2, ctx);   // halve arbeidet
   const halv = RS.fram(j), tynnet = RS.erHogd(R, 80, 0, .2) && !RS.erHogd(R, 80, 0, .9);
-  ok(Math.abs(halv - .5) < 1e-6 && Math.abs(L.lager.tre - j.mat.tre / 2) < .01 && tynnet, `halvveis: ${Math.round(halv * 100)} %, ${L.lager.tre.toFixed(1)} m³ i lageret, trærne tynnes ut: ${tynnet}`);
+  ok(Math.abs(halv - .5) < 1e-6 && Math.abs(L.lager.tømmer - j.mat.tømmer / 2) < .01 && !(L.lager.tre > 0) && tynnet, `halvveis: ${Math.round(halv * 100)} %, ${L.lager.tømmer.toFixed(1)} m³ tømmer i lageret, trærne tynnes ut: ${tynnet}`);
   const h = RS.steg(R, 600, ctx);
   ok(h.some(e => e.hva === 'ferdig') && h.some(e => e.hva === 'tømt') && R.jobber.length === 0 && R.hogd.length === 1 && RS.erHogd(R, 85, 5, .99) && !RS.erHogd(R, 120, 0, 0),
-    `ferdig: hogd felt huskes (${R.hogd.length}), jobben er borte, ${L.lager.tre.toFixed(1)} m³ tre`);
+    `ferdig: hogd felt huskes (${R.hogd.length}), jobben er borte, ${L.lager.tømmer.toFixed(1)} m³ tømmer`);
   // uten folk på hogst går ingenting
   const R2 = RS.ny(), j2 = RS.startHogst(R2, { x: 80, y: 0, r: 20, skog: 1 }, leir).jobb; RS.steg(R2, 600, { ...ctx, arbeidere: () => 0 }); ok(j2.gjort === 0, 'ingen på hogst: ingen framdrift'); }
 
@@ -71,4 +71,13 @@ const leir = { x: 0, y: 0 };
   ok(Math.abs(ledig / n - .9) < .02, `ca. 90 % av skogen i det stoppede feltet kan hogges på nytt (${Math.round(100 * ledig / n)} %)`);
   R.hogd.push({ x: 0, y: 500, r: 20 }); ok(!RS.ledigSkog(R, 0, 500, .99), 'ferdig hogd felt: ingenting igjen'); }
 
+// (Ø1) tømmerbilen: 20 m³ per tur, bare hogstfelt; et gammelt hogstfelt fra en lagring (mat.tre) gir fortsatt planker
+{ const R = RS.ny(), leir0 = { x: 0, y: 0 }, kj = { navn: 'Tømmerbil 1', type: 'tømmerbil', antall: 1, x: 0, y: 0, sti: null };
+  const K = { planlegg: kj => { kj.sti = { igjen: 1 }; return { meter: 1, sekunder: 1 }; } };
+  const riv = RS.startRiving(R, { i: 8, P: [[900, 0], [915, 0], [915, 12], [900, 12]], t: 0, h: 6 }, leir0).jobb;
+  ok(!!RS.lastebil(R, kj, riv.id, null, K, leir0).feil, 'tømmerbilen tar ikke riving');
+  const hj = RS.startHogst(R, { x: 900, y: 300, r: 35, skog: 1 }, leir0).jobb;
+  ok(!RS.lastebil(R, kj, hj.id, null, K, leir0).feil && kj.oppdrag && RS.REGLER.tømmerbil.last === 20, 'tømmerbilen frakter fra hogstfeltet (20 m³)');
+  const gammel = RS.fraJSON(JSON.stringify({ versjon: 1, jobber: [{ id: 3, type: 'hogst', x: 50, y: 0, r: 20, arbeid: 5, gjort: 0, mat: { tre: 15, betong: 0, stål: 0 }, haug: { tre: 1 }, levert: {}, avst: 50 }], hogd: [], revet: [] }));
+  ok(gammel.jobber[0].mat.tre === 15 && gammel.jobber[0].mat.tømmer === 0 && gammel.jobber[0].haug.tømmer === 0, 'gammelt hogstfelt fra en lagring gir planker som før'); }
 console.log(feil ? `${feil} FEIL` : 'Alle testene for materialer fra verden er ok.'); process.exit(feil ? 1 : 0);

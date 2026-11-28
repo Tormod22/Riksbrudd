@@ -18,7 +18,7 @@
       { id: 'strøm', tekst: 'Få strøm: bygg et aggregat eller solceller', hjelp: 'Aggregatet bruker diesel, solcellene gir mindre, men er gratis i drift.', ferdig: T => !!T.strøm },
       // (balansen 18. nov) maten: folk spiser én rasjon hver per døgn, og startmaten varer bare noen døgn
       { id: 'mat', tekst: 'Ha mat til tre døgn', hjelp: 'Folk spiser én rasjon hver per døgn. Kjøp mat i Folk-panelet, send et lag på jakt, fisk med båt eller så en åker – eller bygg drivhus.', ferdig: T => T.matDøgn >= 3 },
-      { id: 'lager', tekst: 'Ha 20 m³ tre på lager', hjelp: 'Kjøp under Leir → Lager, eller hogg skog (samme fane).', ferdig: T => T.tre >= 20 },
+      { id: 'lager', tekst: 'Ha 20 m³ planker på lager', hjelp: 'Kjøp under Leir → Lager, eller hogg skog (samme fane).', ferdig: T => T.tre >= 20 },
     ] },
     { navn: 'Få oversikt', mål: [
       // (løkka r1, kritiker I: startrådet sa 9 mill., byggelista 8,8 mill. i alt og målet «ca. 12 mill.») prisen er den samme som i byggelista:

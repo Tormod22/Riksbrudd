@@ -60,6 +60,10 @@
     kjøkken: { form: 'sal', tak: '#7a3a2c', h: 4.2, kropp: [-3.5, 3.5, -4.5, 4.5], pipe: [-1.2, 1.8], røyk: true, vinduer: 3 },
     verksted: { form: 'sal', tak: '#6b6f70', h: 6.5, kropp: [-6.1, 6.1, -7.1, 7.1], bølge: true, lysbånd: true, plass: [6.1, 12, -7.3, 7.3], porter: [-3.5, 3.5], vinduer: 4 },
     drivhus: { form: 'glass', tak: '#b9d2c8', h: 3, kropp: [-3, 3, -5, 5] },
+    // (Ø1, 28. nov) maskinene i spill/produksjon.js
+    sagbruk: { form: 'sal', tak: '#6e5a40', h: 6, kropp: [-6.1, 6.1, -7.1, 7.1], bølge: true, plass: [6.1, 12, -7.3, 7.3], porter: [-3.5, 3.5], vinduer: 2 },
+    vedkløyver: { form: 'kasse', tak: '#5a6a3a', h: 2.4, kropp: [-3, 3.05, -1.2, 1.2], ribber: true, stripe: '#c9a227' },
+    fyrkjele: { form: 'kasse', tak: '#55504a', h: 3, kropp: [-1.6, 1.6, -1, 1], rist: true, eksos: [-1, .55], pipe: [-1, .55], røyk: true },
     lagertelt: { form: 'telt', tak: '#59604a', h: 3.3, kropp: [-4, 4, -2.5, 2.5], plugger: 3.6 },
     container: { form: 'kasse', tak: '#7a3c24', h: 2.6, kropp: [-3, 3.05, -1.2, 1.2], ribber: true },
     batteri: { form: 'kasse', tak: '#4d5458', h: 2.4, kropp: [-2, 2, -1.2, 1.2], ribber: true, stripe: '#c9a227', luker: 3 },

@@ -552,7 +552,7 @@ const NVE = (() => { const m = fs.readFileSync(path.join(__dirname, '../../site/
             const ledige = window.FolkSpill ? FolkSpill.tilstand().personer.filter(p => p.oppgave === 'fri') : [];
             if (ledige[0] && !Folk.arbeidere('riving')) ledige[0].oppgave = 'riving'; if (ledige[1] && !Folk.arbeidere('hogst')) ledige[1].oppgave = 'hogst';
             RS.startVelg('hogst'); RS.trykk(LX - 32, LY - 4); await RS.prøv(); const v = RS.velg(), bt = document.getElementById('ressursvalg').textContent;
-            const panel = !v.feil && /Start hogst/.test(bt) && /kjøpe like mye/.test(bt) && v.ut.mat.tre > 0; RS.start();
+            const panel = !v.feil && /Start hogst/.test(bt) && /kjøpe like mye/.test(bt) && v.ut.mat.tømmer > 0; RS.start();
             const hj = Rr.jobber.find(j => j.type === 'hogst'), P = [[LX + 300, LY + 300], [LX + 312, LY + 300], [LX + 312, LY + 310], [LX + 300, LY + 310]], rj = Ressurser.startRiving(Rr, { i: 999001, P, t: 6, h: 6 }, leir).jobb;
             for (const j of [hj, rj]) if (j) { j.gjort = j.arbeid - .001; j.haug = { ...j.mat }; } if (rj) rj.avst = 100; for (let i = 0; i < 3; i++) sim(1);
             lk.click(); const del = !!document.querySelector('#leirmeny .ressurs #r-hogst'); lk.click(); RS.lagre();

@@ -43,9 +43,12 @@ module.exports = {
         krev(n === st.antall, `tallet i varselet (${m && m[1]}) og banneret (${st.antall}) er ulike`); krev(m && m[2] === st.retning, `kanten i varselet (${m && m[2]}) og banneret (${st.retning}) er ulike`); }
       // ---------- 3: farten senkes ikke før de er sett ----------
       krev(!ForsvarSpill.fase().sett, 'fasen sier «sett» før noen har sett røverne');
+      // (28. nov) sensorer fra tidligere vakter (radartårn, kameramaster) kan se røverne i løpet av de 700 ms og gjøre fasen «sett»: de skrus av under prøven
+      const serFør = KROKER.ser.splice(0);
       fart('sp3'); await vent(100); FlytSpill.settAuto(true);
       window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'alarm', tekst: 'prøve: leiren angripes' } })); await vent(700);
       d.fartFør = tempo; d.kortÅpne = [...document.querySelectorAll('.på')].map(e => e.id).filter(Boolean).join(','); { const q = FlytSpill.sistStopp(); d.stoppFør = q ? q.liste.map(h => h.type + ':' + h.tekst).join(', ') : null; } krev(tempo === 60, `farten ble senket (${tempo}) før røverne var sett`);
+      KROKER.ser.push(...serFør);
       // røverne inne i leiren: sett – farten ned én gang …
       const r1 = raid[0]; r1.x = L.x + 30; r1.y = L.y + 20; r1.sti = null; for (const e of raid.slice(1)) { e.x = L.x + 2400; e.y = L.y; e.sti = null; }
       for (let i = 0; i < 40 && tempo !== 1; i++) await vent(100); d.fartSett = tempo; krev(tempo === 1, `farten ble ikke senket da røverne ble sett (${tempo})`);
