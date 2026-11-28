@@ -78,10 +78,13 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
     ny.push(lagEl('h3', d.tittel || `${navn} er gjennomsøkt`));
     const leir = []; for (const m of ['mat', 'tre', 'betong', 'stål', 'diesel', 'penger']) { const n = d.fikk && d.fikk[m]; if (n > 0) { const li = lagEl('li'); li.append(lagEl('b', `${tall2(n)} ${NAVN2[m](n)}`), lagEl('small', ` → ${DIT[m]}`)); leir.push(li); } }
     if (d.tomt) ny.push(lagEl('p', d.tomt));
+    // (ut8-hverdag) hverdagstingene som gikk til leirens lager, og hvor de står (de mest verdifulle først, høyst åtte linjer)
+    const TG = d.fikk && d.fikk.ting && d.fikk.ting.length && window.Ting && window.TinglagerSpill ? TinglagerSpill.funnLinjer(d.fikk.ting, 8) : null;
     // (løkka r1) setningen om stedet: under «Huset var tomt», ellers rett under overskriften
     if (d.stemning) ny.push(lagEl('p', d.stemning, 'stemning'));
     if (leir.length) { ny.push(lagEl('h4', d.hentet ? 'Hentet til leiren' : 'Til leiren (ikke i sekken)')); const ul = lagEl('ul'); ul.append(...leir); ny.push(ul); }
     else if (!d.tomt && !d.hentet) ny.push(lagEl('p', 'Ingenting leiren kunne ta imot.'));
+    if (TG) { ny.push(lagEl('h4', 'Hverdagsting til lageret')); const ul = lagEl('ul'); for (const [a, b] of TG) { const li = lagEl('li'); li.append(lagEl('b', a), lagEl('small', b)); ul.append(li); } ny.push(ul); }
     if (d.sekken && d.sekken.length) { ny.push(lagEl('h4', 'I sekken din')); const ul = lagEl('ul'); for (const t of d.sekken) ul.append(lagEl('li', t)); ny.push(ul); }
     if (d.igjen) { ny.push(lagEl('h4', 'Ble igjen i huset')); ny.push(lagEl('p', d.igjen)); }
     if (d.person) { ny.push(lagEl('h4', 'Folk')); ny.push(lagEl('p', d.person)); }
@@ -102,6 +105,8 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
     for (const m of ['tre', 'betong', 'stål']) if (f[m]) fikk[m] = Math.round(Leir.leggInn(L, m, f[m]) * 10) / 10;
     if (f.diesel) { const plass = Math.max(0, Leir.kapasitet(L) - (L.drivstoff || 0)), d = Math.min(plass, f.diesel); L.drivstoff = (L.drivstoff || 0) + d; fikk.diesel = Math.round(d); }
     if (f.penger && window.OppstartSpill) { OppstartSpill.gi(f.penger); fikk.penger = f.penger; }
+    // (ut8-hverdag) hverdagsting (peanøttsmør, tape, ullsokker …) til leirens hyller og skap (spill/tinglager-visning.js); fikk.ting = [{ id, n, p, plass }]
+    if (f.ting && f.ting.length && window.TinglagerSpill && TinglagerSpill.klar()) fikk.ting = TinglagerSpill.leggInnFunn(f.ting);
     if (LeirSpill.lagre) LeirSpill.lagre();
     return fikk;
   }
@@ -127,7 +132,9 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
   function ferdig(P, o = {}) {
     const R = r3(), u = R && R.ut; let mx = 0, my = 0; for (const p of P) { mx += p[0]; my += p[1]; }
     // (balansen 18. nov, Claudes forslag) det første huset du leter i, er aldri tomt: fire rasjoner og 20 000 kr når det ellers var tomt
-    let f = Leting.funn(P.bygg.kl, arealAv(P), P.bygg.i); if (f.tomt && !lett.size && !navigator.webdriver) f = { ...f, tomt: false, mat: 4, penger: 20000 };
+    // (ut8-hverdag) rommene fra interiøret (når huset har et) bestemmer hverdagstingene
+    const roller = P.inne && Array.isArray(P.inne.rom) ? P.inne.rom.map(r => r && r.rolle).filter(Boolean) : null;
+    let f = Leting.funn(P.bygg.kl, arealAv(P), P.bygg.i, roller && roller.length ? { rom: roller } : {}); if (f.tomt && !lett.size && !navigator.webdriver) f = { ...f, tomt: false, mat: 4, penger: 20000 };
     // (R18-F) huset en lapp pekte mot, har et gjemt lager i tillegg (spill/spor-visning.js)
     if (window.SporSpill && SporSpill.medGjemt) f = SporSpill.medGjemt(P, f);
     const fikk = ta(f); lett.set(P.bygg.i, Number.isFinite(o.X) ? [o.X, o.Y] : u ? [u.cx + mx / P.length, u.cy + my / P.length] : null); lagre();
@@ -147,6 +154,8 @@ body:not(.kort) #innelapp{ bottom:auto; top:calc(var(--topp,58px) + 58px); }`;
       const skap = LS && !o.i2d && P.inne && window.Lut && Lut.beholdere(P.inne).length ? ' Skap og skuffer åpner du selv (E ved møbelet).' : '';
       if (ekstra) { logg(melding); logg(ekstra); visFunn(melding + ' ' + ekstra); } else { logg(melding); visFunn(melding + skap); }
       res.sekken = ekstra ? [ekstra] : []; }
+    // (ut8-hverdag) «Fant: 2 glass peanøttsmør, 1 rull tape …» i loggen og under meldingen midt på skjermen
+    if (fikk.ting && fikk.ting.length && window.Ting) { const t = Ting.fantTekst(fikk.ting) + ' Lagt på leirens lager.'; logg(t); visFunn(lapp.textContent + ' ' + t); }
     // en overlevende: blir med hvis leiren har en ledig seng (ellers blir vedkommende igjen)
     let person = null;
     if (f.person && window.FolkRegler && window.FolkSpill && FolkSpill.tilstand() && window.LeirSpill && LeirSpill.tilstand()) {
