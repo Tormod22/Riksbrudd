@@ -12,6 +12,8 @@
  *     når siden lukkes, skriver ikke over), bytter nøklene og laster siden på nytt. Alle modulene leser da sitt eget som vanlig.
  *   - «Automatisk» tas også hvert REGLER.autoMin minutt mens du spiller (ikke i testene: LagringMeny.test).
  *   - Full eller sperret lagring (privat vindu): melding i stedet for krasj, og panelet råder deg til å laste ned spillet som fil.
+ *   - (G0, 28. nov) Plassene ligger i nettleserens database (spill/lagringsside.js). Panelet viser hvor mye plass spillet bruker, og
+ *     venter til databasen er lest før plassene vises. Før siden lastes på nytt, venter «Last» til alt er skrevet til databasen.
  * window.LagringMeny: åpne, lukk, erÅpen, plass(id), lagreHer(id, navn), last(id | plass, { lastInn }), slett(id), legg(id, plass),
  * filTekst(id), hentFil(tekst), lastNed(id), status(), taAuto(), REGLER, test.
  */
@@ -72,7 +74,9 @@
       LS.lås(false); if (rot.LagringSpill) LagringSpill.av(false); return { feil: feilTekst(e) };
     }
     try { LS.rå.set(rå('riksbrudd-lastet'), JSON.stringify({ navn: pl.navn, t: Date.now() })); } catch (e) { /* meldingen etter omlastingen blir borte */ }
-    if (lastInn) { lukk(); setTimeout(() => location.reload(), 30); }
+    // (G0) plassen «Automatisk» skrives til databasen i bakgrunnen: siden lastes på nytt først når den er skrevet (høyst 3 s)
+    if (lastInn) { lukk(); let gjort = false; const om = () => { if (!gjort) { gjort = true; location.reload(); } };
+      (LS.tømt ? LS.tømt() : Promise.resolve()).then(() => setTimeout(om, 30), () => setTimeout(om, 30)); setTimeout(om, 3000); }
     return { ok: true, fjernet: plan.fjern.length, satt: plan.sett.length };
   }
   // filene: teksten som lastes ned, og lesing av en fil (gir { d } eller { feil })
@@ -94,11 +98,14 @@
   let virkerSist = { t: 0, v: 'ok' };
   function status(rask) {
     if (!rask || Date.now() - virkerSist.t > 30000) virkerSist = { t: Date.now(), v: LS.virker() };
-    const v = virkerSist.v, f = LS.feil(), s = rot.LagringSpill && LagringSpill.sist ? LagringSpill.sist() : { ok: 0, feil: 0 };
+    // (G0) «flyttet» (lagt i databasen) og «mangler» er ikke en feilet lagring
+    const f0 = LS.feil(), v = virkerSist.v, f = f0 && (f0.type === 'fullt' || f0.type === 'sperret') ? f0 : null, s = rot.LagringSpill && LagringSpill.sist ? LagringSpill.sist() : { ok: 0, feil: 0 };
     const nyFeil = (f && Date.now() - f.t < 10 * 60000 && (!s.ok || f.t > s.ok)) || (s.feil && s.feil > s.ok);
     if (v !== 'ok') return { tilstand: v, kort: 'ikke lagret', tekst: feilTekst({ name: v === 'fullt' ? 'QuotaExceededError' : 'SecurityError' }) };
     if (!harSpill()) return { tilstand: 'tom', kort: '–', tekst: 'Ingen spill i gang. Du kan laste inn et lagret spill eller en fil.' };
     if (nyFeil) return { tilstand: (f && f.type) || 'fullt', kort: 'feilet', tekst: `Siste lagring feilet${f ? ' kl. ' + kl(f.t) : ''}. ` + feilTekst({ name: f && f.type === 'sperret' ? 'SecurityError' : 'QuotaExceededError' }) };
+    const fl = LS.flyttede ? LS.flyttede().length : 0;
+    if (fl) return { tilstand: 'ok', kort: s.ok ? 'lagret ' + kl(s.ok) : 'lagret', tekst: `Nettleserens enkle lager er fullt, så ${fl === 1 ? 'en del' : fl + ' deler'} av spillet ligger i nettleserens database i stedet. Ingenting er mistet. Last gjerne ned spillet som fil.`, ms: s.ok };
     if (!s.ok) return { tilstand: 'venter', kort: 'snart', tekst: 'Spillet lagres av seg selv i denne nettleseren.' };
     return { tilstand: 'ok', kort: 'lagret ' + kl(s.ok), tekst: `Spillet lagres av seg selv i denne nettleseren. Lagret ${kl(s.ok)}.`, ms: s.ok };
   }
@@ -129,6 +136,7 @@
 #lagremeny .plass.spør{ border-color:#c9b26a; } #lagremeny .plass.spør .tekst b{ white-space:normal; }
 #lagremeny h3{ margin:10px 0 5px; font-size:12.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim,#a99); border-bottom:1px solid var(--rule,#3a3226); padding-bottom:3px; }
 #lagremeny .filrad{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:4px; } #lagremeny .filrad small{ color:var(--ink-dim,#a99); flex:1 1 200px; }
+#lagremeny .plassbruk{ margin:10px 0 0; padding-top:6px; border-top:1px solid var(--rule,#3a3226); color:var(--ink-dim,#a99); font-size:12.5px; } #lagremeny .plassbruk:empty{ display:none; }
 #lagremeny .melding{ min-height:1.2em; margin:8px 0 0; color:#e9d79a; } #lagremeny .melding.feil{ color:#f0a890; }
 #oppstart .lastinn{ margin:2px 0 10px; padding:6px 9px; border:1px solid var(--rule,#3a3226); background:rgba(0,0,0,.18); border-radius:4px; font-size:13.5px; color:var(--ink-dim,#a99); display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 #lagmeny .mtopp button#lagreknapp{ width:auto; height:32px; min-height:32px; padding:0 10px; margin:0 8px 0 auto; font-size:14px; line-height:1; display:inline-flex; align-items:center; align-self:center; gap:6px; white-space:nowrap; }
@@ -139,6 +147,7 @@
   document.head.appendChild(css);
   const bak = el('div', { id: 'lagremeny', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Lagre og last' }), ark = el('div', { klasse: 'ark' });
   const lukkKn = el('button', { type: 'button', klasse: 'lukk', 'aria-label': 'Lukk' }, '×');
+  const plassEl = el('p', { klasse: 'plassbruk' });
   const statusEl = el('p', { klasse: 'status', 'aria-live': 'polite' }), nåEl = el('div'), listeEl = el('div'), filKortEl = el('div'), meldingEl = el('p', { klasse: 'melding', 'aria-live': 'polite' });
   const navnInn = el('input', { type: 'text', maxlength: String(P.REGLER.navnMaks), placeholder: 'For eksempel «Før angrepet»', 'aria-label': 'Navn på lagringen' });
   const filInn = el('input', { type: 'file', accept: '.json,application/json', hidden: '' });
@@ -146,7 +155,7 @@
   const navnRad = el('label', { klasse: 'navn' }, el('span', {}, 'Navn:'), navnInn);
   ark.append(el('div', { klasse: 'topp' }, el('b', {}, 'Lagre og last'), lukkKn), statusEl, nåEl,
     el('h3', {}, 'Lagringsplasser'), navnRad, listeEl,
-    el('h3', {}, 'Fil'), el('div', { klasse: 'filrad' }, hentKn, el('small', {}, 'Ta vare på spillet, eller flytt det til en annen maskin: «Last ned» lager en fil, «Hent fra fil» leser den inn igjen.')), filKortEl, filInn, meldingEl);
+    el('h3', {}, 'Fil'), el('div', { klasse: 'filrad' }, hentKn, el('small', {}, 'Ta vare på spillet, eller flytt det til en annen maskin: «Last ned» lager en fil, «Hent fra fil» leser den inn igjen.')), filKortEl, filInn, meldingEl, plassEl);
   bak.appendChild(ark); document.body.appendChild(bak);
   let åpen = false, spør = null, filPlass = null, tidsur = 0;
   function melding(t, feil) { meldingEl.textContent = t || ''; meldingEl.classList.toggle('feil', !!feil); }
@@ -158,7 +167,8 @@
         over: [`Skrive over «${navn}» med spillet du har nå?`, 'Ja, lagre', 'ja'] }[spør.hva];
       return `<div class="plass spør" data-plass="${id}"><div class="tekst"><b>${esc(T[0])}</b></div><div class="knapper"><button type="button" class="${T[2]}" data-gjør="ja-${spør.hva}" data-plass="${id}">${T[1]}</button><button type="button" data-gjør="avbryt" data-plass="${id}">Avbryt</button></div></div>`;
     }
-    const linje = i ? [`Dag ${i.dag} kl. ${i.klokke}`, i.fraksjon, i.penger !== null ? kroner(i.penger) : '', 'lagret ' + når(p.laget)].filter(Boolean).join(' · ') : ødelagt ? 'Kan ikke leses: ' + p.feil : id === AUTO ? `Tas hvert ${REGLER.autoMin}. minutt du spiller, og før et annet spill lastes inn.` : 'Tom plass';
+    const st = størrelser && størrelser.plasser[id] ? LS.kb(størrelser.plasser[id]) : '';
+    const linje = i ? [`Dag ${i.dag} kl. ${i.klokke}`, i.fraksjon, i.penger !== null ? kroner(i.penger) : '', 'lagret ' + når(p.laget), st].filter(Boolean).join(' · ') : ødelagt ? 'Kan ikke leses: ' + p.feil : id === AUTO ? `Tas hvert ${REGLER.autoMin}. minutt du spiller, og før et annet spill lastes inn.` : 'Tom plass';
     const kn = [];
     if (id !== AUTO && harSpill()) kn.push(`<button type="button" data-gjør="lagre" data-plass="${id}">Lagre her</button>`);
     if (!tom && !ødelagt) kn.push(`<button type="button" data-gjør="last" data-plass="${id}">Last</button>`, `<button type="button" data-gjør="ned" data-plass="${id}" title="Last ned som fil">Last ned</button>`);
@@ -166,6 +176,15 @@
     return `<div class="plass${tom ? ' tom' : ''}" data-plass="${id}"><div class="tekst"><b>${esc(tittel + (navn ? ': ' + navn : ''))}</b><small>${esc(linje)}</small></div><div class="knapper">${kn.join('')}</div></div>`;
   }
   const bytt = (e, h) => { if (e.innerHTML !== h) e.innerHTML = h; };
+  // (G0) hvor mye plass spillet bruker – regnes på nytt høyst hvert femte sekund mens panelet er åpent
+  let størrelser = null, størrelseT = 0;
+  function plassTekst() {
+    if (!LS.størrelse) return '';
+    if (!størrelser || Date.now() - størrelseT > 5000) { størrelser = LS.størrelse(); størrelseT = Date.now(); }
+    const z = størrelser, pl = Object.values(z.plasser).reduce((a, b) => a + b, 0), db = z.database === 'ok';
+    return `Plass: spillet ${LS.kb(z.spill)}, lagringsplassene ${LS.kb(pl)}${db ? ' (i nettleserens database)' : ''}. Nettleserens enkle lager: ${LS.kb(z.ls)} av ca. ${LS.kb(z.kvote)} brukt (alle kartene).`
+      + (db ? '' : ' Databasen virker ikke her, så alt ligger i det enkle lageret.');
+  }
   function tegn(tving) {
     if (!åpen || (!tving && rot.pekerNede && pekerNede(ark))) return;
     const st = status(), S = spill();
@@ -177,12 +196,15 @@
     } else bytt(nåEl, '');
     // uten lagring i nettleseren (sperret) kan ingenting lastes inn – det ville blitt borte ved omlastingen
     const sperret = st.tilstand === 'sperret'; hentKn.disabled = sperret; navnRad.hidden = sperret || !harSpill();
+    bytt(plassEl, sperret ? '' : esc(plassTekst()));
+    // (G0) plassene ligger i databasen: de vises når den er lest (som regel lenge før panelet åpnes)
+    if (LS.lastet && !LS.lastet()) { bytt(listeEl, '<div class="plass tom"><div class="tekst"><b>Leser lagringsplassene …</b></div></div>'); LS.klar.then(() => tegn(true)); return; }
     bytt(listeEl, sperret ? '<div class="plass tom"><div class="tekst"><b>Lagringsplassene virker ikke her</b><small>Nettleseren lagrer ingenting i dette vinduet. Bruk «Last ned som fil», og hent fila i et vanlig vindu.</small></div></div>'
       : REGLER.plasser.map((id, n) => rad(id, plass(id), 'Plass ' + (n + 1))).join('') + rad(AUTO, plass(AUTO), 'Automatisk'));
     if (filPlass) { const i = filPlass.info; bytt(filKortEl, `<div class="plass spør"><div class="tekst"><b>Fra fila: ${esc(filPlass.navn)}</b><small>${esc([`Dag ${i.dag} kl. ${i.klokke}`, i.fraksjon, i.penger !== null ? kroner(i.penger) : '', filPlass.laget ? 'lagret ' + når(filPlass.laget) : ''].filter(Boolean).join(' · '))}</small></div><div class="knapper"><button type="button" class="ja" data-gjør="fil-last">Last inn nå</button>${REGLER.plasser.map((id, n) => `<button type="button" data-gjør="fil-legg" data-plass="${id}">Legg i plass ${n + 1}</button>`).join('')}<button type="button" data-gjør="fil-avbryt">Avbryt</button></div></div>`); }
     else bytt(filKortEl, '');
   }
-  function åpne() { åpen = true; spør = null; bak.classList.add('på'); melding(''); if (rot.Meny && Meny.lukk) Meny.lukk(); tegn(true); clearInterval(tidsur); tidsur = setInterval(() => tegn(false), REGLER.oppdaterMs); setTimeout(() => { try { lukkKn.focus({ preventScroll: true }); } catch (e) { /* ok */ } }, 0); return true; }
+  function åpne() { åpen = true; spør = null; størrelser = null; bak.classList.add('på'); melding(''); if (rot.Meny && Meny.lukk) Meny.lukk(); tegn(true); clearInterval(tidsur); tidsur = setInterval(() => tegn(false), REGLER.oppdaterMs); setTimeout(() => { try { lukkKn.focus({ preventScroll: true }); } catch (e) { /* ok */ } }, 0); return true; }
   function lukk() { if (!åpen) return false; åpen = false; spør = null; filPlass = null; bak.classList.remove('på'); clearInterval(tidsur); oppdaterKnapp(); return true; }
   const navnet = () => navnInn.value.trim();
   function gjør(hva, id) {
@@ -233,7 +255,9 @@
     if (steg && steg.parentNode === oppArk) steg.after(rad); else oppArk.appendChild(rad);
   }
   // (endringen vår utløser observatøren én gang til, men da finnes .lastinn og ingenting skjer)
-  if (oppArk) { new MutationObserver(() => startLenke()).observe(oppArk, { childList: true }); startLenke(); }
+  if (oppArk) { new MutationObserver(() => startLenke()).observe(oppArk, { childList: true }); startLenke();
+    // (G0) plassene ligger i databasen: teksten lages på nytt når den er lest
+    if (LS.klar && LS.lastet && !LS.lastet()) LS.klar.then(() => { const r = oppArk.querySelector('.lastinn'); if (r) { r.remove(); startLenke(); } }); }
 
   // ---------- etter omlasting, automatisk kopi og feil ----------
   rot.addEventListener('riksbrudd-spill', () => setTimeout(() => {
@@ -246,7 +270,13 @@
     if (Date.now() - sistAuto >= REGLER.autoMin * 60000) { const r = taAuto(); if (r.feil) sistAuto = Date.now(); } }, 60000);
   // en lagring som feiler: én melding i loggen per økt (og knappen sier «feilet»)
   let meldt = false;
-  LS.nårFeil(f => { oppdaterKnapp(); if (meldt || typeof logg !== 'function') return; meldt = true;
+  let meldtFlytt = false;
+  LS.nårFeil(f => { oppdaterKnapp();
+    // (G0) localStorage var full, og en del av spillet ble lagt i databasen – ingenting er mistet, men spilleren får vite det én gang
+    if (f.type === 'flyttet') { if (meldtFlytt || typeof logg !== 'function') return; meldtFlytt = true;
+      setTimeout(() => logg('Nettleserens enkle lager er fullt. Spillet lagres videre i nettleserens database, så ingenting er mistet. Last gjerne ned spillet som fil (☰ → Lagre og last).'), 0); return; }
+    if (f.type === 'mangler') { setTimeout(() => { if (typeof logg === 'function') logg('En del av det lagrede spillet ble ikke funnet i nettleserens database. Har du en fil, kan du hente spillet fra den (☰ → Lagre og last).'); }, 1500); return; }
+    if (meldt || typeof logg !== 'function') return; meldt = true;
     setTimeout(() => logg(f.type === 'fullt' ? 'Spillet fikk ikke lagret: nettleseren har ikke mer plass. Åpne «Lagre og last» i ☰ og slett en plass eller last ned spillet som fil.'
       : 'Spillet kan ikke lagres i dette vinduet (privat vindu eller blokkert lagring). Åpne «Lagre og last» i ☰ og last ned spillet som fil før du lukker.'), 0); });
   // virker ikke lagringen i det hele tatt (sperret), sies det fra med en gang spillet er i gang
