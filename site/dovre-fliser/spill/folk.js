@@ -91,6 +91,17 @@
     const p = { id: F.neste++, navn, alder: 19 + Math.floor(r() * 44), yrke: y.navn, ferd, oppgave, helse: 1, lojal: Math.round((.3 + r() * .7) * 100) / 100, seng: false };
     F.personer.push(p); return p;
   }
+  // (G5, ut5-ledere) LEDELSE: en ferdighet til (0,7–1,45 som de andre), men den står ikke i p.ferd (der ville den endret lønnskravene og
+  // «best på» for alle). p.ledelse når den er satt (opplæring senere), ellers et tall fast per person regnet av navnet (gamle og nye
+  // personer får samme tall hver gang, og ingen ny tilfeldig trekning endrer gjengene). Fordelingen (Claudes forslag): de fleste
+  // 0,8–1,1, noen få over 1,3; lærere, tidligere soldater og vektere litt bedre.
+  const LEDELSE_YRKE = { 'lærer': .15, 'tidligere soldat': .12, 'vekter': .06, 'sykepleier': .04 };
+  function ledelse(p) {
+    if (!p) return .7; if (Number.isFinite(p.ledelse)) return Math.max(.7, Math.min(1.45, p.ledelse));
+    let h = 2166136261; const t = String(p.navn || p.id || '') + '|ledelse'; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
+    const u = ((h >>> 0) % 10000) / 10000, v = .7 + .75 * Math.pow(u, 1.6) + (LEDELSE_YRKE[p.yrke] || 0);
+    return Math.round(Math.max(.7, Math.min(1.45, v)) * 100) / 100;
+  }
   // Ny gjeng: ti personer, fordelt etter START (den som er best på en oppgave får den først)
   function ny(frø = 1987) {
     const F = { versjon: 1, personer: [], neste: 1, mat: 30, moral: 60, mål: 60, misnøye: 0, frø: frø >>> 0, borte: 0, sist: {} }, r = rng(F.frø);
@@ -332,7 +343,7 @@
   function fjern(F, id) { if (!F || id === undefined || id === null) return null; const i = F.personer.findIndex(p => p.id === id); if (i < 0) return null; return F.personer.splice(i, 1)[0]; }
   // personId(m): mannens kobling til folket – Leirvakta har tallet (p.id), en tropp har hele personposten (som ikke står i folket)
   const personId = m => (m && (typeof m.person === 'number' || typeof m.person === 'string') ? m.person : null);
-  const api = { varmeAndel: null, døgnF: null, stedF: null, tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor, personF: null, lønnSats, lønnSum };
+  const api = { varmeAndel: null, døgnF: null, stedF: null, tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor, personF: null, lønnSats, lønnSum, ledelse };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.FolkRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

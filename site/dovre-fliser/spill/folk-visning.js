@@ -158,6 +158,8 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
       panel.append(el('div', { klasse: 'opp' }, el('div', {}, el('b', {}, O.navn), el('small', {}, info + (syke > 0 ? ` · ${syke} syke` : '') + (skole ? ` · ${skole} på opplæring` : ''))), minus, el('span', { klasse: 'n' }, String(antall)), pluss));
     }
     if (tavle) panel.append(...tavle.noder); }
+    // (G5, ut5-ledere) LEDERE: leirsjef, formenn, forhandler, troppsjefer og kasserer (spill/ledere-visning.js)
+    if (window.LedereSpill) panel.append(...LedereSpill.del({ el, knapp }));
     // folkene
     panel.append(el('div', { klasse: 'rad' }, knapp(visFolk ? `Skjul folkene` : `Vis folkene (${n})`, () => { visFolk = !visFolk; vis(); }, { id: 'visfolk' })));
     if (visFolk) for (const p of F.personer) {
