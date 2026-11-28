@@ -40,6 +40,7 @@
 #leirmeny .status{ font-size:14px; color:var(--ink-dim); margin-top:6px; line-height:1.3; display:grid; grid-template-columns:1fr 1fr; gap:4px; }
 #leirmeny .flis{ background:#221c13; border:1px solid #3a3226; padding:4px 8px; min-width:0; } #leirmeny .flis small{ display:block; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; opacity:.8; }
 #leirmeny .flis b{ color:var(--ink); font-weight:600; font-size:15px; white-space:nowrap; } #leirmeny .flis.fare{ border-color:#8a4a3a; } #leirmeny .status .linje{ grid-column:1 / -1; font-size:13px; }
+#leirmeny .liste h4.gruppe{ cursor:pointer; user-select:none; } #leirmeny .liste h4.gruppe:hover{ color:var(--ink,#e7dcc3); } #leirmeny .liste h4.gruppe small{ font-weight:400; letter-spacing:0; opacity:.7; } #leirmeny .liste h4.gruppe.lukket{ opacity:.8; }
 #leirmeny .liste h4{ margin:10px 4px 2px; font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); border-bottom:1px solid var(--rule); padding-bottom:3px; } #leirmeny .liste h4:first-child{ margin-top:2px; }
 #leirmeny .faner{ display:flex; gap:0; margin:8px -12px -6px; border-top:1px solid var(--rule); }
 #leirmeny .faner button{ flex:1; border:none; border-right:1px solid var(--rule); background:#1c1710; min-height:38px; color:var(--ink-dim); } #leirmeny .faner button:last-child{ border-right:none; }
@@ -98,6 +99,29 @@ body:has(#leirmeny.på) #loggvelkommen{ left:calc(var(--leirH, 372px) + env(safe
 body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ content:attr(data-tegn); display:inline-block; margin-right:5px; opacity:.85; }`;
   document.head.appendChild(css);
   const el = (tag, eg = {}, ...barn) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(eg)) { if (k === 'klasse') e.className = v; else if (k.startsWith('on')) e[k] = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
+  // (ut8-kr-ro) BYGGLISTA I GRUPPER – rekkefølgen og hvilke som er sammenfoldet fra start (Claudes forslag). GR = [[navn, [id …]] …] slik
+  // menyen bygger den (de gamle gruppene + LEIR2_GRUPPER). Gir [[navn, [id …]] …] i fast rekkefølge, hvert bygg én gang, uten deler.
+  const BYGGREKKE = ['Bo og leve', 'Produksjon', 'Strøm og diesel', 'Lager og arbeid', 'Oversikt og samband', 'Forsvar', 'Droner og sensorer', 'Trening', 'Veger', 'Annet', 'Utstyr og småting', 'Pynt'];
+  const BYGG_LUKKET = { 'Utstyr og småting': true, Pynt: true };
+  // bygg uten gruppe som hører hjemme et sted (resten havner under «Annet»)
+  const BYGG_FLYTT = { åker: 'Produksjon', øvingsfelt: 'Trening' };
+  function byggGrupper(GR) {
+    const LB = window.Leir, V = window.Leirvirkning && Leirvirkning.VIRKNING ? Leirvirkning.VIRKNING : {}, ut = new Map(BYGGREKKE.map(n => [n, []])), sett = new Set();
+    const lov = id => LB.BYGG[id] && !LB.BYGG[id].del && !sett.has(id);
+    const legg = (g, id) => { if (!lov(id)) return; if (!ut.has(g)) ut.set(g, []); ut.get(g).push(id); sett.add(id); };
+    // en gruppe som står tidligere i BYGGREKKE, vinner når et bygg står i to (betongblanderen: Produksjon før Ting i leiren)
+    const rang = n => { const i = BYGGREKKE.indexOf(n === 'Ting i leiren' ? 'Utstyr og småting' : n); return i < 0 ? BYGGREKKE.length : i; };
+    for (const [g, ider] of GR.slice().sort((a, b) => rang(a[0]) - rang(b[0]))) for (const id of ider) {
+      if (g !== 'Ting i leiren') { legg(g, id); continue; }
+      const B = LB.BYGG[id] || {}; legg(B.kw > 0 ? 'Strøm og diesel' : V[id] ? 'Utstyr og småting' : 'Pynt', id); }
+    for (const id of Object.keys(LB.BYGG)) legg(BYGG_FLYTT[id] || 'Annet', id);
+    return [...ut].filter(([, ider]) => ider.length).sort((a, b) => rang(a[0]) - rang(b[0]));
+  }
+  // sammenfoldet eller ikke: valget huskes i nettleseren («riksbrudd-byggrupper»), ellers BYGG_LUKKET
+  let GRUPPEVALG = null;
+  function gruppeLukket(g) { if (!GRUPPEVALG) { try { GRUPPEVALG = JSON.parse(localStorage.getItem('riksbrudd-byggrupper') || '{}') || {}; } catch (e) { GRUPPEVALG = {}; } }
+    return g in GRUPPEVALG ? !!GRUPPEVALG[g] : !!BYGG_LUKKET[g]; }
+  function settGruppe(g, lukket) { gruppeLukket(g); GRUPPEVALG[g] = !!lukket; try { localStorage.setItem('riksbrudd-byggrupper', JSON.stringify(GRUPPEVALG)); } catch (e) { /* sperret */ } }
   const knapp = (t, f, eg = {}) => { const b = el('button', { type: 'button', ...eg }, t); b.onclick = f; return b; };
   const menyEl = el('div', { id: 'leirmeny', role: 'dialog', 'aria-label': 'Leiren' }); document.body.appendChild(menyEl);
   const banner = el('div', { id: 'byggvalg' }); document.body.appendChild(banner);
@@ -298,10 +322,18 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       ['Oversikt og samband', ['kontrollrom', 'radiomast', 'kameramast', 'vakttårn']], ['Lager og arbeid', ['lagertelt', 'container', 'verksted', 'helikopterplass']], ['Forsvar', ['gjerde', 'port', 'sandsekkvoll']], ['Veger', ['veg']]];
     // (22. nov) de nye leirbyggene i spill/modeller-leir2.js sier selv hvilken gruppe de hører til
     for (const [g, ider] of window.LEIR2_GRUPPER || []) { const f = GR.find(x => x[0] === g); if (f) f[1] = f[1].concat(ider.filter(i => !f[1].includes(i))); else GR.push([g, ider.slice()]); }
-    const iGruppe = new Set(GR.flatMap(g => g[1])), rekke = [...GR.flatMap(([navn, ider]) => ider.filter(id => LB.BYGG[id] && !LB.BYGG[id].del).map((id, n) => [id, n ? null : navn])),
-      ...Object.keys(LB.BYGG).filter(id => !LB.BYGG[id].del && !iGruppe.has(id)).map((id, n) => [id, n ? null : 'Annet'])];
-    for (const [id, gruppe] of rekke) { const B = LB.BYGG[id];
-      if (gruppe) liste.appendChild(el('h4', {}, gruppe));
+    // (ut8-kr-ro, kritikken: «Bygglista har 123 typer: kjegler, sperrebånd, stige … står mellom brakke og sagbruk») fast rekkefølge med
+    // produksjonen høyt, og hver gruppe kan foldes sammen (huskes i nettleseren). «Ting i leiren» deles: det som virker (Leirvirkning)
+    // står under «Utstyr og småting», det som bare er utseende under «Pynt» – begge sammenfoldet nederst til du åpner dem.
+    const ryddet = byggGrupper(GR);
+    const rekke = ryddet.flatMap(([navn, ider]) => ider.map((id, n) => [id, n ? null : navn, navn]));
+    for (const [id, gruppe, gNavn] of rekke) { const B = LB.BYGG[id];
+      if (gruppe) { const lukket = gruppeLukket(gruppe), n = (ryddet.find(g => g[0] === gruppe) || [0, []])[1].length;
+        const h4 = el('h4', { klasse: 'gruppe' + (lukket ? ' lukket' : ''), 'data-gruppe': gruppe, role: 'button', tabindex: '0', 'aria-expanded': String(!lukket) }, `${lukket ? '▸' : '▾'} ${gruppe}`, el('small', {}, ` ${n}`));
+        const snu = () => { const nå = !gruppeLukket(gruppe); settGruppe(gruppe, nå); h4.classList.toggle('lukket', nå); h4.setAttribute('aria-expanded', String(!nå)); h4.firstChild.textContent = `${nå ? '▸' : '▾'} ${gruppe}`;
+          for (const k of liste.querySelectorAll('.bygg.kort')) if (k.dataset.gruppe === gruppe) k.hidden = nå; };
+        h4.addEventListener('click', snu); h4.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); snu(); } });
+        liste.appendChild(h4); }
       const k = LB.kostnad(id, 1, bonus()), mp = B.linje ? 0 : matPris(k.mat), pris = B.linje ? `${LB.kroner(B.prisPerMeter)} per meter` : `${LB.kroner(k.pris + mp)} i alt` + (mp ? ` (${delNavn(id)} ${LB.kroner(k.pris)} + materialer du mangler ${LB.kroner(mp)})` : ` (${delNavn(id, true)}; materialene har du)`) + ` · byggelagene dine: ${tidTekst(k.timer * 60)}`;
       const strøm = B.kw > 0 ? ` · gir ${kw(B.kw)} kW` : B.kw < 0 ? ` · bruker ${kw(-B.kw)} kW` : '', nv = B.nivå ? ` · ${Object.values(B.nivå)[0].length} nivåer` : '';
       // (ut4-balanse2) andre moduler kan varsle før kjøpet: window.BYGG_VARSEL = [(type, { kost, prisFor }) => { kort, tekst } | null] (produksjon.js:
@@ -312,7 +344,7 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
       const tegn = el('img', { klasse: 'tegn', alt: '', draggable: 'false' }); if (window.Tegninger) tegn.src = Tegninger.bilde(Tegninger.bygg(id));
       // (r3) ikonet settes med en gang (før kom det først når ikoner.js merket kortet, og da vokste kortet – lista hoppet)
       const ikon = window.Ikoner && Ikoner.BYGG && Ikoner.BYGG[id];
-      liste.appendChild(el('div', { klasse: 'bygg kort', 'data-type': id, ...(ikon ? { 'data-ikon': ikon } : {}), 'data-tips': `${B.navn}|${varsel ? varsel.tekst + ' ' : ''}${pris}${strøm}${nv}. ${B.linje ? 'Per meter: ' : 'Materialer: '}${matTekst(k.mat)}. ${B.virkning && B.virkning !== B.tekst ? B.tekst + '. Virkning: ' + B.virkning : B.tekst}` }, tegn,
+      liste.appendChild(el('div', { klasse: 'bygg kort', 'data-type': id, 'data-gruppe': gNavn, ...(gruppeLukket(gNavn) ? { hidden: '' } : {}), ...(ikon ? { 'data-ikon': ikon } : {}), 'data-tips': `${B.navn}|${varsel ? varsel.tekst + ' ' : ''}${pris}${strøm}${nv}. ${B.linje ? 'Per meter: ' : 'Materialer: '}${matTekst(k.mat)}. ${B.virkning && B.virkning !== B.tekst ? B.tekst + '. Virkning: ' + B.virkning : B.tekst}` }, tegn,
         el('div', {}, el('b', {}, B.navn), el('small', { klasse: 'pris', title: B.linje ? '' : mp ? `Arbeid ${LB.kroner(k.pris)} + materialer du mangler ${LB.kroner(mp)}` : 'Materialene har du på lageret' }, B.linje ? `${LB.kroner(B.prisPerMeter)}/m` : LB.kroner(k.pris + mp) + (mp ? ' i alt' : '')), B.virkningKort ? el('small', { klasse: 'virk' }, B.virkningKort) : '', varsel ? el('small', { klasse: 'varsel', title: varsel.tekst }, varsel.kort) : '', el('small', { klasse: 'kortlinje' }, (B.linje ? '' : tidTekst(k.timer * 60)) + strøm.replace(/^ · /, B.linje ? '' : ' · ') || B.tekst), el('small', { klasse: 'mer' }, (B.linje ? 'per meter: ' : '') + matTekst(k.mat)), el('small', { klasse: 'mer' }, B.virkning || B.tekst)), b));
     }
     // FANER (brukeren 16. nov: «forbedre menyene» – Leir-menyen var én lang side): status og Folk-knappen står alltid øverst, resten
