@@ -133,6 +133,15 @@ function kjør(T, sek, o = {}) {
   ok(/tom for tømmer/.test(PR.grunnTekst('tom', 'sagbruk')) && /venter på tømmer/.test(PR.grunnTekst('tom', 'sagbruk', true)) && PR.grunnTekst('ødelagt', 'sagbruk', true) === 'i stykker', 'grunntekstene for begge måtene');
 }
 
+// ---------- 10. folk på «frakt» bærer for maskinene når de ikke har noe å bære fra hogstfeltene ----------
+{ const T = leir({ n: 4 }); T.F.personer[3].oppgave = 'frakt'; const G = FG.ny(), B = BR.ny(), P = PR.ny(), A = BR.lager(Leir, T.L, T.V, VL, T.midte);
+  let turerFrakt = 0;
+  for (let t = 0; t < 900; t += 5) { FG.steg(G, { F: T.F, L: T.L, leir: T.midte, kart: T.K, hva: () => 'arbeid', mål: (p, h) => BR.mål(B, T.L, p, h) }, 5);
+    BR.steg(B, { F: T.F, L: T.L, G, A, status: P.status, fraktLedig: true }, 5); if (B.bær[4]) turerFrakt++; PR.steg(P, T.L, 5 / 60, { mating: B.m, kraftPer: B.kraftPer, mangler: new Set() }); }
+  ok(turerFrakt > 0, 'frakt-personen bar for saga (' + turerFrakt + ' steg med last eller på vei)');
+  const B2 = BR.ny(), G2 = FG.ny(); for (let t = 0; t < 60; t += 5) { FG.steg(G2, { F: T.F, L: T.L, leir: T.midte, kart: T.K, hva: () => 'arbeid', mål: (p, h) => BR.mål(B2, T.L, p, h) }, 5); BR.steg(B2, { F: T.F, L: T.L, G: G2, A, fraktLedig: false }, 5); }
+  ok(!B2.bær[4] && !(B2.rolle[4]), 'med noe å bære fra hogstfeltet bærer frakt-personen ikke for maskinene');
+}
 // selvtest: en feil med vilje (operatørene teller selv om de ikke står på plass) skal gi mer enn 0 i starten
 { const T = leir({ n: 4 }), G = FG.ny(), B = BR.ny(), A = BR.lager(Leir, T.L, T.V, VL, T.midte);
   FG.steg(G, { F: T.F, L: T.L, leir: T.midte, kart: T.K, hva: () => 'arbeid', mål: (p, h) => BR.mål(B, T.L, p, h) }, 1);
