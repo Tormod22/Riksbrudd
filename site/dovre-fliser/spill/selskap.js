@@ -218,7 +218,7 @@
       k.tittel = tittel(k); nye.push(k); S.tilbud.push(k); n--;
     }
     // de eldste går ut – aldri den første kontrakten (den har sin egen frist), r3: nye tilbud kommer også mens den ligger der
-    while (S.tilbud.length > REGLER.maksTilbud) { const i = S.tilbud.findIndex(q => !q.første); if (i < 0) break; S.tilbud.splice(i, 1); }
+    while (S.tilbud.length > REGLER.maksTilbud) { const i = S.tilbud.findIndex(q => !q.første && !q.fast); if (i < 0) break; S.tilbud.splice(i, 1); }
     return nye;
   }
   // (ut2-balanse 28. nov) PÅFYLL: åpner spilleren Selskapet uten tilbud og uten aktive kontrakter, kommer nye tilbud straks (selskap-visning.js,
@@ -232,6 +232,8 @@
   function opptatt(S, sd, typ, sted, fra) {
     return [...S.tilbud, ...(sd ? sd.aktive : [])].some(k => k && k.type === typ && sammeSted(k.sted, sted) && (typ !== 'eskorte' || sammeSted(k.fra, fra))); }
   function tittel(k) {
+    // (ut3-varekontrakt) typer med egen tekst (spill/vare.js: lever, avtale, kjøp)
+    { const T = REGLER.TYPER[k.type]; if (T && T.tittel) return T.tittel(k); }
     if (k.type === 'eskorte') return `Eskorter ${k.last === 'tankbil' ? 'tankbilen' : 'lastebilen'} fra ${k.fra.navn} til ${k.sted.navn}`;
     if (k.type === 'hold') return `Hold ${k.sted.slag === 'bru' ? k.sted.navn : k.sted.navn} i ${k.hold} timer`;
     if (k.type === 'rydd') return `Rydd vegsperra ved ${k.sted.navn}`;
@@ -245,6 +247,7 @@
   // kravet med enkle ord
   function kravTekst(k) {
     const N = REGLER.nær;
+    { const T = REGLER.TYPER[k.type]; if (T && T.krav) return T.krav(k); }
     if (k.type === 'eskorte') return `${k.giver.navn} trenger ${k.last === 'tankbil' ? 'diesel' : 'varer'} fram. Bilen står ved ${k.fra.navn}. Kjør den til ${k.sted.navn} (innen ${N.fram} m) før fristen. Mister du bilen, er kontrakten brutt.`
       + (k.fare && k.fare.length ? ` Obs: ${k.fare.map(q => q.navn).join(' og ')} holdes av et annet selskap – regn med kamp der.` : '')
       + (k.risiko === 'bakhold' ? ' Det er meldt om bakhold langs ruta: send et lag med bilen eller i forkant. Derfor betaler jobben godt.'
@@ -324,7 +327,8 @@
     const k = S.tilbud.splice(i, 1)[0], r = rand || tilf;
     Object.assign(k, { status: 'aktiv', side: id, godtatt: Math.round(nå), frist: Math.round(nå + k.timer * 60), framdrift: 0, pris: sd.pris });
     const RS = REGLER.RISIKO, pA = k.risiko === 'bakhold' ? RS.bakhold.angrep : k.risiko === 'rolig' ? RS.rolig.angrep : REGLER.rival.angrep;
-    if (k.type === 'eskorte' && r() < pA) k.angrep = SIDER.filter(q => q !== id)[Math.floor(r() * 2)];
+    // (ut3-varekontrakt) en levering med meldt bakhold kan også bli angrepet på vegen (som eskorten)
+    if ((k.type === 'eskorte' || (k.type === 'lever' && k.risiko === 'bakhold')) && r() < pA) k.angrep = SIDER.filter(q => q !== id)[Math.floor(r() * 2)];
     sd.aktive.push(k); return { ok: true, k };
   }
   function avslutt(S, id, k, status) { const sd = side(S, id); sd.aktive = sd.aktive.filter(q => q.id !== k.id); k.status = status; sd.ferdige.unshift(k); sd.ferdige.length = Math.min(sd.ferdige.length, 12); }
@@ -332,8 +336,10 @@
   function lever(S, id, k, nå, rand) {
     const sd = side(S, id), T = REGLER.TYPER[k.type], P = REGLER.pris[k.pris] || REGLER.pris.vanlig, før = nivå(sd).nr, r = rand || tilf;
     endreRykte(S, id, { pålitelig: REGLER.levert.pålitelig, hardhendt: T.hardhendt, billig: P.billig });
-    k.ferdig = Math.round(nå); avslutt(S, id, k, 'levert'); sd.sum.levert++; sd.sum.tjent += k.betaling;
-    const nv = nivå(sd), h = { type: 'levert', k, kr: k.betaling };
+    // (ut3-varekontrakt) k.sluttKr: det som betales ved slutten når en del er betalt underveis (avtale) eller frakten er trukket (lever)
+    const sluttKr = Number.isFinite(k.sluttKr) ? k.sluttKr : k.betaling;
+    k.ferdig = Math.round(nå); avslutt(S, id, k, 'levert'); sd.sum.levert++; sd.sum.tjent += sluttKr;
+    const nv = nivå(sd), h = { type: 'levert', k, kr: sluttKr };
     if (nv.nr > før) h.nivåOpp = nv;
     if (!k.første && r() < (REGLER.motangrep[k.type] || 0)) h.motangrep = true;
     if (!k.første && nv.nr >= REGLER.rekrutt.fraNivå && r() < REGLER.rekrutt.sjanse) h.rekrutt = true;
@@ -341,8 +347,9 @@
   }
   // grunn: 'frist' | 'tapt' | 'avbrutt' | 'rivalFørst'. Gir { kr: bot }
   function bryt(S, id, k, grunn, nå) {
-    const sd = side(S, id), E = grunn === 'avbrutt' ? REGLER.avbrutt : grunn === 'rivalFørst' ? REGLER.rivalFørst : REGLER.brutt;
-    const bot = grunn === 'rivalFørst' ? 0 : k.bot;
+    // (ut3-varekontrakt) 'frakt' = fraktfirmaet mistet lasten (liten ripe, ingen bot); 'avtale' = for mange døgn uten levering (ingen bot – den er betalt per døgn)
+    const VR = REGLER.vareRykte || {}, sd = side(S, id), E = grunn === 'avbrutt' ? REGLER.avbrutt : grunn === 'rivalFørst' ? REGLER.rivalFørst : grunn === 'frakt' ? { pålitelig: VR.frakt || -3 } : grunn === 'avtale' ? { pålitelig: VR.avtale || -10 } : REGLER.brutt;
+    const bot = grunn === 'rivalFørst' || grunn === 'frakt' || grunn === 'avtale' ? 0 : k.bot;
     // (kritikerløkka r3) å gi opp den første kontrakten koster ingenting (opplæringen skal kunne gå videre når den ikke kan fullføres)
     endreRykte(S, id, { pålitelig: k.første && grunn === 'avbrutt' ? 0 : E.pålitelig * (k.første ? REGLER.første.bruddRykte : 1) }); k.ferdig = Math.round(nå); k.grunn = grunn;
     avslutt(S, id, k, grunn === 'rivalFørst' ? 'tapt' : 'brutt'); if (grunn !== 'rivalFørst') sd.sum.brutt++; sd.sum.bøter += bot;
@@ -358,10 +365,13 @@
     const ut = [];
     for (const k of side(S, id).aktive.slice()) {
       const m = mål[k.id] || {};
+      // (ut3-varekontrakt) typer med eget steg (spill/vare.js) avgjør selv når de er levert eller brutt; frist og bakhold som de andre
+      const TS = REGLER.TYPER[k.type] && REGLER.TYPER[k.type].steg;
+      if (TS) { const sv = TS(S, id, k, nå, dt, m, ut); if (sv === 'lever') { ut.push(lever(S, id, k, nå)); continue; } if (sv && sv.bryt) { ut.push(bryt(S, id, k, sv.bryt, nå)); continue; } }
       if (m.hentet) k.hentet = true;
       if (k.type === 'hold' && m.i) k.framdrift = Math.round((k.framdrift + dt) * 100) / 100;
       if (k.type === 'eskorte' && Number.isFinite(m.andel)) k.andel = Math.max(k.andel || 0, m.andel);
-      const ferdig = k.type === 'hold' ? k.framdrift >= k.hold * 60 : !!m.i;
+      const ferdig = TS ? false : k.type === 'hold' ? k.framdrift >= k.hold * 60 : !!m.i;
       if (ferdig) { ut.push(lever(S, id, k, nå)); continue; }
       if (m.tapt) { ut.push(bryt(S, id, k, 'tapt', nå)); continue; }
       if (nå > k.frist) { ut.push(bryt(S, id, k, 'frist', nå)); continue; }
@@ -378,7 +388,7 @@
     for (const k of S.tilbud.slice()) {
       // (ut1-okotest 28. nov, økonomitesten) aldri den første kontrakten – før tok et annet selskap den i 35 % av morgenene den lå
       // åpen, og den røde tråden mistet sitt første steg. r() trekkes likevel, så de andre tilbudene får samme tilfeldighet som før.
-      if (r() >= REGLER.rival.tarPerDag || k.første) continue;
+      if (r() >= REGLER.rival.tarPerDag || k.første || k.fast) continue;
       const tar = k.konkurrent || SIDER.filter(q => q !== k.for)[Math.floor(r() * 2)];
       S.tilbud = S.tilbud.filter(q => q !== k); k.status = 'tatt'; k.side = tar; endreRykte(S, tar, { pålitelig: 2 });
       const sd = side(S, tar); sd.sum.levert++; sd.sum.tjent += k.betaling; ut.push({ type: 'rivalTok', k, rival: tar });
@@ -440,6 +450,7 @@
   function bruttTekst(k) {
     if (!k || (k.status !== 'brutt' && k.status !== 'tapt')) return '';
     if (k.status === 'tapt') return 'et annet selskap kom først';
+    { const T = REGLER.TYPER[k.type], t = T && T.bruttTekst ? T.bruttTekst(k) : ''; if (t) return t; }
     if (k.grunn === 'frist') return 'fristen gikk ut';
     if (k.grunn === 'avbrutt') return 'dere avbrøt den';
     return k.type === 'forsyning' ? 'troppen som bar nødlageret, ble slått ut' : k.type === 'eskorte' ? 'bilen gikk tapt' : 'laget ble slått ut';
@@ -459,6 +470,7 @@
   // «Neste»-lappen for en aktiv kontrakt: hva den venter på nå. v = vurderingen fra visningen ({ i, hentet, lag, fiender, igjen, tapt }).
   function lappFor(k, v, nå) {
     v = v || {}; const st = k.sted.navn;
+    { const T = REGLER.TYPER[k.type]; if (T && T.lapp) return T.lapp(k, v, nå); }
     if (k.type === 'hold') { const h = Math.floor(tall(k.framdrift) / 60), m = Math.round(tall(k.framdrift) % 60);
       return v.fiender ? `Fiender ved ${st} – rydd dem bort (holdt ${h} t ${m} min av ${k.hold} t)` : v.lag ? `Hold ${st}: ${h} t ${m} min av ${k.hold} t` : `Send et lag (${kravFor(k).menn}+) til ${st} og hold stedet`; }
     if (k.type === 'eskorte') return v.i ? `Lever: tankbilen er framme i ${st}` : `Kjør ${k.bil || 'bilen'} til ${st}` + (Number.isFinite(v.igjen) ? ` (${v.igjen >= 1000 ? (Math.round(v.igjen / 100) / 10).toString().replace('.', ',') + ' km' : Math.round(v.igjen) + ' m'} igjen)` : '');
@@ -480,6 +492,8 @@
       if (leir && (!d.leir || Math.round(leir.x) !== d.leir.x || Math.round(leir.y) !== d.leir.y)) return null;
       const S = ny(d.leir, {}); S.nr = tall(d.nr, 0);
       if (d.tråd && typeof d.tråd === 'object') S.tråd = { k: String(d.tråd.k || ''), gjort: (Array.isArray(d.tråd.gjort) ? d.tråd.gjort : []).filter(x => TRÅD.some(s => s.id === x)), byggVed: Number.isFinite(d.tråd.byggVed) ? d.tråd.byggVed : null, slutt: !!d.tråd.slutt, brutt: !!d.tråd.brutt }; S.dag = tall(d.dag, -1); S.rivalDag = tall(d.rivalDag, -1); if (Number.isFinite(d.påfylt)) S.påfylt = d.påfylt;
+      // (ut3-varekontrakt) det spill/vare.js husker (Storlias første kontrakt, sagbruket kjent)
+      if (d.vare && typeof d.vare === 'object') S.vare = { storlia: !!d.vare.storlia, sagKjent: !!d.vare.sagKjent };
       S.tilbud = (Array.isArray(d.tilbud) ? d.tilbud : []).filter(k => k && k.id && REGLER.TYPER[k.type] && k.sted && Number.isFinite(k.sted.x));
       // (R1-løkka) gamle første kontrakter het «Hent nødlageret i nødlageret»: tittelen lages på nytt
       for (const k of S.tilbud) if (k.type === 'forsyning') k.tittel = tittel(k);
