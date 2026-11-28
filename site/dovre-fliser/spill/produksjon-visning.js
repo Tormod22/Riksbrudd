@@ -152,10 +152,7 @@
     document.head.appendChild(css); }
   function oppsett() {
     if (window.Ikoner && Ikoner.BYGG) Object.assign(Ikoner.BYGG, { sagbruk: 'sag', vedkløyver: 'kloyver', fyrkjele: 'kjele' });
-    if (window.Leir2d && Leir2d.STIL) Object.assign(Leir2d.STIL, {
-      sagbruk: { form: 'sal', tak: '#6e5a40', h: 6, kropp: [-6.1, 6.1, -7.1, 7.1], bølge: true, plass: [6.1, 12, -7.3, 7.3], porter: [-3.5, 3.5], vinduer: 2 },
-      vedkløyver: { form: 'kasse', tak: '#5a6a3a', h: 2.4, kropp: [-3, 3.05, -1.2, 1.2], ribber: true, stripe: '#c9a227' },
-      fyrkjele: { form: 'kasse', tak: '#55504a', h: 3, kropp: [-1.6, 1.6, -1, 1], rist: true, eksos: [-1, .55], pipe: [-1, .55], røyk: true } });
+    // (2D-stilen for maskinene står i leir2d.js STIL)
     const G = window.LEIR2_GRUPPER; if (Array.isArray(G) && !G.some(g => g[0] === 'Produksjon')) G.push(['Produksjon', ['sagbruk', 'vedkløyver', 'fyrkjele']]);
     else if (!G) window.LEIR2_GRUPPER = [['Produksjon', ['sagbruk', 'vedkløyver', 'fyrkjele']]];
     tømmerbilType(); kilder(); registrer();
