@@ -31,7 +31,9 @@
     slitasje: .0015,          // hp per driftstime (en maskin i full drift er halvslitt etter ca. 14 døgn: da går den med halv fart til den er reparert)
     // KVALITET (planen 4.3): dyktige folk (snittferdighet på «maskin» over 1,2) gir 10 % mer ut av sagbruket og vedkløyveren
     kvalitet: { grense: 1.2, bonus: .1 },
-    tømmerbil: { pris: 2.5e6 },   // kjøpes i fanen Produksjon; 20 m³ per tur (Ressurser.REGLER.tømmerbil)
+    tømmerbil: { pris: 2.5e6 },
+    // (ut4-firmaer, Ø5 – planen 14.5) HØVLERIET fra Storlia Tømmer: et sagbruk med b.høvleri gir planker × tre og flis × flis av det samme tømmeret
+    høvleri: { tre: 1.4, flis: .5 },   // kjøpes i fanen Produksjon; 20 m³ per tur (Ressurser.REGLER.tømmerbil)
   };
   const GRUNNER = ['av', 'ødelagt', 'fullt', 'tom', 'folk', 'strøm', 'slitt'];
   const GRUNNTEKST = { av: 'slått av', ødelagt: 'ødelagt', fullt: 'lageret fullt', folk: 'ingen folk', strøm: 'uten strøm', slitt: 'slitt – må repareres' };
@@ -56,6 +58,9 @@
   const tomTekst = (t) => (t === 'sagbruk' ? 'tom for tømmer' : t === 'vedkløyver' ? 'tom for flis' : 'tom for brensel');
   const grunnTekst = (g, t) => (g === 'tom' ? tomTekst(t) : GRUNNTEKST[g] || g);
 
+  // det maskinen gir per time ved full drift – sagbruket med høvleri (b.høvleri) gir flere planker og mindre flis
+  function utFor(b) { const M = REGLER.maskiner[b.type]; if (!M) return {}; if (b.type !== 'sagbruk' || !b.høvleri) return M.ut; const H = REGLER.høvleri;
+    return { tre: M.ut.tre * H.tre, flis: M.ut.flis * H.flis }; }
   // Vil maskinen gå nå (alt unntatt strøm og folk er på plass)? Brukes av leir.js (api.hviler) så en maskin som står, ikke tar strøm.
   // Folk telles også: uten folk på «maskin» tar den ingen strøm.
   function vil(L, b, folkIgjen) {
@@ -88,14 +93,15 @@
         // råvaren og plassen i lageret begrenser også
         let fRå = 1, fPlass = 1;
         for (const [vare, m] of Object.entries(v.r)) fRå = Math.min(fRå, har(L, vare) / (m * t));
-        for (const [vare, m] of Object.entries(M.ut)) fPlass = Math.min(fPlass, plass(L, vare) / (m * t));
+        for (const [vare, m] of Object.entries(utFor(b))) fPlass = Math.min(fPlass, plass(L, vare) / (m * t));
         const drift = Math.max(0, Math.min(fFolk * fSlitt, fRå, fPlass));
         // grunnen når den ikke går fullt: det som begrenser mest
         if (drift < 1 - 1e-6) s.grunn = fRå <= drift + 1e-9 && fRå < fFolk * fSlitt ? 'tom' : fPlass <= drift + 1e-9 && fPlass < fFolk * fSlitt ? 'fullt' : fSlitt < 1 && fSlitt <= fFolk ? 'slitt' : 'folk';
         if (drift > 1e-6) {
           s.går = true; s.drift = drift;
           for (const [vare, m] of Object.entries(v.r)) { const q = m * t * drift; L.lager[vare] = Math.max(0, har(L, vare) - q); s.inn[vare] = m * drift; P.brukt[vare] = (P.brukt[vare] || 0) + q; }
-          for (const [vare, m] of Object.entries(M.ut)) { const q = Math.min(m * t * drift * kval, plass(L, vare)); L.lager[vare] = har(L, vare) + q; s.ut[vare] = q / t; P.laget[vare] = (P.laget[vare] || 0) + q; }
+          const ut = utFor(b);
+          for (const [vare, m] of Object.entries(ut)) { const q = Math.min(m * t * drift * kval, plass(L, vare)); L.lager[vare] = har(L, vare) + q; s.ut[vare] = q / t; P.laget[vare] = (P.laget[vare] || 0) + q; }
           s.kvalitet = kval > 1;
           if (M.gir) { s.kw = M.gir * drift; kw += s.kw; varme += M.varme * drift; }
           s.kwBruk = M.kw * drift;
@@ -136,6 +142,6 @@
   // Verdien av det som er laget (kr), med prisene i MATERIALER: planker + flis + ved − tømmer
   function verdi(P, MAT) { const p = v => (MAT && MAT[v] ? MAT[v].pris : 0); let s = 0; for (const [v, m] of Object.entries(P.laget)) s += m * p(v); for (const [v, m] of Object.entries(P.brukt)) s -= m * p(v); return Math.round(s); }
 
-  const api = { REGLER, GRUNNER, GRUNNTEKST, VARENAVN, erMaskin, ny, fraJSON, maskinene, råvare, vil, steg, hviler, oppskrift, merke, grunnTekst, varmeAndel, verdi, nf };
+  const api = { utFor, REGLER, GRUNNER, GRUNNTEKST, VARENAVN, erMaskin, ny, fraJSON, maskinene, råvare, vil, steg, hviler, oppskrift, merke, grunnTekst, varmeAndel, verdi, nf };
   if (NODE) module.exports = api; else rot.Produksjon = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
