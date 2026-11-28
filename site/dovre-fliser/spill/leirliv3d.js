@@ -104,7 +104,7 @@
   }
   function lagInst(geo, mat, n, R) { const m = new THREE.InstancedMesh(geo, mat, n); m.count = 0; m.frustumCulled = false; m.userData.kilde = 'leirliv3d.js'; R.scene.add(m); return m; }
   function røykTekstur() { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 2, 32, 32, 31);
-    gr.addColorStop(0, 'rgba(255,255,255,.55)'); gr.addColorStop(.6, 'rgba(255,255,255,.22)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); }
+    gr.addColorStop(0, 'rgba(255,255,255,.75)'); gr.addColorStop(.55, 'rgba(255,255,255,.32)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); }
   function lag(R) {
     kast(); const geo = geometrier(), mat = window.MODELLER.materiale(), M = {};
     for (const k of ['snor', 'kasse', 'verktøy', 'bukk']) M[k] = lagInst(geo[k], mat, MAKS.ting, R);
@@ -116,7 +116,7 @@
     M.vindu = lagInst(q, vmat, MAKS.vindu, R);
     // røyken: punkter med egen alder (aA 0–1), gjennomsiktige og grå
     const N = MAKS.røyk * LL.REGLER.røyk.dotter, pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3)); pg.setAttribute('aA', new THREE.BufferAttribute(new Float32Array(N).fill(1), 1));
-    const tex = røykTekstur(), rmat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uT: { value: tex }, uC: { value: new THREE.Color(.55, .55, .56) }, uS: { value: 600 }, uB: { value: new THREE.Vector2(.5, 2.6) } },
+    const tex = røykTekstur(), rmat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uT: { value: tex }, uC: { value: new THREE.Color(.55, .55, .56) }, uS: { value: 600 }, uB: { value: new THREE.Vector2(LL.REGLER.røyk.bredde[0], LL.REGLER.røyk.bredde[1]) } },
       vertexShader: 'attribute float aA; uniform float uS; uniform vec2 uB; varying float vA; void main() { vA = aA; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = uS * mix(uB.x, uB.y, aA) / max(1.0, -mv.z); gl_Position = projectionMatrix * mv; }',
       fragmentShader: 'uniform sampler2D uT; uniform vec3 uC; varying float vA; void main() { float a = texture2D(uT, gl_PointCoord).a * (1.0 - vA) * min(1.0, vA * 8.0); if (a < 0.01) discard; gl_FragColor = vec4(uC, a); }' });
     M.røyk = new THREE.Points(pg, rmat); M.røyk.frustumCulled = false; M.røyk.userData.kilde = 'leirliv3d.js'; R.scene.add(M.røyk);

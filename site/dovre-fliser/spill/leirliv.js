@@ -19,7 +19,7 @@
     // fyrkjelen ryker fra kvelden til morgenen (varme i byggene), og alltid når den brenner (produksjon)
     kjeleNatt: [16, 8],
     // røyken: så mange røykdotter per pipe, så lenge en dott lever (s), så høyt den stiger (m/s) og hvor bred den blir (m)
-    røyk: { dotter: 14, liv: 9, stig: .55, bredde: [.5, 2.6] },
+    røyk: { dotter: 18, liv: 10, stig: .6, bredde: [.9, 3.6] },
     // lys i vinduene: når mørket (NATT.mørke, 0–1) er over dette; brakka slukker mellom leggetid og morgen (folk sover)
     lysMørke: .18, leggetid: [23.5, 5.5],
     // byggene som har vinduer med lys (vinduene står i VINDU under)
