@@ -186,10 +186,12 @@
     if (a.P && a.P.inne) delete a.P.inne.over; aktiv = null; settEtasje2D(null, 1); }
   // hvilke etasjer som vises: din og den under; den over mens du står i trappa
   function synlig(a) { const på = a.trappNå !== null && a.trappNå !== undefined, Es = E(), t = på ? a.m.trapper.find(q => q.id === a.trappNå) : null;
-    for (const [n, me] of a.nett) me.visible = n === a.n || n === forrige(a, a.n) || (t && (n === t.fra || n === t.til));
+    // (etasjen over vises også når du står ved foten av en trapp opp – ellers ser du himmelen gjennom trapphullet)
+    for (const [n, me] of a.nett) me.visible = !!t && (n === t.fra || n === t.til) || n === a.n || n === forrige(a, a.n) || (a.vedOpp && n === neste(a, a.n));
     // interiøret i 1. etasje (interior3d) vises når du er i 1. etasje, i kjelleren eller i 2.
     for (const o of window.Interior3d && Interior3d.aktive ? Interior3d.aktive() : []) if (o.plan === a.P.inne) for (const me of o.nett) me.visible = Math.abs(a.n) <= 2 || (t && (t.fra === 1 || t.til === 1));
     void Es; }
+  const neste = (a, n) => { const k = a.m.etasjer.findIndex(e => e.n === n); return k >= 0 && k < a.m.etasjer.length - 1 ? a.m.etasjer[k + 1].n : null; };
   const forrige = (a, n) => { const k = a.m.etasjer.findIndex(e => e.n === n); return k > 0 ? a.m.etasjer[k - 1].n : null; };
 
   // ---------- karakterens etasje (felles med 2D: Etasjer2D.S) ----------
@@ -218,7 +220,8 @@
     const a = aktiv; if (!Interior.inni(a.P, x, y)) { if (a.n !== 1) { a.n = 1; synlig(a); } a.trappNå = null; settEtasje2D(null, 1); return; }
     const [mx, my] = lokal(a, x, y), r = E().stå(a.m, a.n, mx, my), før = a.n;
     if (r) { a.n = r.n; a.trappNå = r.trapp; }
-    if (a.n !== før || a.trappNå !== a.sistTrapp) { a.sistTrapp = a.trappNå; synlig(a); }
+    const vedOpp = E().trapperVed(a.m, a.n).some(t => t.fra === a.n && Math.hypot(mx - t.x, my - t.y) < t.l / 2 + 2.5);
+    if (a.n !== før || a.trappNå !== a.sistTrapp || vedOpp !== a.vedOpp) { a.sistTrapp = a.trappNå; a.vedOpp = vedOpp; synlig(a); }
     if (a.n !== før) { const et = E().etasje(a.m, a.n); if (et && meldt !== a.h.i + ':' + a.n && typeof logg === 'function') { meldt = a.h.i + ':' + a.n; logg(et.stengt ? `${et.navn}: trapperommet er sperret.` : `Du er i ${E().navn(et)}.`); } }
     settEtasje2D(a, a.n, { x: mx, y: my });
   }
@@ -235,7 +238,7 @@
       knapp.addEventListener('click', ev => { ev.preventDefault(); const a = aktiv, E2 = window.Etasjer2D; if (!a || !E2) return; const hh = E2.husAv(a.h.i); if (!hh) return;
         if (E2.erLett(hh, a.n)) E2.let2d(hh, a.n, true); else E2.let2d(hh, a.n); }); }
     const a = aktiv, E2 = window.Etasjer2D, hh = a && E2 ? E2.husAv(a.h.i) : null;
-    let t = ''; if (a && hh && a.n !== 1 && a.trappNå === null && r3() && R3.fot) { const et = E().etasje(a.m, a.n);
+    let t = ''; if (a && hh && a.n !== 1 && r3() && R3.fot) { const et = E().etasje(a.m, a.n);
       if (et && !et.stengt) { const j = E2.S.leter; t = j ? `Leter … ${Math.max(0, Math.ceil(j.sek - (performance.now() - j.start) / 1000))} s` : !E2.erLett(hh, a.n) ? `Let gjennom ${E().navn(et)}` : E2.rest(hh, a.n) && window.LeteSpill && LeteSpill.plassTil(E2.rest(hh, a.n)) ? 'Hent det som ligger igjen' : ''; } }
     if (knapp.textContent !== t) knapp.textContent = t; knapp.style.display = t ? 'block' : 'none';
     if (t) { knapp.style.cssText = 'display:block;min-height:40px;padding:5px 16px;background:rgba(28,23,15,.92);border:1px solid #c9b26a;color:#f0e2b0;font:inherit;font-size:15px;cursor:pointer;pointer-events:auto'; }
@@ -246,5 +249,7 @@
     // vakta: hele byggingen nå (uten å vente på bildene)
     ferdig: () => { const a = aktiv; if (a && a.jobb) { iEtt(a.jobb); a.jobb = null; } return !!(a && a.ferdig); },
     nett: () => (aktiv ? [...aktiv.nett.entries()].map(([n, me]) => ({ n, synlig: me.visible, trekanter: me.geometry.attributes.position.count / 3 })) : []),
-    kast: () => kast(r3()), knapp: () => knapp, steg: () => { const R = r3(); if (R) ramme(R); } };
+    kast: () => kast(r3()), knapp: () => knapp, steg: () => { const R = r3(); if (R) ramme(R); },
+    // bilder og vakter: sett etasjen du står i (uten å gå trappa)
+    sett: n => { if (!aktiv) return false; aktiv.n = n; aktiv.trappNå = null; synlig(aktiv); return true; } };
 })();

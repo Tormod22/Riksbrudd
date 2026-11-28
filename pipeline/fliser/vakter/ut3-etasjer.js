@@ -5,7 +5,8 @@
 //    sier «Du er i 2. etasje», letingen der gir etasjens eget funn (kommandoen «etasjeLet», huskes i «riksbrudd-etasjer»), og
 //    1. etasje er fortsatt ikke gjennomsøkt. Selvtest: 2. etasje kan ikke letes på nytt.
 //  3D (når 3D er på): prøvehuset får interiør med modellen (P.etasjer), du går opp trappa med bevegelsesreglene (Bevegelse.steg og
-//    Interior3d.høyde), står i 2. etasje (høyden = 1. etasjes gulv + etasjens z), etasjen over er skjult, en vegg i 2. etasje
+//    Interior3d.høyde), står i 2. etasje (høyden = 1. etasjes gulv + etasjens z), etasjene over er skjult (den rett over bare når du
+//    står ved en trapp opp), en vegg i 2. etasje
 //    stopper deg, og ingen feil i konsollen.
 // Alt settes tilbake (kameraet, karakteren, lageret, maten, kassa, lagringen, prøvehuset, hindringene, gangen).
 module.exports = {
@@ -89,7 +90,8 @@ module.exports = {
             ok(Math.abs(kr.z - g0 - e2.z) < .15, `høyden i 2. etasje er ${ut.z} m over 1. etasje, ikke ${e2.z}`);
             // nettene: 2. etasje synlig, etasjen over skjult
             const N = Etasjer3d.nett(); ut.nett = N; const n2 = N.find(q => q.n === 2), n3 = N.find(q => q.n === 3);
-            ok(n2 && n2.synlig && n2.trekanter > 200, '2. etasje er ikke bygget/synlig i 3D'); ok(!n3 || !n3.synlig, 'etasjen over er synlig');
+            ok(n2 && n2.synlig && n2.trekanter > 200, '2. etasje er ikke bygget/synlig i 3D'); ok(!n3 || !n3.synlig || Etasjer3d.aktiv().vedOpp, 'etasjen over er synlig (og du står ikke ved en trapp opp)');
+            ok(!N.some(q => q.n > 3 && q.synlig), 'etasjer høyere opp er synlige');
             // en yttervegg i 2. etasje stopper deg (ingen dør der)
             const wv = e2.vegger.find(q => q.type !== 'skille'), mx = (wv.a[0] + wv.b[0]) / 2 + ox, my = (wv.a[1] + wv.b[1]) / 2 + oy;
             ok(Interior.blokkert(P.inne, mx, my), 'ytterveggen i 2. etasje stopper deg ikke'); ok(!Interior.blokkert(P.inne, kr.x, kr.y), 'du står fast der du står');

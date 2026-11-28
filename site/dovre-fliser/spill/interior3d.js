@@ -573,7 +573,9 @@
     for (const r of pl.rom) { yield 'lampe'; if (r.andel < .5) continue; const S = stiler.get(r), lu = r.u1 - r.u0, lv = r.v1 - r.v0, sted = [];
       if (S.lampe === 2) { for (let pu = r.u0 + 3; pu < r.u1 - 1.5; pu += 6) for (let pv = r.v0 + 3; pv < r.v1 - 1.5; pv += 6) sted.push([pu, pv]); if (!sted.length) sted.push([(r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2]); }
       else sted.push([(r.u0 + r.u1) / 2, (r.v0 + r.v1) / 2]);
-      for (const [pu, pv] of sted) { const x = pu * A.ux + pv * A.vx, y = pu * A.uy + pv * A.vy; if (!Interior.inni(P, x, y) || Interior.avstKant(P, x, y) < .5) continue; const va = Math.atan2(A.uy, A.ux);
+      for (const [pu, pv] of sted) { const x = pu * A.ux + pv * A.vx, y = pu * A.uy + pv * A.vy; if (!Interior.inni(P, x, y) || Interior.avstKant(P, x, y) < .5) continue;
+        // (B2) ingen taklampe over trapphullet
+        if (pl.hullUV && pl.hullUV.tak.some(q => pu > q.u0 - .5 && pu < q.u1 + .5 && pv > q.v0 - .5 && pv < q.v1 + .5)) continue; const va = Math.atan2(A.uy, A.ux);
         if (S.lampe === 2) { kasse(x, y, va, [-.75, .75, -.09, .09, tak - .12, tak - .05, [1, 1, .96]]); kasse(x, y, va, [-.8, .8, -.12, .12, tak - .05, tak, STÅL]); flekk(LA, x, y, va, 3.4, 3.4, .024); }
         else if (tak > 2.9) { kasse(x, y, va, [-.012, .012, -.012, .012, tak - .6, tak, MØRK]); kasse(x, y, va, [-.2, .2, -.2, .2, tak - .85, tak - .6, [1, .95, .8], 'glatt', true]); flekk(LA, x, y, va, Math.min(2.4, lu * .55), Math.min(2.4, lv * .55), .024); }
         else { kasse(x, y, va, [-.19, .19, -.19, .19, tak - .09, tak - .01, [1, .97, .86], 'glatt', true]); kasse(x, y, va, [-.21, .21, -.21, .21, tak - .02, tak, STÅL, 'glatt', true]); flekk(LA, x, y, va, Math.min(2.2, lu * .55), Math.min(2.2, lv * .55), .024); } } }
