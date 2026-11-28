@@ -207,9 +207,13 @@
 
   // ---------- krokene i folk.js og rekruttering.js ----------
   const stedJobb = p => (p.oppgave && p.oppgave !== 'fri' ? 'j:' + p.oppgave : null);
-  FR.moralF = (F, L) => (aktiv() && F && F === Fo() ? OP.moral(S, F, stedJobb, { samling: P.samling ? navnB(P.samling) : null, tid: nåTid() }).sum : 0);
+  // (regnes høyst én gang i sekundet – folk.js spør ofte, og parene kan være mange med 200 folk)
+  let moralHurtig = { t: -1e9, v: 0 }, uvennHurtig = { t: -1e9, ids: new Set() };
+  FR.moralF = (F, L) => { if (!aktiv() || !F || F !== Fo()) return 0; const nu = performance.now();
+    if (nu - moralHurtig.t > 1000) moralHurtig = { t: nu, v: OP.moral(S, F, stedJobb, { samling: P.samling ? navnB(P.samling) : null, tid: nåTid() }).sum }; return moralHurtig.v; };
+  const uvennIds = F => { const nu = performance.now(); if (nu - uvennHurtig.t > 1000) { const ids = new Set(); for (const p of F.personer) if (OP.uvennTempo(S, F, p) < 1) ids.add(p.id); uvennHurtig = { t: nu, ids }; } return uvennHurtig.ids; };
   const førPF = FR.personF;
-  FR.personF = (p, o) => (førPF ? førPF(p, o) : 1) * (aktiv() && Fo() && Fo().personer.includes(p) ? OP.uvennTempo(S, Fo(), p) : 1);
+  FR.personF = (p, o) => (førPF ? førPF(p, o) : 1) * (aktiv() && Fo() && o !== 'fri' && uvennIds(Fo()).has(p.id) && Fo().personer.includes(p) ? R.uvennTempo : 1);
   if (window.Rekruttering) { Rekruttering.lokkF = p => (aktiv() && Fo() ? OP.lokkF(S, Fo(), p) : 1); Rekruttering.ulykkeMinus = () => (aktiv() ? OP.søkerMinus(S, nåTid()) : 0); }
 
   // ---------- jobbtavla og personen ----------
@@ -255,6 +259,6 @@
     hode.append(knapp(`Kjøp ${R.vern.pakke} sett verneutstyr (${LB.kroner(pris)})`, () => kjøpVern(1), { id: 'kjopvern', 'data-fane': 'lager' }));
   });
 
-  window.OppforselSpill = { test: false, på: true, alarm: null, feil: '', aktiv, tilstand: () => S, plan: () => P, sett: o => { S = OP.fraJSON(o); lagre(); }, lagre, les, linjer, personTekst, kjøpVern, lys: lysNå, trøtt,
+  window.OppforselSpill = { tøm: () => { moralHurtig.t = -1e9; uvennHurtig.t = -1e9; }, test: false, på: true, alarm: null, feil: '', aktiv, tilstand: () => S, plan: () => P, sett: o => { S = OP.fraJSON(o); lagre(); }, lagre, les, linjer, personTekst, kjøpVern, lys: lysNå, trøtt,
     nullstill: () => { S = OP.ny(); nullPlan(); helseFør.clear(); alarmFør = null; sistBrannLogg = ''; lagre(); }, mål, etter: (dt = 0) => etter(G(), dt, {}), skadet };
 })();

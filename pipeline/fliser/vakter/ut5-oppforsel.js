@@ -53,7 +53,7 @@ module.exports = {
       krev(ut.skade.lettFramme, 'den skadde kom ikke fram til sykestua');
       // 4. VENNER: to på samme jobb som er venner, gir moral; teksten ved personen
       const a = P[1], b = P[2]; b.helse = 1; hard.helse = 1; steg(1, .25); b.oppgave = a.oppgave = 'bygg';
-      const m0 = FolkRegler.moralF(F, L); OS.tilstand().rel[OP.nøkkel(a.id, b.id)] = .8; const m1 = FolkRegler.moralF(F, L);
+      if (OS.tøm) OS.tøm(); const m0 = FolkRegler.moralF(F, L); OS.tilstand().rel[OP.nøkkel(a.id, b.id)] = .8; if (OS.tøm) OS.tøm(); const m1 = FolkRegler.moralF(F, L);
       ut.venner = { før: +m0.toFixed(2), etter: +m1.toFixed(2), tekst: OS.personTekst(a) };
       krev(m1 > m0, 'venner gir ikke moral ' + JSON.stringify(ut.venner)); krev(/venn med/.test(ut.venner.tekst), 'personen viser ikke vennen');
       // 5. ULYKKER: sjansen stiger med trettheten og faller med verneutstyr
