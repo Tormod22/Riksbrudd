@@ -67,7 +67,7 @@
     const ød = ødelagte(), RG = window.RegionSpill && RegionSpill.tilstand ? RegionSpill.tilstand() : null;
     const byer = B.map(b => { const e = eierAv(b.id); let strøm = true; try { strøm = window.GarnisonSpill && b.ref ? GarnisonSpill.strømFor(b.ref) : true; } catch (x) { strøm = true; }
       const rb = e === 'blå' && RG && RG.byer ? RG.byer[b.id] : null;
-      return { id: b.id, navn: b.navn, folk: b.folk, eier: e, strøm, ødelagt: SE.ødelagtNær(b.x, b.y, ød), loj: e === 'blå' ? (rb && Number.isFinite(rb.loj) ? rb.loj : null) : null, holdtFra: S.holdt[String(b.id)] ? S.holdt[String(b.id)].fra : null }; });
+      return { id: b.id, navn: b.navn, folk: b.folk, eier: e, strøm, ødelagt: SE.ødelagtNær(b.x, b.y, ød), loj: e === 'blå' ? (rb && Number.isFinite(rb.loj) ? rb.loj : window.Region && Region.REGLER ? Region.REGLER.lojStart : null) : null, holdtFra: S.holdt[String(b.id)] ? S.holdt[String(b.id)].fra : null }; });
     const mv = minVerdi(), rød = rivalVerdi('rød'), grønn = rivalVerdi('grønn');
     const A = SE.alle({ tid: t, st, SR: ST.REGLER, verdier: { blå: mv.sum, rød: rød.sum, grønn: grønn.sum }, byer, sult: { blå: sulter() } });
     sist = { A, st, byer, verdi: { blå: mv, rød, grønn }, tid: t }; sistNår = performance.now(); return sist;

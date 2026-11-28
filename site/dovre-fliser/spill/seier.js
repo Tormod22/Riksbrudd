@@ -114,7 +114,8 @@
       if (holdt < R.holdtDøgn * 1440) hvorfor.push(`holdt i ${Math.max(0, Math.round(holdt / 144) / 10).toString().replace('.', ',')} av ${R.holdtDøgn} døgn`);
       const ok = !hvorfor.length; if (ok) { nOk++; okFolk += tall(b.folk); }
       // delvis: hvor mye av kravene tettstedet oppfyller (strøm, bruer, lojalitet, tid), så måleren går jevnt og ikke står på 0 i to døgn
-      const del = ok ? 1 : ((b.strøm === false ? 0 : 1) + (tall(b.ødelagt) > 0 ? 0 : 1) + (b.loj === null || b.loj === undefined ? 1 : klem(tall(b.loj) / R.loj)) + klem(holdt / (R.holdtDøgn * 1440))) / 4;
+      //  – et tettsted dere nettopp har tatt, teller halvt til det har vært holdt i holdtDøgn
+      const del = ok ? 1 : ((b.strøm === false ? 0 : 1) + (tall(b.ødelagt) > 0 ? 0 : 1) + (b.loj === null || b.loj === undefined ? 1 : klem(tall(b.loj) / R.loj))) / 3 * (.5 + .5 * klem(holdt / (R.holdtDøgn * 1440)));
       delSum += del; delFolkSum += del * tall(b.folk);
       ut.push({ id: b.id, navn: b.navn, folk: tall(b.folk), ok, del, hvorfor });
     }
@@ -127,7 +128,7 @@
     if (andel < R.andel) mangler.push(`Tettstedene som er bygd opp, har ${prosent(andel)} % av folket – trenger ${prosent(R.andel)} %`);
     if (o.sult) mangler.push('Leiren er tom for mat');
     if (forTidlig) mangler.push(`Avgjøres tidligst dag ${Math.floor(R.tidligst / 1440) + 1}`);
-    let fremdrift = (delBy + delFolk) / 2; if (o.sult) fremdrift *= .5;
+    let fremdrift = Math.min(delBy, delFolk); if (o.sult) fremdrift *= .5;
     return { fremdrift: nådd ? 1 : Math.min(.99, klem(fremdrift)), nådd, holdt: mine.length, ok: nOk, andel, mangler, byer: ut };
   }
   // ødelagte ting innen radius fra (x, y): liste = [{ x, y, lag, tilstand }] (tilstand 'hel' teller ikke)
