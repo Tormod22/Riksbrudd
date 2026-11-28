@@ -119,7 +119,9 @@
       const t = (r.hva === 'sted' ? `${p.navn} har fortalt ${navn(r.side)} at leiren ligger et annet sted. De angriper der det neste døgnet.` : `${p.navn} har lurt ${navn(r.side)} inn i en falsk kontrakt – de taper ca. ${mill(r.tap)}.`)
         + (r.brent ? ` ${navn(r.side)} skjønte det og har trukket ${fornavn(p)} ut – hen er ikke lenger spion for dem.` : ''); melde(t); return { tekst: t, ...r }; },
     send(k) { const F = Fo(), p = person(k.person), r = SP.send(S, p, k.rival, nå()); if (r.feil) return r; FR().fjern(F, p.id); delete S.mistanke[String(p.id)];
-      SP.leggFunn(S, k.rival, rapport(k.rival), nå()); lagre(); endretFolk(); const t = `${p.navn} er sendt inn hos ${navn(k.rival)} som spion (egnet ${pst(r.egnet)}). Dere ser lagene deres nå.`; melde(t); return { tekst: t }; },
+      SP.leggFunn(S, k.rival, rapport(k.rival), nå());
+      // en skjult spion som sendes ut, er ute av leiren (rivalen mister innsynet – dere merker ingenting)
+      const sj = SP.spionFor(S, p.id); if (sj) S.inne.splice(S.inne.indexOf(sj), 1); minne(); lagre(); endretFolk(); const t = `${p.navn} er sendt inn hos ${navn(k.rival)} som spion (egnet ${pst(r.egnet)}). Dere ser lagene deres nå.`; melde(t); return { tekst: t }; },
     hjem(k) { const F = Fo(), r = SP.hjem(S, k.rival); if (r.feil) return r; const p = { ...r.p, oppgave: 'fri' }; if (!F.personer.some(q => q.id === p.id)) F.personer.push(p);
       lagre(); endretFolk(); const t = `${p.navn} er tilbake fra ${navn(k.rival)}.`; melde(t); return { tekst: t }; },
     sabotér(k) { const RS = window.RivalSpill && RivalSpill.S ? RivalSpill.S() : null, sd = RS && RS.sider ? RS.sider[k.rival] : null, sag = sd && sd.sag;
@@ -221,11 +223,11 @@
       if (M.avhør) rad.append(el('small', {}, `Avhør pågår – ferdig om ${Math.max(1, Math.round((M.avhør.til - nå()) / 60))} t.`));
       else { if (!avsl) rad.append(knapp(`Avhør (${R.avhør.timer} t)`, () => kom({ type: 'spionAvhør', person: p.id }), { 'data-avhor': String(p.id), title: 'Tar noen timer. Kan avsløre en spion – en uskyldig liker det ikke.' }));
         rad.append(knapp('Spark', () => kom({ type: 'spionSpark', person: p.id }), { 'data-spark': String(p.id), title: avsl ? 'Spionen går, og rivalen ser ikke lenger inn i leiren' : 'Er hen uskyldig, faller moralen' }));
-        if (avsl && !s.vendt) { const f = SP.kanFalsk(S, p.id, nå());
+        if (avsl) { const f = SP.kanFalsk(S, p.id, nå());
           const b1 = knapp('Falskt sted', () => kom({ type: 'spionFalsk', person: p.id, hva: 'sted' }), { 'data-falsk': 'sted', title: 'Rivalen tror leiren ligger et annet sted og angriper der' });
           const b2 = knapp('Falsk kontrakt', () => kom({ type: 'spionFalsk', person: p.id, hva: 'kontrakt' }), { 'data-falsk': 'kontrakt', title: `Rivalen tar en kontrakt som ikke finnes og taper ca. ${mill(R.falsk.tap)}` });
-          if (f) { b1.disabled = b2.disabled = true; b1.title = b2.title = f; } rad.append(b1, b2); }
-        else if (avsl && s.vendt) rad.append(el('small', {}, 'Brukt til falske opplysninger – rivalen stoler på hen enda.')); }
+          if (f) { b1.disabled = b2.disabled = true; b1.title = b2.title = f; } rad.append(b1, b2);
+          if (s.vendt) rad.append(el('small', {}, `Brukt til falske opplysninger – ${navn(s.side)} stoler på hen ennå.`)); } }
       ut.push(el('div', { klasse: 'mistanke' + (avsl ? ' avslørt' : ''), 'data-mistenkt': String(p.id) },
         el('div', {}, el('b', {}, p.navn), avsl ? ` – avslørt: sendt av ${navn(s.side)}` : ` – mistanke ${Math.round(M.m)} %`),
         el('small', {}, M.grunner.length ? M.grunner.join(' · ').replace(/^./, c => c.toUpperCase()) : 'Ingen klare grunner'), rad)); }
@@ -235,7 +237,7 @@
 
   // ---------- Selskapet → Partnere: egne spioner ----------
   let valgt = { rød: null, grønn: null };
-  function kandidater() { const F = Fo(); if (!F || !FR()) return []; return F.personer.filter(p => !p.karakter && FR().arbeidsfør(p) && !SP.mistenkt(S, p.id) && !SP.spionFor(S, p.id)).sort((a, b) => SP.egnethet(b) - SP.egnethet(a) || a.id - b.id); }
+  function kandidater() { const F = Fo(); if (!F || !FR()) return []; return F.personer.filter(p => !p.karakter && FR().arbeidsfør(p) && !SP.mistenkt(S, p.id)).sort((a, b) => SP.egnethet(b) - SP.egnethet(a) || a.id - b.id); }
   const knappH = (tekst, data, tittel = '') => `<button type="button" data-sp="fi-spion"${Object.entries(data).map(([k, v]) => ` data-${k}="${esc(v)}"`).join('')}${tittel ? ` title="${esc(tittel)}"` : ''}>${esc(tekst)}</button>`;
   function partnerHtml() {
     if (!klar || !Fo()) return ''; const K = kandidater(); let h = '<div class="fi-del">Egne spioner</div>';
