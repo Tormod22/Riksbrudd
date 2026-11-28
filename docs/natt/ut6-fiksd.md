@@ -56,9 +56,23 @@ Begge går nå. Koordinatoren bør vurdere å skrive K2-sjekken om (den prøver 
   egen, og den ene rydderen rakk dem ikke. Vakta teller nå bare sin egen vare (id), og «inne» i et hvilket som helst lagerbygg.
 - `vakter/ut5-bors.js`: setter nå lageret og `riksbrudd-varer` tilbake (og sjekker det i «tilbake»).
 
+- `vakter/ut5-oppforsel.js` (F4, «brann: jobbtavla mangler slukkejobben … ved aggregat»): jobben heter etter et bygg i brannruta (32 m),
+  og et aggregat fra en vakt før sto der. Vakta godtar nå navnet på et hvilket som helst bygg innen 50 m av brakka. (Spillet velger det
+  første bygget i lista, ikke det nærmeste – ikke endret.)
+- `vakter/ut4-eksport.js` («Lastebil 1 står 778 m fra leiren»): vaktbilen står ved havna etter del 1, så smuglerturen lånte leirens egen
+  bil, som en vakt før hadde flyttet. Vaktbilen kjøres hjem før turen. Gjenskapt med forspillet `flyttbil.js`: feil før, ok etter.
+- `vakter/ut2-seier.js` («selskapets verdi er mindre enn kassa»): med børsen (ut5-bors) er verdien børsverdien – den følger stemningen
+  (brutte kontrakter fra vaktene før) og ukas netto og kan være under kassa. Med børsen sjekkes nå at seieren bruker børsverdien.
+  Gjenskapt med `stemning.js` (stemning 0,3): gammel vakt feiler, ny ok.
+
+## Står igjen (rask PC-kjøring 3, 06:13 – før de tre siste vaktrettingene)
+- `terreng` («huset i den bratte lia ble ikke avvist: undefined») – ikke undersøkt.
+- `ut5-bors` «ble ikke satt tilbake: bors: false» – gjenskapes ikke med de 13 vaktene før den (diagnoseutgave `diag-bors.js` i scratchpad
+  viser hvilke felt som er ulike, hvis den feiler).
+
 ## Fellesfiler endret
 - `site/dovre-fliser/index.html`: `lagVindu` (første linje i funksjonen, klemmingen av boksen) + versjonsmerker (versjon.py).
 - `site/dovre-fliser/terreng.js`: `nyttVindu` (to linjer).
 - `site/dovre-fliser/spill/leir-visning.js`: `leirKnapp.onclick` (`menyEl.scrollTop = 0` når den åpnes).
 - `site/dovre-fliser/spill/baering.js`: se punkt 1.
-- Vakter: `ut4-maskinfolk.js`, `ut3-varekontrakt.js`, `ut5-oppforsel.js`, `ut5-bors.js`. Tester: `test_baering.js`, `test_terreng.js`.
+- Vakter: `ut4-maskinfolk.js`, `ut3-varekontrakt.js`, `ut5-oppforsel.js`, `ut5-bors.js`, `ut4-eksport.js`, `ut2-seier.js`. Tester: `test_baering.js`, `test_terreng.js`.
