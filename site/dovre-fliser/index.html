@@ -126,7 +126,7 @@ function skjulMelding(type) {
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
 <script src="/dovre-fliser/kartflis.js?v=2d4fa13884"></script>
-<script src="/dovre-fliser/terreng.js?v=8c11fc89d5"></script>
+<script src="/dovre-fliser/terreng.js?v=0c83ac7342"></script>
 <script src="/dovre-fliser/spill/simulering.js?v=441677f889"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
 <script src="/dovre-fliser/spill/snodekke.js?v=46324f484e"></script>
@@ -929,11 +929,9 @@ async function fyllOmland(v, ZV, x0, y0, x1, y1) {
   await Promise.all(jobber);
 }
 async function lagVindu(b, medVeg, ZV = 9, omland = false) {   // ZV: detaljnivå (9 = 32 m for reglene; 3D bruker finere). omland: bare 3D
-  b = [Math.max(b[0], OMRÅDE[0]), Math.max(b[1], OMRÅDE[1]), Math.min(b[2], OMRÅDE[2] - 1), Math.min(b[3], OMRÅDE[3] - 1)];
-  // (28. nov, fiks c) et lag helt utenfor området ga en tom boks og «Invalid typed array length»: vinduet blir kanten nærmest laget
-  // (laget ligger da utenfor vinduet, og oppdaterSikt prøver igjen om 2 s)
-  if (b[0] > b[2]) b[0] = b[2] = b[2] === OMRÅDE[2] - 1 ? b[2] : b[0];
-  if (b[1] > b[3]) b[1] = b[3] = b[3] === OMRÅDE[3] - 1 ? b[3] : b[1];
+  // (ut6-fiksd) hver kant klemmes inn i området: et lag langt utenfor kartet ga før en snudd boks og negativ størrelse (RangeError i nyttVindu)
+  const kl = (t, a, z) => Math.min(Math.max(t, a), z);
+  b = [kl(b[0], OMRÅDE[0], OMRÅDE[2] - 1), kl(b[1], OMRÅDE[1], OMRÅDE[3] - 1), kl(b[2], OMRÅDE[0], OMRÅDE[2] - 1), kl(b[3], OMRÅDE[1], OMRÅDE[3] - 1)];
   const [x0, y0, x1, y1] = flisområde(b, ZV), T = G.T, nx = x1 - x0 + 1, ny = y1 - y0 + 1;
   const v = Terreng.nyttVindu(G.x0 + x0 * span(ZV), G.y0 - y0 * span(ZV), res(ZV), nx * T, ny * T), jobber = [];
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) jobber.push(Promise.all([hentFlis('hoyde', ZV, x, y), ZV <= 9 ? hentFlis('terreng', ZV, x, y) : null]).then(([h, t]) => {
@@ -3720,7 +3718,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/helling.js?v=14983ad6c3"></script>
 <script src="/dovre-fliser/spill/helling-visning.js?v=55533490bc"></script>
 <script src="/dovre-fliser/spill/kontrollrom.js?v=e3181ca8ce"></script>
-<script src="/dovre-fliser/spill/leir-visning.js?v=887c6a8f8f"></script>
+<script src="/dovre-fliser/spill/leir-visning.js?v=de336f4f25"></script>
 <script src="/dovre-fliser/spill/varelager.js?v=4efc527730"></script>
 <script src="/dovre-fliser/spill/varelager-visning.js?v=997fceb133"></script>
 <script src="/dovre-fliser/spill/folk-visning.js?v=0f163ae992"></script>
@@ -3767,7 +3765,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/husvern.js?v=d39faaf097"></script>
 <script src="/dovre-fliser/spill/overtak.js?v=b316fa406b"></script>
 <script src="/dovre-fliser/spill/husvern-visning.js?v=8abece8d6b"></script>
-<script src="/dovre-fliser/spill/baering.js?v=c3fa245089"></script>
+<script src="/dovre-fliser/spill/baering.js?v=47a28c666e"></script>
 <script src="/dovre-fliser/spill/baering-visning.js?v=6fa33e30a8"></script>
 <script src="/dovre-fliser/spill/oppforsel.js?v=61cb2fe059"></script>
 <script src="/dovre-fliser/spill/oppforsel-visning.js?v=e2356fe603"></script>
@@ -3872,7 +3870,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/vare-visning.js?v=b21c38b00a"></script>
 <script src="/dovre-fliser/spill/firma.js?v=b57609b77e"></script>
 <script src="/dovre-fliser/spill/firma-visning.js?v=37e04ae788"></script>
-<script src="/dovre-fliser/spill/bors.js?v=d001a87a1d"></script>
+<script src="/dovre-fliser/spill/bors.js?v=a8b4b78a74"></script>
 <script src="/dovre-fliser/spill/bors-visning.js?v=33e7127a44"></script>
 <script src="/dovre-fliser/spill/trinn.js?v=317183c7f8"></script>
 <script src="/dovre-fliser/spill/selskapsbilde.js?v=abdc6a9a38"></script>

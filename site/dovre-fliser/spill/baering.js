@@ -43,12 +43,15 @@
     lær: { perTime: .004, rampe: 8, maks: 1.6 },
     // plassene ved bygget (m utenfor fronten): bruksplassene rett foran, innmating og utmating litt lenger ut i hver ende
     plass: { foran: 1.1, mating: 2.6, ende: 1.4, minY: 1.8, spredning: 2.6 },
+    // (ut6-fiksd) en bærer som ikke kommer fram (ingen vei dit – f.eks. et lukket gjerde uten port – eller over «sek» sekunder spilltid på
+    // vei til samme mål), slipper reservasjonen og prøver en annen haug/plass; målet holdes unna i «husk» sekunder
+    ikkeFram: { sek: 900, husk: 1800 },
   };
   const VARENAVN = { tre: 'planker', tømmer: 'tømmer', flis: 'flis', ved: 'ved' };
   const vn = v => VARENAVN[v] || v;
   const r3 = v => Math.round(v * 1e6) / 1e6;
   const nf = (v, d = 1) => (Math.round(v * 10 ** d) / 10 ** d).toString().replace('.', ',');
-  const ny = () => ({ versjon: 1, m: {}, bær: {}, rolle: {}, lær: {}, stat: { turer: 0, m3: 0, sek: 0, gåSek: 0, hjelp: 0 }, nyFunnet: 0, kraftPer: {}, påPlass: {}, jobber: [] });
+  const ny = () => ({ versjon: 1, m: {}, bær: {}, rolle: {}, lær: {}, stat: { turer: 0, m3: 0, sek: 0, gåSek: 0, hjelp: 0, ikkeFram: 0 }, nyFunnet: 0, unna: {}, kraftPer: {}, påPlass: {}, jobber: [] });
   const navnB = b => (LB && LB.BYGG[b.type] ? LB.BYGG[b.type].navn.toLowerCase() : b.type);
   const D = b => (PR ? PR.REGLER.maskiner[b.type] : null);
 
@@ -68,7 +71,7 @@
   const inngang = b => { const B = LB && LB.BYGG[b.type], u = ((B && B.fot) ? B.fot[1] : 3) + .9; return tilKart(b, u, 0); };
 
   // ---------- lageret (grensesnittet mot spill/varelager.js) ----------
-  // lager(Leir, L, V, VL, leir) gir { har(v), finn(v, x, y, hvem), ta(id, v, m, hvem), slipp(id, hvem), beskjeder(hvem), levTil(v, m), lever(v, m) }.
+  // lager(Leir, L, V, VL, leir) gir { har(v), finn(v, x, y, hvem, unna), ta(id, v, m, hvem), slipp(id, hvem), beskjeder(hvem), levTil(v, m, unna), lever(v, m) }.
   // Med varelageret (V, VL) hentes og legges enhetene der de ligger; uten (V = null) er lageret ett sted (lagerbygget eller leirens midte).
   function lager(Leir, L, V, VL, leir) {
     const plassIgjen = v => Math.max(0, Leir.lagerplass(L) - ((L.lager && L.lager[v]) || 0));
@@ -92,8 +95,9 @@
     return {
       har,
       // reserverer den nærmeste ledige enheten av varen (nærmest punktet x, y) og gir { id, mål }
-      finn(v, x, y, hvem) {
-        const kand = V.e.filter(u => u.v === v && !u.r && u.p !== 'bæres' && u.m > .01); if (!kand.length) return null;
+      // unna: { mål-nøkkel: sek } – steder folk ikke kommer fram til (hoppes over)
+      finn(v, x, y, hvem, unna) {
+        const kand = V.e.filter(u => u.v === v && !u.r && u.p !== 'bæres' && u.m > .01 && !(unna && unna[målFor(u).k] > 0)); if (!kand.length) return null;
         let best = null, bd = Infinity; for (const u of kand) { const q = u.p === 'rom' ? leir : VL.punkt(Leir, L, V, u, leir) || leir, d = Math.hypot(q.x - x, q.y - y) + (u.p === 'ute' ? 0 : 4); if (d < bd) { bd = d; best = u; } }
         const r = VL.reserver(V, best.id, hvem); return r.ok ? { id: best.id, mål: målFor(best) } : null;
       },
@@ -103,9 +107,10 @@
       slipp: (id, hvem) => VL.slipp(V, id, hvem),
       beskjeder: hvem => VL.beskjeder(V, hvem),
       // hvor lasten skal: et lagerbygg merket for varen, så et annet lagerbygg med plass, så egne rom, så ute på lagerplassen
-      levTil(v, m) {
+      levTil(v, m, unna) {
         if (plassIgjen(v) < m - 1e-6) return null;
-        const Ps = VL.plasser(Leir, L, V).filter(P => P.tar(v) && P.cap(v) - VL.sum(V, v, u => u.p === P.id) >= m - 1e-6 && !P.tank);
+        const nøkkel = P => (P.id === 'ute' ? 'lagerplass' : P.id === 'rom' ? 'rom-lager' : P.bygg ? 'id:' + P.bygg.id : P.id);
+        const Ps = VL.plasser(Leir, L, V).filter(P => P.tar(v) && P.cap(v) - VL.sum(V, v, u => u.p === P.id) >= m - 1e-6 && !P.tank && !(unna && unna[nøkkel(P)] > 0));
         const rang = P => (P.id === 'ute' ? 9 : P.id === 'rom' ? 2 : P.sone === v ? 0 : 1); Ps.sort((a, b) => rang(a) - rang(b));
         const P = Ps[0]; if (!P) return null;
         if (P.id === 'ute') { const q = uteP(); return { mål: { k: 'lagerplass', x: q.x, y: q.y, navn: 'lagerplassen' } }; }
@@ -131,7 +136,7 @@
         fyll: (Bf.inn[v] || 0) / PR.REGLER.buffer.inn, tekst: `Bær ${vn(v)} til ${navnB(b)}`, blokk: A.har(v) > .01 ? null : `ingen ${vn(v)} på lageret` });
       for (const [w, m] of Object.entries(Bf.ut)) { const igjen = (m || 0) - underveis(b, 'ut', w), n = Math.floor(igjen / last + 1e-9); if (n <= 0) continue;
         ut.push({ id: `ut:${b.id}:${w}`, retning: 'ut', bygg: b.id, vare: w, turer: n, haster: !!(st && !st.går && st.grunn === 'fullt'), fyll: PR.utSum(Bf) / PR.REGLER.buffer.ut,
-          tekst: `Bær ${vn(w)} fra ${navnB(b)} til lageret`, blokk: A.levTil(w, last) ? null : 'lageret er fullt' }); }
+          tekst: `Bær ${vn(w)} fra ${navnB(b)} til lageret`, blokk: A.levTil(w, last, B.unna) ? null : A.levTil(w, last) ? 'kommer ikke fram til lageret' : 'lageret er fullt' }); }
     }
     return ut;
   }
@@ -149,6 +154,8 @@
     for (const id of Object.keys(B.m)) if (!Mid.has(+id)) { tømMating(B, +id, A); delete B.m[id]; }
     // framme ved målet: Folkgang har gått veien til nettopp dette målet (nøkkelen) og står der
     const fram = (p, k) => { const s = G && G.pers[p.id]; return !!(s && s.ved && s.mål && s.mål.k === k); };
+    // (ut6-fiksd) stedene folk ikke kom fram til, glemmes etter en stund (da prøver de igjen)
+    if (!B.unna) B.unna = {}; for (const k of Object.keys(B.unna)) { B.unna[k] -= dt; if (!(B.unna[k] > 0)) delete B.unna[k]; }
 
     // 1. oppdragene som er i gang
     for (const [pid, o] of Object.entries(B.bær)) {
@@ -163,7 +170,11 @@
         const q = A.finn(o.vare, (G && G.pers[pid] ? G.pers[pid].x : b.x), (G && G.pers[pid] ? G.pers[pid].y : b.y), pid);
         if (q) { o.enhet = q.id; o.mål = q.mål; o.vent = 0; B.nyFunnet++; if (ctx.meld) ctx.meld(`${p.navn.split(' ')[0]} fant ikke ${vn(o.vare)} der hen skulle hente – går til en annen haug.`); }
         else { delete B.bær[pid]; if (ctx.meld) ctx.meld(`${p.navn.split(' ')[0]} fant ikke mer ${vn(o.vare)} på lageret.`); continue; } } }
-      if (!fram(p, bærNøkkel(o))) { B.stat.gåSek += dt; o.vent = 0; continue; }
+      // (ut6-fiksd) på vei: står hen fast (ingen vei dit) eller har gått for lenge mot samme mål, slippes reservasjonen
+      if (!fram(p, bærNøkkel(o))) { B.stat.gåSek += dt; o.vent = 0; const k = bærNøkkel(o); if (o.gåK !== k) { o.gåK = k; o.gå = 0; } o.gå += dt;
+        const s = G && G.pers[pid], fast = !!(s && s.fast && s.mål && s.mål.k === k);
+        if (fast || o.gå > REGLER.ikkeFram.sek) kommerIkke(B, o, p, pid, b, A, ctx, G, fast ? s.fast : 'for lang vei');
+        continue; }
       o.vent = (o.vent || 0) + dt; if (o.vent < REGLER.håndter) continue; o.vent = 0;
       const Bf = B.m[o.bygg], P = plasser(b);
       if (o.fase === 'hent' && o.retning === 'inn') {
@@ -171,7 +182,7 @@
         if (r.borte) { const q = A.finn(o.vare, b.x, b.y, pid); if (q) { o.enhet = q.id; o.mål = q.mål; B.nyFunnet++; } else delete B.bær[pid]; continue; }
         o.m = r.m; o.fase = 'lever'; o.mål = { k: 'innmating:' + b.id, x: P.inn.x, y: P.inn.y, navn: 'innmatingen ved ' + navnB(b), bygg: b.id };
       } else if (o.fase === 'hent' && o.retning === 'ut') {
-        const q = Math.min(last, Bf.ut[o.vare] || 0), til = q > .01 ? A.levTil(o.vare, q) : null; if (!til) { delete B.bær[pid]; continue; }
+        const q = Math.min(last, Bf.ut[o.vare] || 0), til = q > .01 ? A.levTil(o.vare, q, B.unna) : null; if (!til) { delete B.bær[pid]; continue; }
         Bf.ut[o.vare] = r3((Bf.ut[o.vare] || 0) - q); o.m = q; o.fase = 'lever'; o.mål = til.mål;
       } else if (o.retning === 'inn') { Bf.inn[o.vare] = r3((Bf.inn[o.vare] || 0) + o.m); ferdig(B, o); delete B.bær[pid]; }
       else { const q = A.lever(o.vare, o.m); if (q < o.m - 1e-6) Bf.ut[o.vare] = r3((Bf.ut[o.vare] || 0) + o.m - q); ferdig(B, o); delete B.bær[pid]; }
@@ -199,7 +210,7 @@
     const åpne = J.filter(j => !j.blokk && j.turer > 0);
     const ta = (p, j, hjelp) => {
       const b = L.bygg.find(q => q.id === j.bygg), P = plasser(b);
-      if (j.retning === 'inn') { const q = A.finn(j.vare, P.inn.x, P.inn.y, p.id); if (!q) { j.blokk = `ingen ${vn(j.vare)} på lageret`; return false; }
+      if (j.retning === 'inn') { const q = A.finn(j.vare, P.inn.x, P.inn.y, p.id, B.unna); if (!q) { j.blokk = A.har(j.vare) > .01 && Object.keys(B.unna || {}).length ? `kommer ikke fram til ${vn(j.vare)} på lageret` : `ingen ${vn(j.vare)} på lageret`; return false; }
         B.bær[p.id] = { retning: 'inn', bygg: b.id, vare: j.vare, fase: 'hent', enhet: q.id, mål: q.mål, m: 0, vent: 0, hjelp: !!hjelp }; }
       else B.bær[p.id] = { retning: 'ut', bygg: b.id, vare: j.vare, fase: 'hent', mål: { k: 'utmating:' + b.id, x: P.ut.x, y: P.ut.y, navn: 'utmatingen ved ' + navnB(b), bygg: b.id }, m: 0, vent: 0, hjelp: !!hjelp };
       j.turer--; rolle[p.id] = { r: 'bær', bærer: true }; if (hjelp) B.stat.hjelp++; return true;
@@ -226,6 +237,19 @@
     return B;
   }
   const bærNøkkel = o => 'bær:' + o.fase + ':' + o.mål.k;
+  // (ut6-fiksd) bæreren kommer ikke fram til målet: målet holdes unna en stund; skulle hen hente fra lageret, prøver hen en annen haug,
+  // ellers (utmatingen eller med lasten) går lasten tilbake og turen avbrytes. Meldingen kommer bare første gang for samme mål.
+  function kommerIkke(B, o, p, pid, b, A, ctx, G, grunn) {
+    const k = o.mål.k, ny = !(B.unna[k] > 0), navn = p.navn.split(' ')[0], hvor = o.mål.navn || 'dit', meld = t => { if (ny && ctx.meld) ctx.meld(t); };
+    B.unna[k] = REGLER.ikkeFram.husk; B.stat.ikkeFram = (B.stat.ikkeFram || 0) + 1;
+    if (o.fase === 'hent' && o.retning === 'inn') {
+      if (o.enhet != null) A.slipp(o.enhet, pid);
+      const s = G && G.pers[pid], q = A.finn(o.vare, s ? s.x : b.x, s ? s.y : b.y, pid, B.unna);
+      if (q) { o.enhet = q.id; o.mål = q.mål; o.vent = 0; o.gå = 0; o.gåK = null; meld(`${navn} kommer ikke fram til ${hvor} (${grunn}) – går til en annen haug.`); return; }
+      delete B.bær[pid]; meld(`${navn} kommer ikke fram til ${vn(o.vare)} på lageret (${grunn}).`); return;
+    }
+    tilbake(B, o, A, pid); delete B.bær[pid]; meld(`${navn} kommer ikke fram til ${hvor} (${grunn}) og gir opp turen.`);
+  }
   function ferdig(B, o) { B.stat.turer++; B.stat.m3 = r3(B.stat.m3 + (o.m || 0)); }
   // lasten tilbake der den kom fra (oppdraget avbrytes)
   function tilbake(B, o, A, hvem) {

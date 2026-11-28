@@ -13,6 +13,9 @@ module.exports = {
     const kl = h => ((h - 6 + 24) % 24) * 60, G = () => FolkgangSpill.tilstand(), steg = (n, dt) => { for (let k = 0; k < n; k++) FolkgangSpill.steg(dt); };
     const listerPåNytt = () => { if (!V || !window.Verden) return; const Lb = Verden.brannListe(V.brann); BRANNER.length = 0; for (const c of Lb.brenner) BRANNER.push(c); BRENT.length = 0; for (const c of Lb.brent) BRENT.push(c); };
     try {
+      // (ut6-fiksd) vaktene før kan ha lagt et lukket gjerde uten port rundt leiren (sjekk.js, K2): da når ingen lagerplassen ute eller
+      // brannen. Gjerder og porter tas bort mens vakta går (L.bygg settes tilbake i finally).
+      { const ut = L.bygg.filter(b => { const B = Leir.BYGG[b.type]; return !(B && ((B.linje && !B.veg) || B.port)); }); L.bygg.splice(0, L.bygg.length, ...ut); }
       // prøveleiren: brakke, sykestue, vakttårn og (hvis den finnes) en betongbunker
       let id = 910000; const legg = (type, x, y, ferdig = true) => { const b = { id: id++, type, x: m.x + x, y: m.y + y, ret: 0, nivå: 1, hp: 1, igjen: ferdig ? 0 : 600, totalt: 60, nr: id, arbeid: null }; L.bygg.push(b); return b; };
       const brakke = legg('brakke', -30, 22), syk = legg('sykestue', 24, -20), tårn = legg('vakttårn', 40, 8), bunker = Leir.BYGG.betongbunker ? legg('betongbunker', -40, -30) : null;
@@ -36,7 +39,9 @@ module.exports = {
         V.brann = Verden.nyBrann(); Verden.tenn(V.brann, brakke.x, brakke.y, tid); listerPåNytt(); steg(2, .25);
         const pl = OS.plan(); ut.brann = { jobber: pl.jobber.length, slukkere: pl.slukk.size, linje: FolkgangSpill.fastLinjer().find(t => /^Slukk brannen/.test(t)) || null };
         krev(ut.brann.jobber === 1 && ut.brann.slukkere >= 2, 'brann: ingen slukkejobb/slukkere ' + JSON.stringify(ut.brann));
-        krev(/brakke/.test(ut.brann.linje || ''), 'brann: jobbtavla mangler slukkejobben ' + JSON.stringify(ut.brann));
+        // (ut6-fiksd) jobben får navnet på et bygg i brannruta (32 m) – et bygg fra en vakt før (aggregatet fra K2) kan stå der også
+        const iRuta = L.bygg.filter(q => Leir.BYGG[q.type] && Math.hypot(q.x - brakke.x, q.y - brakke.y) < 50).map(q => Leir.BYGG[q.type].navn.toLowerCase());
+        krev(/^Slukk brannen/.test(ut.brann.linje || '') && (/brakke/.test(ut.brann.linje) || iRuta.some(n => ut.brann.linje.includes(n))), 'brann: jobbtavla mangler slukkejobben ' + JSON.stringify(ut.brann));
         let fr = 0; for (let k = 0; k < 12 && BRANNER.length; k++) { steg(1, 15); fr = Math.max(fr, [...OS.plan().slukk.keys()].filter(i => G().pers[i] && G().pers[i].ved).length); }
         ut.brann.framme = fr; krev(fr >= 1 || OS.plan().slukket > 0, 'brann: ingen slukkere kom fram');
         for (let k = 0; k < 40 && BRANNER.length; k++) steg(1, 300); ut.brann.igjen = BRANNER.length; ut.brann.avOss = OS.plan().slukket || 0;
@@ -63,11 +68,14 @@ module.exports = {
       // 6. RYDDING: en vare ute når det er plass i et lagertelt – en ledig bærer den inn
       const VL = window.VarelagerSpill && VarelagerSpill.V ? VarelagerSpill.V() : null;
       if (VL && window.Varelager && Varelager.ryddbare) { const e0 = JSON.stringify(VL.e), n0 = VL.neste; ut.rydd = {};
-        try { const telt = legg('lagertelt', 10, 34); VL.e.push({ id: VL.neste++, v: 'tre', m: .5, p: 'ute', i: 99, r: null });
+        try { const telt = legg('lagertelt', 10, 34), uid = VL.neste; VL.e.push({ id: VL.neste++, v: 'tre', m: .5, p: 'ute', i: 99, r: null });
           P.forEach((p, i) => { p.oppgave = i === 5 ? 'fri' : 'bygg'; }); tid = kl(10); steg(2, .25);
           ut.rydd.ryddere = OS.plan().rydd.size; ut.rydd.linje = FolkgangSpill.fastLinjer().find(t => /^Rydd lageret/.test(t)) || null;
           krev(ut.rydd.ryddere === 1 && ut.rydd.linje, 'rydding: ingen ledig rydder ' + JSON.stringify(ut.rydd));
-          steg(30, 10); ut.rydd.ute = VL.e.filter(u => u.p === 'ute').length; ut.rydd.inne = VL.e.filter(u => u.p === 'b' + telt.id).length;
+          // (ut6-fiksd) bare vaktas egen vare telles: vaktene før kan ha latt andre varer ligge ute (ut5-bors la 18 m³ tømmer i lageret),
+          // og et lagertelt fra en vakt før kan være nærmere enn vaktas eget (da er varen båret inn der)
+          steg(30, 10); ut.rydd.ute = VL.e.filter(u => u.p === 'ute' && u.id === uid).length; ut.rydd.inne = VL.e.filter(u => u.v === 'tre' && /^b\d+$/.test(String(u.p))).length;
+          ut.rydd.alleUte = VL.e.filter(u => u.p === 'ute').length;
           krev(ut.rydd.ute === 0 && ut.rydd.inne >= 1, 'rydding: varen ble ikke båret inn ' + JSON.stringify(ut.rydd)); }
         finally { VL.e.splice(0, VL.e.length, ...JSON.parse(e0)); VL.neste = n0; } }
       // 7. en ulykke i spillet (sjansen satt kunstig høyt): personen blir skadet og teller i ulykkene

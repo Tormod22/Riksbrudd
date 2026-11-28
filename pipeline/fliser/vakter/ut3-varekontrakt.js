@@ -50,10 +50,12 @@ module.exports = {
       // ---------- 3) LEVERANSEAVTALE: bot når et døgn ikke leveres ----------
       const ka = V.lagEtt(S, 'blå', 'avtale', tid, o, 'ved', 'Dalsnes Kraftlag'); S.tilbud.unshift(ka); SS.ta(ka.id);
       krev(ka.status === 'aktiv', 'avtalen ble ikke inngått');
-      L.lager.ved = 0; ka.godtatt -= 1440; const p2 = penger(); SS.steg(1);
+      // (ut6-fiksd) Selskap.ta runder godtatt til hele minutter: med tid = 207,6 ble godtatt 208, og «godtatt −= 1440» ga 1439,6 minutter –
+      // døgnet var ikke gått. Døgnene regnes derfor fra tida nå (rundet ned), uansett brøkdelen.
+      L.lager.ved = 0; ka.godtatt = Math.floor(tid) - 1440; const p2 = penger(); SS.steg(1);
       d.mist = { bot: ka.botDøgn, kassa: penger() - p2, mist: ka.mist };
       krev(ka.mist === 1 && p2 - penger() === ka.botDøgn, 'et døgn uten ved ga ikke bot: ' + JSON.stringify(d.mist));
-      L.lager.ved = ka.perDøgn + 2; ka.godtatt -= 1440; const p3 = penger(); SS.steg(1);
+      L.lager.ved = ka.perDøgn + 2; ka.godtatt = Math.floor(tid) - 2880; const p3 = penger(); SS.steg(1);
       d.døgn = { kr: ka.dagKr, kassa: penger() - p3, ved: L.lager.ved };
       krev(ka.levertDøgn === 1 && penger() - p3 === ka.dagKr && Math.abs(L.lager.ved - 2) < .05, 'et døgn med ved ga ikke betaling: ' + JSON.stringify(d.døgn));
       // ---------- 4) STORLIA ----------

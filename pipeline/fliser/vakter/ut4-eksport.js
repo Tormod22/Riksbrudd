@@ -57,6 +57,9 @@ module.exports = {
         const kg = E.lagOrdre(S, tid, { vei: 'grense', vare: 'tre', rand: E.lagRand(7) }); S.tilbud.push(kg); L.lager.tre = 12;
         ES.kommando('eksportTa', { id: kg.id, ut: G[0].id }); krev(kg.status === 'aktiv' && kg.ut.slag === 'grense', 'grenseordren ble ikke tatt');
         const uten = ES.send(kg.id, 'bil', false); krev(uten.feil && /Grensevakta/.test(uten.feil), 'uten avtale skulle «Send lastebil» kreve Grensevakta: ' + JSON.stringify(uten));
+        // (ut6-fiksd) vaktbilen står ved havna etter del 1; uten den lånte turen leirens egen bil, og den kan en vakt før ha flyttet
+        // (i rask kjøring sto «Lastebil 1» 778 m unna). Vaktbilen kjøres hjem først (alle bilene settes tilbake i finally).
+        bil.sti = null; bil.x = leir.x + 30; bil.y = leir.y + 20;
         const p1 = penger(), rg = ES.kommando('eksportSend', { id: kg.id, hvordan: 'bil', smugling: true });
         const tg = kg.turer[0], bg = tg ? KJORETOY.find(q => q.navn === tg.bil) : null;
         krev(tg && tg.smugling && penger() === p1, 'smuglerturen startet ikke (eller kostet penger): ' + (rg && rg.feil));

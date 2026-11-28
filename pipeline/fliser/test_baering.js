@@ -149,5 +149,28 @@ function kjør(T, sek, o = {}) {
   BR.steg(B, { F: T.F, L: T.L, G, A }, 1);
   ok((B.kraftPer[T.sag.id] || 0) === 0, 'selvtest: «ved» på feil mål teller ikke (nøkkelen må stemme)');
 }
+// ---------- (ut6-fiksd) lagerteltet bak et lukket gjerde uten port: bærerne slipper reservasjonen og bruker et annet ----------
+{ const T = leir({ n: 4, tømmer: 0 }), mx = 1000, my = 2000;
+  // et lukket gjerde rundt det første teltet (24, 30), og et annet telt som kan nås
+  T.L.bygg.push({ id: 90, type: 'gjerde', punkter: [[mx + 12, my + 20], [mx + 36, my + 20], [mx + 36, my + 40], [mx + 12, my + 40]], lukket: true, igjen: 0, hp: 1, nivå: 1 });
+  const t2 = { id: 91, type: 'lagertelt', x: mx + 24, y: my - 40, ret: 0, nivå: 1, hp: 1, igjen: 0, totalt: 60, nr: 91, arbeid: null }; T.L.bygg.push(t2); T.L.neste = 92;
+  T.K = Vei.lag({ leir: T.L, start: [mx + 20, my - 20] });
+  // tømmeret: 6 m³ i teltet bak gjerdet, 6 m³ i det andre
+  T.L.lager.tømmer = 12; VL.avstem(Leir, T.L, T.V);
+  for (const u of T.V.e) if (u.v === 'tømmer') u.p = 'b' + T.tlt.id;
+  const flytt = T.V.e.filter(u => u.v === 'tømmer'); flytt.slice(Math.ceil(flytt.length / 2)).forEach(u => { u.p = 'b' + t2.id; });
+  const r = kjør(T, 900);
+  const iTelt1 = T.V.e.filter(u => u.v === 'tømmer' && u.p === 'b' + T.tlt.id && u.r).length;
+  ok(r.B.stat.turer >= 2, `bærerne kom fram til det andre teltet (${r.B.stat.turer} turer, ${r.B.stat.ikkeFram} ganger ikke fram)`);
+  ok(r.B.stat.ikkeFram >= 1 && r.B.unna['id:' + T.tlt.id] > 0, 'teltet bak gjerdet er merket «kommer ikke fram» (' + JSON.stringify(r.B.unna) + ')');
+  ok(iTelt1 === 0, 'ingen reservasjoner står igjen i teltet bak gjerdet (' + iTelt1 + ')');
+  // bare teltet bak gjerdet har tømmer: ingen står og venter med en reservasjon; jobben sier hvorfor
+  const T3 = leir({ n: 4, tømmer: 0 });
+  T3.L.bygg.push({ id: 90, type: 'gjerde', punkter: [[mx + 12, my + 20], [mx + 36, my + 20], [mx + 36, my + 40], [mx + 12, my + 40]], lukket: true, igjen: 0, hp: 1, nivå: 1 });
+  T3.K = Vei.lag({ leir: T3.L, start: [mx + 20, my - 20] }); T3.L.lager.tømmer = 6; VL.avstem(Leir, T3.L, T3.V); for (const u of T3.V.e) if (u.v === 'tømmer') u.p = 'b' + T3.tlt.id;
+  const r3 = kjør(T3, 600), res = T3.V.e.filter(u => u.r).length, jt = (r3.B.jobber || []).map(j => j.blokk).filter(Boolean);
+  ok(res === 0 && !Object.values(r3.B.bær).some(o => o.fase === 'hent' && o.retning === 'inn'), `uten tømmer folk kan nå: ingen reservasjoner (${res}) og ingen henter`);
+  ok(jt.some(t => /kommer ikke fram/.test(t)), 'jobbtavla sier «kommer ikke fram til tømmer på lageret»: ' + JSON.stringify(jt));
+}
 console.log(feil ? `${feil} FEIL` : 'Alle testene for baering.js er ok');
 process.exit(feil ? 1 : 0);
