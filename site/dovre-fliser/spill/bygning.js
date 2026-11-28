@@ -119,6 +119,8 @@
       const første = REGLER.førsteEtasje[kl] || et, n = vegg < første ? 1 : 1 + Math.floor((vegg - første) / (REGLER.etasje[REGLER.oppe[kl]] || et) + .02);
       const nom = [første]; for (let k = 1; k < n; k++) nom.push(REGLER.etasje[REGLER.oppe[kl]] || et);
       const s = vegg / nom.reduce((a, b) => a + b, 0); etasjer = nom.map(x => r2(x * s));
+      // den øverste tar resten, så etasjene fyller veggen helt (avrundingen hoper seg ikke opp i høye bygg)
+      etasjer[n - 1] = r2(vegg - etasjer.slice(0, n - 1).reduce((a, b) => a + b, 0));
     }
     const loft = form !== 'flatt' && (!erHall(kl) || kl === 'uthus') && møne >= REGLER.loftMin && (form === 'saltak' || lu - lv > 2);
     const kjeller = !erHall(kl) || kl === 'industri' ? hash(i, 913) < (REGLER.kjeller[kl] || 0) : false;
@@ -305,13 +307,15 @@
     const iBånd = (x, y) => Math.abs(x * A.vx + y * A.vy - vm) <= loftBånd;
     // veggene i begge etasjene med ramme (for å hoppe raskt over dem som er langt unna)
     // trang: siste forsøk med mindre luft rundt trappa (stige)
-    const luft = o.trang ? .04 : .1, endeLuft = o.trang ? .15 : .22, dørLuft = o.trang ? .2 : .45;
-    const steg = (A.u1 - A.u0) * (A.v1 - A.v0) < 250 ? .25 : .5;
+    const luft = o.trang ? .04 : .1, endeLuft = o.trang ? .15 : .22, dørLuft = o.trang ? .05 : .45;
+    const steg = o.trang || (A.u1 - A.u0) * (A.v1 - A.v0) < 250 ? .25 : .5;
     const VB = [lo, hi].flatMap(et => et.vegger.filter(står)).map(w => [w, Math.min(w.a[0], w.b[0]), Math.min(w.a[1], w.b[1]), Math.max(w.a[0], w.b[0]), Math.max(w.a[1], w.b[1])]);
+    let førLo = null, førHi = null;
     for (const F of former) {
       const kand = [];
       for (let u = A.u0 + .3; u <= A.u1 - .3; u += steg) for (let v = A.v0 + .3; v <= A.v1 - .3; v += steg) for (const a of retn) {
-        const t = { x: u * A.ux + v * A.vx, y: u * A.uy + v * A.vy, a, b: F.b, l: F.l }, c = Math.cos(a), s = Math.sin(a), Q = trappP(t);
+        // (avrundet straks: trappa som lagres, er den som ble prøvd)
+        const t = { x: r2(u * A.ux + v * A.vx), y: r2(u * A.uy + v * A.vy), a: r2(a), b: r2(F.b), l: r2(F.l) }, c = Math.cos(t.a), s = Math.sin(t.a), Q = trappP(t);
         if (!Q.every(p => inni(P, p[0], p[1]) && avstKant(P, p[0], p[1]) > .13) || !inni(P, t.x, t.y)) continue;
         const nede = [t.x - c * (t.l / 2 + .35), t.y - s * (t.l / 2 + .35)], oppe = [t.x + c * (t.l / 2 + .35), t.y + s * (t.l / 2 + .35)];
         if (!inni(P, nede[0], nede[1]) || !inni(P, oppe[0], oppe[1]) || avstKant(P, nede[0], nede[1]) < .22 || avstKant(P, oppe[0], oppe[1]) < .22) continue;
@@ -320,24 +324,30 @@
         for (const q of VB) { if (q[1] > t.x + R || q[3] < t.x - R || q[2] > t.y + R || q[4] < t.y - R) continue; const w = q[0];
           if (krysserRekt(t, w, luft) || avstSeg(nede[0], nede[1], w.a[0], w.a[1], w.b[0], w.b[1]) < endeLuft || avstSeg(oppe[0], oppe[1], w.a[0], w.a[1], w.b[0], w.b[1]) < endeLuft) { gjennom = true; break; } }
         if (gjennom) continue;
-        if ([...dLo, ...dHi].some(([x, y, b]) => krysserRekt(t, { a: [x, y], b: [x, y] }, dørLuft + b / 2))) continue;
+        // (trang: ingen egen sjekk mot dørene – fyllingen under sier om trappa stenger veien)
+        if (!o.trang && [...dLo, ...dHi].some(([x, y, b]) => krysserRekt(t, { a: [x, y], b: [x, y] }, dørLuft + b / 2))) continue;
         if (andre.some(q => { const T2 = { x: q.x, y: q.y, a: q.a, b: q.b + .6, l: q.l + 1.6 }; return Q.some(p => krysserRekt(T2, { a: p, b: p }, 0)) || krysserRekt(T2, { a: Q[0], b: Q[2] }, 0) || krysserRekt(T2, { a: Q[1], b: Q[3] }, 0) || krysserRekt(T2, { a: nede, b: nede }, .2) || krysserRekt(T2, { a: oppe, b: oppe }, .2); })) continue;
         // møbler i veien (trappa + der du går på og av)
-        const iVeien = et => et.møbler.filter(q => q.tilstand !== 'revet' && Math.abs(q.x - t.x) < R + 1.5 && Math.abs(q.y - t.y) < R + 1.5 && (krysserRekt({ x: t.x, y: t.y, a, b: t.b + .5, l: t.l + 1.6 }, { a: [q.x, q.y], b: [q.x, q.y] }, Math.max(q.b, q.d) / 2)));
+        const iVeien = et => et.møbler.filter(q => q.tilstand !== 'revet' && Math.abs(q.x - t.x) < R + 1.5 && Math.abs(q.y - t.y) < R + 1.5 && (krysserRekt({ x: t.x, y: t.y, a: t.a, b: t.b + .5, l: t.l + 1.6 }, { a: [q.x, q.y], b: [q.x, q.y] }, Math.max(q.b, q.d) / 2)));
         const fLo = iVeien(lo), fHi = iVeien(hi), rLo = iRom(lo, nede[0], nede[1]), rHi = iRom(hi, oppe[0], oppe[1]), rM = iRom(lo, t.x, t.y);
         const poeng = (rLo && STIGE.includes(rLo.rolle) ? 3 : 0) + (rHi && STIGE.includes(rHi.rolle) ? 3 : 0) + (rM && STIGE.includes(rM.rolle) ? 1 : 0)
           - .6 * (fLo.length + fHi.length) - Math.hypot(nede[0] - inn[0], nede[1] - inn[1]) / 25 + (avstKant(P, (Q[0][0] + Q[1][0]) / 2, (Q[0][1] + Q[1][1]) / 2) < .4 || avstKant(P, (Q[2][0] + Q[3][0]) / 2, (Q[2][1] + Q[3][1]) / 2) < .4 ? .8 : 0) + hash(m.hus, kand.length) * .05;
         kand.push({ t, nede, oppe, fLo, fHi, poeng });
       }
       kand.sort((p, q) => q.poeng - p.poeng);
-      for (const k of kand.slice(0, 24)) {
-        const t = Object.assign({}, k.t, { nede: pkt(k.nede), oppe: pkt(k.oppe) }), Q = trappP(t);
+      // rommene som alt nås (fra dørene eller en trapp), skal fortsatt nås; i en ny etasje skal alle rom nås fra trappa
+      if (!førLo) { const før = (et, K) => { const g = rutenett(m, et, sperrerPå(m, et)), n = fyll(g, K); return new Set(et.rom.filter(r => romNådd(g, n, r, P)).map(r => r.id)); };
+        førLo = Klo.length ? før(lo, Klo) : new Set(lo.rom.map(r => r.id)); førHi = Khi.length ? før(hi, Khi) : new Set(hi.rom.map(r => r.id)); }
+      // de beste forslagene, men ikke mange nesten like (de faller som regel av samme grunn)
+      const prøvd = []; let forsøk = 0;
+      for (const k of kand) { if (forsøk >= 40) break; if (prøvd.some(q => q.a === k.t.a && Math.hypot(q.x - k.t.x, q.y - k.t.y) < .8)) continue; prøvd.push(k.t); forsøk++;
+        const t = Object.assign({}, k.t, { nede: pkt(k.nede), oppe: pkt(k.oppe) }), Q = trappP(t); k.nede = t.nede; k.oppe = t.oppe;
         const prøv = (et, uten) => { const sp = sperrerPå(m, et); sp.push(Q); const lagret = et.møbler; et.møbler = et.møbler.filter(q => !uten.includes(q)); const g = rutenett(m, et, sp); et.møbler = lagret; return g; };
         const gLo = prøv(lo, k.fLo), gHi = prøv(hi, k.fHi);
         const sLo = Klo.length ? Klo : [k.nede], sHi = Khi.length ? Khi : [k.oppe], nLo = fyll(gLo, sLo), nHi = fyll(gHi, sHi);
         const c1 = celle(gLo, k.nede[0], k.nede[1]), c2 = celle(gHi, k.oppe[0], k.oppe[1]);
         if (c1 < 0 || c2 < 0 || !nLo[c1] || !nHi[c2]) continue;
-        if (!lo.rom.every(r => r.andel < .5 || romNådd(gLo, nLo, r, P)) || !hi.rom.every(r => r.andel < .5 || romNådd(gHi, nHi, r, P))) continue;
+        if (!lo.rom.every(r => r.andel < .5 || !førLo.has(r.id) || romNådd(gLo, nLo, r, P)) || !hi.rom.every(r => r.andel < .5 || (Khi.length && !førHi.has(r.id)) || romNådd(gHi, nHi, r, P))) continue;
         lo.møbler = lo.møbler.filter(q => !k.fLo.includes(q)); hi.møbler = hi.møbler.filter(q => !k.fHi.includes(q));
         // et lite rom som trappa fyller, blir trapperom (i begge etasjene)
         for (const et of [lo, hi]) { const r = iRom(et, t.x, t.y); if (r && !STIGE.includes(r.rolle) && r.areal < t.b * t.l * 3) r.rolle = 'trapperom'; }
