@@ -6,7 +6,7 @@
 //    1. etasje er fortsatt ikke gjennomsøkt. Selvtest: 2. etasje kan ikke letes på nytt.
 //  3D (når 3D er på): prøvehuset får interiør med modellen (P.etasjer), du går opp trappa med bevegelsesreglene (Bevegelse.steg og
 //    Interior3d.høyde), står i 2. etasje (høyden = 1. etasjes gulv + etasjens z), etasjene over er skjult (den rett over bare når du
-//    står ved en trapp opp), en vegg i 2. etasje
+//    står ved en trapp opp), letingen i 2. etasje virker, en vegg i 2. etasje
 //    stopper deg, og ingen feil i konsollen.
 // Alt settes tilbake (kameraet, karakteren, lageret, maten, kassa, lagringen, prøvehuset, hindringene, gangen).
 module.exports = {
@@ -100,6 +100,9 @@ module.exports = {
             // en yttervegg i 2. etasje stopper deg (ingen dør der)
             const wv = e2.vegger.find(q => q.type !== 'skille'), mx = (wv.a[0] + wv.b[0]) / 2 + ox, my = (wv.a[1] + wv.b[1]) / 2 + oy;
             ok(Interior.blokkert(P.inne, mx, my), 'ytterveggen i 2. etasje stopper deg ikke'); ok(!Interior.blokkert(P.inne, kr.x, kr.y), 'du står fast der du står');
+            // leting i 2. etasje i 3D (samme kommando som i 2D; knappen #etasjeknapp)
+            { const hh = E2.husAv(i); ok(hh && E2.let2d(hh, 2), 'letingen i 2. etasje startet ikke i 3D'); for (let q = 0; q < 30 && E2.S.leter; q++) { E2.spol(); await vent(150); }
+              ut.lett3d = !!(hh && E2.erLett(hh, 2)); ok(ut.lett3d, '2. etasje ble ikke gjennomsøkt i 3D'); if (window.LeteSpill && LeteSpill.lukkFunn) LeteSpill.lukkFunn(); }
             // og ned igjen: etasjen blir 1 og høyden 1. etasjes gulv
             const nedM = [t.nede[0] + ox, t.nede[1] + oy];
             for (let s = 0; s < 400; s++) { const a = Math.atan2(-(nedM[0] - kr.x), nedM[1] - kr.y); Bevegelse.steg(kr, { fram: 1, side: 0, retning: a }, .05, verden); Etasjer3d.steg(); if (Math.hypot(nedM[0] - kr.x, nedM[1] - kr.y) < .15) break; }

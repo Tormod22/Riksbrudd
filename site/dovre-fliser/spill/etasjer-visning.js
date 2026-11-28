@@ -74,7 +74,7 @@
     const X = g.h.o[0] + p.x, Y = g.h.o[1] + p.y; k.x = X; k.y = Y; if (k.sti) k.sti = []; g.sist = [X, Y];
     S.p = { x: p.x, y: p.y }; if (n !== S.n) { S.n = n; const P = PT(); if (P && P.S) { P.S.etasje = n; P.S.valgt = null; } }
     tegnPå();
-    if (d >= 0) { S.gang = null; const et = E.etasje(g.h.m, S.n); if (typeof logg === 'function') logg(`Du er i ${E.navn(et)}.`); if (g.ferdig) try { g.ferdig(); } catch (e) { console.warn('etasjer:', e); } visPå(); return; }
+    if (d >= 0) { S.gang = null; const et = E.etasje(g.h.m, S.n); if (typeof logg === 'function') logg(`Du er ${E.iNavn(et)}.`); if (g.ferdig) try { g.ferdig(); } catch (e) { console.warn('etasjer:', e); } visPå(); return; }
     setTimeout(steg, 80);
   }
 
@@ -84,7 +84,7 @@
   const rest = (h, n) => { const r = S.lett[nk(h, n)]; return r && typeof r === 'object' ? r : null; };
   function sjekkLet(k) {
     const h = husAv(k.hus), m = modell(h); if (!m) return 'Huset er ikke lastet.'; const et = E.etasje(m, k.n); if (!et || k.n === 1) return 'Ukjent etasje.';
-    if (et.stengt) return 'Trapperommet er sperret.'; if (S.hus !== h.i || etasjeI(h) !== k.n) return `Du må stå i ${E.navn(et)}.`;
+    if (et.stengt) return 'Trapperommet er sperret.'; if (S.hus !== h.i || etasjeI(h) !== k.n) return `Du må være ${E.iNavn(et)}.`;
     if (k.hent) return rest(h, k.n) && window.LeteSpill && LeteSpill.plassTil(rest(h, k.n)) ? null : 'Det er ikke plass i leiren ennå.';
     return erLett(h, k.n) ? `${E.navn(et)[0].toUpperCase() + E.navn(et).slice(1)} er alt gjennomsøkt.` : null;
   }
@@ -94,7 +94,7 @@
     const fikk = LS && LS.ta ? LS.ta(f) : f, igjen = {};
     for (const s of ['tre', 'betong', 'stål', 'diesel']) { const r = (f[s] || 0) - (fikk[s] || 0); if (r > (s === 'diesel' ? .5 : .05)) igjen[s] = Math.round(r * 10) / 10; }
     S.lett[nk(h, k.n)] = Object.keys(igjen).length ? igjen : 1; lagre();
-    const tekst = f.tomt ? `${navn[0].toUpperCase() + navn.slice(1)} var tom${et.loft ? 't' : ''} – noen har vært her før.` : (window.Leting ? Leting.tekst(fikk).replace(/^Du fant/, k.hent ? 'Du hentet' : `Du fant i ${navn}`) : 'Du fant noe.') + (Object.keys(igjen).length ? ' Noe ble igjen – leiren har ikke plass.' : '');
+    const tekst = f.tomt ? `${navn[0].toUpperCase() + navn.slice(1)} var tom${et.loft ? 't' : ''} – noen har vært her før.` : (window.Leting ? Leting.tekst(fikk).replace(/^Du fant/, k.hent ? 'Du hentet' : `Du fant ${E.iNavn(et)}`) : 'Du fant noe.') + (Object.keys(igjen).length ? ' Noe ble igjen – leiren har ikke plass.' : '');
     if (LS && LS.visResultat) try { LS.visResultat({ bygg: { i: h.i, kl: h.info.kl }, leir: false }, { i2d: true, tittel: (k.hent ? 'Hentet fra ' : 'Gjennomsøkt: ') + navn, fikk, hentet: !!k.hent, tomt: f.tomt ? tekst : '', igjen: Object.keys(igjen).length ? 'Noe ligger igjen – leiren har ikke plass til alt.' : '', sekken: [] }); } catch (e) { console.warn('etasjer:', e); }
     if (window.OverlevSpill && OverlevSpill.øk) OverlevSpill.øk('leting', 10);
     tegnPå(); return { ok: true, tekst, f, fikk };
@@ -138,10 +138,10 @@
     radHus = h; const m = modell(h), k = karakter(); if (!m || !k || m.etasjer.length < 2) return '';
     const her = S.hus === h.i && inni(h.Pv, k.x, k.y) ? etasjeI(h) : null, et = E.etasje(m, n), tf = E.tilflukt(m), b = (h2, t, tit) => `<button type="button" data-et="${h2}" title="${esc(tit || t)}">${esc(t)}</button>`;
     let html = '<div class="rad valg" id="etasjerad">';
-    if (S.gang) html += `<span>Går … ${esc(E.navn(E.etasje(m, S.n)))}</span>`;
+    if (S.gang) html += `<span>Går … ${esc(E.iNavn(E.etasje(m, S.n)))}</span>`;
     else if (S.leter) html += `<span>Leter gjennom ${esc(E.navn(E.etasje(m, S.leter.n)))} … ${Math.max(0, Math.ceil(S.leter.sek - (performance.now() - S.leter.start) / 1000))} s</span>` + b('avbryt', 'Avbryt');
     else {
-      html += `<span>${her === null ? 'Karakteren er ikke i huset' : 'Du er i ' + esc(E.navn(E.etasje(m, her)))}</span>`;
+      html += `<span>${her === null ? 'Karakteren er ikke i huset' : 'Du er ' + esc(E.iNavn(E.etasje(m, her)))}</span>`;
       if (et && her !== n) html += et.stengt ? '<small> · trapperommet er sperret</small>' : b('gå', her === null ? `Gå til ${E.navn(et)}` : `Gå hit (${n > (her || 1) ? 'opp' : 'ned'} trappa)`, 'Karakteren går dit – gjennom trappene');
       if (her !== null && her === n && n !== 1) {
         if (!erLett(h, n)) html += b('let', `Let gjennom ${E.navn(et)}`, et.loft ? 'Loftet har ofte mye skrot – materialer og gamle ting' : et.kjeller ? 'Kjelleren har ofte mat og diesel' : '');

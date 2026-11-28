@@ -50,6 +50,8 @@
   const areal = P => { let a = 0; for (let i = 0; i < P.length; i++) { const p = P[i], q = P[(i + 1) % P.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a) / 2; };
   const nøkkel = (i, n) => (n === 1 || n === undefined ? i : i + ':' + n);
   const navn = e => (!e ? '' : e.kjeller ? 'kjelleren' : e.loft ? 'loftet' : e.n + '. etasje');
+  // «på loftet», «i kjelleren», «i 2. etasje»
+  const iNavn = e => (!e ? '' : (e.loft ? 'på ' : 'i ') + navn(e));
   // hva slags etasje det er (til funn): loft, kjeller, tilfluktsrom eller over
   function slag(e) { if (!e) return 'over'; if (e.loft) return 'loft'; if (e.kjeller) return e.rom.some(r => r.rolle === 'tilfluktsrom') ? 'tilfluktsrom' : 'kjeller'; return 'over'; }
   const rund = (s, v) => (s === 'mat' || s === 'diesel' ? Math.round(v) : s === 'penger' ? Math.round(v / 1000) * 1000 : Math.round(v * 10) / 10);
@@ -204,7 +206,7 @@
   function loftHøyde(m, x, y) { const A = m.akse, v = x * A.vx + y * A.vy, vm = (A.v0 + A.v1) / 2, hv = (A.v1 - A.v0) / 2;
     return Math.max(0, (m.tak && m.tak.møne || 0) * (1 - Math.abs(v - vm) / Math.max(.5, hv))); }
 
-  const api = { REGLER, etasje, navn, slag, nøkkel, funn, tilflukt, sperret, påTrapp, trappHøyde, trapperVed, stå, trappSperrer, blokkert, rute, korridor, iKorridor, trappÅpninger, vei, lengde, hull, trappUV, loftHøyde, lokal, areal, står };
+  const api = { REGLER, etasje, navn, iNavn, slag, nøkkel, funn, tilflukt, sperret, påTrapp, trappHøyde, trapperVed, stå, trappSperrer, blokkert, rute, korridor, iKorridor, trappÅpninger, vei, lengde, hull, trappUV, loftHøyde, lokal, areal, står };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Etasjer = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -228,7 +228,7 @@
     if (r) { a.n = r.n; a.trappNå = r.trapp; }
     const vedOpp = E().trapperVed(a.m, a.n).some(t => t.fra === a.n && Math.hypot(mx - t.x, my - t.y) < t.l / 2 + 2.5);
     if (a.n !== før || a.trappNå !== a.sistTrapp || vedOpp !== a.vedOpp) { a.sistTrapp = a.trappNå; a.vedOpp = vedOpp; synlig(a); }
-    if (a.n !== før) { const et = E().etasje(a.m, a.n); if (et && meldt !== a.h.i + ':' + a.n && typeof logg === 'function') { meldt = a.h.i + ':' + a.n; logg(et.stengt ? `${et.navn}: trapperommet er sperret.` : `Du er i ${E().navn(et)}.`); } }
+    if (a.n !== før) { const et = E().etasje(a.m, a.n); if (et && meldt !== a.h.i + ':' + a.n && typeof logg === 'function') { meldt = a.h.i + ':' + a.n; logg(et.stengt ? `${et.navn}: trapperommet er sperret.` : `Du er ${E().iNavn(et)}.`); } }
     settEtasje2D(a, a.n, { x: mx, y: my });
   }
   function planlegg() { if (rafNr || !aktiv || !aktiv.jobb) return; rafNr = requestAnimationFrame(() => { rafNr = 0; const R = r3(), a = aktiv; if (!R || !a || !a.jobb) return; const frist = performance.now() + BIT.ms;
