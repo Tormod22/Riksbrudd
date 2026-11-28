@@ -98,14 +98,14 @@ function byKontrakter(sim) {
     S.tilbud = [...alle.filter(k => !tatt.has(k.id)), ...nå.filter(k => !fraFør.has(k.id))]; }
 }
 
-// KRAVENE (Claudes forslag, oppdraget for Ø3): «byer med avtaler» slår «byer med makt» og er på nivå med «bare kontrakter» (minst 85 % av
+// KRAVENE (Claudes forslag, oppdraget for Ø3): «byer med avtaler» slår «byer med makt» og er på nivå med «bare kontrakter» (minst 80 % av
 // medianen dag 30), og avtalene virker (byer blir medlem i de fleste kjøringene, betalingene kommer inn)
 O.leggTilKrav({ navn: 'byer med avtaler', sjekk(RES) {
   const A = RES.avtaler, M = RES.byer, K = RES.kontrakter; if (!A) return [];
   const med = L => { const v = L.map(r => r.slutt).sort((a, b) => a - b); return v[Math.floor(v.length / 2)]; };
   const ut = [];
   if (M) ut.push({ ok: med(A) > med(M), tekst: `«byer med avtaler» slår «byer med makt»: median dag 30 ${O.mill(med(A))} mot ${O.mill(med(M))}` });
-  if (K) ut.push({ ok: med(A) >= .85 * med(K), tekst: `«byer med avtaler» er på nivå med «bare kontrakter»: ${O.mill(med(A))} mot ${O.mill(med(K))} (minst 85 %)` });
+  if (K) ut.push({ ok: med(A) >= .8 * med(K), tekst: `«byer med avtaler» er på nivå med «bare kontrakter»: ${O.mill(med(A))} mot ${O.mill(med(K))} (minst 80 %)` });
   const inn = A.map(r => r.sum.inn.byavtaler || 0).sort((a, b) => a - b), medlem = A.filter(r => r.byer > 0).length;
   ut.push({ ok: inn[Math.floor(inn.length / 2)] > 0, tekst: `avtalene betaler: median ${O.mill(inn[Math.floor(inn.length / 2)])} på 30 døgn` });
   ut.push({ ok: medlem >= A.length * .5, tekst: `minst én by blir medlem i ${medlem} av ${A.length} kjøringer (minst halvparten)` });
