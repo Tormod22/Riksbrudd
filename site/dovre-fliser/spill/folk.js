@@ -105,15 +105,17 @@
     return F;
   }
   // i karantene (Grålungen) eller borte fra leiren (spill/samfunn.js): arbeider ikke
-  const arbeidsfør = p => p.helse >= R.arbeidsfør && !p.karantene && !p.borte;
+  // (28. nov, rekruttering) p.skole: på opplæring på øvingsfeltet (spill/rekruttering.js) – arbeider ikke imens
+  const arbeidsfør = p => p.helse >= R.arbeidsfør && !p.karantene && !p.borte && !p.skole;
   const på = (F, o) => F.personer.filter(p => p.oppgave === o);
   const arbeidere = (F, o) => på(F, o).filter(arbeidsfør).length;
   const moralFaktor = m => .55 + .6 * Math.max(0, Math.min(100, m)) / 100;
   // Tempo for én person på oppgaven: ferdighet × moral × søvn × helse
   // F.tempoF: lover, hendelser og seremonier i leiren (spill/samfunn.js, settes i steg); p.trener: i opplæring (lærer eller elev);
+  // api.personF(p, o): egenskapene til personen (flittig, nattmenneske, modig – spill/rekruttering.js);
   // api.oppgaveF(o): faktor per oppgave utenfra (f.eks. frakt når vegene gror igjen, spill/overlev.js)
   const personTempo = (F, p, o) => (o === 'fri' ? 1 : p.ferd[o] || 1) * moralFaktor(F.moral) * (p.seng || F.sist.alleSeng ? 1 : .85) * (.5 + .5 * Math.min(1, p.helse))
-    * (F.tempoF > 0 ? F.tempoF : 1) * (p.trener ? .6 : 1) * (api.oppgaveF ? api.oppgaveF(o) || 1 : 1);
+    * (F.tempoF > 0 ? F.tempoF : 1) * (p.trener ? .6 : 1) * (api.oppgaveF ? api.oppgaveF(o) || 1 : 1) * (api.personF ? api.personF(p, o) || 1 : 1);
   // Snittet for dem som er i arbeid på oppgaven (0 når ingen er der), 0–1,5
   // (F0, 28. nov) api.døgnF(F, o): døgnplanen fra jobbtavla (spill/jobber.js) – 0 når ingen på oppgaven er i arbeidstida, høyere i
   // arbeidstida, så et helt døgn gir like mye som før. Uten jobbtavla (og i testene) 1.
@@ -236,12 +238,18 @@
   // ---------- lønn ----------
   // Lønn per døgn for n personer (infl = markedets inflasjon, 1 = som ved start)
   const lønnPerDøgn = (n, infl = 1) => Math.round(n * R.lønn * (infl > 0 ? infl : 1));
-  // lønnSteg(F, dt, betal, o): lønnen samles opp og betales én gang per spilltime. o.ekstra = menn i egne tropper (utenfor folket),
+  // (28. nov, rekruttering) hver person kan ha egen lønn (p.lønn, fra lønnskravet da hen ble ansatt); uten den R.lønn som før.
+  // lønnSum(F, ekstra, infl): lønna per døgn for gjengen + menn i egne tropper – ekstra er et antall (standardlønn) eller en liste
+  // med personpostene deres (m.person: egen lønn hvis de har)
+  const lønnSats = p => (p && p.lønn > 0 ? p.lønn : R.lønn);
+  const lønnSum = (F, ekstra = 0, infl = 1) => Math.round((F.personer.reduce((s, p) => s + lønnSats(p), 0)
+    + (Array.isArray(ekstra) ? ekstra.reduce((s, p) => s + lønnSats(p), 0) : Math.max(0, ekstra || 0) * R.lønn)) * (infl > 0 ? infl : 1));
+  // lønnSteg(F, dt, betal, o): lønnen samles opp og betales én gang per spilltime. o.ekstra = menn i egne tropper (utenfor folket; antall eller personposter),
   // o.infl = inflasjonen. betal(kr) -> true/false. Får de ikke betalt, blir det som skyldes stående i F.ubetalt (moralen synker)
   // og prøves betalt sammen med neste lønn. Gir { betalt, ubetalt, hendelser }.
   function lønnSteg(F, dt, betal, o = {}) {
-    const H = [], n = F.personer.length + Math.max(0, o.ekstra || 0);
-    F.lønnAkk = (F.lønnAkk || 0) + lønnPerDøgn(n, o.infl) * dt / R.døgn; F.lønnTid = (F.lønnTid || 0) + dt;
+    const H = [];
+    F.lønnAkk = (F.lønnAkk || 0) + lønnSum(F, o.ekstra, o.infl) * dt / R.døgn; F.lønnTid = (F.lønnTid || 0) + dt;
     if (F.lønnTid < R.lønnPeriode) return { betalt: 0, ubetalt: F.ubetalt || 0, hendelser: H };
     F.lønnTid = 0; const ny = Math.round(F.lønnAkk), gjeld = Math.round(F.ubetalt || 0), sum = ny + gjeld; F.lønnAkk = 0;
     if (sum <= 0) return { betalt: 0, ubetalt: 0, hendelser: H };
@@ -324,7 +332,7 @@
   function fjern(F, id) { if (!F || id === undefined || id === null) return null; const i = F.personer.findIndex(p => p.id === id); if (i < 0) return null; return F.personer.splice(i, 1)[0]; }
   // personId(m): mannens kobling til folket – Leirvakta har tallet (p.id), en tropp har hele personposten (som ikke står i folket)
   const personId = m => (m && (typeof m.person === 'number' || typeof m.person === 'string') ? m.person : null);
-  const api = { varmeAndel: null, døgnF: null, stedF: null, tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor };
+  const api = { varmeAndel: null, døgnF: null, stedF: null, tatteNavn, opptatteNavn: null, treffTekst, falneTekst, fjern, personId, oppgaveF: null, FORNAVN, OPPGAVER, OPPGAVE, YRKER, R, ny, nyPerson, rng, arbeidsfør, arbeidere, tempo, personTempo, byggelag, byggTempo, sett, pluss, minus, behov, steg, kjøpMat, lønnSteg, lønnPerDøgn, rekrutter, kanRekruttere, nød, forsvar, fraJSON, moralFaktor, personF: null, lønnSats, lønnSum };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.FolkRegler = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
