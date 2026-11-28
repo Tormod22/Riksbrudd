@@ -39,7 +39,7 @@
   // knapper med egen bekreftelse (byggene, avtalen med bygdevernet i Krig) og knapper i boksene selv
   const EGEN = '#byggvalg, #byggbanner, #avtalekort, #stortkjop, [data-advarsel="avtale"], [data-advarsel="avtale-rute"], [data-stortkjop="nei"]';
   const css = document.createElement('style');
-  css.textContent = `#stortkjop{ position:fixed; left:50%; top:calc(var(--topp,58px) + 70px); transform:translateX(-50%); z-index:60; width:min(420px,calc(100vw - 32px)); background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); padding:12px 14px; border-radius:6px; box-shadow:0 10px 34px rgba(0,0,0,.6); font-size:14.5px; line-height:1.4; }
+  css.textContent = `#stortkjop{ box-sizing:border-box; position:fixed; left:50%; top:calc(var(--topp,58px) + 70px); transform:translateX(-50%); z-index:60; width:min(420px,calc(100vw - 32px)); background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); padding:12px 14px; border-radius:6px; box-shadow:0 10px 34px rgba(0,0,0,.6); font-size:14.5px; line-height:1.4; }
 #stortkjop b{ display:block; font-family:'Cormorant Garamond', serif; font-size:19px; margin-bottom:4px; } #stortkjop small{ display:block; color:var(--ink-dim,#a99); font-size:12.5px; margin-top:5px; }
 #stortkjop .kn{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; } #stortkjop button{ min-height:40px; padding:0 14px; border-radius:5px; border:1px solid #454b52; background:#1d2125; color:#e9e4d6; cursor:pointer; font:inherit; }
 #stortkjop button.hoved{ background:#3b3220; border-color:#d9a441; color:#f2d68a; } #stortkjop button[disabled]{ opacity:.5; cursor:not-allowed; }`;
