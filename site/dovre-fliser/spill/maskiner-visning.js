@@ -128,6 +128,11 @@
     // et nytt utsnitt bygger scenen på nytt: lag nettene igjen der
     KROKER.sett3d.push(() => { T.sist = 0; });
   }
+  // (ut9-maskiner2) ikonene for de nye maskinene i byggesettet (Ikoner.legg, som kjeder-visning.js gjør for sine maskiner)
+  const IKON = { flis: "<path d='M4 18l6-12 2 4 4-6 4 14z'/><path d='M8 18l2-3 2 3'/>", filet: "<path d='M3 12c4-5 10-5 14 0-4 5-10 5-14 0z'/><path d='M17 12l4-3v6zM7 10l6 4'/>",
+    balle: "<rect x='4' y='7' width='16' height='11' rx='1'/><path d='M4 11h16M4 14h16M9 7v11M15 7v11'/>", knus: "<path d='M4 5h16l-5 8H9z'/><path d='M9 13l-2 7M15 13l2 7M10 20h4'/>" };
+  const IKONBYGG = {}; for (const [d, n] of [['bs_flishogger', 'flis'], ['bs_filetmaskin', 'filet'], ['bs_ballepresse', 'balle'], ['bs_knuser', 'knus']]) { IKONBYGG[d] = n; IKONBYGG[d + '_1'] = n; }
+  (function ikoner(n) { if (window.Ikoner && Ikoner.legg) Ikoner.legg(IKON, IKONBYGG); else if (n < 40) setTimeout(() => ikoner(n + 1), 500); })(0);
   window.MaskinerSpill = { kilder, tall: () => Object.assign({}, T.tall, { kilder: T.kilder.length, t: T.t }), prøve: liste => { T.prøve = liste || null; T.sist = 0; }, tegnet2d: () => S2.tegnet,
     nullstill2d: () => { S2.tegnet = 0; }, matrise: i => { if (!T.blad || i >= T.blad.count) return null; const m = new THREE.Matrix4(); T.blad.getMatrixAt(i, m); return Array.from(m.elements); }, rydd, LIVR };
 })();
