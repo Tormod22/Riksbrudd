@@ -55,7 +55,7 @@
 #selskapet.på{ display:flex; }
 #selskapet .shode{ flex:none; display:flex; gap:10px; align-items:center; padding:10px 46px 6px 12px; }
 #selskapet .shode .smerke{ flex:none; width:44px; height:44px; } #selskapet .shode h2{ margin:0; font-family:"IM Fell English",serif; font-weight:400; font-size:21px; line-height:1.1; letter-spacing:.02em; }
-#selskapet .shode small{ display:block; font-size:12.5px; color:#c9b26a; letter-spacing:.02em; margin-top:2px; }
+#selskapet .shode small{ display:block; font-size:12.5px; color:#c9b26a; letter-spacing:.02em; margin-top:2px; } #selskapet .shode small.nivlinje{ color:#a89970; margin-top:1px; }
 #selskapet .lukk{ position:absolute; right:8px; top:8px; width:32px; height:30px; padding:0; font-size:17px; line-height:1; background:linear-gradient(180deg,#2a2215,#17120a); border:1px solid #5a4a2a; border-radius:3px; color:inherit; cursor:pointer; }
 #selskapet .sfaner{ flex:none; display:flex; gap:0; overflow-x:auto; scrollbar-width:none; border-bottom:1px solid #5a4a2a; padding:0 6px; }
 #selskapet .sfaner::-webkit-scrollbar{ display:none; }
@@ -111,7 +111,8 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     let h = '<ul class="tall">';
     h += linje('Kassa', s ? kr(s.penger) : '–');
     if (u) h += linje('Ukas resultat', u.dager ? krF(u.netto) : '–', u.netto > 0 ? 'pluss' : u.netto < 0 ? 'minus' : '', u.dager ? `${kr(u.inn)} inn, ${kr(u.ut)} ut (${u.dager} ${u.dager === 1 ? 'døgn' : 'døgn'})` : '');
-    h += linje('Nivå', `${nv.nr} · ${nv.navn}`, '', rykte);
+    // (ut8-kr-ro) nivået er ryktet – et krav under trinnet: «Trinn 3 (Makt i regionen) krever nivå 3 «Etablert»»
+    { const N = nivåLinje(R, nv.nr); h += linje('Nivå (rykte)', `${nv.nr} · ${nv.navn}`, '', (N.krav ? (N.ok ? `Nok for trinn ${N.trinn}. ` : `Trinn ${N.trinn} krever nivå ${N.krav}. `) : '') + rykte); }
     if (sd && sd.sum) h += linje('Kontrakter', `${sd.sum.levert} levert`, '', `${sd.aktive ? sd.aktive.length : 0} aktive, ${S && S.tilbud ? S.tilbud.length : 0} ledige tilbud`);
     h += linje('Folk', F ? String(F.personer.length) : '–'); h += linje('Lag', String(egneLag().length));
     h += linje('Tettsteder', String(trinnBilde().tettsteder));
@@ -140,7 +141,11 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     return h;
   }
   const kommer = f => `<div class="rolig"><b>${esc(f.kommer)}</b>${esc(f.mer)}</div>`;
-  function hodeHtml() { const SS = window.SelskapSpill, R = regnTrinn(); return `${SS && SS.merke ? SS.merke('blå', 44) : ''}<div><h2>${esc(navn())}</h2><small>${esc(TR.tekst(R))}</small></div>`; }
+  // (ut8-kr-ro, kritikken: to stiger) trinnet er overskriften, ryktenivået står under som et krav: «Rykte: nivå 1 av 3 for trinn 3»
+  function nivåLinje(R, nr) { const SK = window.Selskap, maks = SK && SK.REGLER && SK.REGLER.NIVÅER ? SK.REGLER.NIVÅER.length : 4;
+    if (nr === undefined) { const SS = window.SelskapSpill; nr = SS && SS.nivå ? SS.nivå().nr : 1; } return TR.nivåLinje ? TR.nivåLinje(R, nr, maks) : { kort: '', lang: '' }; }
+  function hodeHtml() { const SS = window.SelskapSpill, R = regnTrinn(), N = nivåLinje(R);
+    return `${SS && SS.merke ? SS.merke('blå', 44) : ''}<div><h2>${esc(navn())}</h2><small>${esc(TR.tekst(R))}</small>${N.kort ? `<small class="nivlinje" data-nivlinje="${N.ok ? 'ok' : 'mangler'}">Rykte: ${esc(N.kort)}</small>` : ''}</div>`; }
 
   // ---------- kontraktene: panelet fra selskap-visning.js lånes inn i fanen ----------
   let lånt = false;

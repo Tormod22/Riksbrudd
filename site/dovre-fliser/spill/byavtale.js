@@ -60,6 +60,11 @@
     // byen sier opp under «siOpp» eller etter «brudd» brudd, og vil ikke snakke med den rivalen på «stengt» døgn. Handel etter «handelEtter»
     // holdte døgn (uten disse tallene – gamle lagringer – gjelder sju døgn som før). Kunde: rivalen har levert en kontrakt for byen.
     rivalLøfte: { mann: 4, tillit: 45, holdt: 3, brutt: -10, siOpp: 25, brudd: 3, stengt: 3, handelEtter: 5, kundeVekt: 1.5 },
+    // (ut8-kr-ro) BUDKAMPEN – Claudes regel og tall (kritikken: «Ravnsund frir, men all forhandling sier tillit 30 av 40 – varselet er en
+    // påminnelse om at du taper»): når en rival frir til byen (eller har en beskyttelsesavtale der), kan dere vinne beskyttelsen med
+    // lavere tillit hvis dere lover mer enn rivalen. Kravet til tillit for beskyttelse synker med «løfte» poeng for løftet dere gir
+    // (6 mann og hjelp innen 1 t: −10, altså 30 = det en ny by starter på), men aldri under «min». Prisen må fortsatt være under rivalens.
+    budkamp: { løfte: { lite: 0, vanlig: 5, stort: 10 }, min: 25 },
   };
   const TRINN = ['nøytral', 'kunde', 'beskyttelse', 'handel', 'medlem'];
   const TRINNORD = { nøytral: 'Nøytral', kunde: 'Kunde', beskyttelse: 'Beskyttelse', handel: 'Handel', medlem: 'Medlem' };
@@ -117,10 +122,19 @@
     const vf = H.kort ? (varighet >= 30 ? .9 : varighet <= 7 ? 1.05 : 1) : H.lang ? (varighet >= 30 ? 1.1 : varighet <= 7 ? .92 : 1) : 1;
     return Math.round(grunnpris(t, folk) * H.pris * lf * bf * tf * vf / 1000) * 1000;
   }
+  // (ut8-kr-ro) er det budkamp om byen nå? (en rival frir, eller har en beskyttelses-/handelsavtale med den)
+  const budkamp = b => !!(b && (b.forhandler || b.rival));
+  // (ut8-kr-ro) tilliten byen krever for trinnet t; i budkamp om beskyttelse synker kravet med løftet (REGLER.budkamp)
+  function tillitKrav(b, t, løfte) {
+    const K = REGLER.trinn[t]; if (!K) return 0;
+    if (t !== 'beskyttelse' || !budkamp(b)) return K.tillit;
+    return Math.max(REGLER.budkamp.min, K.tillit - (REGLER.budkamp.løfte[løfte] || 0));
+  }
   // Kan byen gå til dette trinnet nå? Gir null eller en grunn (norsk tekst)
   // eid = byen er alt din (tatt med makt): da kan den bli medlem uten beskyttelse og handel først
   // tid = spillminutter nå (valgfri): da gjelder også «etter» (døgn på trinnet under) og stengt etter en oppsigelse
-  function kanTrinn(b, t, side = 'blå', eid = false, tid) {
+  // o = { løfte } (valgfri, ut8-kr-ro): løftet i tilbudet – i budkamp senker et stort løfte kravet til tillit (tillitKrav)
+  function kanTrinn(b, t, side = 'blå', eid = false, tid, o) {
     const K = REGLER.trinn[t]; if (!K || t === 'kunde') return 'Ukjent avtale.';
     const nå = trinn(b);
     if (Number.isFinite(tid) && b.stengtTil && tid < b.stengtTil) return `Byen sa opp avtalen nylig og vil ikke forhandle på ${Math.ceil((b.stengtTil - tid) / 1440)} døgn.`;
@@ -129,14 +143,14 @@
     if (b.avtale && b.avtale.oppsagt) return 'Byen har sagt opp avtalen og vil ikke forhandle nå.';
     if (rang(nå) >= rang(t)) return { beskyttelse: 'Dere har alt en beskyttelsesavtale.', handel: 'Dere har alt en handelsavtale.', medlem: 'Byen er alt medlem.' }[nå] || 'Dere har alt en avtale.';
     if (K.krever && rang(nå) < rang(K.krever) && !(eid && t === 'medlem')) return `Krever en ${K.krever === 'beskyttelse' ? 'beskyttelsesavtale' : 'handelsavtale'} først.`;
-    if ((b.tillit || 0) < K.tillit) return `Byen stoler ikke nok på dere: tillit ${Math.round(b.tillit)} av ${K.tillit}.`;
+    { const krav = tillitKrav(b, t, o && o.løfte); if ((b.tillit || 0) < krav) return `Byen stoler ikke nok på dere: tillit ${Math.round(b.tillit)} av ${krav}.`; }
     if (K.fryktUnder !== undefined && (b.frykt || 0) >= K.fryktUnder) return `Byen er redd dere: frykt ${Math.round(b.frykt)} (må under ${K.fryktUnder}).`;
     return null;
   }
   // FORHANDLINGEN. tilbud: { trinn, pris (kr per døgn byen betaler; ikke for medlem), løfte, varighet }, om: { folk, behov, holdning, rivalPris }
   // Gir { svar: 'ja'|'nei'|'motbud', grunn, motbud: { pris } | null, verdi }
   function forhandle(b, tilbud, om = {}) {
-    const t = tilbud.trinn, feil = kanTrinn(b, t, 'blå', !!om.eid, om.nå); if (feil) return { svar: 'nei', grunn: feil, motbud: null, verdi: 0 };
+    const t = tilbud.trinn, feil = kanTrinn(b, t, 'blå', !!om.eid, om.nå, { løfte: tilbud.løfte }); if (feil) return { svar: 'nei', grunn: feil, motbud: null, verdi: 0 };
     const H = HOLDNING[om.holdning] || HOLDNING.forsiktig, frykt = b.frykt || 0;
     if (H.fryktNei !== undefined && frykt > H.fryktNei) return { svar: 'nei', grunn: 'Byrådet lar seg ikke true. Frykten må ned først.', motbud: null, verdi: 0 };
     if (!REGLER.varigheter.includes(+tilbud.varighet)) return { svar: 'nei', grunn: 'Varigheten må være 7, 14 eller 30 døgn.', motbud: null, verdi: 0 };
@@ -254,6 +268,20 @@
     return { holdt, sierOpp, grunn, side };
   }
 
+  // (ut8-kr-ro) SPORET TIL MER TILLIT – det reglene over gir, som tekst til byens kort (kritikken: «ingen synlig vei til mer tillit»).
+  // b = byen, o: { holdning, navn (byens navn), trinn (det neste trinnet dere vil til), løfte (ikke brukt) }.
+  // Gir { krav, mangler, budkamp: { krav, løfte } | null, veier: [{ id, tekst, pluss, per }] } – pluss er tillitspoeng, per 'kontrakt'|'døgn'|'gang'.
+  function tillitSpor(b, o = {}) {
+    const T = REGLER.tillit, H = HOLDNING[o.holdning] || HOLDNING.forsiktig, f = H.tillit || 1, rund = v => Math.round(v * 10) / 10;
+    const t = o.trinn && REGLER.trinn[o.trinn] ? o.trinn : 'beskyttelse', krav = REGLER.trinn[t].tillit, tl = b ? b.tillit || 0 : REGLER.start.tillit;
+    const veier = [{ id: 'kontrakt', tekst: `Lever en kontrakt for ${o.navn || 'byen'}`, pluss: T.kontrakt, per: 'kontrakt' }];
+    if (!b || !b.avtale) { if (tl < REGLER.vakt.tak) veier.push({ id: 'vakt', tekst: `Vokt byen: minst ${REGLER.vakt.mann} mann i byen eller innen ${REGLER.radius / 1000} km i ${REGLER.vakt.timer} t av døgnet`, pluss: rund(T.holdt * f), per: 'døgn', tak: REGLER.vakt.tak }); }
+    else { veier.push({ id: 'holdt', tekst: 'Hold løftet i avtalen', pluss: rund(T.holdt * f), per: 'døgn' }); veier.push({ id: 'hjelp', tekst: 'Kom i tide når byen ber om hjelp', pluss: T.hjelp, per: 'gang' }); }
+    let bk = null; if (t === 'beskyttelse' && budkamp(b)) { const L = REGLER.løfter.find(l => tl >= tillitKrav(b, t, l.id)) || null;
+      bk = { krav: tillitKrav(b, t, 'stort'), løfte: L ? L.id : null, mann: L ? L.mann : null }; }
+    return { krav, mangler: Math.max(0, Math.ceil(krav - tl)), budkamp: bk, veier };
+  }
+
   // KRIGSSTILLINGEN (strategi.js, kapittel 3.3): medlemmer teller fullt (de er eid, eier blå), partnere (handel) halvt.
   // Gir { side, vekt } for et tettsted som ikke er eid, ellers null.
   function stillingVekt(b) {
@@ -275,7 +303,7 @@
     return S;
   }
 
-  const api = { REGLER, TRINN, TRINNORD, HOLDNING, HOLDNINGER, BEHOVORD, hash, leder, behov, ny, by, trinn, rang, grunnpris, verdi, kanTrinn, forhandle, inngå, time, døgn,
+  const api = { REGLER, TRINN, TRINNORD, HOLDNING, HOLDNINGER, BEHOVORD, hash, leder, behov, ny, by, trinn, rang, grunnpris, verdi, kanTrinn, forhandle, inngå, time, døgn, budkamp, tillitKrav, tillitSpor,
     siOpp, slutt, avslutt, naboer, betaling, berOmHjelp, hjelpSteg, rivalMål, rivalFrir, rivalSteg, rivalVokser, rivalKunde, rivalTime, rivalDøgn, stillingVekt, fraJSON };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Byavtale = api;

@@ -17,4 +17,14 @@ let feil = 0; const ok = (v, t) => { console.log((v ? 'ok   ' : 'FEIL ') + t); i
 { const R = T.regn({ levert: '2', bygg: NaN, nivå: null }); ok(R.nr === 1 && R.steg.id === 'bygg', 'rare tall tåles'); }
 ok(T.tekst(T.regn({ levert: 1, bygg: 3 })) === 'Trinn 2 av 4 · Leverandør – et selskap folk stoler på', 'teksten om trinnet');
 ok(T.REGLER.TRINN.map(t => t.navn).join(' → ') === 'Overleve → Leverandør → Makt i regionen → Konsern', 'de fire trinnene fra planen');
+// (ut8-kr-ro) trinn og nivå på samme linje: nivået er et krav under trinnet
+{ const R = T.regn({ levert: 1, bygg: 3, nivå: 1 }), N = T.nivåLinje(R, 1);
+  ok(N.krav === 3 && N.trinn === 3 && !N.ok && N.kort === 'nivå 1 av 3 for trinn 3', 'trinn 2 med nivå 1: «' + N.kort + '»');
+  ok(/trinn 3 \(Makt i regionen\) krever nivå 3 «Etablert»/.test(N.lang), 'den lange teksten: ' + N.lang); }
+{ const N = T.nivåLinje(T.regn({}), 1); ok(N.trinn === 3 && N.kort === 'nivå 1 av 3 for trinn 3', 'trinn 1: nivåkravet gjelder trinn 3 (trinn 2 krever ikke nivå)'); }
+{ const R = T.regn({ levert: 5, bygg: 6, nivå: 3, tettsteder: 0 }), N = T.nivåLinje(R, 3); ok(N.ok && N.kort === 'nivå 3 – nok for trinn 3', 'nivå 3 er nok for trinn 3: ' + N.kort); }
+{ const R = T.regn({ levert: 5, bygg: 6, nivå: 3, tettsteder: 1 }), N = T.nivåLinje(R, 3); ok(N.trinn === 4 && N.kort === 'nivå 3 av 4 for trinn 4', 'på trinn 3: neste krav er nivå 4: ' + N.kort); }
+{ const R = T.regn({ levert: 12, bygg: 9, nivå: 4, tettsteder: 3 }), N = T.nivåLinje(R, 4); ok(N.krav === null && N.kort === 'nivå 4 av 4', 'på trinn 4: ' + N.kort); }
+{ const R = T.regn({ levert: 1, bygg: 3, nivå: 1 }); ok(R.krav.find(k => k.id === 'nivå').tekst === 'Ryktet er på nivå 3 «Etablert» (nå nivå 1)', 'kravet sier nivået nå: ' + R.krav.find(k => k.id === 'nivå').tekst); }
+ok(T.nivåLinje(null, 'x').kort === 'nivå 1 av 3 for trinn 3', 'rare tall i nivåLinje tåles');
 console.log(feil ? feil + ' FEIL' : 'alle testene for trinn.js er ok'); process.exit(feil ? 1 : 0);

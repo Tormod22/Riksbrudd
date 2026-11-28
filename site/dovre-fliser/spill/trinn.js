@@ -33,7 +33,8 @@
       steg: (n, B) => (tall(B.levert) === 0 ? 'Lever den første kontrakten' : `Lever ${flertall(n - tall(B.levert), 'kontrakt', 'kontrakter')} til`), hjelp: 'Kontraktene står i Selskapet, fanen Kontrakter.' },
     bygg: { om: 'leir', tekst: n => `Leiren har ${n} ferdige bygg`, steg: (n, B) => `Bygg ${flertall(n - tall(B.bygg), 'bygg', 'bygg')} til i leiren`,
       hjelp: 'Leir → Bygg. En brakke gir flere senger, et vakttårn ser røverne før de kommer.' },
-    nivå: { om: 'kontrakt', tekst: n => `Selskapet er på nivå ${n} «${REGLER.NIVÅNAVN[n] || n}»`, steg: n => `Nå nivå ${n} «${REGLER.NIVÅNAVN[n] || n}»: lever flere kontrakter`,
+    // (ut8-kr-ro, kritikken: «to stiger som ikke henger sammen») kravet sier at nivået er ryktet, og hvor dere står nå
+    nivå: { om: 'kontrakt', tekst: (n, B) => `Ryktet er på nivå ${n} «${REGLER.NIVÅNAVN[n] || n}»${B && Number.isFinite(+B.nivå) && +B.nivå > 0 && +B.nivå < n ? ` (nå nivå ${+B.nivå})` : ''}`, steg: n => `Nå nivå ${n} «${REGLER.NIVÅNAVN[n] || n}»: lever flere kontrakter`,
       hjelp: 'Nivået stiger med leverte kontrakter og ryktet for å holde ord (Selskapet → Oversikt).' },
     tettsteder: { om: 'by', tekst: n => (n === 1 ? 'Dere holder et tettsted' : `Dere holder ${n} tettsteder`),
       steg: (n, B) => (tall(B.tettsteder) === 0 ? 'Få et tettsted på laget' : `Få ${flertall(n - tall(B.tettsteder), 'tettsted', 'tettsteder')} til på laget`),
@@ -47,14 +48,29 @@
     let regnet = 1; for (const t of T) { if (t.nr > 1 && oppfylt(t)) regnet = t.nr; else if (t.nr > 1) break; }
     const nr = Math.max(regnet, Math.min(T.length, Math.max(1, Math.floor(tall(høyest)) || 1)));
     const trinn = T[nr - 1], neste = T[nr] || null;
-    const krav = neste ? Object.entries(neste.krav).map(([id, n]) => ({ id, n, ok: tall(B[id]) >= n, tekst: KRAV[id].tekst(n), om: KRAV[id].om, hjelp: KRAV[id].hjelp })) : [];
+    const krav = neste ? Object.entries(neste.krav).map(([id, n]) => ({ id, n, ok: tall(B[id]) >= n, tekst: KRAV[id].tekst(n, B), om: KRAV[id].om, hjelp: KRAV[id].hjelp })) : [];
     const mangler = krav.filter(k => !k.ok);
     const m = mangler[0], steg = m ? { tekst: `${KRAV[m.id].steg(m.n, B)} (mot trinn ${neste.nr}: ${neste.navn})`, kort: KRAV[m.id].steg(m.n, B), hjelp: KRAV[m.id].hjelp, om: m.om, id: m.id } : null;
     return { nr, trinn, neste, krav, mangler, steg, regnet };
   }
   // linjen om trinnet (Oversikt og kortet): «Trinn 2 av 4 · Leverandør – et selskap folk stoler på»
   const tekst = R => `Trinn ${R.nr} av ${REGLER.TRINN.length} · ${R.trinn.navn} – ${R.trinn.du}`;
-  const Trinn = { REGLER, KRAV, regn, tekst };
+  // (ut8-kr-ro, kritikken: «Trinn 2 av 4» i tittelen og «Nivå 1 · Ukjent» i Kontrakter – «jeg måtte lese tre faner for å forstå at trinn
+  // og nivå er to forskjellige ting») TRINNET er overskriften; NIVÅET er ryktet som kunde (spill/selskap.js) og et krav under trinnet.
+  // nivåLinje(R, nivå, maks) gir { nivå, navn, krav, trinn, ok, kort, lang }: det neste trinnet som krever et nivå (fra trinnet over det
+  // dere står på), og om nivået er nok. kort = «nivå 1 av 3 for trinn 3», lang = «Rykte: nivå 1 «Ukjent» – trinn 3 krever nivå 3 «Etablert»».
+  // Reglene er de samme som før – dette er bare teksten.
+  function nivåLinje(R, nivå, maks) {
+    const n = Math.max(1, Math.floor(tall(nivå)) || 1), navn = REGLER.NIVÅNAVN[n] || String(n), nr = R && R.nr ? R.nr : 1;
+    const t = REGLER.TRINN.find(q => q.nr > nr && Number.isFinite(q.krav.nivå) && q.krav.nivå > 0) || null;
+    if (!t) { const m = Math.max(n, Math.floor(tall(maks)) || 4);
+      return { nivå: n, navn, krav: null, trinn: null, ok: true, kort: `nivå ${n} av ${m}`, lang: `Rykte: nivå ${n} «${navn}»${n >= m ? ' – det øverste' : ''}` }; }
+    const k = t.krav.nivå, kn = REGLER.NIVÅNAVN[k] || String(k), ok = n >= k;
+    return { nivå: n, navn, krav: k, trinn: t.nr, ok,
+      kort: ok ? `nivå ${n} – nok for trinn ${t.nr}` : `nivå ${n} av ${k} for trinn ${t.nr}`,
+      lang: ok ? `Rykte: nivå ${n} «${navn}» – nok for trinn ${t.nr} (${t.navn})` : `Rykte: nivå ${n} «${navn}» – trinn ${t.nr} (${t.navn}) krever nivå ${k} «${kn}»` };
+  }
+  const Trinn = { REGLER, KRAV, regn, tekst, nivåLinje };
   if (typeof module !== 'undefined' && module.exports) { module.exports = Trinn; return; }
   rot.Trinn = Trinn;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

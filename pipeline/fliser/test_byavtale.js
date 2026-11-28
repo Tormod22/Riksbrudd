@@ -97,4 +97,29 @@ ok(B.grunnpris('beskyttelse', 200) === R.pris.minst.beskyttelse && B.grunnpris('
   ST.avtaler = id => (id === 'b' ? { side: 'rød', vekt: .5 } : null); const g = ST.stilling(byer, () => null); ST.avtaler = null;
   ok(Math.abs(g.sider.rød.andel - .125) < 1e-9 && Math.abs(g.nøytral.andel - .875) < 1e-9, 'krigsstillingen: Strategi.avtaler gjelder når ingen funksjon er gitt (rivalens partner)'); }
 
+// (ut8-kr-ro) BUDKAMPEN: en rival frir – et stort løfte senker kravet til tillit for beskyttelse (30 = det en ny by starter på)
+{ const b = B.by(B.ny(), 'x'); ok(B.kanTrinn(b, 'beskyttelse', 'blå', false, 0, { løfte: 'stort' }) === 'Byen stoler ikke nok på dere: tillit 30 av 40.', 'uten rival: kravet er 40 også med stort løfte');
+  b.forhandler = { side: 'rød', fra: 0, ferdig: 1440, pris: 400000 }; ok(B.budkamp(b), 'rivalen frir = budkamp');
+  ok(B.tillitKrav(b, 'beskyttelse', 'stort') === 30 && B.tillitKrav(b, 'beskyttelse', 'vanlig') === 35 && B.tillitKrav(b, 'beskyttelse', 'lite') === 40, 'budkamp: kravet 30/35/40 etter løftet');
+  ok(B.tillitKrav(b, 'handel', 'stort') === R.trinn.handel.tillit, 'budkampen gjelder bare beskyttelse');
+  ok(B.kanTrinn(b, 'beskyttelse', 'blå', false, 0, { løfte: 'stort' }) === null, 'budkamp: tillit 30 og stort løfte er nok');
+  ok(/30 av 35/.test(B.kanTrinn(b, 'beskyttelse', 'blå', false, 0, { løfte: 'vanlig' })), 'budkamp: vanlig løfte krever 35');
+  const lav = B.forhandle(b, { trinn: 'beskyttelse', pris: 300000, løfte: 'stort', varighet: 14 }, { folk: 21000, behov: 50, holdning: 'forsiktig', rivalPris: 400000 });
+  ok(lav.svar === 'ja', 'budkamp: under rivalens pris og stort løfte gir ja (' + lav.grunn + ')');
+  const dyr = B.forhandle(b, { trinn: 'beskyttelse', pris: 900000, løfte: 'stort', varighet: 14 }, { folk: 21000, behov: 50, holdning: 'forsiktig', rivalPris: 400000 });
+  ok(dyr.svar !== 'ja', 'budkamp: over rivalens pris er fortsatt ikke ja');
+  const nei = B.forhandle(b, { trinn: 'beskyttelse', pris: 300000, løfte: 'lite', varighet: 14 }, { folk: 21000, behov: 50, holdning: 'forsiktig', rivalPris: 400000 });
+  ok(nei.svar === 'nei' && /30 av 40/.test(nei.grunn), 'budkamp: lite løfte holder ikke');
+  b.tillit = 20; ok(B.tillitKrav(b, 'beskyttelse', 'stort') === 30 && /20 av 30/.test(B.kanTrinn(b, 'beskyttelse', 'blå', false, 0, { løfte: 'stort' })), 'budkamp: lavere tillit enn 30 holder ikke'); }
+// (ut8-kr-ro) SPORET til mer tillit
+{ const b = B.by(B.ny(), 'y'), S = B.tillitSpor(b, { navn: 'Lillehammer', holdning: 'forsiktig' });
+  ok(S.krav === 40 && S.mangler === 10 && !S.budkamp, 'sporet: 10 tillit mangler til beskyttelse');
+  const k = S.veier.find(v => v.id === 'kontrakt'), v = S.veier.find(v => v.id === 'vakt');
+  ok(k && k.pluss === R.tillit.kontrakt && /Lillehammer/.test(k.tekst), 'sporet: en kontrakt for byen gir +' + R.tillit.kontrakt);
+  ok(v && v.pluss === R.tillit.holdt && v.per === 'døgn' && v.tak === R.vakt.tak, 'sporet: å vokte byen gir +' + R.tillit.holdt + ' per døgn');
+  ok(B.tillitSpor(b, { holdning: 'patriot' }).veier.find(v => v.id === 'vakt').pluss === 1.4, 'sporet: patrioten stoler sakte (+1,4 per døgn)');
+  b.forhandler = { side: 'grønn', fra: 0, ferdig: 1440, pris: 1 }; const bk = B.tillitSpor(b, {}).budkamp; ok(bk && bk.løfte === 'stort' && bk.mann === 6 && bk.krav === 30, 'sporet i budkamp: løftet 6 mann holder');
+  b.tillit = 36; ok(B.tillitSpor(b, {}).budkamp.løfte === 'vanlig', 'sporet i budkamp: med tillit 36 holder det vanlige løftet');
+  b.avtale = { trinn: 'beskyttelse' }; ok(B.tillitSpor(b, { trinn: 'handel' }).veier.some(v => v.id === 'holdt') && !B.tillitSpor(b, { trinn: 'handel' }).veier.some(v => v.id === 'vakt'), 'sporet med avtale: hold løftet, ikke vakt'); }
+
 console.log(feil ? `\n${feil} FEIL` : '\nalle byavtale-testene ok'); process.exit(feil ? 1 : 0);
