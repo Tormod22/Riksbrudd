@@ -47,6 +47,8 @@ Kritikken: `docs/kritikk/2026-11-28-ut-jonas-bakke.md`. Alle nye tall er Claudes
   skriftstørrelsen (15–16 px får 16–17 px ramme i stedet for 15).
 - Koblet til Etikett: «inn/ut 3,3 m³» ved maskinene (baering-visning.js: feltet er hindring, teksten plasseres), «Vårt · Kaserne»
   (husvern-visning.js), produksjonstavla over maskinen (produksjon-visning.js: hindring).
+- kompakt.js kanter(): øverst er kanten nå bunnen av statuslinja og knappene (`--topp`), så navn ikke står halvt under knappene på telefon
+  (de flyttes ned med pil, eller skjules).
 - Ikke gjenskapt i Ulvik: «Nattskift» over «Helikopter» (begge går alt gjennom Etikett; bildet viste dem dempet bak byggevisningens slør).
   På /norge ved Ulvik (telefon) sto navnene ved leiren fritt (bilde i scratchpad natt/ut8-kr-telefon/norge-naer.png).
 
