@@ -48,7 +48,8 @@
 
   // ---------- panelet «Spol til …» ----------
   const css = el('style');
-  css.textContent = `#spoltil{ position:fixed; z-index:15; right:10px; top:calc(var(--topp,58px) + 8px); width:min(360px,94vw); max-height:calc(100vh - var(--topp,58px) - 30px); overflow:auto; display:none; padding:8px 10px 10px; background:var(--panel,#1c170f); border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; line-height:1.35; box-shadow:0 4px 18px rgba(0,0,0,.5); border-radius:6px; }
+  css.textContent = `#spoltil{ position:fixed; z-index:40; right:10px; top:calc(var(--topp,58px) + 8px); width:min(360px,94vw); max-height:calc(100vh - var(--topp,58px) - 30px); overflow:auto; display:none; padding:8px 10px 10px; background:#1c170f; border:1px solid #c9b26a; color:var(--ink,#e7dcc3); font-size:14px; line-height:1.35; box-shadow:0 4px 18px rgba(0,0,0,.5); border-radius:6px; }
+#nesteh{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
 #spoltil.på{ display:block; } #spoltil .hode{ display:flex; align-items:center; gap:8px; } #spoltil .hode b{ flex:1; color:#f0e2b0; font-size:15px; }
 #spoltil small{ display:block; color:var(--ink-dim,#a99); font-size:12.5px; }
 #spoltil h4{ margin:10px 0 4px; font-size:12.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:#b9a77a; }

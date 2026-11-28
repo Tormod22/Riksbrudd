@@ -124,7 +124,7 @@
 
   // ---------- panelet ----------
   const css = el('style');
-  css.textContent = `#statistikk{ position:fixed; z-index:16; left:50%; top:50%; transform:translate(-50%,-50%); width:min(660px,94vw); max-height:88vh; overflow:auto; display:none; padding:10px 12px 12px; background:var(--panel,#1c170f); border:1px solid #c9b26a; border-radius:6px; color:var(--ink,#e7dcc3); font-size:14px; box-shadow:0 6px 24px rgba(0,0,0,.55); }
+  css.textContent = `#statistikk{ position:fixed; z-index:40; left:50%; top:50%; transform:translate(-50%,-50%); width:min(660px,94vw); max-height:88vh; overflow:auto; display:none; padding:10px 12px 12px; background:#1c170f; border:1px solid #c9b26a; border-radius:6px; color:var(--ink,#e7dcc3); font-size:14px; box-shadow:0 6px 24px rgba(0,0,0,.55); }
 #statistikk.på{ display:block; } #statistikk .hode{ display:flex; align-items:center; gap:8px; } #statistikk .hode b{ flex:1; font-size:16px; color:#f0e2b0; }
 #statistikk button{ background:#2a2318; border:1px solid var(--rule,#4a4030); color:inherit; font:inherit; cursor:pointer; border-radius:4px; min-height:34px; padding:2px 10px; font-size:13px; }
 #statistikk .valg{ display:flex; flex-wrap:wrap; gap:5px; margin:8px 0; } #statistikk .valg button.på{ border-color:#c9b26a; background:#4a3f22; color:#f0e2b0; }
