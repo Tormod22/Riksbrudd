@@ -237,8 +237,8 @@
   // steder kan ha: vern (bygdevernets mann), fiender (mann dere ser eller nylig så ved stedet), garnison (anslått, når et annet selskap holder det)
   // betaling = som et vanlig tilbud × betaling (en trygg jobb nær leiren betaler litt mindre enn en der troppen må slåss seg fram);
   // maksNivå: bare så lenge selskapet er på nivå 1–2 (starten, trinn 1–2) – senere skal lagene være sterke nok til de vanlige tilbudene;
-  // rykte: andelen av det vanlige ryktet («pålitelig») en levert lett jobb gir
-  REGLER.lett = { styrke: 4, min: 800, maksMeter: 9000, nærmeste: 3, holdSjanse: .5, ekstraPerKm: 1, garnison: 8, betaling: .85, maksNivå: 2, rykte: .5 };
+  // rykte: andelen av det vanlige ryktet («pålitelig») en levert lett jobb gir; kmt/omveg: anslaget for marsjen når fristen sjekkes
+  REGLER.lett = { styrke: 4, min: 800, maksMeter: 9000, nærmeste: 3, holdSjanse: .5, ekstraPerKm: 1, garnison: 8, betaling: .85, maksNivå: 2, rykte: .5, kmt: 3, omveg: 1.3 };
   // det kjente forsvaret ved stedet for en jobb (mann), samme regel som visningens forsvarVed: bygdevernet teller ikke når jobben er for
   // bygdelaget eller kommunen der (de vet om jobben); en garnison teller når et annet selskap holder stedet
   function forsvarFor(k, sted, id) {
@@ -249,8 +249,11 @@
     return m;
   }
   // klarer én tropp på «styrke» mann (og «kjøretøy» egne biler) dette tilbudet? sted = stedet med vern/fiender (ellers k.sted)
-  function klarbar(k, styrke, sd, sted, kjøretøy = 0) {
+  // leir (valgfri): da må også fristen holde til fots (samme regel som marsjVurdering, med et anslag: luftlinje × lett.omveg i lett.kmt)
+  function klarbar(k, styrke, sd, sted, kjøretøy = 0, leir = null) {
     if (!k || k.første || !REGLER.TYPER[k.type] || REGLER.TYPER[k.type].krav) return false;
+    if (leir && k.type !== 'eskorte' && k.sted) { const km = Math.hypot(k.sted.x - leir.x, k.sted.y - leir.y) / 1000 * REGLER.lett.omveg;
+      if (marsjVurdering(k, { km, timer: km / REGLER.lett.kmt }).advarsel) return false; }
     const K = kravFor(k); if (sd && K.nivå > nivå(sd).nr) return false; if (K.menn > tall(styrke)) return false;
     if (k.type === 'rydd') return false;
     if (k.type === 'eskorte' && (tall(kjøretøy) < 1 || k.risiko === 'bakhold' || k.fare)) return false;
@@ -263,7 +266,7 @@
     const sd = side(S, id), L = S.leir || { x: 0, y: 0 }, LT = REGLER.lett, styrke = Math.max(LT.styrke, tall(o.styrke)), nv = nivå(sd);
     // bare når selskapet står uten arbeid: ingen kontrakt i gang (har dere en, er det den som gir pengene i dag)
     if (nv.nr > LT.maksNivå || sd.aktive.some(k => !k.første && REGLER.TYPER[k.type] && !REGLER.TYPER[k.type].krav)) return null;
-    if (S.tilbud.some(k => klarbar(k, styrke, sd, stedFor(steder, k), o.kjøretøy))) return null;
+    if (S.tilbud.some(k => klarbar(k, styrke, sd, stedFor(steder, k), o.kjøretøy, L))) return null;
     // nærmest først: fra lett.min (et tettsted like ved leiren er en god første jobb – Ulvik lå 1,3 km fra Jonas' leir), helst innen
     // maksMeter; finnes ingen der, også lenger ut (til avstand.maks) – fristen vokser med avstanden
     const alle = (steder || []).filter(q => q && Number.isFinite(q.x) && Number.isFinite(q.y) && q.navn)
