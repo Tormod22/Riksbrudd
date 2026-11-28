@@ -36,7 +36,7 @@ module.exports = { navn: 'løkka r2: økonomi, dagbok og tekster', kjør: async 
       // 4) folketallet: et lag fra folket gir «+n»
       const t = nyttLag('Vaktprøve', leir.x + 50, leir.y, 'blå'); t.fraFolk = true; t.menn.length = 3; ENHETER.push(t); await vent(900);
       ut.folk = $('sFolk').textContent; krev(/^\d+ \+3/.test(ut.folk), 'folketallet viser ikke de i troppene: ' + ut.folk);
-      ENHETER.splice(ENHETER.indexOf(t), 1); await vent(900); krev(!/\+/.test($('sFolk').textContent), 'pluss-tallet går ikke bort');
+      (ENHETER.indexOf(t) >= 0 && ENHETER.splice(ENHETER.indexOf(t), 1)); await vent(900); krev(!/\+/.test($('sFolk').textContent), 'pluss-tallet går ikke bort');
       // 5) samme døde én gang
       const SS = { døde: [], gravlagte: [] }; Samfunn.død(SS, 'Vegard Dahl', 'soldat', 1); Samfunn.død(SS, 'Vegard Dahl', 'soldat', 2); krev(SS.døde.length === 1, 'samme døde står to ganger');
       // 6) statusmeldinger gjentas ikke

@@ -61,7 +61,10 @@
   // ---------- plassene inne i byggene og oppe i tårnet ----------
   const planer = new WeakMap(), tårnZ = new Map();
   // en fri plass på gulvet inne i leirbygget b til figur nr. i: { x, y (kartets meter), z (3D), a, uteX, uteY (like utenfor døra), u }
-  function innePlass(b, i, R, u) {
+  function innePlass(b, i, R, u, hva) {
+    // (ut9-liv) kjøkkenet i leiren er for lite til et langbord inne: de tre første som spiser, sitter på benken under markisen (modellen
+    // i modeller-leir2.js: bordet ved x 3,6, benken ved x 4,2, langs y 0,4–2,8); resten spiser inne
+    if (hva === 'bord' && b.type === 'kjøkken' && i < 3) return uteBord(b, i, R, u);
     if (!window.Interior3d || !Interior3d.egne || !window.Interior) return null;
     const e = Interior3d.egne().find(q => q.P.bygg && q.P.bygg.i === 9000000 + b.id); if (!e) return null; const P = e.P;
     let c = planer.get(P);
@@ -71,12 +74,31 @@
       const gulv = Math.max(P.gulvFast, Math.min(maks + .06, (P.veggTopp || P.gulvFast + 2.6) - 2));
       let nx = -P.dør.uy, ny = P.dør.ux; if (nx * (P.dør.x - mx) + ny * (P.dør.y - my) < 0) { nx = -nx; ny = -ny; }
       c = { pl, gulv, mx, my, ute: [P.dør.x + nx * 1.3, P.dør.y + ny * 1.3] }; planer.set(P, c); }
+    // (ut9-liv) i køya (brakka, om natta) eller på en plass ved langbordet (kjøkkenet, ved måltidene) – ellers en fri plass på gulvet
+    if (hva) { const pl = møbelPlass(c, b, i, R, u, hva, P); if (pl) return pl; }
     const bb = c.pl.bb; let x = null, y = null;
     for (let f = 0; f < 30 && x === null; f++) { const px = bb[0] + .4 + hash(i * 31 + f, b.id) * (bb[2] - bb[0] - .8), py = bb[1] + .4 + hash(i * 31 + f, b.id + 7) * (bb[3] - bb[1] - .8);
       if (Interior.inni(P, px, py) && Interior.avstKant(P, px, py) > .55 && !Interior.blokkert(c.pl, px, py) && Math.hypot(px - P.dør.x, py - P.dør.y) > 1.3) { x = px; y = py; } }
     if (x === null) return null;
     const gulv = P.inne && typeof P.inne.gulv === 'number' ? P.inne.gulv : c.gulv;
     return { x: u.cx + x, y: u.cy + y, z: gulv, a: Math.atan2(c.my - y, c.mx - x) + (hash(i, b.id + 3) - .5) * 2, uteX: u.cx + c.ute[0], uteY: u.cy + c.ute[1], u, b: b.id };
+  }
+  // (ut9-liv) plassen i en køyeseng eller ved et langbord fra planen til interiøret (samme plan som interior3d.js tegner).
+  // Køyesenga: to per seng (nede og oppe), hodet mot puta (sengas −y); bordet: tre plasser på hver langside, ansiktet mot bordet.
+  // Høydene er fra modellen i interior3d.js (madrassen nede 0,55 m, oppe 1,35 m). Claudes forslag: 0,12 m opp til kroppens midte.
+  function møbelPlass(c, b, i, R, u, hva, P) {
+    const type = hva === 'seng' ? 'køyeseng' : 'langbord', M = c.pl.møbler.filter(m => m.type === type); if (!M.length) return null;
+    const gulv = P.inne && typeof P.inne.gulv === 'number' ? P.inne.gulv : c.gulv, ute = { uteX: u.cx + c.ute[0], uteY: u.cy + c.ute[1], u, b: b.id, hva };
+    if (hva === 'seng') { const k = Math.floor(i / 2) % M.length, oppe = i % 2 && i < M.length * 2 ? 1 : 0, m = M[k], h = (m.a || 0) + Math.PI / 2;
+      return { x: u.cx + m.x + Math.cos(h) * .86, y: u.cy + m.y + Math.sin(h) * .86, z: gulv + (oppe ? 1.35 : .55) + .12, a: h, ligger: true, ...ute }; }
+    const n = M.length * 6, s = i % n, m = M[Math.floor(s / 6)], side = s % 2 ? 1 : -1, langs = ((Math.floor(s / 2) % 3) - 1) * .8, a = m.a || 0;
+    const lx = langs, ly = side * (m.d / 2 + .32), x = m.x + lx * Math.cos(a) - ly * Math.sin(a), y = m.y + lx * Math.sin(a) + ly * Math.cos(a);
+    return { x: u.cx + x, y: u.cy + y, z: gulv, a: a - side * Math.PI / 2, sitter: true, ...ute };
+  }
+  function uteBord(b, i, R, u) {
+    const k = 1 + ((b.nivå || 1) - 1) * .08, c = Math.cos(b.ret || 0), sn = Math.sin(b.ret || 0), lx = 4.24 * k, ly = (.8 + i * .8) * k, x = b.x + lx * c - ly * sn, y = b.y + lx * sn + ly * c;
+    const G = window.LeirSpill && LeirSpill.grunn3d ? LeirSpill.grunn3d(b, u, R) : null, z = (G ? G.topp : (hoyde3d(b.x, b.y, u) - u.h0) * R.EX) - .05;
+    return { x, y, z, a: (b.ret || 0) + Math.PI, sitter: true, uteX: x + c * .8, uteY: y + sn * .8, u, b: b.id, hva: 'bord' };
   }
   // vakta oppe på plattformen i vakttårnet (modeller.js: plattformen ligger 5,65 m over grunnen, ganget med nivået)
   function tårnPlass(b, i, R, u) {
@@ -85,7 +107,7 @@
     const lx = (hash(i, b.id) - .5) * 1.2, ly = (hash(i, b.id + 1) - .5) * 1.2, [x, y] = pk(lx, ly), [fx, fy] = pk(.9, -2.5);
     return { x, y, z: z.topp + 5.65 * k, a: Math.atan2(ly, lx) + (b.ret || 0), uteX: fx, uteY: fy, u, b: b.id, tårn: true };
   }
-  function plassVed(b, i, R, u) { if (!b || b.igjen > 0) return null; if (b.type === 'vakttårn') return tårnPlass(b, i, R, u); return INNE.has(b.type) ? innePlass(b, i, R, u) : null; }
+  function plassVed(b, i, R, u, hva) { if (!b || b.igjen > 0) return null; if (b.type === 'vakttårn') return tårnPlass(b, i, R, u); return INNE.has(b.type) ? innePlass(b, i, R, u, hva) : null; }
 
   // RUNDE 7 (20. nov, kritikerne: «menneskene er kantete klosser»): figurene er den felles, avrundede figuren i spill/figur3d.js – én
   // flokk (to nett: nær og fjern). Bevegelsen (beina og armene svinger, armene fram med en kasse når de bærer, krum overkropp for de
@@ -93,7 +115,7 @@
   const HUD = [[.86, .69, .56], [.8, .62, .49], [.66, .48, .36], [.92, .79, .68], [.47, .33, .25]];
   // Claudes forslag: hvor mange som har langt hår, lue og sekk
   const ANDEL = { langt: .3, lue: .2, sekk: .15 };
-  let flokk = null, obj = null;
+  let flokk = null, obj = null; const RANG = new Map();
   function lag(R) { if (flokk) flokk.kast(); const D = Figur3d.DEL; flokk = Figur3d.flokk(R, { maks: ALLE, kilde: 'folk3d.js', deler: D.hår | D.langt | D.lue | D.sekk | D.kasse | D.gevær }); obj = new THREE.Object3D(); figurer = null; nøkkel = ''; }
   KROKER.ramme3d.push(R => { if (!R.ut || typeof THREE === 'undefined' || !window.Figur3d || !window.FolkSpill || !window.OppstartSpill) return; const F = FolkSpill.tilstand(), S = OppstartSpill.tilstand(), leir = S && S.leir, u = R.ut; if (!F || !leir) return;
     if (!flokk || flokk.scene !== R.scene || !flokk.nær.parent) lag(R);
@@ -118,10 +140,13 @@
     if (!meg) fotFra = 0; else if (!fotFra) fotFra = nåMs;
     const regel = meg && nåMs - fotFra < UNNA.startTid ? STARTREGEL : UNNA;
     const brakker = bygg.filter(b => b.type === 'brakke' && !(b.igjen > 0));
+    // (ut9-liv) plass nr. i køya / ved bordet: rekkefølgen blant dem som sover eller spiser i samme bygg (ikke figurens nummer – da kunne to få samme seng)
+    RANG.clear(); if (gang) { const grp = new Map(); for (let i = 0; i < nV; i++) { const g = gang.plass(VO[i]); if (!g || !g.inne || g.bygg === null || g.bygg === undefined) continue;
+      const k = g.bygg + (g.sover || g.hva === 'søvn' ? 's' : g.hva === 'mat' ? 'm' : ''), n = grp.get(k) || 0; grp.set(k, n + 1); RANG.set(i, n); } }
     flokk.start();
-    figurer.forEach((p, i) => { let går = 0; const q = pers(i), G = SLAG[p.slag] || SLAG.voksen, syk = !!(q && q.syk);
+    figurer.forEach((p, i) => { let går = 0; p.stilling = ''; const q = pers(i), G = SLAG[p.slag] || SLAG.voksen, syk = !!(q && q.syk);
       const gq = gang && i < nV && q ? gang.plass(q) : null;
-      if (gq) går = følg(p, i, gq, bygg, meg, regel, R, u, dt, G.fart * (syk ? .7 : 1)); else {
+      if (gq) går = følg(p, i, gq, bygg, meg, regel, R, u, dt, G.fart * (syk ? .7 : 1), q); else {
       // et nytt utsnitt: plassen inne gjelder ikke lenger (høyden er regnet fra det gamle) – gå ut døra
       if (p.inne && p.inne.u !== u) { p.x = p.inne.uteX; p.y = p.inne.uteY; p.inne = null; p.tx = 0; }
       if (p.mål && p.mål.u !== u) p.mål = null;
@@ -143,10 +168,15 @@
       // vakta i tårnet speider sakte fram og tilbake; de som står inne, snur seg litt innimellom
       const a = p.inne ? p.inne.a + Math.sin(performance.now() / (p.inne.tårn ? 4000 : 7000) + i) * (p.inne.tårn ? .7 : .4) : p.a, z = p.inne ? p.inne.z : (hoyde3d(p.x, p.y) - u.h0) * R.EX + (p.etasje > 1 ? (p.etasje - 1) * 3 : 0);
       // de som frakter eller bygger, bærer en kasse når de går; vakta har gevær (lavt når hun går, klart når hun står)
-      const oppg = q && !q.karantene && p.slag === 'voksen' ? q.oppgave : '', bær = (oppg === 'frakt' || oppg === 'bygg') && !p.inne ? p.går : 0, vakt = oppg === 'vakt';
-      obj.position.set(p.x - u.cx, p.y - u.cy, z); obj.rotation.set(0, 0, a); obj.scale.setScalar(p.s); obj.updateMatrix();
-      flokk.legg(obj.matrix, { fase: p.fase, sving: p.går, bære: vakt ? 0 : bær, sikte: vakt ? .45 * (1 - p.går) : 0, krum: G.krum + (syk ? .12 : 0), barn: p.slag === 'barn' ? 1 : 0,
-        maske: p.maske | (bær > .5 && !vakt ? D.kasse : 0) | (vakt ? D.gevær : 0), farger: p.farger }); });
+      const oppg = q && !q.karantene && p.slag === 'voksen' ? q.oppgave : '', bær = (oppg === 'frakt' || oppg === 'bygg') && !p.inne ? p.går : 0;
+      // (ut9-liv) stillingen (spill/leirliv.js): ligger i køya, sitter ved bordet, kikkert i tårnet, planker på skulderen (byggelaget) eller kasse (frakt)
+      const ligger = !!(p.inne && p.inne.ligger), sitter = !!(p.inne && p.inne.sitter), kikkert = !!(p.inne && p.inne.tårn && oppg === 'vakt' && Math.sin(performance.now() / 9000 + i * 2) > -.3);
+      const planker = oppg === 'bygg' && bær > .5, vakt = oppg === 'vakt' && !ligger && !sitter;
+      p.stilling = ligger ? 'ligger' : sitter ? 'sitter' : kikkert ? 'kikkert' : planker ? 'planker' : bær > .5 ? 'kasse' : ''; p.z3 = z; p.a3 = a;
+      if (ligger) { obj.rotation.order = 'ZYX'; obj.rotation.set(0, -Math.PI / 2, a); } else { obj.rotation.order = 'XYZ'; obj.rotation.set(0, 0, a); }
+      obj.position.set(p.x - u.cx, p.y - u.cy, z); obj.scale.setScalar(p.s); obj.updateMatrix();
+      flokk.legg(obj.matrix, { fase: p.fase, sving: ligger || sitter ? 0 : p.går, bære: kikkert ? .95 : sitter ? .7 : vakt || planker ? 0 : bær, sikte: vakt && !kikkert ? .45 * (1 - p.går) : 0, krum: ligger ? 0 : G.krum + (syk ? .12 : 0),
+        kne: sitter ? -1 : 0, barn: p.slag === 'barn' ? 1 : 0, maske: p.maske | (bær > .5 && !vakt && !planker ? D.kasse : 0) | (vakt && !kikkert ? D.gevær : 0), farger: p.farger }); });
     flokk.slutt(); });
   // (F2) hvilke voksne som er figurer: med gangen de MAKS_GANG nærmeste kameraet (hvert sekund), ellers de MAKS første (som før)
   let valgtSist = 0, valgte = [];
@@ -159,12 +189,15 @@
   }
   // (F2) figuren følger plassen fra gangen (FolkgangSpill.plass): framme i et bygg med interiør står den inne (plassVed), ellers der personen er.
   // Plassen oppdateres 4 ganger i sekundet; figuren går mykt etter den. Står du for nær, går den unna som før (UNNA). Gir 1 når den går.
-  function følg(p, i, gq, bygg, meg, regel, R, u, dt, fart) {
+  function følg(p, i, gq, bygg, meg, regel, R, u, dt, fart, q) {
     if (p.inne && p.inne.u !== u) { p.x = p.inne.uteX; p.y = p.inne.uteY; p.inne = null; }
     p.mål = null; p.etter = null; p.etasje = gq.e || 1;
     if (gq.inne && gq.bygg !== null && gq.bygg !== undefined) {
-      if (p.inne && p.inne.b === gq.bygg) return 0;
-      const b = bygg.find(q => q.id === gq.bygg), pl = b ? plassVed(b, i, R, u) : null;
+      // (ut9-liv) hva personen gjør der inne (spill/leirliv.js): sover i køya eller spiser ved bordet
+      const b = bygg.find(q => q.id === gq.bygg), st = b && window.Leirliv ? Leirliv.stilling(gq, q ? q.oppgave : '', b.type) : '', hva = st === 'ligger' ? 'seng' : st === 'sitter' ? 'bord' : '';
+      const nr = hva && RANG.has(i) ? RANG.get(i) : i;
+      if (p.inne && p.inne.b === gq.bygg && (p.inne.hva || '') === hva && (!hva || p.inne.nr === nr)) return 0;
+      const pl = b ? plassVed(b, nr, R, u, hva) : null; if (pl) pl.nr = nr;
       if (pl) { p.inne = pl; p.x = pl.x; p.y = pl.y; p.a = pl.a; return 0; }
     } else if (p.inne) { p.x = p.inne.uteX; p.y = p.inne.uteY; p.inne = null; }
     let tx = gq.x, ty = gq.y;
@@ -189,5 +222,5 @@
     const v = rnd() * 6.283; p.tx = (b ? b.x : leir.x) + Math.cos(v) * r; p.ty = (b ? b.y : leir.y) + Math.sin(v) * r; p.mål = null;
     p.etter = null; p.omveg = 0; p.vent = p.slag === 'gammel' ? 10 + rnd() * 40 : hos ? 8 + rnd() * 30 : 2 + rnd() * 14; p.hos = hos && b ? b.type : '';
   }
-  window.Folk3d = { UNNA, STARTREGEL, unna, antall: () => (flokk && flokk.nær.visible ? flokk.antall() : 0), figurer: () => figurer, nett: () => (flokk ? { nær: flokk.nær, fjern: flokk.fjern } : null), flokk: () => flokk, plassVed: (b, i) => { const R = r3(); return R && R.ut ? plassVed(b, i, R, R.ut) : null; } };
+  window.Folk3d = { UNNA, STARTREGEL, unna, antall: () => (flokk && flokk.nær.visible ? flokk.antall() : 0), figurer: () => figurer, nett: () => (flokk ? { nær: flokk.nær, fjern: flokk.fjern } : null), flokk: () => flokk, plassVed: (b, i, hva) => { const R = r3(); return R && R.ut ? plassVed(b, i, R, R.ut, hva) : null; } };
 })();

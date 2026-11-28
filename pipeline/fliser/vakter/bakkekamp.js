@@ -42,7 +42,7 @@ module.exports = {
         ok(tapUten > 0 && Math.abs(tapMed / tapUten - med / uten) < .02, `kampSteg bruker ikke dekningen (tap ${tapMed.toFixed(2)} med vegg, ${tapUten.toFixed(2)} uten)`);
         ok(ut.selvtest === 1, 'selvtesten: en vegg uten dekning ga likevel dekning');
         ok(ut.buer >= 1, 'skadeindikatoren fikk ingen bue mot skytteren');
-        ENHETER.splice(ENHETER.indexOf(e), 1);
+        (ENHETER.indexOf(e) >= 0 && ENHETER.splice(ENHETER.indexOf(e), 1));
         // ---------- (2) treffmarkøren ----------
         K.treff = performance.now(); await vent(250); ut.markør = BK.treffAlfa(); ok(ut.markør > 0 || BK.treffSist() > 0, 'treffmarkøren slo ikke til');
         // ---------- (3) siktekikkert ----------
@@ -53,7 +53,7 @@ module.exports = {
         // ---------- (4) granater ----------
         const g = nyttLag('Vaktprøve granatmål', d.x + fx * 40, d.y + fy * 40, 'rød'); ENHETER.push(g); nye.push(g); K.hp = 100;
         const sm = BK.smell(g.x, g.y); ut.granat = { rammet: sm && sm.rammet, hp: K.hp }; ok(sm && sm.rammet > 0 && K.hp === 100, 'granaten: ' + JSON.stringify(ut.granat));
-        ENHETER.splice(ENHETER.indexOf(g), 1);
+        (ENHETER.indexOf(g) >= 0 && ENHETER.splice(ENHETER.indexOf(g), 1));
         I.ting.granat = 1; const kastet = BK.kast(), fløy = BK.flyr().length; for (let i = 0; i < 60 && BK.flyr().length; i++) await vent(100);
         ut.kast = { kastet, fløy, igjen: BK.flyr().length, belte: I.ting.granat || 0 }; ok(kastet && fløy === 1 && ut.kast.igjen === 0 && !ut.kast.belte, 'kastet: ' + JSON.stringify(ut.kast));
         K.hp = 100;

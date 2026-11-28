@@ -68,7 +68,9 @@ module.exports = {
       // 6. RYDDING: en vare ute når det er plass i et lagertelt – en ledig bærer den inn
       const VL = window.VarelagerSpill && VarelagerSpill.V ? VarelagerSpill.V() : null;
       if (VL && window.Varelager && Varelager.ryddbare) { const e0 = JSON.stringify(VL.e), n0 = VL.neste; ut.rydd = {};
-        try { const telt = legg('lagertelt', 10, 34), uid = VL.neste; VL.e.push({ id: VL.neste++, v: 'tre', m: .5, p: 'ute', i: 99, r: null });
+        // (ut9-liv) varen legges FØRST i lista: rydderen tar den første som kan bæres inn, og vaktene før kan ha latt mange varer ligge ute
+        // (da rakk ikke én rydder fram til vaktas vare på 300 s – «varen ble ikke båret inn» av og til)
+        try { const telt = legg('lagertelt', 10, 34), uid = VL.neste; VL.e.unshift({ id: VL.neste++, v: 'tre', m: .5, p: 'ute', i: 99, r: null });
           P.forEach((p, i) => { p.oppgave = i === 5 ? 'fri' : 'bygg'; }); tid = kl(10); steg(2, .25);
           ut.rydd.ryddere = OS.plan().rydd.size; ut.rydd.linje = FolkgangSpill.fastLinjer().find(t => /^Rydd lageret/.test(t)) || null;
           krev(ut.rydd.ryddere === 1 && ut.rydd.linje, 'rydding: ingen ledig rydder ' + JSON.stringify(ut.rydd));

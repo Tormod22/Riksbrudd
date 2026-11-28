@@ -33,6 +33,10 @@ Leir.leggInn(L, 'tre', 6); stemmer('leggInn med lagertelt');
 const inneTre = () => VL.sum(V, 'tre', u => u.p === 'b' + telt.id), uteTre = () => VL.sum(V, 'tre', u => u.p === 'ute');
 ok(inneTre() >= 6 - 1e-9, 'de nye plankene havnet i lagerteltet (' + inneTre() + ' inne, ' + uteTre() + ' ute)');
 const u0 = uteTre(); Leir.uttak(L, 'tre', 1); ok(Math.abs(uteTre() - (u0 - 1)) < 1e-6, 'uttak tar det som ligger ute først'); stemmer('uttak med telt');
+// (ut9-liv) rydderen bar en bestemt enhet: den flyttes, ikke den første som ligger ute
+{ const kan = VL.ryddbare(Leir, L, V, 100).filter(q => q.fra === 'ute'), ute = V.e.filter(u => kan.some(q => q.id === u.id)), sist = ute[ute.length - 1];
+  if (ute.length >= 2) { const n1 = VL.rydd(Leir, L, V, 1, sist.id); ok(n1 === 1 && sist.p !== 'ute' && ute[0].p === 'ute', 'rydd med «først» flytter enheten rydderen bar (' + ute.length + ' ute)'); stemmer('rydd først'); }
+  else ok(false, 'prøven trenger minst to enheter ute (' + ute.length + ')'); }
 // rydding bærer det som ligger ute, inn
 const n = VL.rydd(Leir, L, V, 100); ok(n > 0 && VL.sum(V, 'tre', u => u.p === 'ute') < 1e-6, 'rydding bærer plankene inn (' + n + ' enheter)'); stemmer('etter rydding');
 ok(VL.rydd(Leir, L, V, 100) === 0, 'ingenting mer å rydde');

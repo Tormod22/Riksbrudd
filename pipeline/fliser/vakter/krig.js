@@ -43,7 +43,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       if (window.SpilletSpill && SpilletSpill.T()) { const Sp = SpilletSpill, Tr = Sp.T(), T1 = JSON.stringify(Tr), kr1 = OppstartSpill.tilstand().penger, F1 = window.FolkSpill && FolkSpill.tilstand(), mo = F1 ? F1.moral : 0;
         Tr.aktiv = 0; await Sp.angrep(); const rl = ENHETER.filter(q => q.raid === Tr.aktiv); for (let i = 0; i < 40 && rl.some(q => q.planlegger); i++) await new Promise(r => setTimeout(r, 250));
         for (const q of rl) { q.sti = null; q.x = L.x + 3900; q.y = L.y; q.nærVært = true; } Sp.angrepSteg(); ut.bølgeVenter = Tr.aktiv > 0 && rl.length > 0; tid += 31; Sp.angrepSteg(); ut.bølgeOver = Tr.aktiv === 0 && !ENHETER.some(q => q.raid) && OppstartSpill.tilstand().penger > kr1;
-        for (const q of rl) if (ENHETER.includes(q)) ENHETER.splice(ENHETER.indexOf(q), 1); tid = tid0; for (const k of Object.keys(Tr)) delete Tr[k]; Object.assign(Tr, JSON.parse(T1)); if (Tr.nesteSpill === null) Tr.nesteSpill = Infinity; if (Tr.nesteEkte === null) Tr.nesteEkte = Infinity; if (F1) F1.moral = mo; try { localStorage.setItem('riksbrudd-trussel', T1); } catch (e) {} document.querySelectorAll('#varsel.på').forEach(v => v.classList.remove('på')); }
+        for (const q of rl) if (ENHETER.includes(q)) (ENHETER.indexOf(q) >= 0 && ENHETER.splice(ENHETER.indexOf(q), 1)); tid = tid0; for (const k of Object.keys(Tr)) delete Tr[k]; Object.assign(Tr, JSON.parse(T1)); if (Tr.nesteSpill === null) Tr.nesteSpill = Infinity; if (Tr.nesteEkte === null) Tr.nesteEkte = Infinity; if (F1) F1.moral = mo; try { localStorage.setItem('riksbrudd-trussel', T1); } catch (e) {} document.querySelectorAll('#varsel.på').forEach(v => v.classList.remove('på')); }
 
       // lagringen tar med fiendens lag, minnet og målet for en marsj
       const pk = Lagring.pakk({ tid, leir: L, lag: [], fiender: LagringSpill.fiendeLag(), minne: window.AI ? AI.minne : null, stillinger: window.STILLINGER || [] }); ut.lagret = pk.fiender.some(q => q.navn === 'Vakt rød 2' && q.side === 'rød') && (!window.AI || !!pk.minne.rød);
@@ -51,7 +51,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       skitten = true; await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     } catch (e) { ut.feil = String(e && e.stack || e).slice(0, 400); }
     finally {
-      for (const s of ENHETER.slice()) if (/^Vakt (blå|rød)/.test(s.navn)) ENHETER.splice(ENHETER.indexOf(s), 1);
+      for (const s of ENHETER.slice()) if (/^Vakt (blå|rød)/.test(s.navn)) (ENHETER.indexOf(s) >= 0 && ENHETER.splice(ENHETER.indexOf(s), 1));
       KS.nullstill(); Object.assign(KS.T(), JSON.parse(T0)); KS.test = test0; tid = tid0; valgt = valgt0; visPanel(); if (window.AI && AI.fred) for (const k of Object.keys(AI.fred)) delete AI.fred[k];
       const S2 = OppstartSpill.tilstand(); if (S2.penger > penger0) OppstartSpill.betal(S2.penger - penger0); else if (S2.penger < penger0) OppstartSpill.gi(penger0 - S2.penger);
       KS.lagre(); ut.ryddet = ENHETER.length === ant0; skitten = true;
@@ -93,7 +93,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       ut.krig3d = !!(window.Krig3d && Krig3d.antall && 'stillinger' in Krig3d.antall());
     } catch (e) { ut.feil = String(e && e.stack || e).slice(0, 400); }
     finally {
-      for (const s of ENHETER.slice()) if (/^Vakt4 /.test(s.navn)) ENHETER.splice(ENHETER.indexOf(s), 1);
+      for (const s of ENHETER.slice()) if (/^Vakt4 /.test(s.navn)) (ENHETER.indexOf(s) >= 0 && ENHETER.splice(ENHETER.indexOf(s), 1));
       for (let i = LS.bygg.length - 1; i >= 0; i--) if (LS.bygg[i].id >= 987654 && LS.bygg[i].id <= 987670) LS.bygg.splice(i, 1);
       if (F && F0) { F.personer = F.personer.filter(p => F0.ider.has(p.id)); for (const [id, o] of F0.oppg) { const p = F.personer.find(q => q.id === id); if (p) p.oppgave = o; } F.mat = F0.mat; F.moral = F0.moral; F.neste = F0.neste; }
       KS.nullstill(); Object.assign(KS.T(), JSON.parse(T0)); KS.test = test0; tid = tid0;
@@ -123,7 +123,7 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
         n0 = SKUDD.length; S6.kanon(K); ut.skuddNabo = SKUDD.slice(n0).filter(q => q.a === K && q.b === b).length; }
     } catch (e) { ut.feil = String(e && e.stack || e).slice(0, 300); }
     finally {
-      for (const q of lag) { if (q.flyttet) { q.flyttet.x = q.x; q.flyttet.y = q.y; } else if (ENHETER.includes(q)) ENHETER.splice(ENHETER.indexOf(q), 1); }
+      for (const q of lag) { if (q.flyttet) { q.flyttet.x = q.x; q.flyttet.y = q.y; } else if (ENHETER.includes(q)) (ENHETER.indexOf(q) >= 0 && ENHETER.splice(ENHETER.indexOf(q), 1)); }
       for (let i = DRONER.length - 1; i >= dr0; i--) if (DRONER[i].navn === 'Vakt5-drone') DRONER.splice(i, 1);
       Object.assign(K, k0); tempo = tempo0; skitten = true; }
     // lagringen av fienden (riksbrudd-krig → fiende): «sist sett» og lastebilene pakkes og legges inn igjen, og en lagret marsj settes i gang igjen

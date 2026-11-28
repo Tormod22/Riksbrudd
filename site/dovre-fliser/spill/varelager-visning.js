@@ -207,7 +207,7 @@
     hent: (id, hvem) => (V ? VL.hent(V, id, hvem) : { feil: 'Ingen leir.' }), lever: (id, plass) => (V ? VL.lever(LB, leir(), V, id, plass) : { feil: 'Ingen leir.' }),
     bruk: (id, mengde, grunn) => (V ? VL.bruk(leir(), V, id, mengde, grunn) : 0), beskjeder: hvem => (V ? VL.beskjeder(V, hvem) : []),
     finnNy: (vare, hvem, x, y) => (V ? VL.finnNy(V, vare, hvem, punkt, x, y) : null), sone: (bygg, vare) => kom({ type: 'lagersone', bygg, vare }),
-    rydd: n => (V ? VL.rydd(LB, leir(), V, n == null ? 1e9 : n) : 0), sistTyveri: () => sistTyveri, synlig: () => !!V && typeof kam !== 'undefined' && kam.m <= VIS_UTE,
+    rydd: (n, først) => (V ? VL.rydd(LB, leir(), V, n == null ? 1e9 : n, først) : 0), sistTyveri: () => sistTyveri, synlig: () => !!V && typeof kam !== 'undefined' && kam.m <= VIS_UTE,
     VIS_UTE, VIS_INNE, tegnEnhet,
   });
 })();
