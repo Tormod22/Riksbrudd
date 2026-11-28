@@ -36,14 +36,19 @@
   function steg(dtSek) {
     const F = Fo(), L = Lr(), m = midte(); if (!F || !L || !m || !window.Leir) return;
     const k = Math.round(m.x) + ',' + Math.round(m.y); if (k !== leirNøkkel) { leirNøkkel = k; G = FG.ny(); kart = null; }
-    const R = window.RessursSpill && RessursSpill.tilstand ? RessursSpill.tilstand() : null;
+    const R = window.RessursSpill && RessursSpill.tilstand ? RessursSpill.tilstand() : null, t0 = performance.now();
     const ctx = { F, L, leir: m, kart: kartNå(L, m), RJ: R && Array.isArray(R.jobber) ? R.jobber : [], nær: window.Ressurser && Ressurser.REGLER ? Ressurser.REGLER.nær : 150,
       hva: p => { const n = window.JobberSpill ? JobberSpill.nå(p) : null; return n ? n.hva : p.oppgave === 'fri' ? 'fri' : 'arbeid'; } };
     // (F3) bærerne og bruksplassene (spill/baering-visning.js): målKrok gir målet, etter[] kjøres rett etter hvert steg
     const FS = window.FolkgangSpill; if (FS.målKrok) ctx.mål = FS.målKrok;
-    FG.steg(G, ctx, dtSek); G.tid = nåTid();
-    for (const f of FS.etter) { try { f(G, dtSek, ctx); } catch (e) { FS.feil = e.message; } }
+    const t1 = performance.now(); FG.steg(G, ctx, dtSek); G.tid = nåTid(); const t2 = performance.now();
+    for (let i = 0; i < FS.etter.length; i++) { const t = performance.now(); try { FS.etter[i](G, dtSek, ctx); } catch (e) { FS.feil = e.message; } mål('etter' + i, performance.now() - t); }
+    mål('kart', t1 - t0); mål('steg', t2 - t1); mål('alt', performance.now() - t0);
   }
+  // (F5) MÅLING: tida per del av oppdateringen (ms) – snitt og lengste siden nullstill (vakta og Folk-panelet leser den)
+  let MÅL = {};
+  function mål(k, ms) { const m = MÅL[k] || (MÅL[k] = { n: 0, sum: 0, maks: 0 }); m.n++; m.sum += ms; if (ms > m.maks) m.maks = ms; }
+  function måling() { const ut = {}; for (const [k, m] of Object.entries(MÅL)) ut[k] = { n: m.n, snitt: +(m.sum / m.n).toFixed(3), maks: +m.maks.toFixed(2) }; return ut; }
   // dt i spillminutter fra løkka; regnes 4 ganger i sekundet (REGLER.takt), høyst 10 spillminutter om gangen (en skjult fane, rask spoling)
   KROKER.sim.push(dt => {
     samlet += dt > 0 ? dt : 0; const nu = performance.now(); if (nu - sistSteg < FG.REGLER.takt * 1000) return; sistSteg = nu;
@@ -112,5 +117,5 @@
   // teksten ved personen i Folk-panelet: bare når den sier noe mer enn døgnplanen (går til …, står fast …) og plassene er ferske
   function gjør(p) { const s = G.pers[p.id]; if (!s || !fersk() || s.oppgave !== p.oppgave || (s.framme && !s.fast && !s.går)) return ''; return FG.tekst(G, p); }
   window.FolkgangSpill = { på: true, aktiv, tilstand: () => G, steg, plass, plass2d, tekst: p => FG.tekst(G, p), gjør, fastLinjer, fersk, visKort: id => { const F = Fo(), p = F && F.personer.find(q => q.id === id); visKort(p || null); return !!p; },
-    farge, FARGE, nullstill: () => { G = FG.ny(); kart = null; }, kart: () => kart, målKrok: null, etter: [] };
+    farge, FARGE, nullstill: () => { G = FG.ny(); kart = null; }, måling, nullstillMåling: () => { MÅL = {}; }, kart: () => kart, målKrok: null, etter: [] };
 })();
