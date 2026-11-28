@@ -1,7 +1,7 @@
 // Vakt «liv i leiren» (ut9-liv, spill/leirliv.js + leirliv3d.js + stillingene i folk3d.js): en ferdig brakke får vasketøy, en byggeplass
 // kasser og verktøy – aldri inni et bygg –, en gjeng på ti har en hund som rusler (og ligger ved bålet om natta), og reglene for røyk og lys
 // svarer. I 3D også: småtingene og hunden står på bakken og ikke i bygg, brakka får lys i vinduene om natta, kjøkkenet en pipe som ryker
-// ved middag, og plassen i køya/ved bordet ligger inne i bygget. Setter alt tilbake (bygg, tid, mørket, hundene).
+// ved middag, plassen i køya ligger inne i brakka og plassen på benken ved kjøkkenet like utenfor (under markisen). Setter alt tilbake (bygg, tid, mørket, hundene).
 module.exports = {
   navn: 'liv i leiren (vasketøy, kasser, hund, røyk, lys i vinduene, køya og bordet)',
   kjør: async (pg, profil) => pg.evaluate(async () => {
@@ -39,22 +39,22 @@ module.exports = {
           krev(!ut.hund.iBygg, 'hunden står i et bygg'); tid = ((1 - 6 + 24) % 24) * 60; for (let k = 0; k < 200 && !h.ligger; k++) LV.steg(.02); ut.hund.natt = h.ligger;
           krev(h.ligger === 1, 'hunden legger seg ikke om natta ' + JSON.stringify(ut.hund)); void x0; void y0; } }
       // 4. 3D: står på bakken og ikke i bygg, lys i vinduene om natta, pipa ryker ved middag, plassen i køya og ved bordet er inne i bygget
-      if (i3d) { tid = ((21 - 6 + 24) % 24) * 60; if (window.NATT) NATT.mørke = .9; LV.oppdater(); await vent(1600);
+      if (i3d) { tid = ((22.75 - 6 + 24) % 24) * 60; const holdMørkt = setInterval(() => { if (window.NATT) NATT.mørke = .9; }, 50); if (window.NATT) NATT.mørke = .9; LV.oppdater(); await vent(1600); clearInterval(holdMørkt);
         const s = LV.sjekk(); ut.d3 = s;
         krev(s && s.ting.snor >= 1 && s.ting.kasse + s.ting.verktøy + s.ting.bukk >= 2, '3D: småtingene mangler ' + JSON.stringify(s));
         krev(s && s.iBygg === 0 && s.svever === 0, '3D: noe står i et bygg eller svever ' + JSON.stringify(s));
         krev(s && s.vinduer > 0, '3D: ingen lys i vinduene om natta ' + JSON.stringify(s));
         krev(!kjøk || LV.kilder().some(k => k.id === kjøk.id), '3D: kjøkkenet har ingen pipe');
         const seng = window.Folk3d && Folk3d.plassVed ? Folk3d.plassVed(brakke, 0, 'seng') : null, bord = kjøk && window.Folk3d ? Folk3d.plassVed(kjøk, 1, 'bord') : null;
-        ut.d3.seng = seng ? { ligger: !!seng.ligger, inne: LL.inni(Leir.hjørner(brakke), seng.x, seng.y) } : null; ut.d3.bord = bord ? { sitter: !!bord.sitter, inne: LL.inni(Leir.hjørner(kjøk), bord.x, bord.y) } : null;
+        ut.d3.seng = seng ? { ligger: !!seng.ligger, inne: LL.inni(Leir.hjørner(brakke), seng.x, seng.y) } : null; ut.d3.bord = bord ? { sitter: !!bord.sitter, nær: Math.hypot(bord.x - kjøk.x, bord.y - kjøk.y) < 8, iVeggen: LL.inni(Leir.hjørner(kjøk), bord.x, bord.y) } : null;
         // interiøret lages bare for bygg nær kameraet (Interior3d) – mangler planen, kan plassene ikke prøves her
         if (seng) krev(seng.ligger && ut.d3.seng.inne, '3D: plassen i køya er ikke inne i brakka ' + JSON.stringify(ut.d3.seng));
-        if (bord) krev(bord.sitter && ut.d3.bord.inne, '3D: plassen ved bordet er ikke inne i kjøkkenet ' + JSON.stringify(ut.d3.bord)); }
+        if (bord) krev(bord.sitter && ut.d3.bord.nær && !ut.d3.bord.iVeggen, '3D: plassen på benken ved kjøkkenet er feil (langt unna eller inni bygget) ' + JSON.stringify(ut.d3.bord)); }
     } catch (e) { ut.feil.push('unntak: ' + e.message); }
     finally {
       L.bygg.splice(0, L.bygg.length, ...JSON.parse(bygg0)); L.neste = neste0; tid = tid0; if (window.NATT) NATT.mørke = mørke0; LV.oppdater(); if (typeof skitten !== 'undefined') skitten = true;
     }
-    const d3 = ut.d3 ? `; 3D: ${ut.d3.ting.snor} snor, ${ut.d3.ting.kasse + ut.d3.ting.verktøy + ut.d3.ting.bukk} kasser/verktøy, ${ut.d3.vinduer} vinduer med lys, ${ut.d3.røykKilder} piper, køya ${ut.d3.seng ? 'inne' : '–'}, bordet ${ut.d3.bord ? 'inne' : '–'}` : ' (3D av)';
+    const d3 = ut.d3 ? `; 3D: ${ut.d3.ting.snor} snor, ${ut.d3.ting.kasse + ut.d3.ting.verktøy + ut.d3.ting.bukk} kasser/verktøy, ${ut.d3.vinduer} vinduer med lys, ${ut.d3.røykKilder} piper, køya ${ut.d3.seng ? 'inne' : '–'}, benken ${ut.d3.bord ? 'ved kjøkkenet' : '–'}` : ' (3D av)';
     return { ok: !ut.feil.length, tekst: ut.feil.length ? ut.feil.join('; ') : `karakteren kom tilbake etter feil fjerning: ${ut.vern ? ut.vern.tilbake : '–'}; vasketøy ved brakka, ${ut.ting.ved} ting ved byggeplassen, 0 i bygg; hund ${ut.hund.n} (gikk ${ut.hund.gikk || 0} m, ligger om natta ${!!ut.hund.natt})` + d3, data: ut };
   }),
 };
