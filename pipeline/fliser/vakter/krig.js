@@ -24,8 +24,10 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
       // overgivelse: et knust lag gir seg, fangene følger laget og leveres i leiren, og avhør gir etterretning
       const c = nyttLag('Vakt rød 2', L.x + 5200, L.y + 5100, 'rød'); ENHETER.push(c);
       for (let i = 0; i < 7; i++) b.menn[i].hp = 0; KS.steg.overgivelser(); ut.gaSeg = !ENHETER.includes(b) && !!a.fanger && a.fanger.n === 5 && ENHETER.includes(c);
+      // (ut9-kontroll) feilsøking: hvorfor laget ikke ga seg i full kontroll (PC)
+      if (!ut.gaSeg) ut.gaSegInfo = { iListe: ENHETER.includes(b), fanger: a.fanger || null, hvile: !!(window.AI && AI.hvile && AI.hvile('blå', 'rød')), fred: window.AI ? AI.fred : null, pakter: window.AI && AI.pakter ? AI.pakter.length : null, tid, ute: b.menn.filter(m => m.hp <= 0).length, n: b.menn.length, lufta: !!b.iLufta };
       a.x = L.x + 20; a.y = L.y + 20; KS.test = false; for (let i = 0; i < 12; i++) KROKER.sim.forEach(f => f(.1)); KS.test = true; ut.levert = !a.fanger && KS.T().fanger.length === 1;
-      ut.avhør = KS.avhør(0); tid += R.etterretning.avhør + 1; for (let i = 0; i < 12; i++) KROKER.sim.forEach(f => f(.1)); tid = tid0; ut.etter = KS.T().etter.some(q => q.navn === 'Vakt rød 2' && q.kilde === 'avhør'); ut.avhørt = !!KS.T().fanger[0].avhørt;
+      ut.avhør = KS.avhør(0); tid += R.etterretning.avhør + 1; for (let i = 0; i < 12; i++) KROKER.sim.forEach(f => f(.1)); tid = tid0; ut.etter = KS.T().etter.some(q => q.navn === 'Vakt rød 2' && q.kilde === 'avhør'); ut.avhørt = !!(KS.T().fanger[0] && KS.T().fanger[0].avhørt);
       // Leir-menyen viser fangene og etterretningen
       const hode = document.createElement('div'), el = (t, at = {}, ...barn) => { const e = document.createElement(t); for (const [k, v] of Object.entries(at)) { if (k === 'klasse') e.className = v; else e.setAttribute(k, v); } e.append(...barn); return e; };
       for (const f of LEIR_MENY) if (/Etterretning og avtaler/.test(String(f))) f(hode, { el, knapp: (t, fn, eg = {}) => { const q = el('button', eg, t); q.onclick = fn; return q; } });
