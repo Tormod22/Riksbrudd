@@ -55,7 +55,7 @@ module.exports = {
         { const v = r => I3.deler({ type: 'vask', b: .6, d: .45, h: .85, f: .33, rolle: r }).length; ut.bad = [v('kjøkken'), v('bad')]; ok(ut.bad[1] > ut.bad[0], 'ingen tannbørster på badet ' + ut.bad);
           const kjs = å => I3.deler({ type: 'kjøleskap', b: .62, d: .62, h: 1.85, f: .5, åpen: å, innFyll: .8 }).length; ut.kjøleskap = [kjs(false), kjs(true)]; ok(ut.kjøleskap[1] > ut.kjøleskap[0] + 4, 'det åpne kjøleskapet viser ikke innholdet ' + ut.kjøleskap);
           // leirens kiste: åpen i 3D når lagerpanelet viser den
-          const ki = sett('bs_kiste_1', i0 + 8, j0); TL.legg(T, TS.plasser(), 'ullsokker', 4, 0, { plass: 'b' + ki.id }); const lukket = tell(ki); TS.åpne(true, 'b' + ki.id); const åpen = tell(ki); TS.åpne(false); ut.kiste = [lukket, åpen];
+          const ki = sett('bs_kiste_1', i0 + 8, j0); TL.legg(T, TS.plasser(), 'ullsokker', 4, 0, { plass: 'b' + ki.id }); const lukket = tell(ki); TS.åpne(true, 'b' + ki.id); const åpen = tell(ki); TS.åpne(false, null); ut.kiste = [lukket, åpen];
           ok(åpen > lukket, 'kista står ikke åpen med tingene synlige når den vises i lagerpanelet ' + ut.kiste); }
         // (4) 2D-symbolene
         const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
