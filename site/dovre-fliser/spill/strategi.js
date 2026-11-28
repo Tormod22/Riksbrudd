@@ -42,9 +42,16 @@
     ut.radius = Math.max(R.radius, med.length ? med[med.length - 1].d * 1.08 : 0); return ut;
   }
   // Stillingen: eierAv(id) gir siden som holder tettstedet (eller null). Gir { folk, byer, sider: { side: { byer, folk, andel } }, nøytral }.
-  function stilling(byer, eierAv, sider = ['blå', 'rød', 'grønn']) {
-    const ut = { folk: 0, byer: byer.length, sider: {}, nøytral: { byer: 0, folk: 0, andel: 0 } }; for (const s of sider) ut.sider[s] = { byer: 0, folk: 0, andel: 0 };
-    for (const b of byer) { ut.folk += b.folk; const e = eierAv(b.id), m = e && ut.sider[e] ? ut.sider[e] : ut.nøytral; m.byer++; m.folk += b.folk; }
+  // (Ø3 byene på laget, kapittel 3.3) avtaleAv(id) -> { side, vekt } | null for tettsteder som IKKE er eid: en handelspartner teller med
+  // vekt ½ for siden (resten er nøytralt), og telles i sider[side].partnere. Medlemmer er eid (eier), så de teller fullt som før. Uten
+  // avtaleAv brukes api.avtaler (settes av spill/byavtale-visning.js), ellers er stillingen som før.
+  function stilling(byer, eierAv, sider = ['blå', 'rød', 'grønn'], avtaleAv) {
+    const ut = { folk: 0, byer: byer.length, sider: {}, nøytral: { byer: 0, folk: 0, andel: 0 } }; for (const s of sider) ut.sider[s] = { byer: 0, folk: 0, andel: 0, partnere: 0 };
+    const av = avtaleAv || api.avtaler;
+    for (const b of byer) { ut.folk += b.folk; const e = eierAv(b.id), m = e && ut.sider[e] ? ut.sider[e] : ut.nøytral;
+      const a = !e && av ? av(b.id) : null, p = a && ut.sider[a.side] && a.vekt > 0 ? ut.sider[a.side] : null;
+      if (p) { const v = Math.min(1, a.vekt); p.folk += b.folk * v; p.partnere++; m.byer++; m.folk += b.folk * (1 - v); continue; }
+      m.byer++; m.folk += b.folk; }
     for (const m of [...Object.values(ut.sider), ut.nøytral]) m.andel = ut.folk ? m.folk / ut.folk : 0;
     return ut;
   }
@@ -130,7 +137,7 @@
   const prosent = a => (a > 0 && a < .005 ? 'under 1' : Math.round(a * 100));
   // entall/flertall: «1 tettsted», «2 tettsteder»
   const tettsteder = n => `${n} tettsted${n === 1 ? '' : 'er'}`;
-  const api = { REGLER, anbefalt, område, stilling, utfall, rekkevidde, fronter, trekk, nyligTapt, tapTekst, trusler, prosent, kravTekst, kravFor, tettsteder };
+  const api = { avtaler: null, REGLER, anbefalt, område, stilling, utfall, rekkevidde, fronter, trekk, nyligTapt, tapTekst, trusler, prosent, kravTekst, kravFor, tettsteder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Strategi = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
