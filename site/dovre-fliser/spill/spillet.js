@@ -15,9 +15,11 @@
     // hovedinntekten). Alle tallene er Claudes forslag:
     //  - bølgene vokser saktere (1, 1, 1, 2, 2, 2, 3 … høyst 6) og aldri over det spilleren kan møte (lagFor)
     //  - første bølge tidligst etter 24 spilltimer / 30 minutter spilling, siden 16–26 timer / 16–28 minutter mellom
-    //  - byttet dekker skadene, ikke mer: 300 000 kr + 150 000 per bølge, høyst 1,5 mill.
+    //  - byttet dekker skadene, ikke mer: 100 000 kr + 50 000 per bølge, høyst 400 000 kr. (ut2-balanse 28. nov, økonomitesten: med
+    //    300 000 + 150 000 per bølge, høyst 1,5 mill., ga 40 bølger på 30 døgn 55 mill. til en som bare satt hjemme – mer enn byene. Nå
+    //    dekker belønningen omtrent det forsvaret koster: en falt mann er 500 000 kr å erstatte, sårede trenger stell, bygg repareres.)
     //  - og aldri over det dagen tilsier: ett lag de tre første døgnene, så ett til hvert tredje døgn (dagerPerLag)
-    BALANSE: { perLag: 3, først: { spill: 24 * 60, ekte: 30 }, mennPerLag: 8, dagerPerLag: 3, ekstra: 2, bytte: { fast: 3e5, perBølge: 1.5e5, tak: 1.5e6 } },
+    BALANSE: { perLag: 3, først: { spill: 24 * 60, ekte: 30 }, mennPerLag: 8, dagerPerLag: 3, ekstra: 2, bytte: { fast: 1e5, perBølge: 5e4, tak: 4e5 } },
     // antall lag i bølge nr (1, 1, 1, 2, 2, 2, 3 … høyst 6)
     lag: nr => klem(1 + Math.floor((nr - 1) / Trussel.BALANSE.perLag), 1, 6),
     // … men ikke flere enn spilleren kan møte: ett røverlag per åtte soldater (minst ett), og ett til når han har stridsvogn eller

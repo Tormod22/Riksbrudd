@@ -32,6 +32,10 @@ O.leggTilDel({ id: 'hogst',
 O.leggTilStrategi({ id: 'hogst', navn: 'hogst og salg', fornuftig: true, tekst: 'fire på hogst og to på frakt; selger det markedet tar imot hver morgen',
   start(sim) { sim.selgTre = true; const P = sim.F.personer.slice().sort((a, b) => (b.ferd.hogst || 0) - (a.ferd.hogst || 0));
     P.forEach((p, i) => { if (i < 4) FolkR.sett(sim.F, p.id, 'hogst'); else if (i < 6) FolkR.sett(sim.F, p.id, 'frakt'); }); },
+  // (ut2-balanse 28. nov) når startleiren er ferdig bygget, går de som bygde, på vakt i leiren (Leirvakta) – en fornuftig spiller lar ikke
+  // leiren stå åpen for røverne mens hogstlaget er ute (før dekket belønningen for bølgene det; den er nå lavere, spillet.js Trussel)
+  time(sim) { if (sim.hogstVakt || Leir.jobber(sim.L).length) return; sim.hogstVakt = true;
+    for (const p of sim.F.personer) if (p.oppgave === 'bygg') FolkR.sett(sim.F, p.id, 'vakt'); },
 });
 
 O.leggTilKrav({ navn: 'hogst og salg', sjekk(RES) {

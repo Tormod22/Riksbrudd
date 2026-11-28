@@ -459,7 +459,8 @@ body.kort #selskap{ left:calc(8px + env(safe-area-inset-left,0px)); right:calc(8
     else if (s === 'vis') { const k = S && (S.tilbud.find(q => q.id === id) || S.sider[ID].aktive.find(q => q.id === id)); if (k) { const p = k.type === 'rydd' && k.sperre ? k.sperre : k.type === 'eskorte' && bilFor(k) ? bilFor(k) : k.sted; gåTil(p.x, p.y); } } });
   function vis(på) {
     åpen = på === undefined ? !åpen : !!på; panel.classList.toggle('på', åpen);
-    if (åpen) { if (S && !S.tilbud.length && !S.sider[ID].aktive.length) { nyeTilbud(); if (S.dag < 0) S.dag = dagNå(); } if (window.lukkPanel) try { lukkPanel(); } catch (e) { /* */ }
+    // (ut2-balanse 28. nov) i spillet høyst én gang per spilldøgn (Selskap.påfyll) – i testene som før
+    if (åpen) { if (S && !S.tilbud.length && !S.sider[ID].aktive.length && (!auto() || !SK.påfyll || SK.påfyll(S, dagNå(), ID))) { nyeTilbud(); if (S.dag < 0) S.dag = dagNå(); } if (window.lukkPanel) try { lukkPanel(); } catch (e) { /* */ }
       // (R18-A) Leir-menyen ligger på samme plass – lukk den, så panelene ikke står oppå hverandre
       { const lm = document.getElementById('leirmeny'), lk = document.getElementById('leirknapp'); if (lm && lk && lm.classList.contains('på')) lk.click(); }
       melding = ''; tegn(true); }

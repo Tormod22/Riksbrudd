@@ -15,12 +15,13 @@ ok(/holder ord|nokså stødig/.test(S0.rykteTekst(S.sider.blå.rykte)), 'ryktete
 
 // tilbud: tre, innenfor avstanden, med tittel og betaling
 const nye = S0.lagTilbud(S, 'blå', 600, steder, S0.lagRand(42));
-ok(nye.length === 3 && S.tilbud.length === 3, 'tre tilbud ved rykte 50');
+// (ut2-balanse 28. nov) tilbudPerDag 3 -> 2: to tilbud ved rykte 50
+ok(nye.length === S0.REGLER.tilbudPerDag && S.tilbud.length === S0.REGLER.tilbudPerDag && S0.REGLER.tilbudPerDag === 2, 'to tilbud ved rykte 50');
 ok(nye.every(k => k.sted.navn !== 'For langt' && k.betaling > 100000 && k.bot === Math.round(k.betaling * .35 / 10000) * 10000 && k.tittel && S0.kravTekst(k)), 'tilbudene har sted, betaling, bot og tekst');
 ok(S0.lagTilbud(S0.ny(leir), 'blå', 0, [], S0.lagRand(1)).length === 0, 'ingen steder = ingen tilbud');
 
 // ryktet styrer tilbudene: pålitelig gir flere, hardhendt gir flere ryddejobber og færre hentejobber
-ok(S0.antallTilbud({ pålitelig: 80, hardhendt: 20, billig: 50 }) === 4 && S0.antallTilbud({ pålitelig: 10, hardhendt: 20, billig: 50 }) === 2, 'antall etter pålitelighet');
+ok(S0.antallTilbud({ pålitelig: 80, hardhendt: 20, billig: 50 }) === 3 && S0.antallTilbud({ pålitelig: 10, hardhendt: 20, billig: 50 }) === 1, 'antall etter pålitelighet');
 const v1 = S0.typeVekter({ pålitelig: 50, hardhendt: 10, billig: 50 }), v2 = S0.typeVekter({ pålitelig: 50, hardhendt: 90, billig: 50 });
 ok(v2.rydd > v1.rydd * 2 && v2.hent < v1.hent / 2, 'hardhendt: flere rydd, færre hent');
 const tell = (r, typ) => { const T = S0.ny(leir); T.sider.blå.rykte = r; let k = 0; for (let i = 0; i < 40; i++) k += S0.lagTilbud(T, 'blå', i * 1440, steder, S0.lagRand(i + 1)).filter(q => q.type === typ).length; return k; };
@@ -157,7 +158,9 @@ ok(S0.fristTekst({ frist: 839.6 }, 0) === '14 t 0 min igjen' && S0.fristTekst({ 
     ok(n > 0 && feil === 0, `bygd/kommune i tettsted er stedets egen: ${n} kontrakter, ${feil} feil`); }
   // nivåene
   const sd = S0.side(S0.ny(L0), 'blå'); ok(S0.nivå(sd).nr === 1 && S0.nesteNivå(sd).mangler.length === 2, 'nivå 1, to ting mangler for nivå 2');
-  sd.sum.levert = 2; sd.rykte.pålitelig = 56; ok(S0.nivå(sd).nr === 2 && S0.nesteNivå(sd).nivå.nr === 3, 'nivå 2');
+  // (ut2-balanse 28. nov) nivå 2 krever nå tre leverte (før to): to er fortsatt nivå 1
+  sd.sum.levert = 2; sd.rykte.pålitelig = 56; ok(S0.nivå(sd).nr === 1, 'to leverte er fortsatt nivå 1');
+  sd.sum.levert = 3; ok(S0.nivå(sd).nr === 2 && S0.nesteNivå(sd).nivå.nr === 3, 'nivå 2');
   sd.sum.levert = 20; sd.rykte.pålitelig = 99; ok(S0.nivå(sd).nr === 4 && S0.nesteNivå(sd) === null, 'øverste nivå');
   // kravene
   const hold = { type: 'hold', nivå: 1 }, esk = { type: 'eskorte', nivå: 1 }, stor = { type: 'hold', nivå: 2 }, sd1 = S0.side(S0.ny(L0), 'blå');
@@ -212,3 +215,21 @@ console.log(`Alle ${n} testene for selskap.js er ok`);
   assert.ok(snitt(bakhold) >= 2 * snitt(rolig), `bakhold betaler minst dobbelt: ${Math.round(snitt(bakhold))} mot ${Math.round(snitt(rolig))}`);
   assert.ok(angrepB / bakhold.length > .6 && angrepR / rolig.length < .3, `bakholdet kommer som oftest (${angrepB}/${bakhold.length}), sjelden på rolige ruter (${angrepR}/${rolig.length})`);
   console.log(`ok   eskorte etter risiko: ${rolig.length} rolige (snitt ${Math.round(snitt(rolig) / 1000)} 000 kr), ${bakhold.length} med bakhold (snitt ${Math.round(snitt(bakhold) / 1000)} 000 kr)`); }
+
+// (ut2-balanse 28. nov) påfyll når Selskapet åpnes tomt: høyst én gang per spilldøgn, og bare før selskapet har levert/brutt mer enn den første
+{ const S = S0.ny({ x: 0, y: 0 }), sd = S0.side(S, 'blå');
+  ok(S0.påfyll(S, 3, 'blå') && !S0.påfyll(S, 3, 'blå') && S0.påfyll(S, 4, 'blå'), 'påfyll: høyst én gang per døgn');
+  sd.sum.levert = 1; ok(S0.påfyll(S, 5, 'blå'), 'påfyll: etter den første kontrakten');
+  sd.sum.levert = 2; ok(!S0.påfyll(S, 6, 'blå'), 'påfyll: ikke når to kontrakter er levert');
+  const T = S0.fraJSON(S0.tilJSON(S)); ok(T && T.påfylt === 5, 'påfyll: døgnet lagres'); }
+// (ut2-balanse) eskorten betales etter strekket fra -> til, med tak på vegfaktoren, og rolig/bakhold etter RISIKO
+{ const R = S0.REGLER, r = { pålitelig: 50, hardhendt: 25, billig: 50 };
+  ok(S0.betaling('eskorte', r, 'vanlig', 100000) === S0.betaling('eskorte', r, 'vanlig', 10000) && S0.betaling('eskorte', r, 'vanlig', 4000) < S0.betaling('eskorte', r, 'vanlig', 10000), 'eskorte: vegfaktoren har tak (× ' + R.TYPER.eskorte.meterTak + ')');
+  ok(S0.betaling('hent', r, 'vanlig', 100000) > S0.betaling('hent', r, 'vanlig', 10000), 'andre typer: ingen tak på vegfaktoren');
+  const T = S0.ny({ x: 0, y: 0 }), st = [{ navn: 'A', x: 3000, y: 0, slag: 'tettsted', id: 1 }, { navn: 'B', x: 3000, y: 15000, slag: 'tettsted', id: 2 }]; let n = 0, galt = 0;
+  for (let i = 0; i < 60; i++) for (const k of S0.lagTilbud(T, 'blå', i * 1440, st, S0.lagRand(i + 11))) { if (k.type !== 'eskorte') continue; n++;
+    const strekk = Math.hypot(k.sted.x - k.fra.x, k.sted.y - k.fra.y), f = k.risiko === 'bakhold' ? R.RISIKO.bakhold.faktor : R.RISIKO.rolig.faktor;
+    const venta = Math.round(S0.betaling('eskorte', T.sider.blå.rykte, 'vanlig', strekk, 0, S0.REGLER.NIVÅER[k.nivå - 1].faktor) * f / 1e4) * 1e4;
+    if (Math.abs(k.betaling - venta) > 2e4) galt++; T.tilbud = []; }
+  ok(n > 5 && !galt, `eskorte: betalingen følger strekket og risikoen (${n} tilbud, ${galt} avvik)`); }
+console.log('ut2-balanse: påfyll og eskortebetaling ok');

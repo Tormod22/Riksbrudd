@@ -25,14 +25,18 @@ const REGLER = {
   // minst «bandSlakk»), og medianen av hver inntekt over 30 døgn innen «postDel» (minst «bandSlakk») – ellers er balansen flyttet
   bandDel: .25, postDel: .35, bandSlakk: 1e6,
   maksSek: 100,                              // hele testen skal ta under ca. 2 minutter (inn2.sh)
+  // (ut2-balanse 28. nov, målene for balansen – Claudes forslag, docs/natt/ut2-balanse.md):
+  //  - «bare kontrakter» ender med en median på 80–150 mill. på 30 døgn (før 448), og nivå 4 kommer tidligst rundt dag 10 (før dag 6);
+  //  - «byer med makt» slår «gjør ingenting» klart: medianen dag 30 minst «byerOver» over;
+  //  - å sitte hjemme og slå røverbølger tjener ikke penger: «forsvarer leiren» ender (median) under der den var dag 1, og belønningen er
+  //    ikke større enn det forsvaret koster (rekruttering av nye for de falne + det røverne tok)
+  kontraktMål: [80e6, 150e6], nivå4Tidligst: 10, byerOver: 2e6,
 };
 // KJENTE BRUDD: krav som brytes i dag og er meldt i notatet (balansen endres ikke i denne pakka). De skrives ut som «KJENT» og feiler
 // ikke testen – med OKO_STRENG=1 gjør de det. Fjern linja når balansen er rettet.
-const KJENT = {
-  'grense:kontrakter': 'docs/natt/ut1-okotest.md, funn 1 (28. nov): én tropp som tar kontrakt etter kontrakt, når 200 mill. rundt dag 15–20',
-  'grense:blandet': 'samme som over: kontraktene drar «blandet» over grensen',
-  'utenSjanse:byer': 'docs/natt/ut1-okotest.md, funn 2 (28. nov): småbyene gir lite skatt, og troppen og garnisonene spiser kassa',
-};
+// (ut2-balanse 28. nov) de tre bruddene fra ut1-okotest (kontraktene over grensen for «bare kontrakter» og «blandet», «byer med makt» blakk i
+// 18 %) er rettet i reglene – se docs/natt/ut2-balanse.md. Lista er tom.
+const KJENT = {};
 const BAND_FIL = path.join(__dirname, 'okonomitest-band.json');
 
 let feil = 0, kjente = 0;
@@ -118,6 +122,28 @@ for (const [id, L] of Object.entries(RES)) { const st = O.STRATEGIER[id]; if (!s
   const U = REGLER.utenSjanse, uten = L.filter(r => r.dager.slice(-U.døgn).every(d => d.kasse < d.faste)), andel = uten.length / L.length;
   ok(andel <= U.andel, `«${st.navn}» blir ikke blakk uten sjanse: ${uten.length} av ${L.length} kjøringer (${Math.round(andel * 100)} %) er blakk de ${U.døgn} siste døgnene (høyst ${U.andel * 100} %)` + (uten.length ? `, f.eks. frø ${uten.slice(0, 3).map(r => r.frø).join(', ')}` : ''), 'utenSjanse:' + id);
   if (REGLER.slårIngenting) { const m = kvant(kasseDag(L, O.REGLER.døgn), .5); ok(m > ingenMed, `«${st.navn}» ender over «gjør ingenting» (median dag ${O.REGLER.døgn}: ${mill(m)} mot ${mill(ingenMed)})`, 'utenSjanse:' + id); } }
+// 4b) (ut2-balanse) målene for balansen, se REGLER.kontraktMål osv.
+const median = (L, f) => kvant(L.map(f), .5);
+function balanseKrav(RES, tekst = '') {
+  const ut = [];
+  if (RES.kontrakter) { const L = RES.kontrakter, m = kvant(kasseDag(L, O.REGLER.døgn), .5), [a, b] = REGLER.kontraktMål;
+    ut.push({ ok: m >= a && m <= b, tekst: `«bare kontrakter» ender rundt målet: median dag ${O.REGLER.døgn} ${mill(m)} (mål ${mill(a)}–${mill(b)})${tekst}` });
+    const n4 = median(L, r => { const i = r.dager.findIndex(d => d.nivå >= 4); return i < 0 ? Infinity : i + 1; });
+    ut.push({ ok: n4 >= REGLER.nivå4Tidligst, tekst: `«bare kontrakter» når nivå 4 rundt dag ${Number.isFinite(n4) ? Math.round(n4) : 'aldri'} (tidligst dag ${REGLER.nivå4Tidligst})${tekst}` }); }
+  if (RES.byer && RES.ingenting) { const m = kvant(kasseDag(RES.byer, O.REGLER.døgn), .5), i = kvant(kasseDag(RES.ingenting, O.REGLER.døgn), .5);
+    ut.push({ ok: m >= i + REGLER.byerOver, tekst: `«byer med makt» slår «gjør ingenting» klart: median dag ${O.REGLER.døgn} ${mill(m)} mot ${mill(i)} (minst ${mill(REGLER.byerOver)} over)${tekst}` }); }
+  if (RES.forsvar) { const L = RES.forsvar, d1 = kvant(kasseDag(L, 1), .5), d30 = kvant(kasseDag(L, O.REGLER.døgn), .5);
+    const bel = median(L, r => r.sum.inn['røvere'] || 0), kost = median(L, r => (r.sum.ut.rekruttering || 0) + (r.sum.ut['røvere tok'] || 0));
+    ut.push({ ok: d30 <= d1, tekst: `«forsvarer leiren» tjener ikke penger på røverbølgene: median dag 1 ${mill(d1)} -> dag ${O.REGLER.døgn} ${mill(d30)}${tekst}` });
+    ut.push({ ok: bel <= kost, tekst: `belønningen for røverbølgene (median ${mill(bel)}) er ikke større enn det forsvaret koster (nye for de falne + det røverne tok: ${mill(kost)})${tekst}` }); }
+  return ut;
+}
+for (const q of balanseKrav(RES)) ok(q.ok, q.tekst);
+// SELVTEST (årsak H): med den gamle røverbelønningen (300 000 + 150 000 per bølge, tak 1,5 mill.) skal kravet om røverbølgene slå til
+{ const { Trussel } = require('../../site/dovre-fliser/spill/spillet.js'), B = Trussel.BALANSE.bytte, nå = { ...B };
+  Object.assign(B, { fast: 3e5, perBølge: 1.5e5, tak: 1.5e6 });
+  let q; try { q = balanseKrav({ forsvar: Array.from({ length: Math.min(30, REGLER.frø) }, (_, i) => O.kjør('forsvar', i + 1)) }); } finally { Object.assign(B, nå); }
+  const brudd = q.filter(x => !x.ok); ok(brudd.length > 0, `selvtest: med den gamle røverbelønningen sier kravet fra (${brudd.length ? brudd[0].tekst : 'ingen brudd'})`); }
 // 5) krav fra økonomidelene (okosim.leggTilKrav) – f.eks. sagbruk, byavtaler, børs
 for (const K of O.KRAV) for (const q of [].concat(K.sjekk(RES, REGLER) || [])) ok(q.ok, `${K.navn}: ${q.tekst}`, q.kjent);
 // 6) båndet: medianene skal ligge nær de lagrede (en endring i reglene som flytter balansen mye, sies fra om her)

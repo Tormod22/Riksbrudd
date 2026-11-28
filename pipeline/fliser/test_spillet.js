@@ -22,7 +22,8 @@ ok(Trussel.lagFor(9, { soldater: 40, dag: 0 }) === 1 && Trussel.lagFor(9, { sold
 ok(Trussel.menn(1, 8) === 6 && Trussel.menn(2, 8) === 8 && Trussel.menn(9, 40) === 12 && Trussel.menn(5, 3) === 5 && Trussel.menn(9) === 12, 'angrep: røverlagene er små i de første bølgene og aldri større enn soldatene + 2');
 // (runde 5) taket gjelder hele bølgen: to lag deler på soldatene + 2, og vanskelighetsgraden ganger soldatene
 ok(Trussel.menn(4, 12, 2) === 7 && Trussel.menn(4, 12, 1) === 12 && Trussel.menn(4, 12, 3, 1.5) === 7 && Trussel.menn(4, 6, 2) === 5 && Trussel.menn(3, 12, 1, .6) === 10, 'angrep (runde 5): taket for hele bølgen og vanskelighetsgraden');
-ok(Trussel.belønning(1) === 450000 && Trussel.belønning(40) === 1.5e6, 'angrep: byttet er lite og har et tak');
+// (ut2-balanse 28. nov) 300 000 + 150 000 per bølge, tak 1,5 mill. -> 100 000 + 50 000, tak 400 000 (belønningen dekker skadene)
+ok(Trussel.belønning(1) === 150000 && Trussel.belønning(40) === 4e5, 'angrep: byttet er lite og har et tak');
 ok(Trussel.vent(1).spill > Trussel.vent(8).spill && Trussel.vent(30).spill === 16 * 60 && Trussel.vent(30).ekte === 16, 'angrep: kortere mellom bølgene, men aldri under 16 timer / 16 minutter');
 { const s = Trussel.start({ x: 1000, y: 2000 }, .25, .5), d = Math.hypot(s.x - 1000, s.y - 2000); ok(d > 2999 && d < 4001 && s.retning === 'nord' && /nord/.test(Trussel.varsel(3, 2, s)), 'angrep: starter 3–4 km unna (19. nov), varselet sier retningen');
   ok(Math.round(Trussel.anslag(3500, 0, 1.3)) === 45 && Math.round(Trussel.anslag(3500, 0)) === 78 && Trussel.anslag(3500, 60) < 20 && Trussel.anslag(3500, 999) === 0, 'angrep: anslaget på ankomsten (ca. 78 min fra 3,5 km i terrenget)'); }
