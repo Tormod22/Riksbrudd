@@ -9,6 +9,8 @@
 'use strict';
 const fs = require('fs'), path = require('path');
 const O = require('./okosim.js');
+// nye økonomideler legger sin del, sine strategier og sine krav i egne filer pipeline/fliser/okosim-<del>.js (se notatet)
+for (const f of fs.readdirSync(__dirname).filter(f => /^okosim-.+\.js$/.test(f)).sort()) require(path.join(__dirname, f));
 
 // ---------- kravene (Claudes forslag) ----------
 const REGLER = {
