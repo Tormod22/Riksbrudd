@@ -15,6 +15,11 @@ eller fra et butikkpunkt (node med shop/amenity) som ligger inne i bygget. Spill
 Anlegg (lag «anlegg», bare z13): a = 1 fotballbane, 2 tennis, 3 annen ballbane, 4 løpebane, 5 lekeplass, 6 parkeringsplass,
 7 rullebane (linjen gjort til flate med bredden, r = banenummer som «01/19»), 8 taksebane, 9 oppstillingsplass (apron).
 Punkter (lag «punkt», bare z13): p = 1 bensinstasjon (amenity=fuel, node eller midten av området), k = kjede.
+Industritype (28. nov, ut8-industri, brukeren: «korrekt innredning» per industri): ind = nummeret i IND (1 tømmer/sagbruk … 14 kjemi/plast),
+fra merkene på bygget (industrial/craft/man_made/power/amenity/navnet), ellers fra et punkt inne i bygget (node med industrial/craft …),
+ellers fra det minste industriområdet bygget står i (landuse=industrial/quarry/port/harbour + industrial=*, man_made=works + product,
+power=plant/substation, amenity=recycling …). Skrives bare når den er kjent. Bygg merket bare building=yes (t 5) inne i et
+industriområde blir t 6 (industri) eller 12 (lager i havn/depot) når de er minst 60 m².
 
 Bruk: python3 bygninger.py INN.osm.pbf UTMAPPE [PUNKT.osm.pbf]     -> UTMAPPE/hus-0.pmtiles + manifest.json
 """
@@ -151,6 +156,87 @@ def anlegg_type(tags):
     return 0
 
 
+# ---------- INDUSTRITYPEN (28. nov, ut8-industri) ----------
+# Nummeret må stemme med Industri.IND i site/dovre-fliser/spill/industri.js. Valgt etter maskinene spillet alt har (produksjon.js:
+# sagbruk, steinbrudd/knuser, fiskemottak, mølle, raffineri, smie) og det OSM faktisk skiller på i Norge (sagbruk, fiskeforedling,
+# steinbrudd, verft, kraft, lager). 0 = ukjent (spillet anslår da typen fra omgivelsene).
+IND = {0: 'ukjent', 1: 'tømmer/sagbruk', 2: 'trevare/snekker', 3: 'olje', 4: 'gass', 5: 'stein/pukk/gruve', 6: 'fisk/sjømat',
+       7: 'mat/meieri/slakteri', 8: 'metall/verksted/smie', 9: 'båt/verft', 10: 'kraft/energi', 11: 'lager/logistikk',
+       12: 'gjenvinning/avfall', 13: 'bryggeri/drikke', 14: 'kjemi/plast'}
+# OSM-verdier (industrial=*, craft=*, product=*, content=*) -> type. Ukjente verdier prøves mot ORD under.
+IND_VERDI = {
+    **dict.fromkeys(['sawmill', 'timber', 'wood', 'lumber', 'lumber_yard', 'logging', 'wood_processing', 'pulp', 'paper', 'paper_mill', 'pellets'], 1),
+    **dict.fromkeys(['furniture', 'carpentry', 'carpenter', 'joiner', 'joinery', 'woodworking', 'cabinet_maker', 'window_construction', 'parquet_layer', 'cooper', 'prefab_houses'], 2),
+    **dict.fromkeys(['oil', 'refinery', 'petroleum', 'fuel', 'oil_terminal', 'oil_depot', 'tank_farm', 'diesel', 'petrol', 'oil_and_gas'], 3),
+    **dict.fromkeys(['gas', 'lng', 'natural_gas', 'gas_terminal', 'lpg', 'propane'], 4),
+    **dict.fromkeys(['quarry', 'mine', 'mining', 'gravel', 'aggregate', 'sand', 'cement', 'concrete', 'asphalt', 'stone', 'stonemason', 'rock', 'crushed_stone', 'minerals', 'concrete_plant'], 5),
+    **dict.fromkeys(['fish_processing', 'fishery', 'seafood', 'fish', 'aquaculture', 'fish_farm', 'fish_farming', 'salmon', 'fish_factory', 'shrimp'], 6),
+    **dict.fromkeys(['food', 'food_industry', 'food_processing', 'slaughterhouse', 'abattoir', 'dairy', 'bakery', 'meat', 'mill', 'grain', 'flour', 'butcher', 'cheese', 'confectionery', 'cannery', 'grain_silo'], 7),
+    **dict.fromkeys(['metal', 'steel', 'metal_processing', 'metal_construction', 'mechanical', 'machine_shop', 'smelter', 'smelting', 'aluminium', 'aluminum', 'foundry', 'welding', 'welder',
+                     'engineering', 'blacksmith', 'metalworker', 'machinery', 'ferroalloy', 'ironworks'], 8),
+    **dict.fromkeys(['shipyard', 'boatyard', 'ship_building', 'shipbuilding', 'boatbuilder', 'boat_building', 'dry_dock', 'slipway'], 9),
+    **dict.fromkeys(['power', 'power_plant', 'electricity', 'heating_station', 'district_heating', 'plant', 'substation', 'generator', 'hydro'], 10),
+    **dict.fromkeys(['warehouse', 'logistics', 'depot', 'distribution', 'port', 'storage', 'terminal', 'container_terminal', 'bus_depot', 'harbour', 'freight', 'transport'], 11),
+    **dict.fromkeys(['scrap_yard', 'scrapyard', 'scrap', 'recycling', 'waste', 'waste_handling', 'waste_transfer_station', 'wastewater', 'wastewater_plant', 'landfill', 'sewage', 'incinerator'], 12),
+    **dict.fromkeys(['brewery', 'distillery', 'winery', 'beverages', 'beverage', 'drinks', 'cider', 'bottling'], 13),
+    **dict.fromkeys(['chemical', 'chemicals', 'plastic', 'plastics', 'pharmaceutical', 'paint', 'fertilizer', 'fertiliser', 'rubber', 'chemistry', 'explosives'], 14),
+}
+# Ord i navnet (norsk og engelsk) – bare når merkene ellers sier at det er industri (se industri_type). Første treff vinner.
+IND_ORD = [(9, r'verft|båtbyggeri|skipsbyggeri|slipp(en)?\b|shipyard|boatyard'), (6, r'fisk|sjømat|fryseri|seafood|laks|sild|reker|trandamp|filet|hermetikk'),
+           (1, r'sagbruk|\bsag\b|trelast|sawmill|tømmer|høvleri'), (2, r'snekker|møbel|trevare|ferdighus|treindustri|joinery'),
+           (13, r'bryggeri|brenneri|brewery|mikrobryggeri'), (7, r'meieri|slakteri|bakeri|mølle|kjøtt|\bmat\b|næringsmiddel|tine\b|nortura|dairy'),
+           (3, r'olje|raffineri|petro|oljeterminal|tankanlegg'), (4, r'\bgass\b|gassterminal|\blng\b'),
+           (5, r'pukk|steinbrudd|\bgrus|sement|betong|gruve|\bstein|quarry|knuseverk'), (14, r'kjemi|plast|maling|gjødsel|yara\b'),
+           (12, r'gjenvinning|skrap|avfall|renovasjon|renseanlegg|recycling'), (10, r'kraftstasjon|kraftverk|transformator|trafo|energi|fjernvarme'),
+           (8, r'\bmek\b|mekanisk|verksted|\bstål|metall|sveis|smie|aluminium|støperi'), (11, r'lager|logistikk|terminal|transport|spedisjon')]
+IND_ORD_RE = [(n, re.compile(o)) for n, o in IND_ORD]
+def ind_verdi(v):
+    """En OSM-verdi (kan være «oil;gas») -> industritype (0 = ukjent)."""
+    for d in str(v or '').strip().lower().replace(' ', '_').split(';'):
+        if d in IND_VERDI: return IND_VERDI[d]
+    return 0
+def ind_navn(n):
+    n = str(n or '').lower()
+    if not n.strip(): return 0
+    for t, r in IND_ORD_RE:
+        if r.search(n): return t
+    return 0
+def industri_type(tags, bygg=None):
+    """Industritypen fra merkene på ett objekt (bygg, punkt eller område). bygg = building=* når det er et bygg.
+    Rekkefølgen: industrial=*, craft=*, man_made, power, amenity, landuse/havn, og til sist navnet (bare i industri-sammenheng)."""
+    g = lambda k: (tags.get(k) or '').strip().lower()
+    for k in ('industrial', 'craft'):
+        t = ind_verdi(g(k))
+        if t: return t
+    mm = g('man_made')
+    if mm == 'works':
+        t = ind_verdi(g('product')) or ind_navn(tags.get('name'))
+        if t: return t
+    if mm == 'storage_tank': return {'gas': 4, 'lng': 4, 'water': 0, 'sewage': 12, 'manure': 0}.get(g('content'), 3 if g('content') in ('oil', 'fuel', 'diesel', 'petrol', '') else ind_verdi(g('content')))
+    if mm == 'silo': return 7 if g('content') in ('', 'grain', 'wheat', 'barley', 'oats', 'flour', 'fodder') else ind_verdi(g('content')) or 7
+    if mm in ('wastewater_plant', 'water_works'): return 12 if mm == 'wastewater_plant' else 0
+    if mm in ('mineshaft', 'adit'): return 5
+    if g('power') in ('plant', 'substation', 'generator') and g('generator:source') != 'solar': return 10
+    if g('amenity') in ('recycling', 'waste_transfer_station') and g('recycling_type') != 'container': return 12
+    lu = g('landuse')
+    if lu == 'quarry': return 5
+    if g('seamark:harbour:category') == 'fishing' or g('harbour:category') == 'fishing': return 6
+    if lu in ('port', 'harbour', 'depot'): return 11
+    if lu == 'landfill': return 12
+    # navnet: bare når bygget/området er industri (building=industrial/warehouse … eller landuse=industrial / man_made=works)
+    if (bygg in ('industrial', 'manufacture', 'warehouse', 'storage', 'yes', 'shed', 'hangar', 'service') and (tags.get('name') and (bygg != 'yes' or g('landuse') == 'industrial' or tags.get('industrial') or mm == 'works'))) \
+            or (bygg is None and (lu == 'industrial' or mm == 'works')):
+        return ind_navn(tags.get('name'))
+    return 0
+# Områder som gjør bygg til industri (t 5 -> 6) selv uten kjent type
+def er_industriområde(tags):
+    lu = (tags.get('landuse') or '').lower()
+    return lu in ('industrial', 'quarry', 'port', 'harbour', 'depot', 'landfill') or bool(tags.get('industrial')) or tags.get('man_made') == 'works' \
+        or tags.get('power') in ('plant', 'substation') or tags.get('amenity') in ('recycling', 'waste_transfer_station') or tags.get('man_made') == 'wastewater_plant'
+# byggtypene som kan få typen fra området de står i (ikke boliger, butikker, skoler …)
+IND_FRA_OMRÅDE = {1, 2, 5, 6, 12}
+IND_MIN_AREAL = 60.0
+
 def tall(s):
     try: return float(str(s).replace(',', '.').split()[0].rstrip('m'))
     except Exception: return None
@@ -160,12 +246,19 @@ class Samler(osmium.SimpleHandler):
     def __init__(s):
         super().__init__(); s.tr = Transformer.from_crs('EPSG:4326', CRS, always_xy=True)
         s.ringer, s.h, s.t, s.k, s.u = [], [], [], [], []
+        s.ind = []                      # industritypen fra byggets egne merker (0 = ukjent)
+        s.indpunkt = []                 # punkter med industritype: (x, y, ind)
+        s.område = []                   # industriområder: (ring, ind, areal)
         s.anlegg, s.anlegg_t, s.anlegg_r = [], [], []   # ringer, type og banenummer
         s.punkt = []                    # butikkpunkter: (x, y, kjede)
         s.fuel = []                     # bensinstasjoner: (x, y, kjede)
         s.punkter = True                # False: hopp over nodene (byggfila har millioner av noder uten merker)
     def node(s, n):
-        if not s.punkter or not (n.tags.get('shop') or n.tags.get('amenity')): return
+        if not s.punkter: return
+        if n.tags.get('industrial') or n.tags.get('craft') or n.tags.get('man_made') or n.tags.get('power'):
+            t = industri_type(n.tags, 'yes')
+            if t: x, y = s.tr.transform(n.location.lon, n.location.lat); s.indpunkt.append((x, y, t))
+        if not (n.tags.get('shop') or n.tags.get('amenity')): return
         k = kjede(n.tags)
         if k or n.tags.get('amenity') == 'fuel': x, y = s.tr.transform(n.location.lon, n.location.lat)
         if k: s.punkt.append((x, y, k))
@@ -193,6 +286,15 @@ class Samler(osmium.SimpleHandler):
                     xs, ys = s.tr.transform([n.lon for n in ytre], [n.lat for n in ytre]); s.fuel.append((float(np.mean(xs)), float(np.mean(ys)), kjede(a.tags))); break
             except Exception: pass
             return
+        if (not b or b == 'no') and er_industriområde(a.tags):
+            try:
+                for ytre in a.outer_rings():
+                    xs, ys = s.tr.transform([n.lon for n in ytre], [n.lat for n in ytre])
+                    if len(xs) >= 4:
+                        r = np.column_stack([xs, ys]).astype(np.float64)
+                        ar = abs(float(np.dot(r[:-1, 0], r[1:, 1]) - np.dot(r[1:, 0], r[:-1, 1]))) / 2
+                        s.område.append((r, industri_type(a.tags), ar))
+            except Exception: pass
         if not b or b == 'no':
             at = anlegg_type(a.tags)
             if at:
@@ -210,7 +312,7 @@ class Samler(osmium.SimpleHandler):
                 if h is None:
                     l = tall(a.tags.get('building:levels'))
                     h = l * 3 + 1 if l else HØYDE.get(b, 6)
-                s.ringer.append(np.column_stack([xs, ys]).astype(np.float64)); s.h.append(round(min(max(h, 2), 300), 1)); t = bygg_type(b, a.tags); s.t.append(t if t is not None else 5); s.k.append(kjede(a.tags)); s.u.append(utseende(a.tags))
+                s.ringer.append(np.column_stack([xs, ys]).astype(np.float64)); s.h.append(round(min(max(h, 2), 300), 1)); t = bygg_type(b, a.tags); s.t.append(t if t is not None else 5); s.k.append(kjede(a.tags)); s.u.append(utseende(a.tags)); s.ind.append(industri_type(a.tags, b))
         except Exception: pass
 
 
@@ -233,7 +335,52 @@ def koble_punkter(ringer, k, punkt):
     return n
 
 
-def lag_fliser(ringer, h, t, k=None, anlegg=(), anlegg_t=(), anlegg_r=(), fuel=(), u=None):
+def koble_industri(ringer, t, ind, indpunkt=(), område=()):
+    """Industritypen til byggene som ikke har den selv: først et punkt inne i bygget, så det minste industriområdet midten står i.
+    Bygg merket bare building=yes (t 5) i et industriområde blir t 6 eller 12 (lager). Endrer t og ind. Gir (fra punkt, fra område, ny type)."""
+    from shapely import contains_xy
+    C = 200.0; rut = {}
+    for i, r in enumerate(ringer):
+        x0, y0 = r.min(axis=0); x1, y1 = r.max(axis=0)
+        for cx in range(int(x0 // C), int(x1 // C) + 1):
+            for cy in range(int(y0 // C), int(y1 // C) + 1): rut.setdefault((cx, cy), []).append(i)
+    n_p = n_o = n_t = 0; poly = {}
+    for x, y, v in indpunkt:
+        for i in rut.get((int(x // C), int(y // C)), []):
+            if ind[i]: continue
+            r = ringer[i]
+            if not (r[:, 0].min() <= x <= r[:, 0].max() and r[:, 1].min() <= y <= r[:, 1].max()): continue
+            p = poly.get(i) or poly.setdefault(i, Polygon(r))
+            if p.is_valid and p.contains(Point(x, y)): ind[i] = v; n_p += 1; break
+    if not område: return n_p, 0, 0
+    # midtpunktet og arealet til hvert bygg (rammens midte holder: byggene er små mot områdene)
+    mid = np.array([(r[:, 0].mean(), r[:, 1].mean()) for r in ringer]) if ringer else np.zeros((0, 2))
+    areal = [abs(float(np.dot(r[:-1, 0], r[1:, 1]) - np.dot(r[1:, 0], r[:-1, 1]))) / 2 for r in ringer]
+    best = {}   # bygg -> (områdets areal, ind)
+    inne = set()
+    for ring, v, ar in område:
+        x0, y0 = ring.min(axis=0); x1, y1 = ring.max(axis=0)
+        kand = set()
+        for cx in range(int(x0 // C), int(x1 // C) + 1):
+            for cy in range(int(y0 // C), int(y1 // C) + 1): kand.update(rut.get((cx, cy), ()))
+        kand = [i for i in kand if t[i] in IND_FRA_OMRÅDE and x0 <= mid[i, 0] <= x1 and y0 <= mid[i, 1] <= y1]
+        if not kand: continue
+        try: pg = Polygon(ring)
+        except Exception: continue
+        if not pg.is_valid: pg = pg.buffer(0)
+        ja = contains_xy(pg, mid[kand, 0], mid[kand, 1])
+        for i, j in zip(kand, ja):
+            if not j: continue
+            inne.add(i)
+            if v and (i not in best or ar < best[i][0]): best[i] = (ar, v)
+    for i, (ar, v) in best.items():
+        if not ind[i]: ind[i] = v; n_o += 1
+    for i in inne:
+        if t[i] == 5 and areal[i] >= IND_MIN_AREAL: t[i] = 12 if ind[i] == 11 else 6; n_t += 1
+    return n_p, n_o, n_t
+
+
+def lag_fliser(ringer, h, t, k=None, anlegg=(), anlegg_t=(), anlegg_r=(), fuel=(), u=None, ind=None):
     """Fordeler byggene på z12- og z13-fliser etter omrissets ramme (med margin) og koder MVT."""
     ut = {}
     for z, min_areal, tol in ((12, 30.0, 1.0), (13, 0.0, 0.0)):
@@ -266,6 +413,7 @@ def lag_fliser(ringer, h, t, k=None, anlegg=(), anlegg_t=(), anlegg_r=(), fuel=(
                     e = {'h': h[i], 't': t[i], 'i': i}
                     if k and k[i]: e['k'] = k[i]
                     if u and u[i]: e.update(u[i])
+                    if ind and ind[i]: e['ind'] = ind[i]
                     f.append({'geometry': Polygon(c), 'properties': e})
             lag = [{'name': 'hus', 'features': f}] if f else []
             if z == 13 and (tx, ty) in anl:
@@ -297,6 +445,8 @@ def main(inn, utmappe, punktfil=None):
     if punktfil: s.apply_file(punktfil); s.punkter = False   # butikkpunktene for seg (liten fil), så ikke alle nodene går gjennom Python
     s.apply_file(inn, locations=True, idx='flex_mem'); logg('bygg lest:', len(s.ringer), 'anlegg:', len(s.anlegg), 'butikkpunkter:', len(s.punkt))
     n = koble_punkter(s.ringer, s.k, s.punkt); logg('kjede fra punkt:', n, 'kjedebygg i alt:', sum(1 for v in s.k if v))
+    n_egne = sum(1 for v in s.ind if v); n_p, n_o, n_t = koble_industri(s.ringer, s.t, s.ind, s.indpunkt, s.område)
+    logg('industritype: egne merker', n_egne, 'fra punkt', n_p, 'fra område', n_o, '(områder:', len(s.område), ') ny type industri/lager', n_t)
     # samme stasjon kan være både punkt og område: én per 40 m
     fuel = []
     for x, y, kj in s.fuel:
@@ -304,7 +454,7 @@ def main(inn, utmappe, punktfil=None):
         if nær is None: fuel.append((x, y, kj))
         elif kj and not fuel[nær][2]: fuel[nær] = (fuel[nær][0], fuel[nær][1], kj)
     logg('bensinstasjoner:', len(fuel))
-    fl = lag_fliser(s.ringer, s.h, s.t, s.k, s.anlegg, s.anlegg_t, s.anlegg_r, fuel, s.u)
+    fl = lag_fliser(s.ringer, s.h, s.t, s.k, s.anlegg, s.anlegg_t, s.anlegg_r, fuel, s.u, s.ind)
     fil = os.path.join(utmappe, 'hus-0.pmtiles'); l = sorted(fl.items(), key=lambda kv: zxy_to_tileid(*kv[0]))
     with open(fil, 'wb') as f:
         w = Writer(f)
@@ -314,7 +464,8 @@ def main(inn, utmappe, punktfil=None):
                    {'description': 'Byggomriss fra OpenStreetMap (© OpenStreetMap-bidragsytere, ODbL)', 'crs': CRS})
     b = os.path.getsize(fil); tag = 'kart-hus-' + hashlib.sha256(open(fil, 'rb').read()).hexdigest()[:12]
     man = {'versjon': tag, 'kilde': '© OpenStreetMap-bidragsytere (ODbL)', 'filer': {'hus': [{'fil': 'hus-0.pmtiles', 'zmin': 12, 'zmax': 13, 'x6': None, 'byte': b, 'fliser': len(l)}]},
-           'statistikk': {'bensinstasjoner': len(fuel), 'bygg': len(s.ringer), 'kjedebygg': sum(1 for v in s.k if v), 'anlegg': len(s.anlegg), 'med_hoyde_eller_etasjer': None, 'med_takform': sum(1 for e in s.u if 'r' in e), 'med_etasjer': sum(1 for e in s.u if 'l' in e), 'med_farge': sum(1 for e in s.u if 'tf' in e or 'vf' in e), 'helse': sum(1 for v in s.t if v in (15, 16))}}
+           'statistikk': {'bensinstasjoner': len(fuel), 'bygg': len(s.ringer), 'kjedebygg': sum(1 for v in s.k if v), 'anlegg': len(s.anlegg), 'med_hoyde_eller_etasjer': None, 'med_takform': sum(1 for e in s.u if 'r' in e), 'med_etasjer': sum(1 for e in s.u if 'l' in e), 'med_farge': sum(1 for e in s.u if 'tf' in e or 'vf' in e), 'helse': sum(1 for v in s.t if v in (15, 16)),
+                          'industritype': {IND[n]: sum(1 for v in s.ind if v == n) for n in IND if n}, 'industriområder': len(s.område)}}
     json.dump(man, open(os.path.join(utmappe, 'manifest.json'), 'w'), ensure_ascii=False, indent=1)
     open(os.path.join(utmappe, 'tag.txt'), 'w').write(tag)
     logg('ferdig:', len(l), 'fliser,', round(b / 1e6, 1), 'MB,', tag)

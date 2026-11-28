@@ -125,7 +125,7 @@ function skjulMelding(type) {
   window.addEventListener('unhandledrejection', e => vis(e.reason && e.reason.message || String(e.reason))); })();
 </script>
 <script src="/dovre-fliser/lib/pmtiles-4.3.0.js"></script>
-<script src="/dovre-fliser/kartflis.js?v=2d4fa13884"></script>
+<script src="/dovre-fliser/kartflis.js?v=cf2e3c62b9"></script>
 <script src="/dovre-fliser/terreng.js?v=0c83ac7342"></script>
 <script src="/dovre-fliser/spill/simulering.js?v=441677f889"></script>
 <script src="/dovre-fliser/spill/riksgrense.js?v=7a24da0c27"></script>
@@ -257,7 +257,7 @@ let ARB = null, arbId = 0; const ARB_VENT = new Map();
 function startArbeider(filer, release, riksgrense = null) {
   if (!HAR_OFFSCREEN || typeof Worker === 'undefined') return;
   try {
-    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=ba5ccf6a3b');
+    const w = new Worker('/dovre-fliser/kartflis-arbeider.js?v=8198d5e50d');
     w.onmessage = ({ data: m }) => {
       if (m.type === 'bytes') { STAT.byte += m.n; STAT.req += m.req; if (m.kilde) STAT.kilde = m.kilde; tegnHud(); nettOk(); return; }
       if (m.type === 'feil') { visFeil(new Error(m.melding)); return; }
@@ -2015,6 +2015,8 @@ async function hus3d(u) {
       // (veggTopp: der ytterveggen slutter – taket begynner. Interiøret, spill/interior3d.js, holder himlingen under den.)
       // (runde 15) tetthet og kjede til interiøret (stil eldre/nyere og butikkens innhold)
       P.bygg = { i, t, h, kl, tett: tettI, k: o && o.e ? o.e.k : undefined }; P.veggTopp = undefined;
+      // (ut8-industri) industritypen fra dataene og midten i kartets meter (spill/industri.js velger innredningen etter den)
+      if (kl === 'industri' || kl === 'lager') { P.bygg.ind = o.e.ind; P.bygg.X = mx + u.cx; P.bygg.Y = my + u.cy; }
       const bs = BY && !rundt ? BY.stil(kl, t, i, h, f.areal, tettI, enkel) : null;
       if (bs && !(o.e.vf > 0)) { const v = .94 + BY.hash(i, 3, 3) * .08; for (let q = 0; q < 3; q++) veggF[q] = bs.farge[q] * v; }
       // (runde 15) hvitmalte trehus og teglrøde tak i tette strøk (Byhus.husFarge/husTak), når OSM ikke har fargen
@@ -2319,11 +2321,11 @@ function skilt3d(liste) {
 }
 async function visByggVed(X, Y) {
   const b = await finnBygg(X, Y); if (!b) return false;
-  const e = b.o.e, f = form(b.P), navn = e.k && BUTIKKER[e.k] ? BUTIKKER[e.k][0] + ' (butikk)' : BYGGTYPE[e.t] || 'Bygg';
+  const e = b.o.e, f = form(b.P), navn = e.k && BUTIKKER[e.k] ? BUTIKKER[e.k][0] + ' (butikk)' : (window.Industri && Industri.panelNavn && Industri.panelNavn(e, b.P)) || BYGGTYPE[e.t] || 'Bygg';
   document.getElementById('pnavn').textContent = navn;
   document.getElementById('psub').textContent = [e.h ? 'ca. ' + nf.format(Math.round(e.h)) + ' m høyt' : null, nf.format(Math.round(f.areal)) + ' m² grunnflate', e.h > 4 ? 'ca. ' + Math.max(1, Math.round((e.h - 1) / 3)) + ' etasjer' : null].filter(Boolean).join(' · ');
   document.getElementById('handl').innerHTML = ''; document.getElementById('menn').innerHTML = '';
-  document.getElementById('hint').textContent = 'Byggomriss og type: © OpenStreetMap-bidragsytere (ODbL).' + (e.t === 2 ? ' Typen er ikke skilt ut ennå i dataene (bygges på nytt).' : '');
+  document.getElementById('hint').textContent = 'Byggomriss og type: © OpenStreetMap-bidragsytere (ODbL).' + (e.t === 2 ? ' Typen er ikke skilt ut ennå i dataene (bygges på nytt).' : '') + (window.Industri && Industri.panelHint ? Industri.panelHint(e, b.P) : '');
   valgt = null; document.getElementById('panel').classList.add('på'); return true;
 }
 // Trekledning (stående panel, ca. 20 cm bord) med samme vindu som vindusflisen; takstein (en rad per flis med skygge under).
@@ -3753,10 +3755,12 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/dyr3d.js?v=5d58ce1732"></script>
 <script src="/dovre-fliser/spill/gard3d.js?v=61b5c2338f"></script>
 <script src="/dovre-fliser/spill/vakt3d.js?v=9818cd6e22"></script>
-<script src="/dovre-fliser/spill/interior.js?v=6130b32bf9"></script>
+<script src="/dovre-fliser/spill/interior.js?v=75befea9d3"></script>
+<script src="/dovre-fliser/spill/industri.js?v=c1287cf3b7"></script>
+<script src="/dovre-fliser/spill/industri-visning.js?v=ec52cfabca"></script>
 <script src="/dovre-fliser/spill/bygning.js?v=c3d700aab6"></script>
 <script src="/dovre-fliser/spill/vei.js?v=6fd0b892d6"></script>
-<script src="/dovre-fliser/spill/plantegning.js?v=802255cb2a"></script>
+<script src="/dovre-fliser/spill/plantegning.js?v=dace1a494f"></script>
 <script src="/dovre-fliser/spill/plantegning-visning.js?v=8c8292e647"></script>
 <script src="/dovre-fliser/spill/folkgang.js?v=4d97e75c50"></script>
 <script src="/dovre-fliser/spill/folkgang-visning.js?v=129c9d1fc1"></script>
@@ -3773,7 +3777,7 @@ function trengerTegning3d(nå) {
 <script src="/dovre-fliser/spill/utpost-visning.js?v=11dde1d933"></script>
 <script src="/dovre-fliser/spill/trafikkart.js?v=9de608b8d0"></script>
 <script src="/dovre-fliser/spill/trafikkart-visning.js?v=2649b93460"></script>
-<script src="/dovre-fliser/spill/interior3d.js?v=62e86b07f3"></script>
+<script src="/dovre-fliser/spill/interior3d.js?v=b066f44e19"></script>
 <script src="/dovre-fliser/spill/etasjer.js?v=9ad7b426d4"></script>
 <script src="/dovre-fliser/spill/etasjer-visning.js?v=7db876c020"></script>
 <script src="/dovre-fliser/spill/etasjer3d.js?v=cab5583ce8"></script>

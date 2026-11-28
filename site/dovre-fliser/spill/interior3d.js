@@ -275,7 +275,8 @@
       case 'medisinskap': k(-b, b, -d, d, 0, h, HVIT); k(-.12, .12, d, d + .012, 1.38, 1.44, [.8, .12, .12]); k(-.03, .03, d, d + .012, 1.29, 1.53, [.8, .12, .12]); k(b - .12, b - .08, d, d + .03, .9, 1.1, STÅL); break;
       case 'døpefont': k(-.22, .22, -.22, .22, 0, .78, [.84, .82, .78], 'glatt', true); k(-b, b, -d, d, .78, h, [.84, .82, .78], 'glatt', true); k(-b * .75, b * .75, -d * .75, d * .75, h - .02, h + .005, [.5, .62, .7], 'glatt', true); break;
       case 'kopimaskin': k(-b, b, -d, d, 0, h, [.85, .85, .83]); k(-b + .05, b - .05, -d + .05, d - .05, h, h + .06, MØRK); k(-b * .6, b * .2, d - .02, d + .1, h - .3, h - .25, HVIT); break;
-      default: k(-b, b, -d, d, 0, h, GRÅ);
+      // (ut8-industri) industrimaskinene: kasse-modellene i spill/industri.js (Industri.MODELLER kan byttes ut)
+      default: if (!(window.Industri && Industri.deler(m, k))) k(-b, b, -d, d, 0, h, GRÅ);
     }
     // SMÅTING (17. nov, brukeren: «forbedre innsiden av bygg enda mer»): ting som står på bord og benker – tallerkener, kopper, bøker,
     // ark, kjeler, lamper. Fast per møbel (m.f), så samme hus ser likt ut hver gang. De sperrer ikke og er bare klosser i samme nett.
@@ -341,6 +342,8 @@
       case 'kontrollrom_olje': S.gulv = ['betong', [.5, .54, .56]]; S.vegg = ['malt', [.86, .88, .86]]; S.lampe = 2; break;
       case 'sakristi': S.gulv = ['parkett', [.46, .32, .22]]; S.vegg = ['malt', [.95, .93, .87]]; break;
       case 'gang': if (kl === 'skole') { S.gulv = ['betong', [.66, .72, .62]]; S.vegg = ['malt', [.95, .92, .8]]; } break;
+      // (ut8-industri) hallene og bakrommene i industribyggene (Industri.ROMSTIL)
+      default: { const st = window.Industri && Industri.romStil(r.rolle); if (st) Object.assign(S, st); }
     }
     if (kl === 'sykehus' && !/^(sykerom|beboerrom|dagligstue|kjøkken|bad)$/.test(r.rolle)) { S.gulv = ['betong', [.74, .8, .78]]; S.vegg = ['malt', [.92, .96, .94]]; }
     if (kl === 'hytte' && r.rolle !== 'bad') S.vegg = ['panel', [.86, .7, .48]];
@@ -362,7 +365,7 @@
     yield 'start';
     // planen i biter (Interior.planG), ellers i ett strekk
     // (runde 15) det dataene har om bygget går videre til planen: byggeår, OSM-merker, navn, tetthet, kjede og høyden over havet
-    const B = P.bygg, info = { i: B.i, kl: B.kl, h: B.h, dør: best, senger: B.senger, år: B.år, am: B.am, navn: B.navn, industri: B.industri, tett: B.tett, k: B.k,
+    const B = P.bygg, info = { i: B.i, kl: B.kl, h: B.h, dør: best, senger: B.senger, år: B.år, am: B.am, navn: B.navn, industri: B.industri, ind: B.ind, X: B.X, Y: B.Y, tett: B.tett, k: B.k,
       moh: P.leir ? undefined : hoyde3d(u.cx + P[0][0], u.cy + P[0][1], u) }, pl = Interior.planG ? yield* Interior.planG(P, info) : Interior.plan(P, info);
     yield 'plan';
     // (28. nov, B2) hus med flere etasjer: byggemodellen (spill/etasjer3d.js) – samme 1. etasje som i 2D, hull der trappene går
