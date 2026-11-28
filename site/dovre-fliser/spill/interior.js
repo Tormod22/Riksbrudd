@@ -124,24 +124,35 @@
     traverskran: [10, .7, 0, 0], sveisebås: [3, 2.6, 2.1, 1], stålplater: [3, 1.5, .7, 1],
     tank: [3, 3, 4, 1], rørgate: [6, .9, 1.4, 1], ventil: [.8, .8, 1.3, 1], tavlepanel: [2.4, .5, 2, 1],
     beboerbad: [1.9, 1.7, 2.2, 1], undersøkelsesbenk: [.7, 1.9, .75, 1], medisinskap: [1, .45, 1.9, 1], døpefont: [.7, .7, 1, 1], kopimaskin: [.8, .6, 1.1, 1],
+    // (ut9-mobler, 28. nov, brukeren: «flere forskjellige hyller, flere forskjellige møbler») 31 nye møbler. Mål er Claudes forslag.
+    // Veggskap og -hyller (overskap, vifte, krydderhylle, speilskap, verktøyvegg) sperrer ikke: de henger over gulvet (høyden = toppen).
+    hjørnesofa: [2.5, 1.7, .82, 1], peis: [1.3, .55, 1.25, 1], vitrineskap: [1, .42, 1.9, 1], gyngestol: [.7, .95, 1.05, 1], piano: [1.5, .62, 1.25, 1], skjenk: [1.6, .46, .85, 1],
+    overskap: [1.8, .35, 2.15, 0], kjøkkenøy: [1.8, .9, .92, 1], vifte: [.6, .5, 2.2, 0], oppvaskmaskin: [.6, .6, .86, 1], krydderhylle: [.8, .18, 1.85, 0],
+    barneseng: [.72, 1.32, .9, 1], kommode: [1, .5, .9, 1], garderobe: [1.8, .62, 2.1, 1], sminkebord: [1, .45, .76, 1],
+    badekar: [1.7, .75, .56, 1], vaskemaskin: [.6, .6, .86, 1], speilskap: [.6, .16, 1.9, 0], skoskap: [.9, .32, 1.1, 0],
+    permreol: [.8, .4, 2, 1], vannkjøler: [.36, .36, 1.3, 1], safe: [.6, .6, 1, 1],
+    gondol: [2.4, 1.1, 1.45, 1], frysedisk: [2.4, 1, .9, 1], drikkekjøler: [.75, .72, 2, 1], vognrekke: [1.1, .6, 1, 1],
+    stålreol: [1.8, .6, 2.2, 1], verktøyvegg: [2, .12, 1.8, 0], verkstedbenk: [2.2, .75, .92, 1], luftkompressor: [.7, .45, .8, 1], dekkstativ: [1.2, .5, 1.4, 1],
   };
+  // (ut9-mobler) møblene som henger på veggen over gulvet: spill/interior3d.js tegner dem uten skygge på gulvet
+  const VEGGHENGT = { overskap: 1, vifte: 1, krydderhylle: 1, speilskap: 1, verktøyvegg: 1 };
   // Møblene per romtype, som oppskrifter (brukes for alle roller som ikke har egen kode i møblerG). Hvert steg:
   //  [hva, type, antall, valg]: 'vegg' = inntil en vegg (valg.sider 'lang'/'kort'), 'midt' = midt i rommet, 'foran' = foran forrige møbel,
   //  'rutenett' = rader (valg du/dv, mU/mV), 'rad' = så mange som får plass langs veggene, 'bord' = bord med stoler (antall = stoler).
   //  antall kan være en funksjon av arealet A. «per» = ett møbel per så mange m² (høyst antall).
   const MØBELSETT = {
     vindfang: [['vegg', 'skohylle', 1, { fri: .6 }], ['vegg', 'knagger', 1, { fri: .5 }]],
-    vaskerom: [['vegg', 'vask', 1, { fri: .5 }], ['vegg', 'hylle', 1, { fri: .5 }], ['vegg', 'skap', 1]],
+    vaskerom: [['vegg', 'vask', 1, { fri: .5 }], ['vegg', 'vaskemaskin', 1, { fri: .4 }], ['vegg', 'hylle', 1, { fri: .5 }], ['vegg', 'skap', 1]],
     møterom: [['bord', 'spisebord', 6, { b: 2.4 }], ['vegg', 'tavle', 1, { fri: .3, sider: 'kort' }], ['vegg', 'plante', 1, { fri: .5 }]],
-    pauserom: [['vegg', 'kjøkkenbenk', 1, { b: 2.4, sider: 'lang' }], ['vegg', 'kjøleskap', 1], ['bord', 'spisebord', 4], ['vegg', 'plante', 1, { fri: .5 }]],
-    arkiv: [['vegg', 'arkivskap', 4], ['vegg', 'hylle', 2]],
-    kontorlandskap: [['par', 'pult', A => Math.min(16, Math.floor(A / 6))], ['vegg', 'kopimaskin', 1], ['vegg', 'arkivskap', 2], ['vegg', 'plante', 2, { fri: .5 }]],
+    pauserom: [['vegg', 'kjøkkenbenk', 1, { b: 2.4, sider: 'lang' }], ['vegg', 'kjøleskap', 1], ['vegg', 'oppvaskmaskin', 1], ['bord', 'spisebord', 4], ['vegg', 'vannkjøler', 1, { fri: .5 }], ['vegg', 'plante', 1, { fri: .5 }]],
+    arkiv: [['vegg', 'arkivskap', 4], ['vegg', 'permreol', 2], ['vegg', 'hylle', 1]],
+    kontorlandskap: [['par', 'pult', A => Math.min(16, Math.floor(A / 6))], ['vegg', 'kopimaskin', 1], ['vegg', 'arkivskap', 2], ['vegg', 'permreol', 1], ['vegg', 'vannkjøler', 1, { fri: .5 }], ['vegg', 'plante', 2, { fri: .5 }]],
     lærerrom: [['bord', 'langbord', 0], ['vegg', 'kjøkkenbenk', 1, { b: 1.8 }], ['vegg', 'bokhylle', 2], ['vegg', 'pult', 2]],
     grupperom: [['bord', 'spisebord', 4], ['vegg', 'tavle', 1, { fri: .3 }], ['vegg', 'bokhylle', 1]],
     korridor: [['vegg', 'benk', A => Math.min(4, Math.floor(A / 25)), { fri: .8 }], ['vegg', 'plante', A => Math.min(3, Math.floor(A / 30)), { fri: .8 }]],
     // helse
     beboerrom: [['vegg', 'beboerbad', 1, { fri: .5, sider: 'kort' }], ['seng', 'sykeseng'], ['vegg', 'skap', 1], ['vegg', 'lenestol', 1], ['vegg', 'plante', 1, { fri: .5 }]],
-    dagligstue: [['vegg', 'sofa', 2, { sider: 'lang' }], ['vegg', 'lenestol', A => Math.min(4, Math.floor(A / 10))], ['vegg', 'tvbenk', 1], ['bord', 'spisebord', 4], ['bord', 'spisebord', 4], ['vegg', 'bokhylle', 1], ['vegg', 'plante', 2, { fri: .5 }]],
+    dagligstue: [['vegg', 'sofa', 2, { sider: 'lang' }], ['vegg', 'lenestol', A => Math.min(4, Math.floor(A / 10))], ['vegg', 'tvbenk', 1], ['bord', 'spisebord', 4], ['bord', 'spisebord', 4], ['vegg', 'bokhylle', 1], ['vegg', 'piano', 1], ['vegg', 'plante', 2, { fri: .5 }]],
     vaktrom: [['vegg', 'pult', 2], ['vegg', 'medisinskap', 1], ['vegg', 'arkivskap', 1], ['vegg', 'skap', 1], ['vegg', 'vask', 1, { fri: .5 }]],
     venterom: [['vegg', 'skranke', 1, { sider: 'kort' }], ['rad', 'benk', 6, { fri: 1 }], ['vegg', 'plante', 2, { fri: .5 }]],
     behandlingsrom: [['vegg', 'undersøkelsesbenk', 1], ['vegg', 'pult', 1], ['vegg', 'vask', 1, { fri: .5 }], ['vegg', 'medisinskap', 1], ['vegg', 'stol', 1, { fri: .4 }]],
@@ -522,6 +533,15 @@
       if (!it || type !== 'spisebord') return it; const lu = it.hu > it.hv;
       for (let k = 0; k < n; k++) { const s = k % 2 ? 1 : -1, t = n > 2 ? ((Math.floor(k / 2) / Math.max(1, Math.ceil(n / 2) - 1)) - .5) * Math.max(0, (lu ? it.hu : it.hv) * 2 - .5) : 0; prøv(r, 'stol', it.cu + (lu ? t : s * (it.hu + .32)), it.cv + (lu ? s * (it.hv + .32) : t), lu, lu ? s > 0 : s < 0, { luft: -.2, fri: .3 }); }
       return it; };
+    // (ut9-mobler) et veggskap over et annet møbel (overskap over benken, vifte over komfyren, speilskap over vasken): samme vegg, ryggen
+    // mot veggen, sperrer ikke og står ikke i veien for noe på gulvet
+    const oppå = (r, it, type, o) => { if (!it || it.side === undefined) return null; const d0 = MØBLER[type][1], q = (it.d - d0) / 2, sd = it.side;
+      const cu = it.cu + (sd === 1 ? q : sd === 3 ? -q : 0), cv = it.cv + (sd === 0 ? -q : sd === 2 ? q : 0);
+      const ny = prøv(r, type, cu, cv, sd === 0 || sd === 2, sd === 2 || sd === 3, Object.assign({ svev: true, iVeien: true, fri: -50, luft: -100, margin: .02, b: Math.min(it.b, MØBLER[type][0]) }, o)); if (ny) ny.side = sd; return ny; };
+    // midt i rommet, eller litt til siden når gangveien går gjennom midten
+    const midtI = (r, type, o) => { const lu0 = r.u1 - r.u0 >= r.v1 - r.v0; for (const [a, b2] of [[.5, .5], [.5, .3], [.5, .7], [.35, .5], [.65, .5]]) { const it = prøv(r, type, r.u0 + (r.u1 - r.u0) * a, r.v0 + (r.v1 - r.v0) * b2, lu0, false, o); if (it) return it; } return null; };
+    // fast valg per rom (ikke fra tilf(), så de andre møblene beholder sine tall)
+    const rh = (r, q) => hash(pl.i, 9000 + pl.rom.indexOf(r) * 31 + q);
     // gangveiene: fra hver åpning i rommet rett inn fra veggen og så bort til rommets midte, 0,8 m brede
     for (const r of pl.rom) { const cu = (r.u0 + r.u1) / 2, cv = (r.v0 + r.v1) / 2, q = .4; r.veier = [];
       for (const [ou, ov] of åpninger) { if (ou < r.u0 - .3 || ou > r.u1 + .3 || ov < r.v0 - .3 || ov > r.v1 + .3) continue;
@@ -538,38 +558,49 @@
       switch (r.rolle) {
         case 'stue': case 'allrom': {
           // hytter og eldre hus: vedovn i stua (først, så den får plass)
-          if (pl.kl === 'hytte' || pl.stil === 'eldre') etSted(r, 'ovn', { fri: .6 });
-          const s = etSted(r, 'sofa', null, lang) || etSted(r, 'sofa'); if (s) { foran(r, s, 'salongbord', .45, { fri: .3 }); }
-          etSted(r, 'tvbenk', null, s ? [(s.side + 2) % 4] : null) || etSted(r, 'tvbenk'); etSted(r, 'bokhylle'); if (A > 14) etSted(r, 'lenestol'); etSted(r, 'plante', { fri: .5 });
+          if (pl.kl === 'hytte' || pl.stil === 'eldre') etSted(r, 'ovn', { fri: .6 }); else if (A > 15 && rh(r, 1) < .35) etSted(r, 'peis', { fri: .7 });
+          // (ut9-mobler) hjørnesofa i store stuer, ellers vanlig sofa
+          const s = (A > 18 && rh(r, 2) < .4 ? etSted(r, 'hjørnesofa', null, lang) : null) || etSted(r, 'sofa', null, lang) || etSted(r, 'sofa'); if (s) { foran(r, s, 'salongbord', .45, { fri: .3 }); }
+          etSted(r, 'tvbenk', null, s ? [(s.side + 2) % 4] : null) || etSted(r, 'tvbenk'); etSted(r, 'bokhylle'); if (A > 14) etSted(r, rh(r, 3) < .3 ? 'gyngestol' : 'lenestol');
+          if (A > 17 && rh(r, 4) < .25) etSted(r, 'piano'); if (A > 16 && rh(r, 5) < .5) etSted(r, 'vitrineskap'); etSted(r, 'plante', { fri: .5 });
           if (r.rolle === 'allrom') { const k = etSted(r, 'kjøkkenbenk', { b: Math.min(2.4, Math.max(1.2, Math.min(lu, lv) - 1)) }); if (k) etSted(r, 'kjøleskap'); if (A > 16) bord(r, 2); if (pl.rom.filter(q => q.rolle !== 'utenfor').length === 1) etSted(r, 'seng'); }
-          else if (A > 20) bord(r, 4);
+          else if (A > 20) { bord(r, 4); if (rh(r, 6) < .6) etSted(r, 'skjenk'); }
           break; }
-        case 'kjøkken': { etSted(r, 'kjøkkenbenk', { b: Math.min(3, Math.max(1.4, Math.max(lu, lv) - 1.2)) }, lang) || etSted(r, 'kjøkkenbenk', { b: 1.4 }); etSted(r, 'komfyr'); etSted(r, 'kjøleskap'); if (A > 8) bord(r, A > 12 ? 4 : 2); break; }
-        case 'soverom': { const s = etSted(r, A > 9 ? 'dobbeltseng' : 'seng') || etSted(r, 'seng'); if (s) { const lU = s.side === 0 || s.side === 2;
+        case 'kjøkken': { const kb = etSted(r, 'kjøkkenbenk', { b: Math.min(3, Math.max(1.4, Math.max(lu, lv) - 1.2)) }, lang) || etSted(r, 'kjøkkenbenk', { b: 1.4 }); oppå(r, kb, 'overskap');
+          const kf = etSted(r, 'komfyr'); oppå(r, kf, 'vifte'); etSted(r, 'kjøleskap'); if (A > 7 && rh(r, 1) < .7) etSted(r, 'oppvaskmaskin');
+          if (rh(r, 2) < .65) etSted(r, 'krydderhylle', { svev: true, fri: .3 });
+          if (A > 13 && rh(r, 3) < .45 && midtI(r, 'kjøkkenøy', { fri: .9 })) break; if (A > 8) bord(r, A > 12 ? 4 : 2); break; }
+        case 'soverom': { const barn = A < 9.5 && rh(r, 1) < .4 && pl.rom.filter(q => q.rolle === 'soverom').length > 1;
+          const s = etSted(r, barn ? 'barneseng' : A > 9 ? 'dobbeltseng' : 'seng') || etSted(r, 'seng'); if (s && s.type !== 'barneseng') { const lU = s.side === 0 || s.side === 2;
           prøv(r, 'nattbord', s.cu + (lU ? s.hu + .3 : 0), s.cv + (lU ? 0 : s.hv + .3), lU, s.side === 2 || s.side === 3, { fri: .3 }); }
-          etSted(r, 'skap'); if (A > 11) etSted(r, 'pult'); break; }
-        case 'bad': etSted(r, 'toalett', { fri: .5 }); etSted(r, 'vask', { fri: .5 }); etSted(r, 'dusj', { fri: .5 }); break;
-        case 'gang': etSted(r, 'skohylle', { fri: .6 }); etSted(r, 'knagger', { fri: .5 }); if (A > 9) etSted(r, 'skap'); if (pl.kl === 'skole') { etSted(r, 'benk'); etSted(r, 'benk'); } break;
-        case 'kontor': { const n = Math.max(1, Math.min(6, Math.floor(A / 7))); for (let k = 0; k < n; k++) { const p = etSted(r, 'pult'); if (p) foran(r, p, 'kontorstol', .1, { fri: .3, luft: -.1 }); } etSted(r, 'arkivskap'); etSted(r, 'bokhylle'); etSted(r, 'plante', { fri: .5 }); break; }
+          (A > 10 && rh(r, 2) < .6 ? etSted(r, 'garderobe') : null) || etSted(r, 'skap'); if (A > 7 && rh(r, 3) < .6) etSted(r, 'kommode');
+          if (s && s.type === 'dobbeltseng' && rh(r, 4) < .45) etSted(r, 'sminkebord'); if (A > 11) etSted(r, 'pult'); break; }
+        case 'bad': { etSted(r, 'toalett', { fri: .5 }); const v = etSted(r, 'vask', { fri: .5 }); if (rh(r, 3) < .7) oppå(r, v, 'speilskap');
+          (A > 5.5 && rh(r, 1) < .55 ? etSted(r, 'badekar', { fri: .5 }) : null) || etSted(r, 'dusj', { fri: .5 });
+          if (rh(r, 2) < .5 && !pl.rom.some(q => q.rolle === 'vaskerom')) etSted(r, 'vaskemaskin', { fri: .4 }); break; }
+        case 'gang': etSted(r, rh(r, 1) < .45 ? 'skoskap' : 'skohylle', { fri: .6 }); etSted(r, 'knagger', { fri: .5 }); if (A > 9) etSted(r, 'skap'); if (pl.kl === 'skole') { etSted(r, 'benk'); etSted(r, 'benk'); } break;
+        case 'kontor': { const n = Math.max(1, Math.min(6, Math.floor(A / 7))); for (let k = 0; k < n; k++) { const p = etSted(r, 'pult'); if (p) foran(r, p, 'kontorstol', .1, { fri: .3, luft: -.1 }); } etSted(r, 'arkivskap'); etSted(r, rh(r, 1) < .4 ? 'permreol' : 'bokhylle');
+          if (A > 12 && rh(r, 2) < .35) etSted(r, 'vannkjøler', { fri: .5 }); if (rh(r, 3) < .15) etSted(r, 'safe'); etSted(r, 'plante', { fri: .5 }); break; }
         case 'resepsjon': { const s = etSted(r, 'skranke', null, kort) || etSted(r, 'skranke'); if (s) foran(r, s, 'kontorstol', -1.3, { fri: .2, luft: -1 }); etSted(r, 'benk'); etSted(r, 'benk'); etSted(r, 'plante', { fri: .5 }); etSted(r, 'plante', { fri: .5 }); break; }
         case 'klasserom': { const t = etSted(r, 'tavle', { fri: .3 }, kort); etSted(r, 'kateter', null, t ? [t.side] : kort);
           yield* rutenett(r, 'skolepult', { du: 1.5, dv: 1.3, mU: lu >= lv ? 2.4 : 1, mV: lu >= lv ? 1 : 2.4, langsU: lu < lv, maks: 24 }); etSted(r, 'bokhylle'); break; }
         case 'sykerom': { const s = etSted(r, 'sykeseng'); if (s) { const lU = s.side === 0 || s.side === 2; prøv(r, 'nattbord', s.cu + (lU ? s.hu + .3 : 0), s.cv + (lU ? 0 : s.hv + .3), lU, false, { fri: .3 }); }
           if (A > 14) etSted(r, 'sykeseng'); etSted(r, 'stol', { fri: .4 }); etSted(r, 'vask', { fri: .5 }); break; }
         case 'butikk': yield* butikk(r); break;
-        case 'lager': { for (let k = 0; k < Math.min(10, Math.floor(A / 5)); k++) etSted(r, k % 3 ? 'pall' : 'hylle'); break; }
-        case 'verksted': { for (let k = 0; k < Math.min(6, 1 + Math.floor(A / 60)); k++) etSted(r, 'arbeidsbenk');
+        case 'lager': { for (let k = 0; k < Math.min(10, Math.floor(A / 5)); k++) etSted(r, k % 3 ? 'pall' : rh(r, k) < .5 ? 'stålreol' : 'hylle'); break; }
+        case 'verksted': { for (let k = 0; k < Math.min(6, 1 + Math.floor(A / 60)); k++) etSted(r, k === 0 ? 'verkstedbenk' : 'arbeidsbenk'); etSted(r, 'verktøyvegg', { fri: .5 }); if (rh(r, 1) < .6) etSted(r, 'luftkompressor'); etSted(r, 'stålreol');
           yield* rutenett(r, 'maskin', { du: 7, dv: 6, mU: 3, mV: 3, langsU: lu >= lv, fri: 2, maks: 12 }); for (let k = 0; k < Math.min(8, Math.floor(A / 40)); k++) etSted(r, k % 2 ? 'pall' : 'tønne'); break; }
         case 'lagerhall': { const høy = pl.tak > 4.6; const satt = yield* rutenett(r, høy ? 'pallereol' : 'pall', { du: lu >= lv ? 3 : 4.2, dv: lu >= lv ? 4.2 : 3, mU: 2.5, mV: 2.5, langsU: lu >= lv, fri: 2.5, maks: 60, h: høy ? Math.min(4, pl.tak - .6) : undefined });
           // små lager (telt, boder): paller og hyller langs veggene i stedet
-          if (!satt.length) for (let k = 0; k < Math.min(8, Math.floor(A / 4)); k++) etSted(r, k % 3 ? 'pall' : 'hylle'); break; }
+          if (!satt.length) for (let k = 0; k < Math.min(8, Math.floor(A / 4)); k++) etSted(r, k % 3 ? 'pall' : k % 2 ? 'stålreol' : 'hylle'); break; }
         case 'låve': { yield* rutenett(r, 'høyball', { du: 1.45, dv: 1.45, mU: 1, mV: 1, maks: 14, fri: 2, hopp: (cu, cv) => cu > r.u0 + lu * .45 }); for (let k = 0; k < Math.min(4, Math.floor(A / 40)); k++) etSted(r, 'bås', { fri: 1.5 });
           if (A > 90) prøv(r, 'traktor', r.u0 + lu * .7, (r.v0 + r.v1) / 2, lu < lv, false, { fri: 1.5 }); etSted(r, 'tønne'); break; }
         case 'garasje': { const i = pl.inngang, cu = i.inn[0] * ux + i.inn[1] * uy, cv = i.inn[0] * vx + i.inn[1] * vy, tvers = Math.abs(i.nx * ux + i.ny * uy) > .7;
           // bilen står rett innenfor porten, med nesa innover
           prøv(r, 'bil', tvers ? cu - Math.sign(i.nx * ux + i.ny * uy) * 2.6 : cu, tvers ? cv : cv - Math.sign(i.nx * vx + i.ny * vy) * 2.6, !tvers, false, { fri: 0, margin: .2 });
-          etSted(r, 'hylle'); etSted(r, 'arbeidsbenk', { b: 1.4 }); break; }
-        case 'bod': etSted(r, 'hylle'); etSted(r, 'vedstabel'); if (A > 6) etSted(r, 'tønne'); break;
+          etSted(r, rh(r, 1) < .5 ? 'stålreol' : 'hylle'); etSted(r, rh(r, 2) < .5 ? 'verkstedbenk' : 'arbeidsbenk', { b: 1.4 }); etSted(r, 'verktøyvegg', { fri: .5 });
+          if (rh(r, 3) < .5) etSted(r, 'dekkstativ'); if (rh(r, 4) < .3) etSted(r, 'luftkompressor'); break; }
+        case 'bod': etSted(r, 'hylle'); etSted(r, 'vedstabel'); if (A > 6) etSted(r, 'tønne'); if (A > 5 && rh(r, 1) < .5) etSted(r, 'stålreol'); break;
         case 'kirke': { const iU = lu >= lv, i = pl.inngang, cu = i.inn[0] * ux + i.inn[1] * uy, cv = i.inn[0] * vx + i.inn[1] * vy;
           // alteret i enden lengst fra inngangen, benkerader på hver side av midtgangen
           const fjern = iU ? (cu - r.u0 < r.u1 - cu ? 1 : 3) : (cv - r.v0 < r.v1 - cv ? 2 : 0); vegg(r, 'alter', fjern, .5, { fri: .5 });
@@ -629,9 +660,13 @@
       rad(r, 'kjøledisk', Math.max(1, Math.floor(bred / 3)), { fri: 1.2 }, [bak]); if (A > 150) rad(r, 'kjøledisk', 2, { fri: 1.2 }, [dybdeV ? (mot > 0 ? 3 : 1) : (mot > 0 ? 0 : 2)]);
       // reolene: rader innover fra fronten, 2,7 m mellom radene, midtgang på tvers, fri sone foran og ved bakveggen
       const midt = dyp * .55;
-      yield* rutenett(r, 'reol', { du: dybdeV ? 2.7 : 2.5, dv: dybdeV ? 2.5 : 2.7, mU: 1.6, mV: 1.6, langsU: !dybdeV, fri: 1.4, maks: 48, iVeien: true,
+      // (ut9-mobler) halve butikkene har gondoler (lavere, dobbeltsidige reoler), resten høye reoler
+      const reolType = hash(pl.i, 77) < .5 ? 'gondol' : 'reol';
+      yield* rutenett(r, reolType, { du: dybdeV ? 2.7 : 2.5, dv: dybdeV ? 2.5 : 2.7, mU: 1.6, mV: 1.6, langsU: !dybdeV, fri: 1.4, maks: 48, iVeien: true,
         hopp: (cu, cv) => { const a = inn(cu, cv); return a < front + 2.2 || a > dyp - 2.4 || Math.abs(a - midt) < 1.3; } });
       if (!pl.møbler.some(m => m.type === 'kasse')) etSted(r, 'kasse');
+      // frysedisk, drikkekjølere og handlevogner der det er plass langs veggene
+      if (A > 60) etSted(r, 'frysedisk', { fri: 1.2 }); for (let k = 0; k < (A > 150 ? 3 : A > 40 ? 2 : 1); k++) etSted(r, 'drikkekjøler', { fri: 1 }); etSted(r, 'vognrekke', { fri: 1 });
     }
   }
 
@@ -683,7 +718,7 @@
   }
   // På trappa foran en dør eller i selve døråpningen
   function påTrapp(pl, x, y) { for (const i of pl.innganger || [pl.inngang]) { const dx = x - i.x, dy = y - i.y, ut = dx * i.nx + dy * i.ny; if (ut >= -.8 && ut < (i.trapp || pl.trapp || 1.5) + .3 && Math.abs(dx * i.ux + dy * i.uy) < i.w / 2 + .15) return true; } return false; }
-  const api = { KLASSE, TYPER, ROMSETT, MØBELSETT, TILGANG, ALDRI_VED_DØR, STILER, ÅR, TAK_MIN, MØBLER, VEGG, FRI, plan, planG, takhøyde, velgStil, type, nærKant, inniR, nærKantR, blokkert, friInngang, høyde, påTrapp, inni, avstSeg, avstKant };
+  const api = { KLASSE, TYPER, ROMSETT, MØBELSETT, TILGANG, ALDRI_VED_DØR, STILER, ÅR, TAK_MIN, MØBLER, VEGGHENGT, VEGG, FRI, plan, planG, takhøyde, velgStil, type, nærKant, inniR, nærKantR, blokkert, friInngang, høyde, påTrapp, inni, avstSeg, avstKant };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Interior = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
