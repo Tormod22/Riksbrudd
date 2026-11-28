@@ -157,6 +157,10 @@
   const vis = (overskrift, tekst) => { lagBoks(); document.getElementById('ytelseTekst').textContent = overskrift; pre.textContent = tekst; boks.classList.add('på'); };
 
   // Selve målingen. valg: { rammer, vent, kilder, tak (ms per måling) } – testene bruker få rammer.
+  // ROLIG = ms uten automatisk endring av oppløsningen etter en måling (Claudes forslag)
+  const ROLIG = 3000;
+  // lerretets størrelse etter R.målPr nå (størrelse3d i index.html); tiden for forrige bilde beholdes, så snittet ikke får et kunstig kort bilde
+  const nyStørrelse = R => { if (typeof størrelse3d !== 'function') return; const s = R.sistRamme; størrelse3d(R); R.sistRamme = s; };
   async function mål(valg) {
     const R = typeof R3 !== 'undefined' && R3, v = Object.assign({ rammer: 20, vent: 5, kilder: 7, tak: 9000 }, valg || {});
     if (!R || !på3d || !R.ut || R.bygger || R.måler) return null;
@@ -184,7 +188,9 @@
         while (!nokTegninger(skjerm, ganger, m.ms * ganger)) { ganger *= 2; R.målGanger = ganger; m = await ett(Math.min(8, v.rammer)); }
         if (ganger > 1) alt = await ett(); }
       const rader = [{ navn: 'Hele bildet', ms: alt.ms, tri: alt.tri, kall: alt.kall }];
-      steg('halv oppløsning'); R.målPr = .5; const halv = await ett(); R.målPr = null; rader.push({ navn: 'Med halv oppløsning', ms: halv.ms, halv: true });
+      // (ut7, 28. nov) oppløsningen settes straks (størrelse3d i index.html), ikke først i neste bilde: på en treg maskin kom bildene tett, og
+      // både målingen og kontrollen (som ser på lerretet mellom bildene) kunne se den gamle bredden i hele den halve målingen
+      steg('halv oppløsning'); R.målPr = .5; nyStørrelse(R); const halv = await ett(); R.målPr = null; nyStørrelse(R); rader.push({ navn: 'Med halv oppløsning', ms: halv.ms, halv: true });
       for (const g of grupper) {
         const navn = NAVN[g.navn] || g.navn; steg('uten ' + navn);
         skjul(g.ting, true); const m = await ett(); skjul(g.ting, false);
@@ -203,7 +209,8 @@
       return r;
     } finally {
       for (const L of skjult) for (const o of L) o.traverse(c => { c.layers.set(0); });
-      R.målPr = null; R.målGanger = null; R.måler = false; R.skala = skala0; R.rammeSnitt = snitt0; R.skalaVed = performance.now();
+      // (ut7) oppløsningen står i ro ROLIG ms etter målingen: på en treg maskin gikk den ned straks etter (de første bildene etter er trege)
+      R.målPr = null; R.målGanger = null; R.måler = false; R.skala = skala0; R.rammeSnitt = snitt0; R.skalaVed = performance.now() + ROLIG; nyStørrelse(R);
       if (knapp) knapp.textContent = 'Mål ytelse';
     }
   }
