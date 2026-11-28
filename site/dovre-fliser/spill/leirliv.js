@@ -135,8 +135,11 @@
     return [ctx.leir.x, ctx.leir.y];
   }
   // ett steg (dt sekunder) for hunden h. ctx: { leir, h (klokka), folk: [[x, y]], bygg: [[x, y]], fri(x, y), rnd }
+  // hundens egen tallrekke (bare utseende – rører ikke verdens felles strøm i Tilfeldig)
+  let hundFrø = 0x9e3779b9;
+  const hundRnd = () => { hundFrø = (hundFrø + 0x6d2b79f5) | 0; let t = hundFrø; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   function hundSteg(h, dt, ctx) {
-    const H = R.hund, rnd = ctx.rnd || Math.random, natt = iTid(ctx.h, H.sov);
+    const H = R.hund, rnd = ctx.rnd || hundRnd, natt = iTid(ctx.h, H.sov);
     if (natt) { h.går = 0; h.løper = 0;
       // om natta: går til en fri plass ved bålet (leirens midte) og legger seg
       if (!h.sov) h.sov = sovPlass(h.nr, ctx);
