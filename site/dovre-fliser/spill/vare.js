@@ -16,6 +16,9 @@
  */
 (function (rot) {
   'use strict';
+  // felles tilfeldighet (spill/tilfeldig.js) som i selskap.js: samme frø gir samme svar
+  const TILFELDIG = (typeof globalThis !== 'undefined' && globalThis.Tilfeldig) || (typeof require === 'function' ? require('./tilfeldig') : null);
+  const tilf = TILFELDIG ? TILFELDIG.verden : () => .5;
   // ---------- tallene (alle er Claudes forslag) ----------
   const REGLER = {
     VARER: {
@@ -188,7 +191,7 @@
   // ---------- frakt med Gråfjell ----------
   // km = luftlinja fra leiren til stedet. Gir { firma, pris, timer, sjanse, tapt } – tapt trekkes nå (r), men vises først ved ankomst
   function frakt(k, km, r) {
-    const F = REGLER.frakt, rr = r || Math.random, timer = Math.round((F.fast + km * F.omveg / F.kmt) * 10) / 10;
+    const F = REGLER.frakt, rr = r || tilf, timer = Math.round((F.fast + km * F.omveg / F.kmt) * 10) / 10;
     const sjanse = k.risiko === 'bakhold' ? F.tapBakhold : F.tap;
     return { firma: F.firma, pris: avrund(k.betaling * F.andel, 1000), timer, sjanse, tapt: rr() < sjanse };
   }

@@ -90,7 +90,7 @@
     if (lager <= .01) return { feil: `Lageret har ingen ${VN(k.vare)}. ${k.vare === 'tre' ? 'Sag tømmer til planker (sagbruket), eller kjøp planker i Leir → Lager.' : 'Lag mer, eller kjøp i Leir → Lager.'}` };
     if (hvordan === 'frakt') {
       if (lager < v.igjen - .01) return { feil: `${V.REGLER.frakt.firma} tar bare hele resten (${V.mengdeTekst(k.vare, v.igjen)}) – dere har ${V.mengdeTekst(k.vare, lager)}.` };
-      const km = Math.hypot(k.sted.x - p.x, k.sted.y - p.y) / 1000, f = V.brukFrakt(k, tid, km, window.Tilfeldig ? Tilfeldig.verden : Math.random); if (f.feil) return { feil: f.feil };
+      const km = Math.hypot(k.sted.x - p.x, k.sted.y - p.y) / 1000, f = V.brukFrakt(k, tid, km); if (f.feil) return { feil: f.feil };
       ta(k.vare, f.mengde); lagre(); skitten = true;
       return { ok: true, tekst: `${V.REGLER.frakt.firma} henter ${V.mengdeTekst(k.vare, f.mengde)} ${VN(k.vare)} og leverer i ${k.sted.navn} om ca. ${nf(f.timer)} t. De tar ${kr(f.pris)} og risikoen.` };
     }
