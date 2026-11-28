@@ -146,8 +146,11 @@
     const ute = V.e.filter(u => u.p === 'ute'); if (ute.length) { let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
       for (const u of ute) { const q = punkt(u); if (!q) continue; x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); }
       if (x0 < Infinity) { g.save(); g.fillStyle = 'rgba(48,40,28,.38)'; g.fillRect(sx(x0 - 3), sy(y1 + 2), (x1 - x0 + 6) / m, (y1 - y0 + 4) / m); g.restore(); } }
+    let n = 0;
     for (const u of V.e) { if (u.p === 'bæres') continue; const q = punkt(u); if (!q || q.lag > 0) continue; const X = sx(q.x), Y = sy(q.y); if (X < -40 || Y < -40 || X > W + 40 || Y > H + 40) continue;
-      if (q.inne && m > VIS_INNE) continue; if (q.inne) { g.save(); g.globalAlpha = .55; tegnEnhet(g, u, q, sx, sy, m); g.restore(); } else tegnEnhet(g, u, q, sx, sy, m); }
+      if (q.inne && m > VIS_INNE) continue; n++; if (q.inne) { g.save(); g.globalAlpha = .55; tegnEnhet(g, u, q, sx, sy, m); g.restore(); } else tegnEnhet(g, u, q, sx, sy, m); }
+    // (for vakta) så mange enheter ble tegnet sist, og når
+    ut.tegnet = n; ut.tegnetNår = performance.now();
   });
   // tegnes etter leirens bygg (som også tegnes «over» og i byggevisningen), ellers ligger taket oppå
   if (typeof KROKER !== 'undefined') { const f = KROKER.tegn[KROKER.tegn.length - 1]; f.over = true; f.bygg = true; }
@@ -162,7 +165,8 @@
 #leirmeny .varelager .forklar{ font-size:12.5px; color:var(--ink-dim,#a99); line-height:1.35; margin:2px 0 4px; }`;
   document.head.appendChild(css);
   const innhold = o => { const d = Object.entries(o.varer).map(([k, w]) => `${VL.antallTekst(k, w.n)} (${tall(w.m)} ${enhetTekst(k)})` + (w.r ? `, ${w.r} reservert` : '')); return d.length ? d.join(', ') : 'tomt'; };
-  (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el, knapp }) => {
+  // (unshift: lager-visning.js lastes senere og legger oversikten sin først, så står «Lagerplasser» rett under den)
+  (window.LEIR_MENY = window.LEIR_MENY || []).unshift((hode, { el, knapp }) => {
     const L = leir(); if (!L || !V) return; VL.avstem(LB, L, V);
     const boks = el('div', { klasse: 'varelager', id: 'varelager' });
     hode.append(el('h3', { 'data-fane': 'lager' }, 'Lagerplasser: hvor varene ligger'));
