@@ -49,8 +49,12 @@
     brenner: { tre: true, tømmer: true, flis: true, ved: true, diesel: true },
     // så mange enheter bærer folkene inn i timen (fra ute / feil sone til ledig plass inne)
     ryddPerTime: 12,
-    // lagerplassen ute: avstand fra leirens midte og hvor tett enhetene står (m)
-    ute: { avstand: 24, rad: 3.4, perRad: 10 },
+    // lagerplassen ute: avstand fra leirens midte; hver vare har sin blokk (rad etter rad nedover), dx/dy = avstand mellom enhetene,
+    // rader = rader i blokken, h = blokkens høyde; er blokken full, fortsetter varen i en ny blokk til høyre (bredde + 1 m)
+    ute: { avstand: 24, bredde: 18, blokk: {
+      tre: { dx: 1.6, dy: 1.45, rader: 3, h: 4.8 }, betong: { dx: 1.6, dy: 1.45, rader: 3, h: 4.8 }, stål: { dx: 1.8, dy: 1.1, rader: 4, h: 4.8 },
+      tømmer: { dx: 1.9, dy: 4.6, rader: 1, h: 5.2, ret: Math.PI / 2 }, flis: { dx: 1.5, dy: 1.45, rader: 3, h: 4.8 }, ved: { dx: 1.6, dy: 1.45, rader: 3, h: 4.8 },
+      diesel: { dx: .85, dy: .85, rader: 2, h: 2.4 } } },
     // rutene inne i et bygg (m) og kanten innenfor veggene
     rute: 1.6, kant: .7,
     // så små rester regnes som ingenting
@@ -198,8 +202,12 @@
   function punkt(Leir, L, V, u, leir) {
     if (u.p === 'bæres') return null;
     const U = REGLER.ute, uteP = V.ute || (leir ? { x: leir.x + U.avstand * .7, y: leir.y - U.avstand * .7 } : null);
-    if (u.p === 'ute' || u.p === 'rom') { if (!uteP) return null; const rad = Math.max(0, VARER.indexOf(u.v)), dx = u.i % U.perRad, under = Math.floor(u.i / U.perRad);
-      const bredde = u.v === 'tømmer' ? 4.6 : u.v === 'diesel' ? .9 : 1.7; return { x: uteP.x + dx * bredde - (u.p === 'rom' ? 30 : 0), y: uteP.y - rad * U.rad * 2 - under * U.rad, ret: 0, inne: u.p === 'rom', plass: u.p }; }
+    // egne rom fra byggesettet: plassen i rommet er ukjent her – tegnes ikke
+    if (u.p === 'rom') return null;
+    if (u.p === 'ute') { if (!uteP) return null; const Bl = U.blokk[u.v], perRad = Math.max(1, Math.floor(U.bredde / Bl.dx)), perBlokk = perRad * Bl.rader;
+      let y = 0; for (const k of VARER) { if (k === u.v) break; y += U.blokk[k].h; }
+      const j = u.i % perBlokk, kol = Math.floor(u.i / perBlokk);
+      return { x: uteP.x + kol * (U.bredde + 1) + (j % perRad + .5) * Bl.dx, y: uteP.y - y - (Math.floor(j / perRad) + .5) * Bl.dy, ret: Bl.ret || 0, inne: false, plass: 'ute' }; }
     const id = +u.p.slice(1), b = (L.bygg || []).find(q => q.id === id); if (!b) return null; const B = Leir.BYGG[b.type]; if (!B || !B.fot) return { x: b.x, y: b.y, ret: b.ret || 0 };
     const [x0, x1, y0, y1] = B.fot, k = REGLER.kant, c = REGLER.rute, nx = Math.max(1, Math.floor((x1 - x0 - 2 * k) / c)), ny = Math.max(1, Math.floor((y1 - y0 - 2 * k) / c));
     const j = u.i % (nx * ny), lx = x0 + k + (j % nx + .5) * ((x1 - x0 - 2 * k) / nx), ly = y0 + k + (Math.floor(j / nx) + .5) * ((y1 - y0 - 2 * k) / ny);
