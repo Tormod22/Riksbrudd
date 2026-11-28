@@ -42,6 +42,8 @@ const T2 = TL.ny();
 ok(TL.legg(T2, P1, 'hammer', 1, 0, { utenUte: true }).length === 0, 'kjøkkenhylla tar ikke hammer');
 ok(TL.legg(T2, P1, 'flaskevann', 4, 0, { utenUte: true }).some(q => q.p === 'b2'), 'vann går i tønnestativet');
 ok(TL.legg(T2, [P1[2]], 'peanøttsmør', 1, 0, { utenUte: true }).length === 0, 'vitrinen tar ikke mat');
+// 9b) noen få ting viser likevel noe på hylla
+ok(H.varer({ l: 1, d: .3, nivåer: [1.25, 1.5, 1.75], hv: .2, fyll: .06, f: .123 }).length > 0, 'litt fylling synes');
 // 10) paller
 const pl = H.paller({ l: 2.4, d: 1, nivåer: [.23, 1.31, 2.39], hv: .8, fyll: .5, f: .6 });
 ok(pl.length >= 4 && pl.length <= 40 && pl.every(q => q[0] >= -1.2 && q[1] <= 1.2 && q[2] >= -.5 && q[3] <= .5), 'paller: ' + pl.length + ' kartonger');

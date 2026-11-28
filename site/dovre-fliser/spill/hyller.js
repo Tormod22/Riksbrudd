@@ -23,6 +23,8 @@
     tomHus: .22, tomButikk: .3, fyllHus: [.3, 1], fyllButikk: [.15, .85],
     // en hylle med ting på i leiren viser i det minste litt (selv om det bare er noen få liter)
     minstSynlig: .06,
+    // andelen av den nederste hylla som alltid er i bruk når hylla ikke er tom
+    minstNivå: .22,
   };
   // FORMENE: [bredde, høyde, dybde (andel av hylla), rund, fjes (hvor mange like ting side om side høyst)]
   const FORM = {
@@ -107,7 +109,8 @@
     for (let n = 0; n < o.nivåer.length && ut.length < maks; n++) {
       const z = o.nivåer[n], hv = o.hv || .3;
       // fyllingen fordeles nedenfra: de nederste hyllene fylles først (som på et ekte lager), litt ujevnt
-      const plassN = Math.max(0, Math.min(1, fyll * o.nivåer.length - n + (hash(s, 40 + n) - .5) * .4));
+      // (den nederste hylla viser alltid litt når det står noe der – ellers forsvant noen få ting helt)
+      const plassN = Math.max(n === 0 ? REGLER.minstNivå : 0, Math.min(1, fyll * o.nivåer.length - n + (hash(s, 40 + n) - .5) * .4));
       if (plassN <= .02) continue;
       const lengde = (l - 2 * REGLER.kant) * plassN; let x = -l / 2 + REGLER.kant + (hash(s, 50 + n) < .5 ? 0 : (l - 2 * REGLER.kant) * (1 - plassN));
       const slutt = x + lengde; let k = 0;
