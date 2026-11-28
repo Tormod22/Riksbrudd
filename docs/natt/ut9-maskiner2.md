@@ -34,6 +34,9 @@ Med husdataene fra `claude/nattfiks` (HUS_TAG kart-hus-3af69d4a5eaf): Stavanger/
 bare 1 med `ind` (olje, men et 18 m høyt næringsbygg -> kontorinteriør); Egersund (2,5 km) 131 bygg, 9 industri, 0 med `ind`. De fleste
 industribyggene får altså typen fra anslaget. Bilder av tre ekte industribygg i Egersund i plantegningen: scratchpad
 `natt/ut9-maskiner/norge-<nr>-pc.png` (metallverksted med maskinene, lagerhall, turbinhall/styrerom, mathall).
+I 3D: inne i det største av dem (Egersund, bygg 3681396) – fiskehall med fiskekar, sløyelinje, filetmaskin, transportbånd, platefryser og
+iskvern i linja (`norge3d-3681396-pc.png`). Det SAMME bygget fikk «mathall» i plantegningen da modellen ble laget like etter at kartet var
+flyttet dit (se under) – anslaget er ikke stabilt før høyden er lest.
 FUNNET OG RETTET (industri-visning.js, ut8-fila): linja i plantegningen sa «fiskeforedling» mens modellen hadde en mathall. Anslaget fra
 omgivelsene kan endre seg etter at modellen er laget (høyden/infrastrukturen er ikke lest ennå – `IndustriSpill.omgivelser` husker bare
 fullstendige svar), så linja leser nå typen fra hallen i den ferdige modellen når den finnes. IKKE RETTET (til ut8/koordinator): huspanelet
