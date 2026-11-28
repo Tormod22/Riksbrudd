@@ -60,7 +60,7 @@
   const ORD = [[9, /verft|båtbyggeri|skipsbyggeri|slipp(en)?\b|shipyard|boatyard/], [6, /fisk|sjømat|fryseri|seafood|laks|sild|reker|trandamp|filet|hermetikk/],
     [1, /sagbruk|(^|[^a-zæøå])sag($|[^a-zæøå])|trelast|sawmill|tømmer|høvleri/], [2, /snekker|møbel|trevare|ferdighus|treindustri|joinery/],
     [13, /bryggeri|brenneri|brewery/], [7, /meieri|slakteri|bakeri|mølle|kjøtt|(^|[^a-zæøå])mat($|[^a-zæøå])|næringsmiddel|nortura|dairy/],
-    [4, /(^|[^a-zæøå])gass($|[^a-zæøå])|gassterminal|(^|[^a-z])lng($|[^a-z])/], [3, /olje|raffineri|petro|tankanlegg/],
+    [3, /olje|raffineri|petro|tankanlegg/], [4, /(^|[^a-zæøå])gass($|[^a-zæøå])|gassterminal|(^|[^a-z])lng($|[^a-z])/],
     [5, /pukk|steinbrudd|(^|[^a-zæøå])grus|sement|betong|gruve|(^|[^a-zæøå])stein|quarry|knuseverk/], [14, /kjemi|plast|maling|gjødsel/],
     [12, /gjenvinning|skrap|avfall|renovasjon|renseanlegg|recycling/], [10, /kraftstasjon|kraftverk|transformator|trafo|energi|fjernvarme/],
     [8, /(^|[^a-zæøå])mek($|[^a-zæøå])|mekanisk|verksted|(^|[^a-zæøå])stål|metall|sveis|smie|aluminium|støperi/], [11, /lager|logistikk|terminal|transport|spedisjon/]];
@@ -217,6 +217,9 @@
     const omg = typeof api.omgivelser === 'function' ? api.omgivelser(info) : null;
     return type(info, omg);
   }
+  // navnet på varianten i planen (pl.variant): de tre gamle navnene (tre, olje, metall – interior.js og vaktene kjenner dem) beholdes
+  const VNAVN = { 1: 'tre', 3: 'olje', 8: 'metall' };
+  const variantNavn = t => VNAVN[t] || 'ind' + t;
   let koblet = null;
   function koble(Interior) {
     if (!Interior || !Interior.TYPER || koblet === Interior) return !!Interior; koblet = Interior;
@@ -226,18 +229,19 @@
     for (const t of ALLE) { const I = IND[t]; if (t !== 11 && I.hall) RS['ind_' + t] = { hall: I.hall, bak: I.bak }; }
     // klassen «industri»: varianten er industritypen (ind1 … ind14); den gamle regelen (tre/metall/olje) står igjen som reserve
     const Ti = T.industri; if (Ti && !Ti.gammelVariant) {
-      Ti.gammelVariant = Ti.variant; Ti.variant = (info, f) => 'ind' + forInfo(info);
-      for (const t of [0, ...ALLE]) Ti.varianter['ind' + t] = { romsett: romsettFor(t), ind: t };
+      Ti.gammelVariant = Ti.variant; Ti.variant = (info, f) => variantNavn(forInfo(info));
+      for (const t of [0, ...ALLE]) Ti.varianter[variantNavn(t)] = { romsett: romsettFor(t), ind: t };
     }
     // klassen «lager»: industrilokalet når dataene sier hvilken industri lageret hører til (ind), ellers et vanlig lager
     const Tl = T.lager; if (Tl && !Tl.variant) {
-      Tl.variant = info => (info && info.ind > 0 && info.ind !== 11 && IND[info.ind] ? 'ind' + info.ind : 'lager');
-      Tl.varianter = { lager: { romsett: 'lager', ind: 11 } }; for (const t of ALLE) Tl.varianter['ind' + t] = { romsett: romsettFor(t), ind: t };
+      Tl.variant = info => (info && info.ind > 0 && info.ind !== 11 && IND[info.ind] ? variantNavn(info.ind) : 'lager');
+      Tl.varianter = { lager: { romsett: 'lager', ind: 11 } }; for (const t of ALLE) Tl.varianter[variantNavn(t)] = { romsett: romsettFor(t), ind: t };
     }
     return true;
   }
-  // industritypen i en ferdig plan (pl.variant 'ind6' -> 6), eller null når planen ikke er et industribygg
-  const fraPlan = pl => { const m = pl && /^ind(\d+)$/.exec(pl.variant || ''); return m ? +m[1] : pl && pl.kl === 'lager' ? 11 : null; };
+  // industritypen i en ferdig plan (pl.variant 'ind6' -> 6, 'tre' -> 1), eller null når planen ikke er et industribygg
+  const fraPlan = pl => { if (!pl || (pl.kl !== 'industri' && pl.kl !== 'lager')) return null; const v = pl.variant || ''; const m = /^ind(\d+)$/.exec(v); if (m) return +m[1];
+    for (const [t, n] of Object.entries(VNAVN)) if (n === v) return +t; return pl.kl === 'lager' ? 11 : null; };
   // Interior-kroken: andre moduler kan be om innredningen for et bygg (info som til Interior.plan)
   const forBygg = info => { const t = forInfo(info); return { type: t, navn: navn(t), tekst: tekst(t), kjent: kjent(info), innredning: innredning(t) }; };
 
@@ -295,7 +299,7 @@
   // interior3d.js: møbeltyper den ikke kjenner (svar true når modellen er tegnet)
   function deler(m, k) { const f = MODELLER[m.type]; if (!f) return false; f(m, k, m.b / 2, m.d / 2, m.h, F); return true; }
 
-  const api = { IND, ALLE, REGLER, MASKINER, OPPSKRIFT, ROMSTIL, MODELLER, F, ORD, type, kjent, navn, kort, tekst, fraNavn, vekter, innredning, koble, forInfo, forBygg, fraPlan, romsettFor, romStil, deler, hash, omgivelser: null };
+  const api = { IND, ALLE, REGLER, MASKINER, OPPSKRIFT, ROMSTIL, MODELLER, F, ORD, type, kjent, navn, kort, tekst, variantNavn, fraNavn, vekter, innredning, koble, forInfo, forBygg, fraPlan, romsettFor, romStil, deler, hash, omgivelser: null };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Industri = api;
   // nettleseren: koble til interiøret med en gang (interior.js er lastet før denne fila)

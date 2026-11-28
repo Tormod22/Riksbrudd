@@ -185,7 +185,7 @@ IND_VERDI = {
 IND_ORD = [(9, r'verft|båtbyggeri|skipsbyggeri|slipp(en)?\b|shipyard|boatyard'), (6, r'fisk|sjømat|fryseri|seafood|laks|sild|reker|trandamp|filet|hermetikk'),
            (1, r'sagbruk|\bsag\b|trelast|sawmill|tømmer|høvleri'), (2, r'snekker|møbel|trevare|ferdighus|treindustri|joinery'),
            (13, r'bryggeri|brenneri|brewery|mikrobryggeri'), (7, r'meieri|slakteri|bakeri|mølle|kjøtt|\bmat\b|næringsmiddel|tine\b|nortura|dairy'),
-           (4, r'\bgass\b|gassterminal|\blng\b'), (3, r'olje|raffineri|petro|oljeterminal|tankanlegg'),
+           (3, r'olje|raffineri|petro|oljeterminal|tankanlegg'), (4, r'\bgass\b|gassterminal|\blng\b'),
            (5, r'pukk|steinbrudd|\bgrus|sement|betong|gruve|\bstein|quarry|knuseverk'), (14, r'kjemi|plast|maling|gjødsel|yara\b'),
            (12, r'gjenvinning|skrap|avfall|renovasjon|renseanlegg|recycling'), (10, r'kraftstasjon|kraftverk|transformator|trafo|energi|fjernvarme'),
            (8, r'\bmek\b|mekanisk|verksted|\bstål|metall|sveis|smie|aluminium|støperi'), (11, r'lager|logistikk|terminal|transport|spedisjon')]

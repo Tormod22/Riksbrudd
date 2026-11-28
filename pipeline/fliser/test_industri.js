@@ -48,6 +48,10 @@ for (const [ind, rom, ting] of [[1, 'sagbrukshall', 'sagbenk'], [3, 'oljehall', 
   [9, 'verftshall', 'båtbukk'], [10, 'turbinhall', 'generator'], [11, 'lagerhall', 'pall'], [12, 'sorteringshall', 'avfallscontainer'], [13, 'bryggerhall', 'gjæringstank'], [14, 'kjemihall', 'reaktor'], [2, 'snekkerverksted', 'høvelbenk']]) {
   const { pl, t, r } = plan({ ind }, rekt(36, 22)); ok(r.has(rom) && (t.has(ting) || [...t].some(x => x === 'pallereol')), `ind ${ind}: ${rom} med ${ting} (${[...t].slice(0, 8).join(', ')})`);
 }
+// som vakta «interiør» (vakter/inne.js): de gamle variantnavnene tre/metall/olje og innholdet står seg når Industri er koblet til
+{ const v = navn => plan({ navn }, rekt(32, 20)); const a = v('sagbruk'), b = v('mek. verksted'), c = v('olje og gass');
+  ok(a.pl.variant === 'tre' && a.t.has('sagbenk') && b.pl.variant === 'metall' && b.t.has('traverskran') && c.pl.variant === 'olje' && c.t.has('tank'), 'gamle variantnavn: tre, metall, olje (' + [a, b, c].map(q => q.pl.variant).join(', ') + ')');
+  ok(Industri.fraPlan(a.pl) === 1 && Industri.fraPlan(c.pl) === 3, 'fraPlan() kjenner de gamle navnene'); }
 // uten ind: anslaget fra omgivelsene (Industri.omgivelser) – fiskevær gir fisk
 Industri.omgivelser = () => ({ kai: 100, fiskevær: true, moh: 3 });
 { let n = 0; for (let i = 0; i < 40; i++) if (Interior.plan(rekt(30, 18), { i, kl: 'industri', h: 8, dør: dør(rekt(30, 18), 0, .5, 4) }).variant === 'ind6') n++; ok(n >= 25, 'uten ind, i et fiskevær: ' + n + ' av 40 blir fiskeforedling'); }
