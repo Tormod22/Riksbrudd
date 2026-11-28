@@ -21,7 +21,9 @@
   const tall = v => (v >= 100 ? Math.round(v) : Math.round(v * 10) / 10).toLocaleString('nb-NO');
   const navn = k => (k === 'diesel' ? 'diesel' : (LB.MATERIALER[k] ? LB.MATERIALER[k].navn.toLowerCase() : k));
   const enhetTekst = k => (k === 'diesel' ? 'l' : (LB.MATERIALER[k] || {}).enhet || '');
-  const mengdeTekst = o => Object.entries(o || {}).filter(([, m]) => m > .05).map(([k, m]) => `${tall(m)} ${enhetTekst(k)} ${navn(k)}`).join(', ');
+  const mengdeTekst = o => { const d = Object.entries(o || {}).filter(([, m]) => m > .05).map(([k, m]) => `${tall(m)} ${enhetTekst(k)} ${navn(k)}`); return d.length > 1 ? d.slice(0, -1).join(', ') + ' og ' + d[d.length - 1] : d.join(''); };
+  // «i lagerteltet», «i containeren»
+  const iBygg = b => ({ lagertelt: 'i lagerteltet', container: 'i containeren', drivstofftank: 'ved dieseltanken', aggregat: 'ved aggregatet' })[b.type] || `i ${((LB.BYGG[b.type] || {}).navn || 'lageret').toLowerCase()}`;
 
   // ---------- lasting og lagring (per leir, som spill/karakter.js) ----------
   function last() {
@@ -77,7 +79,7 @@
       const brenner = (x, y) => B.some(c => Math.abs(x - c.x) <= (c.r || 32) && Math.abs(y - c.y) <= (c.r || 32));
       const r = VL.brann(LB, L, V, brenner, punkt);
       for (const [p, o] of Object.entries(r.per)) { const t = mengdeTekst(o); if (!t || typeof logg !== 'function') continue;
-        const b = p[0] === 'b' ? LB.finn(L, +p.slice(1)) : null; logg(`Brannen tok ${t} ${b ? 'i ' + ((LB.BYGG[b.type] || {}).navn || 'lageret').toLowerCase() : 'på lagerplassen'}.`); }
+        const b = p[0] === 'b' ? LB.finn(L, +p.slice(1)) : null; logg(`Brannen tok ${t} ${b ? iBygg(b) : 'på lagerplassen'}.`); }
       if (Object.keys(r.tapt).length) { if (window.LeirSpill && LeirSpill.lagre) LeirSpill.lagre(); lagre(); if (typeof skitten !== 'undefined') skitten = true; } }
   }
   if (typeof KROKER !== 'undefined') KROKER.sim.push(dt => { try { steg(dt); } catch (e) { console.error(e); } });
@@ -151,6 +153,15 @@
       if (q.inne && m > VIS_INNE) continue; n++; if (q.inne) { g.save(); g.globalAlpha = .55; tegnEnhet(g, u, q, sx, sy, m); g.restore(); } else tegnEnhet(g, u, q, sx, sy, m); }
     // (for vakta) så mange enheter ble tegnet sist, og når
     ut.tegnet = n; ut.tegnetNår = performance.now();
+  });
+  // trykk på en haug/pall/et fat når kartet er zoomet inn: hva det er og hvor det ligger (ikke mens du bygger eller har valgt et lag)
+  if (typeof KROKER !== 'undefined') KROKER.trykk.push((X, Y) => {
+    if (!V || !leir() || typeof kam === 'undefined' || kam.m > VIS_UTE || (typeof valgt !== 'undefined' && valgt) || (window.LeirSpill && LeirSpill.plassering && LeirSpill.plassering())) return false;
+    let best = null, bd = Math.max(1, 6 * kam.m);
+    for (const u of V.e) { const q = punkt(u); if (!q || q.lag > 0 || (q.inne && kam.m > VIS_INNE)) continue; const d = Math.hypot(q.x - X, q.y - Y); if (d < bd) { bd = d; best = { u, q }; } }
+    if (!best || typeof logg !== 'function') return false; const { u, q } = best, E = R.enhet[u.v];
+    const hvor = u.p === 'ute' ? 'ute på lagerplassen – slites i regn, røvere kan ta den' : q.inne ? 'under tak' : 'ute ved tanken';
+    logg(`${E.navn[0].toUpperCase() + E.navn.slice(1)}: ${tall(u.m)} ${enhetTekst(u.v)}, ${hvor}${u.r ? ' (reservert)' : ''}.`); return true;
   });
   // tegnes etter leirens bygg (som også tegnes «over» og i byggevisningen), ellers ligger taket oppå
   if (typeof KROKER !== 'undefined') { const f = KROKER.tegn[KROKER.tegn.length - 1]; f.over = true; f.bygg = true; }

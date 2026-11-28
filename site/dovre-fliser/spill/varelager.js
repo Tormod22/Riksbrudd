@@ -209,9 +209,12 @@
       const j = u.i % perBlokk, kol = Math.floor(u.i / perBlokk);
       return { x: uteP.x + kol * (U.bredde + 1) + (j % perRad + .5) * Bl.dx, y: uteP.y - y - (Math.floor(j / perRad) + .5) * Bl.dy, ret: Bl.ret || 0, inne: false, plass: 'ute' }; }
     const id = +u.p.slice(1), b = (L.bygg || []).find(q => q.id === id); if (!b) return null; const B = Leir.BYGG[b.type]; if (!B || !B.fot) return { x: b.x, y: b.y, ret: b.ret || 0 };
-    const [x0, x1, y0, y1] = B.fot, k = REGLER.kant, c = REGLER.rute, nx = Math.max(1, Math.floor((x1 - x0 - 2 * k) / c)), ny = Math.max(1, Math.floor((y1 - y0 - 2 * k) / c));
+    const cs = Math.cos(b.ret || 0), sn = Math.sin(b.ret || 0), [x0, x1, y0, y1] = B.fot, tilKart = (lx, ly, lag) => ({ x: b.x + lx * cs - ly * sn, y: b.y + lx * sn + ly * cs, ret: b.ret || 0, inne: u.v !== 'diesel', plass: u.p, lag });
+    // fatene står i rader langs langsiden av tanken (aggregatet), utenfor bygget
+    if (u.v === 'diesel') { const per = Math.max(1, Math.floor((y1 - y0) / .85)), kol = Math.floor(u.i / per); return tilKart(x1 + .6 + (kol % 3) * .85, y0 + (u.i % per + .5) * .85, Math.floor(kol / 3)); }
+    const k = REGLER.kant, c = REGLER.rute, nx = Math.max(1, Math.floor((x1 - x0 - 2 * k) / c)), ny = Math.max(1, Math.floor((y1 - y0 - 2 * k) / c));
     const j = u.i % (nx * ny), lx = x0 + k + (j % nx + .5) * ((x1 - x0 - 2 * k) / nx), ly = y0 + k + (Math.floor(j / nx) + .5) * ((y1 - y0 - 2 * k) / ny);
-    const cs = Math.cos(b.ret || 0), sn = Math.sin(b.ret || 0); return { x: b.x + lx * cs - ly * sn, y: b.y + lx * sn + ly * cs, ret: b.ret || 0, inne: true, plass: u.p, lag: Math.floor(u.i / (nx * ny)) };
+    return tilKart(lx, ly, Math.floor(u.i / (nx * ny)));
   }
 
   // ---------- oversikt ----------

@@ -1,0 +1,6 @@
+[
+  ["Varene har en plass", "Lageret er ikke bare et tall lenger. Plankene ligger på paller, tømmeret i hauger, flisa i storsekker og dieselen i fat. Zoom inn på leiren for å se dem. Tallene i statuslinja er de samme som før: summen av alt du har.", "Leiren"],
+  ["Under tak eller ute", "Det som får plass i et lagertelt eller en container, ligger under tak. Resten legges ute på lagerplassen. Ute slites planker, flis og ved i regn, og røvere kan stjele det. Det som ligger inne, får de ikke tak i. Folkene bærer varene inn når det blir plass.", "Leiren"],
+  ["Lagersoner", "I Leir → Lager under «Lagerplasser» kan du merke et lagertelt eller en container for én vare, for eksempel bare planker. Da legges bare den varen der, og de andre bæres ut. «Alle varer» tar bort merket.", "Leiren"],
+  ["Brann i lageret", "Brenner det der varene ligger, går det som kan brenne tapt: planker, tømmer, flis, ved og diesel. Stål og betong tåler brannen.", "Leiren"]
+]
