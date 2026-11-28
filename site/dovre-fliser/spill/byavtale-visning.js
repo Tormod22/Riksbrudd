@@ -163,9 +163,15 @@
     (KT.side = KT.side || []).push(sd => { if (!klar) return null; const d = [];
       for (const by of område()) { const b = S.byer[by.id]; if (!b) continue;
         if (sd === 'blå' && b.avtale) d.push(`${by.navn} (${BA.TRINNORD[b.avtale.trinn].toLowerCase()})`);
-        if (sd !== 'blå' && b.forhandler && b.forhandler.side === sd) d.push(`forhandler med ${by.navn}`);
-        if (sd !== 'blå' && b.rival && b.rival.side === sd) d.push(`avtale med ${by.navn}`); }
-      return d.length ? (sd === 'blå' ? 'Byavtaler: ' : `${sidenavn(sd)}: `) + d.slice(0, 4).join(', ') + '.' : null; }); }
+        if (sd !== 'blå' && b.forhandler && b.forhandler.side === sd) d.push(`${sidenavn(sd)} forhandler med ${by.navn}`);
+        if (sd !== 'blå' && b.rival && b.rival.side === sd) d.push(`${sidenavn(sd)} har ${b.rival.trinn === 'handel' ? 'handelsavtale' : 'beskyttelsesavtale'} med ${by.navn}`); }
+      return d.length ? (sd === 'blå' ? 'Byavtaler: ' + d.slice(0, 4).join(', ') : d.slice(0, 3).join('. ')) + '.' : null; }); }
+
+  // ---------- varselbrikken (spill/narhud.js leser window.VARSEL_TILLEGG): en by ber om hjelp; trykk = byens kort ----------
+  (window.VARSEL_TILLEGG = window.VARSEL_TILLEGG || []).push(() => { if (!klar) return []; const ut = [];
+    for (const by of område()) { const b = S.byer[by.id]; if (!b || !b.hjelp) continue; const t = Math.max(0, Math.round((b.hjelp.frist - nåMin()) / 6) / 10);
+      ut.push({ i: 'varsel', k: 'fare', t: `${by.navn} ber om hjelp`, s: `frist ${String(t).replace('.', ',')} t`, f: () => { valgt = by.id; modus = 'kort'; if (window.SelskapetSpill) SelskapetSpill.vis(true, 'byer'); } }); }
+    return ut.slice(0, 2); });
 
   // ---------- kartet: ringene ----------
   const RING = { kunde: ['rgba(170,180,190,.75)', 1.5, [4, 4]], beskyttelse: ['rgba(214,178,90,.9)', 2.5, []], handel: ['rgba(127,176,122,.95)', 3, []], medlem: ['rgba(110,150,210,1)', 4, []] };
