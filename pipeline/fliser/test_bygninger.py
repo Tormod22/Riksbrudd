@@ -30,7 +30,9 @@ pr = sorted([f['properties'] for f in d['hus']['features']], key=lambda p: p['i'
 ok = pr[0].get('r') == 2 and pr[0].get('vf') == 0xf2f0ea + 1 and 'r' not in pr[1] and pr[1]['t'] == 15; feil += not ok; print(('ok   ' if ok else 'FEIL ') + f'flisa: {pr}')
 
 # ---------- INDUSTRITYPEN (28. nov, ut8-industri) ----------
-from bygninger import industri_type, ind_navn, IND
+from bygninger import industri_type, ind_navn, IND, svak_type
+for tags, ventet in [({'office': 'company', 'name': 'Egersund Fisk AS'}, 6), ({'office': 'company', 'name': 'Regnskapsbyrå AS'}, 0), ({'name': 'Fisk og vilt'}, 0), ({'craft': 'yes', 'operator': 'Otta Sag'}, 1)]:
+    v = svak_type(tags); ok = v == ventet; feil += not ok; print(('ok   ' if ok else 'FEIL ') + f'svakt punkt {tags} -> {v}')
 for tags, bygg, ventet in [({'industrial': 'sawmill'}, 'industrial', 1), ({'craft': 'boatbuilder'}, 'yes', 9), ({'craft': 'carpenter'}, None, 2),
                            ({'industrial': 'oil;gas'}, None, 3), ({'man_made': 'works', 'product': 'gravel'}, None, 5), ({'man_made': 'storage_tank', 'content': 'gas'}, None, 4),
                            ({'man_made': 'storage_tank', 'content': 'water'}, None, 0), ({'power': 'substation'}, None, 10), ({'power': 'generator', 'generator:source': 'solar'}, None, 0),
@@ -38,7 +40,9 @@ for tags, bygg, ventet in [({'industrial': 'sawmill'}, 'industrial', 1), ({'craf
                            ({'amenity': 'recycling', 'recycling_type': 'centre'}, None, 12), ({'amenity': 'recycling', 'recycling_type': 'container'}, None, 0),
                            ({'name': 'Nergård Fiskemottak'}, 'industrial', 6), ({'name': 'Fiskebutikken'}, 'yes', 0), ({'name': 'Dovre Sag'}, 'industrial', 1),
                            ({'landuse': 'industrial', 'name': 'Otta Mek. Verksted'}, None, 8), ({'industrial': 'brewery'}, None, 13), ({'industrial': 'factory'}, None, 0),
-                           ({'industrial': 'slaughterhouse'}, None, 7), ({'industrial': 'chemical'}, None, 14), ({'industrial': 'scrap_yard'}, None, 12), ({}, 'industrial', 0)]:
+                           ({'industrial': 'slaughterhouse'}, None, 7), ({'industrial': 'chemical'}, None, 14), ({'industrial': 'scrap_yard'}, None, 12), ({}, 'industrial', 0),
+                           ({'landuse': 'industrial', 'operator': 'Moelven Trelast'}, None, 1), ({'landuse': 'port', 'name': 'Fiskerihavna'}, None, 11),
+                           ({'landuse': 'industrial', 'owner': 'Norsk Stein AS'}, None, 5), ({'building': 'industrial', 'operator': 'Lerøy Sjømat'}, 'industrial', 6)]:
     v = industri_type(tags, bygg); ok = v == ventet; feil += not ok; print(('ok   ' if ok else 'FEIL ') + f'industri {bygg} {tags} -> {v} ({IND.get(v)})')
 
 # Hele byggjobben på en liten syntetisk .osm (Geofabrik er stengt herfra; den ekte kjøringen skjer i GitHub Actions)
@@ -74,6 +78,16 @@ PRØVE = [  # (navn, x, y, b, d, merker, ventet t, ventet ind)
     ('bryggeri inne i lagerområde', 6050, 50, 20, 20, {'building': 'yes'}, 6, 13),
     ('fiskemottak i navnet', 7000, 0, 20, 20, {'building': 'industrial', 'name': 'Nergård Fiskemottak'}, 6, 6),
     ('trafo i transformatorstasjon', 8010, 10, 6, 6, {'building': 'transformer_tower'}, 1, 10),
+    # (ut9-industri2) områder uten egen type arver fra punkter og naboer; navnet kan stå i operator; nært punkt; svake punkter
+    ('yes i område med fiskepunkt', 10010, 10, 20, 15, {'building': 'yes'}, 6, 6),
+    ('industri i område med operator «Sildoljefabrikk»', 11010, 10, 20, 15, {'building': 'industrial'}, 6, 6),
+    ('yes i område med bedriften «Moen Trelast AS»', 12010, 10, 20, 15, {'building': 'yes'}, 6, 1),
+    ('nabo til et mek. verksted i samme område', 13050, 10, 20, 15, {'building': 'yes'}, 6, 8),
+    ('verkstedet selv (craft=metal_construction)', 13010, 10, 20, 15, {'building': 'industrial', 'craft': 'metal_construction'}, 6, 8),
+    ('industribygg 40 m fra et sagbrukspunkt', 14000, 0, 20, 15, {'building': 'industrial'}, 6, 1),
+    ('industribygg 120 m fra sagbrukspunktet', 14000, 160, 20, 15, {'building': 'industrial'}, 6, 0),
+    ('bolig med bedriften «Bergen Fisk AS» inni', 15000, 0, 12, 10, {'building': 'house'}, 0, 0),
+    ('lager med bedriften «Bergen Fisk AS» inni', 15100, 0, 30, 20, {'building': 'warehouse'}, 12, 6),
 ]
 for navn, dx, dy, b, d, tg, *_ in PRØVE: firkant(X + dx, Y + dy, b, d, tg)
 # områdene (uten building): fiskeforedling, havn, industri uten type, oljeterminal, et stort lagerområde med et bryggeri inni, trafostasjon
@@ -84,10 +98,18 @@ firkant(X + 5000, Y, 50, 50, {'landuse': 'industrial', 'industrial': 'oil'})
 firkant(X + 6000, Y, 200, 200, {'landuse': 'industrial', 'industrial': 'warehouse'})
 firkant(X + 6040, Y + 40, 40, 40, {'industrial': 'brewery'})
 firkant(X + 8000, Y, 30, 30, {'power': 'substation'})
+firkant(X + 10000, Y, 60, 60, {'landuse': 'industrial'})
+firkant(X + 11000, Y, 60, 60, {'landuse': 'industrial', 'operator': 'Egersund Sildoljefabrikk'})
+firkant(X + 12000, Y, 60, 60, {'landuse': 'industrial'})
+firkant(X + 13000, Y, 90, 60, {'landuse': 'industrial'})
 punkter = []
 nid_p = [900000]
 lon, lat = tr.transform(X + 4015, Y + 15); punkter.append((900001, lon, lat, {'man_made': 'works', 'product': 'gravel', 'name': 'Pukkverket'}))
 lon, lat = tr.transform(X + 9000, Y); punkter.append((900002, lon, lat, {'shop': 'supermarket', 'name': 'KIWI Dombås'}))
+for pid, dx, dy, tg in [(900003, 10045, 45, {'industrial': 'fish_processing'}), (900004, 12045, 45, {'office': 'company', 'name': 'Moen Trelast AS'}),
+                        (900005, 14010, 47, {'industrial': 'sawmill'}), (900006, 15006, 5, {'office': 'company', 'name': 'Bergen Fisk AS'}),
+                        (900007, 15110, 10, {'office': 'company', 'name': 'Bergen Fisk AS'})]:
+    lon, lat = tr.transform(X + dx, Y + dy); punkter.append((pid, lon, lat, tg))
 with tempfile.TemporaryDirectory() as tmp:
     inn, pf, ut = os.path.join(tmp, 'bygg.osm'), os.path.join(tmp, 'punkt.osm'), os.path.join(tmp, 'ut')
     skriv(inn, noder, veier); skriv(pf, punkter, [])
@@ -103,7 +125,7 @@ import json
 for i, (navn, dx, dy, b, d, tg, vt, vi) in enumerate(PRØVE):
     e = funnet.get(i, {}); ok = e.get('t') == vt and e.get('ind', 0) == vi; feil += not ok
     print(('ok   ' if ok else 'FEIL ') + f'byggjobben: {navn} -> t {e.get("t")}, ind {e.get("ind", 0)} (ventet t {vt}, ind {vi})')
-ok = all('ind' not in e for e in funnet.values() if not e.get('ind')) and man['statistikk']['industritype'].get('fisk/sjømat') == 2 and man['statistikk']['industriområder'] == 7
+ok = all('ind' not in e for e in funnet.values() if not e.get('ind')) and man['statistikk']['industritype'].get('fisk/sjømat') == 5 and man['statistikk']['industriområder'] == 11
 feil += not ok; print(('ok   ' if ok else 'FEIL ') + f'manifestet: {man["statistikk"]["industritype"]}, områder {man["statistikk"]["industriområder"]}')
 
 sys.exit(1 if feil else 0)

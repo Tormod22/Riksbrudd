@@ -201,6 +201,10 @@ def ind_navn(n):
     for t, r in IND_ORD_RE:
         if r.search(n): return t
     return 0
+# (ut9-industri2) navnet på et objekt: navn, driver, eier og merkenavn (bedriften står ofte i operator/owner, ikke i name)
+NAVNENØKLER = ('name', 'official_name', 'operator', 'owner', 'brand')
+def navn_av(tags):
+    return ' '.join(str(tags.get(k)) for k in NAVNENØKLER if tags.get(k))
 def industri_type(tags, bygg=None):
     """Industritypen fra merkene på ett objekt (bygg, punkt eller område). bygg = building=* når det er et bygg.
     Rekkefølgen: industrial=*, craft=*, man_made, power, amenity, landuse/havn, og til sist navnet (bare i industri-sammenheng)."""
@@ -224,10 +228,16 @@ def industri_type(tags, bygg=None):
     if lu in ('port', 'harbour', 'depot'): return 11
     if lu == 'landfill': return 12
     # navnet: bare når bygget/området er industri (building=industrial/warehouse … eller landuse=industrial / man_made=works)
-    if (bygg in ('industrial', 'manufacture', 'warehouse', 'storage', 'yes', 'shed', 'hangar', 'service') and (tags.get('name') and (bygg != 'yes' or g('landuse') == 'industrial' or tags.get('industrial') or mm == 'works'))) \
-            or (bygg is None and (lu == 'industrial' or mm == 'works')):
-        return ind_navn(tags.get('name'))
+    nv = navn_av(tags)
+    if (bygg in ('industrial', 'manufacture', 'warehouse', 'storage', 'yes', 'shed', 'hangar', 'service') and (nv and (bygg != 'yes' or g('landuse') == 'industrial' or tags.get('industrial') or mm == 'works'))) \
+            or (bygg is None and (lu in ('industrial', 'port', 'harbour') or mm == 'works' or tags.get('industrial'))):
+        return ind_navn(nv)
     return 0
+# (ut9-industri2) et SVAKT punkt: en bedrift (office=*, craft uten kjent verdi) med et navn som sier bransjen («Egersund Fisk AS»).
+# Brukes bare der det ellers er industri: i et industriområde (gir området typen) og i bygg som alt er industri/lager.
+def svak_type(tags):
+    if not (tags.get('office') or tags.get('craft') or tags.get('company')): return 0
+    return ind_navn(navn_av(tags))
 # Områder som gjør bygg til industri (t 5 -> 6) selv uten kjent type
 def er_industriområde(tags):
     lu = (tags.get('landuse') or '').lower()
@@ -255,9 +265,10 @@ class Samler(osmium.SimpleHandler):
         s.punkter = True                # False: hopp over nodene (byggfila har millioner av noder uten merker)
     def node(s, n):
         if not s.punkter: return
-        if n.tags.get('industrial') or n.tags.get('craft') or n.tags.get('man_made') or n.tags.get('power'):
-            t = industri_type(n.tags, 'yes')
-            if t: x, y = s.tr.transform(n.location.lon, n.location.lat); s.indpunkt.append((x, y, t))
+        if n.tags.get('industrial') or n.tags.get('craft') or n.tags.get('man_made') or n.tags.get('power') or n.tags.get('office'):
+            t = industri_type(n.tags, 'yes'); sv = 0
+            if not t: t = svak_type(n.tags); sv = 1
+            if t: x, y = s.tr.transform(n.location.lon, n.location.lat); s.indpunkt.append((x, y, t, sv))
         if not (n.tags.get('shop') or n.tags.get('amenity')): return
         k = kjede(n.tags)
         if k or n.tags.get('amenity') == 'fuel': x, y = s.tr.transform(n.location.lon, n.location.lat)
@@ -335,48 +346,91 @@ def koble_punkter(ringer, k, punkt):
     return n
 
 
+# (ut9-industri2) Claudes tall: hvor langt et sterkt industripunkt rekker til et industri-/lagerbygg som ikke står i et område med type,
+# og vektene når et område uten type arver typen fra punktene (sterke 2, svake 1) og byggene med egne merker (1) inne i området.
+IND_NÆR = 60.0
+IND_VEKT = {'sterk': 2.0, 'svak': 1.0, 'bygg': 1.0}
+
+
 def koble_industri(ringer, t, ind, indpunkt=(), område=()):
-    """Industritypen til byggene som ikke har den selv: først et punkt inne i bygget, så det minste industriområdet midten står i.
-    Bygg merket bare building=yes (t 5) i et industriområde blir t 6 eller 12 (lager). Endrer t og ind. Gir (fra punkt, fra område, ny type)."""
+    """Industritypen til byggene som ikke har den selv. Rekkefølgen:
+    1. et sterkt punkt (industrial/craft/man_made/power med kjent type) inne i bygget; et svakt punkt (bedrift med bransjenavn) bare i
+       bygg som alt er industri eller lager (t 6/12);
+    2. det minste industriområdet midten står i – et område uten egen type arver typen fra punktene og byggene (med egne merker) inne i
+       det (flest stemmer, sterke punkter teller dobbelt);
+    3. det nærmeste sterke punktet innen IND_NÆR m, for industri-/lagerbygg som fortsatt mangler typen.
+    Bygg merket bare building=yes (t 5) i et industriområde blir t 6 eller 12 (lager). Endrer t og ind. Gir (fra punkt, fra område, ny type);
+    detaljene står i koble_industri.sist."""
     from shapely import contains_xy
     C = 200.0; rut = {}
+    egne = [v for v in ind]
     for i, r in enumerate(ringer):
         x0, y0 = r.min(axis=0); x1, y1 = r.max(axis=0)
         for cx in range(int(x0 // C), int(x1 // C) + 1):
             for cy in range(int(y0 // C), int(y1 // C) + 1): rut.setdefault((cx, cy), []).append(i)
-    n_p = n_o = n_t = 0; poly = {}
-    for x, y, v in indpunkt:
+    pkt = [(p[0], p[1], p[2], p[3] if len(p) > 3 else 0) for p in indpunkt]
+    n_p = n_o = n_t = n_arv = n_nær = 0; poly = {}
+    for x, y, v, sv in pkt:
         for i in rut.get((int(x // C), int(y // C)), []):
-            if ind[i]: continue
+            if ind[i] or (sv and t[i] not in (6, 12)): continue
             r = ringer[i]
             if not (r[:, 0].min() <= x <= r[:, 0].max() and r[:, 1].min() <= y <= r[:, 1].max()): continue
             p = poly.get(i) or poly.setdefault(i, Polygon(r))
             if p.is_valid and p.contains(Point(x, y)): ind[i] = v; n_p += 1; break
-    if not område: return n_p, 0, 0
-    # midtpunktet og arealet til hvert bygg (rammens midte holder: byggene er små mot områdene)
     mid = np.array([(r[:, 0].mean(), r[:, 1].mean()) for r in ringer]) if ringer else np.zeros((0, 2))
-    areal = [abs(float(np.dot(r[:-1, 0], r[1:, 1]) - np.dot(r[1:, 0], r[:-1, 1]))) / 2 for r in ringer]
-    best = {}   # bygg -> (områdets areal, ind)
-    inne = set()
-    for ring, v, ar in område:
-        x0, y0 = ring.min(axis=0); x1, y1 = ring.max(axis=0)
-        kand = set()
-        for cx in range(int(x0 // C), int(x1 // C) + 1):
-            for cy in range(int(y0 // C), int(y1 // C) + 1): kand.update(rut.get((cx, cy), ()))
-        kand = [i for i in kand if t[i] in IND_FRA_OMRÅDE and x0 <= mid[i, 0] <= x1 and y0 <= mid[i, 1] <= y1]
-        if not kand: continue
-        try: pg = Polygon(ring)
-        except Exception: continue
-        if not pg.is_valid: pg = pg.buffer(0)
-        ja = contains_xy(pg, mid[kand, 0], mid[kand, 1])
-        for i, j in zip(kand, ja):
-            if not j: continue
-            inne.add(i)
-            if v and (i not in best or ar < best[i][0]): best[i] = (ar, v)
-    for i, (ar, v) in best.items():
-        if not ind[i]: ind[i] = v; n_o += 1
-    for i in inne:
-        if t[i] == 5 and areal[i] >= IND_MIN_AREAL: t[i] = 12 if ind[i] == 11 else 6; n_t += 1
+    if område:
+        areal = [abs(float(np.dot(r[:-1, 0], r[1:, 1]) - np.dot(r[1:, 0], r[:-1, 1]))) / 2 for r in ringer]
+        prut = {}
+        for j, (x, y, v, sv) in enumerate(pkt): prut.setdefault((int(x // C), int(y // C)), []).append(j)
+        best = {}   # bygg -> (områdets areal, ind)
+        inne = set()
+        for ring, v, ar in område:
+            x0, y0 = ring.min(axis=0); x1, y1 = ring.max(axis=0)
+            kand, kp = set(), set()
+            for cx in range(int(x0 // C), int(x1 // C) + 1):
+                for cy in range(int(y0 // C), int(y1 // C) + 1): kand.update(rut.get((cx, cy), ())); kp.update(prut.get((cx, cy), ()))
+            kand = [i for i in kand if x0 <= mid[i, 0] <= x1 and y0 <= mid[i, 1] <= y1]
+            if not kand: continue
+            try: pg = Polygon(ring)
+            except Exception: continue
+            if not pg.is_valid: pg = pg.buffer(0)
+            ja = contains_xy(pg, mid[kand, 0], mid[kand, 1])
+            med = [i for i, j in zip(kand, ja) if j]
+            if not med: continue
+            # området uten egen type: stemmer fra punktene og byggene med egne merker inne i det
+            if not v:
+                st = {}
+                kp = [j for j in kp if x0 <= pkt[j][0] <= x1 and y0 <= pkt[j][1] <= y1]
+                if kp:
+                    jp = contains_xy(pg, np.array([pkt[j][0] for j in kp]), np.array([pkt[j][1] for j in kp]))
+                    for j, q in zip(kp, jp):
+                        if q: st[pkt[j][2]] = st.get(pkt[j][2], 0) + IND_VEKT['svak' if pkt[j][3] else 'sterk']
+                for i in med:
+                    if egne[i]: st[egne[i]] = st.get(egne[i], 0) + IND_VEKT['bygg']
+                if st: v = max(sorted(st), key=lambda k: st[k]); n_arv += 1
+            for i in med:
+                if t[i] not in IND_FRA_OMRÅDE: continue
+                inne.add(i)
+                if v and (i not in best or ar < best[i][0]): best[i] = (ar, v)
+        for i, (ar, v) in best.items():
+            if not ind[i]: ind[i] = v; n_o += 1
+        for i in inne:
+            if t[i] == 5 and areal[i] >= IND_MIN_AREAL: t[i] = 12 if ind[i] == 11 else 6; n_t += 1
+    # 3. nærmeste sterke punkt for industri-/lagerbygg som fortsatt mangler typen
+    sterke = [(x, y, v) for x, y, v, sv in pkt if not sv]
+    if sterke:
+        srut = {}
+        for x, y, v in sterke: srut.setdefault((int(x // C), int(y // C)), []).append((x, y, v))
+        for i in range(len(ringer)):
+            if ind[i] or t[i] not in (6, 12): continue
+            mx, my = mid[i]; bestd, bv = IND_NÆR, 0
+            for cx in (int(mx // C) - 1, int(mx // C), int(mx // C) + 1):
+                for cy in (int(my // C) - 1, int(my // C), int(my // C) + 1):
+                    for x, y, v in srut.get((cx, cy), ()):
+                        d = ((x - mx) ** 2 + (y - my) ** 2) ** .5
+                        if d < bestd: bestd, bv = d, v
+            if bv: ind[i] = bv; n_nær += 1
+    koble_industri.sist = {'fra punkt': n_p, 'fra område': n_o, 'områder som arvet': n_arv, 'nært punkt': n_nær, 'ny type': n_t}
     return n_p, n_o, n_t
 
 
@@ -446,7 +500,7 @@ def main(inn, utmappe, punktfil=None):
     s.apply_file(inn, locations=True, idx='flex_mem'); logg('bygg lest:', len(s.ringer), 'anlegg:', len(s.anlegg), 'butikkpunkter:', len(s.punkt))
     n = koble_punkter(s.ringer, s.k, s.punkt); logg('kjede fra punkt:', n, 'kjedebygg i alt:', sum(1 for v in s.k if v))
     n_egne = sum(1 for v in s.ind if v); n_p, n_o, n_t = koble_industri(s.ringer, s.t, s.ind, s.indpunkt, s.område)
-    logg('industritype: egne merker', n_egne, 'fra punkt', n_p, 'fra område', n_o, '(områder:', len(s.område), ') ny type industri/lager', n_t)
+    logg('industritype: egne merker', n_egne, 'fra punkt', n_p, 'fra område', n_o, '(områder:', len(s.område), ') ny type industri/lager', n_t, koble_industri.sist)
     # samme stasjon kan være både punkt og område: én per 40 m
     fuel = []
     for x, y, kj in s.fuel:
