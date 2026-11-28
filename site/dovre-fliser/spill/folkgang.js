@@ -74,7 +74,7 @@
 
   // ---------- målet for én person ----------
   // Gir { k (nøkkel – samme nøkkel = samme mål), x, y, e, hus, kart ('id:..'/'rom:..' = felles veikart, ellers null), navn (stedet), gjør (når hen er framme),
-  //       regnet (teller som framme – utpost), inne (byggtype folk går inn i), bygg (id) }
+  //       regnet (teller som framme: en utpost der leir.js regner reisen, eller frakten der ressurser.js regner turene), inne (byggtype folk går inn i), bygg (id) }
   function målFor(p, i, hva, ctx, sm) {
     const leir = ctx.leir, bål = (k, tekst) => { const a = hash(p.id, 11) * 6.283, r = REGLER.bål[0] + hash(p.id, 13) * (REGLER.bål[1] - REGLER.bål[0]);
       return { k: 'bål:' + p.id, x: leir.x + Math.cos(a) * r, y: leir.y + Math.sin(a) * r, navn: 'bålet', gjør: tekst || k }; };
@@ -90,7 +90,10 @@
       if (seng) return { k: seng.k, kart: seng.k, x: seng.x, y: seng.y, e: seng.e, hus: seng.hus, navn: 'senga i ' + seng.navn, gjør: hva === 'syk' ? 'hviler i senga' : 'sover', inne: seng.inne || null, bygg: seng.bygg };
       return bål('sover ute (ingen seng)');
     }
-    if (hva === 'mat') { const s = sted(STED.kjøkken, p.id); return s ? { ...s, gjør: 'spiser' } : bål('spiser ved bålet'); }
+    if (hva === 'mat') {
+      // langt ute (hogstfelt, utpost over REGLER.utpost m unna): matpakke der de arbeider – ingen tur hjem til lunsj
+      if (p.oppgave !== 'fri') { const A = målFor(p, i, 'arbeid', ctx, sm); if (A && Math.hypot(A.x - leir.x, A.y - leir.y) > REGLER.utpost) return { ...A, kart: A.kart, gjør: 'spiser matpakka', inne: null }; }
+      const s = sted(STED.kjøkken, p.id); return s ? { ...s, gjør: 'spiser' } : bål('spiser ved bålet'); }
     if (hva !== 'arbeid' || p.oppgave === 'fri') return bål('har fri');
     const o = p.oppgave, nr = sm.nr.get(p.id) || 0;
     if (o === 'bygg') {
@@ -110,7 +113,7 @@
       const q = A[nr % A.length], a = hash(p.id, 21) * 6.283, r = o === 'hogst' ? Math.min(12, (q.r || 10) * .6) : 4;
       return { k: o + ':' + q.id, x: q.x + Math.cos(a) * r, y: q.y + Math.sin(a) * r, navn: o === 'hogst' ? 'hogstfeltet' : 'huset som rives', gjør: o === 'hogst' ? 'feller trær' : 'river huset' }; }
     if (o === 'frakt') { const A = (ctx.RJ || []).filter(q => q.avst > (ctx.nær || 150) && q.frakt !== 'lastebil' && q.haug && Object.values(q.haug).some(v => v > .01));
-      if (A.length) { const q = A[nr % A.length]; return { k: 'haug:' + q.id, x: q.x, y: q.y, navn: 'haugen', gjør: 'henter materialer' }; } }
+      if (A.length) { const q = A[nr % A.length]; return { k: 'haug:' + q.id, x: q.x, y: q.y, navn: 'haugen', gjør: 'bærer materialer til leiren', regnet: true }; } }
     const D = STED[o]; if (D) { const s = sted(D, nr); if (s) return o === 'vakt' ? { ...s, inne: 'vakttårn' } : s; }
     if (o === 'vakt') { const a = hash(p.id, 5) * 6.283; return { k: 'post:' + p.id, x: leir.x + Math.cos(a) * 14, y: leir.y + Math.sin(a) * 14, navn: 'vaktposten', gjør: 'står vakt' }; }
     return bål('venter – ' + (D ? 'trenger ' + D.navn : 'ingen arbeidsplass'));

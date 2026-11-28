@@ -125,5 +125,13 @@ for (const n of [10, 50, 200]) {
   const s = G.pers[1];
   ok(rom.some(r => r.senger > 0) && s.framme && /egenbygde/.test(s.mål.navn), 'senga i det egenbygde huset: ' + FG.tekst(G, P.F.personer[0]) + ' (' + rom.map(r => r.navn + ' ' + r.senger).join(', ') + ')');
 }
+// ---------- 7. langt ute: matpakke på hogstfeltet, og hogsten bidrar først når de er framme ----------
+{ const P = leir(3, { alle: 'hogst', byggeplass: false }), G = FG.ny(); let hva = 'arbeid';
+  const RJ = [{ id: 1, type: 'hogst', x: P.midte.x + 700, y: P.midte.y, r: 30, arbeid: 10, gjort: 0 }];
+  const ctx = { F: P.F, L: P.L, leir: P.midte, kart: kartFor(P), RJ, hva: () => hva };
+  kjør(G, ctx, 60); ok(FG.stedF(G, P.F, 'hogst') === 0 && /hogstfeltet/.test(FG.tekst(G, P.F.personer[0])), 'på vei til hogstfeltet 700 m unna: ' + FG.tekst(G, P.F.personer[0]));
+  kjør(G, ctx, 600, 1); ok(FG.stedF(G, P.F, 'hogst') === 1, 'framme på hogstfeltet etter 10 min: ' + FG.tekst(G, P.F.personer[0]));
+  hva = 'mat'; kjør(G, ctx, 30); ok(/matpakka/.test(FG.tekst(G, P.F.personer[0])) && G.pers[1].framme, 'lunsj langt ute: ' + FG.tekst(G, P.F.personer[0]));
+}
 console.log(feil ? `${feil} FEIL` : 'Alle testene for folkgang.js er ok');
 process.exit(feil ? 1 : 0);

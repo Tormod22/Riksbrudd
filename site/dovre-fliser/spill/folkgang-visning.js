@@ -55,7 +55,7 @@
   KROKER.tegn.push((g, vx0, vy1) => {
     if (typeof kam === 'undefined' || (typeof på3d !== 'undefined' && på3d)) return; const m = kam.m, lt = window.Leir2d && Leir2d.REGLER ? Leir2d.REGLER.folkUnder : .6;
     const F = Fo(); if (!F || m >= 3 || (m < lt && window.Leir2d && !Leir2d.av)) return;
-    g.save(); const r = Math.max(2.2, Math.min(4, 1.6 / Math.sqrt(m) + 1.4));
+    g.save(); const r = Math.max(2.8, Math.min(4.5, 1.8 / Math.sqrt(m) + 1.6));
     for (const p of F.personer) { const q = plass2d(p); if (!q) continue; const x = (q.x - vx0) / m, y = (vy1 - q.y) / m;
       g.globalAlpha = q.sover ? .55 : 1; g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.arc(x + .8, y + 1, r + .6, 0, 6.283); g.fill();
       g.fillStyle = q.farge; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill();
