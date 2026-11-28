@@ -44,7 +44,7 @@
   function bilde() { const B = område(); if (!B.length) return null; const st = S.stilling(B, eierAv), led = ledige(), fri = led.filter(l => !l.holder), fi = fiender();
     // (runde 12) forslagene bruker lag du har kontakt med; har du ingen, foreslås de andre (med grå knapp og forklaring)
     const medK = fri.filter(l => l.kontakt), kand = medK.length ? medK : fri.length ? fri : led;
-    return { byer: B, st, ut: S.utfall(st, undefined, auto() && typeof tid === 'number' ? tid : undefined), trekk: S.trekk('blå', B, eierAv, kand, fi, undefined, { liste: meldt.tap || [], nå: typeof tid === 'number' ? tid : 0 }, b => (eierAv(b.id) === 'blå' ? 0 : kjentForsvar(b).mann)), trusler: S.trusler('blå', B, eierAv, garnison, fi), fronter: S.fronter(B, eierAv), fiender: fi, ledige: led }; }
+    return { byer: B, st, ut: S.utfall(st, undefined, auto() && typeof tid === 'number' ? tid : undefined), trekk: S.trekk('blå', B, eierAv, kand, fi, undefined, { liste: meldt.tap || [], nå: typeof tid === 'number' ? tid : 0 }, b => (eierAv(b.id) === 'blå' ? 0 : kjentForsvar(b).mann), ruteAv), trusler: S.trusler('blå', B, eierAv, garnison, fi), fronter: S.fronter(B, eierAv), fiender: fi, ledige: led }; }
 
   // ---------- radioen (runde 12, PC-kritiker F) ----------
   // «Vaktlaget ble sendt 8 km til Løkken uten advarsel, og etterpå når ingen ordre fram»: før et lag sendes ut av radiorekkevidden,
@@ -143,6 +143,54 @@
   // fredstiden: motstanderne slåss ikke om tettsteder før den er over (spill/fraksjoner-visning.js, AI.regionFred)
   const fredSlutt = () => { if (!window.Fraksjoner || !Fraksjoner.fredDøgn || !window.AI || AI.på === false || (navigator.webdriver && !AI.test && !api.test)) return 0; const f = (window.SPILLREGLER && SPILLREGLER.faktor && SPILLREGLER.faktor.fiende) || 1; return Fraksjoner.fredDøgn(f) * 1440; };
   const fredTekst = () => { const s = fredSlutt(); return s && tid < s ? `fredstid til dag ${Math.floor(s / 1440) + 1}${typeof klokkeslett === 'function' ? ' kl. ' + klokkeslett(s) : ''} – ingen kamp om byen før det` : ''; };
+  // ---------- (ut8-kr-krig, Ingrid 28. nov) MARSJRUTA FØR BEKREFTELSEN ----------
+  // «Neste trekk 1: Vingrom» → «Send 2 lag» → «Send likevel»: bekreftelsen nevnte ikke at ruta gikk gjennom Lillehammer (bygdevern 14) og
+  // Vingnes (10); det sto først i loggen etter ordren, og fire falt. Nå regnes marsjruta FØR bekreftelsen med samme regel som ordre()
+  // (index.html) og kroken i spill/krig-visning.js: Terreng.ruteTil i et vindu rundt laget og målet, de fiendtlige tettstedene
+  // (KrigSpill.fiendtligeByer – bygdevern som står, motstandernes byer) og omvegen utenom dem når den er god nok (Krig.omvegOk). Byene ruta
+  // likevel går gjennom, står i bekreftelsen med forsvaret («Marsjen går gjennom Lillehammer – bygdevern ca. 14 mann»), og Strategi.trekk
+  // setter slike forslag bak de trygge (ruteAv). Svaret huskes per mål, lagets plass (300 m-ruter) og de fiendtlige byene; ett om gangen.
+  // I testene (navigator.webdriver) er dette av til StrategiSpill.ruteTest = true (vakta ut8-kr-krig), så de andre vaktene går som før.
+  const RUTER = new Map(); let ruteKø = Promise.resolve();
+  const ruteAuto = () => auto() && (!navigator.webdriver || api.ruteTest === true);
+  function fiendtligeFor(fra, by) { const KS = window.KrigSpill; if (!KS || !KS.fiendtligeByer || !window.Garnison) return null; try { return KS.fiendtligeByer([[fra.x, fra.y], [by.x, by.y]]); } catch (e) { return null; } }
+  // bare byer som ligger innenfor vinduet ruta regnes i, kan ligge på ruta
+  function iVindu(fra, by, fi) { const d = Math.hypot(by.x - fra.x, by.y - fra.y), pad = Math.max(2500, d * .3), x0 = Math.min(fra.x, by.x) - pad, x1 = Math.max(fra.x, by.x) + pad, y0 = Math.min(fra.y, by.y) - pad, y1 = Math.max(fra.y, by.y) + pad;
+    return fi.filter(b => b.by && b.by.bb && b.by.bb[2] > x0 && b.by.bb[0] < x1 && b.by.bb[3] > y0 && b.by.bb[1] < y1); }
+  const ruteNøkkel = (fra, by, fi) => by.id + '|' + Math.round(fra.x / 300) + ',' + Math.round(fra.y / 300) + '|' + fi.map(b => b.navn + ':' + b.mann + ':' + b.grunn).join(',');
+  // det som er kjent om marsjruta fra fra ({ x, y }) til by: { gjennom: [{ navn, grunn, mann, vern, id, folk, pris }], omveg, timer, km } eller
+  // { ingen: true } (ingen rute til fots); undefined = ikke regnet ennå; null = kan ikke regnes (av i testene, mangler reglene)
+  function ruteKjent(fra, by) { if (!ruteAuto() || !fra || !by) return null; const fi0 = fiendtligeFor(fra, by); if (!fi0) return null; const fi = iVindu(fra, by, fi0);
+    if (!fi.length) return { gjennom: [], fri: true }; const r = RUTER.get(ruteNøkkel(fra, by, fi)); return r && !r.venter ? r : undefined; }
+  function ruteSjekk(fra, by) { if (!ruteAuto()) return Promise.resolve(null); const fi0 = fiendtligeFor(fra, by); if (!fi0) return Promise.resolve(null); const fi = iVindu(fra, by, fi0);
+    if (!fi.length) return Promise.resolve({ gjennom: [], fri: true });
+    const n = ruteNøkkel(fra, by, fi), har = RUTER.get(n); if (har) return har.venter || Promise.resolve(har);
+    if (typeof lagVindu !== 'function' || !window.Terreng || !window.Krig || !Krig.gjennomByer) return Promise.resolve(null);
+    const p = { x: fra.x, y: fra.y }, venter = ruteKø = ruteKø.then(() => regnRute(p, by, fi)).then(r => { if (r) RUTER.set(n, r); else RUTER.delete(n); if (RUTER.size > 80) RUTER.delete(RUTER.keys().next().value); return r; }, () => { RUTER.delete(n); return null; });
+    RUTER.set(n, { venter }); return venter; }
+  async function regnRute(fra, by, fi) { const K = window.Krig, inni = G.inni, X = by.x, Y = by.y, d = Math.hypot(X - fra.x, Y - fra.y), maks = typeof MARSJ_MAKS !== 'undefined' ? MARSJ_MAKS : 30000;
+    if (d > maks) return { gjennom: [], forLangt: true };
+    const pad = Math.max(2500, d * .3), v = await lagVindu([Math.min(fra.x, X) - pad, Math.min(fra.y, Y) - pad, Math.max(fra.x, X) + pad, Math.max(fra.y, Y) + pad], true);
+    let r = Terreng.ruteTil(v, fra.x, fra.y, X, Y), mx = X, my = Y;
+    if (!r && window.MÅL_PÅ_LAND) for (const q of MÅL_PÅ_LAND(v, fra.x, fra.y, X, Y)) { r = Terreng.ruteTil(v, fra.x, fra.y, q[0], q[1]); if (r) { mx = q[0]; my = q[1]; break; } }
+    if (!r) return { ingen: true };
+    let gj = K.gjennomByer(r.sti, fi, inni), omveg = null; const t0 = r.timer;
+    if (gj.length) { const sp = K.sperrByer(v, gj, inni), r2 = Terreng.ruteTil(sp.v, fra.x, fra.y, mx, my);
+      if (r2 && K.omvegOk(r.timer, r2.timer) && !K.gjennomByer(r2.sti, fi, inni).length) { omveg = { rundt: gj.map(b => b.navn), ekstra: r2.timer - t0 }; r = r2; gj = []; } }
+    let km = 0; for (let i = 1; i < r.sti.length; i++) km += Math.hypot(r.sti[i][0] - r.sti[i - 1][0], r.sti[i][1] - r.sti[i - 1][1]) / 1000;
+    const Kr = window.Krig;
+    return { timer: r.timer, km, omveg, gjennom: gj.map(b => { const ob = (byer || []).find(q => q.id === b.by.e.id), mann = b.mann > 0 ? b.mann : ob ? kjentForsvar(ob).mann : 0;
+      return { navn: b.navn, grunn: b.grunn, mann, vern: b.mann > 0, id: b.by.e.id, folk: b.by.e.folk || 0, pris: b.mann > 0 && Kr && Kr.vernPris ? Kr.vernPris(b.by.e.folk || 0) : 0 }; }) }; }
+  // «Marsjen går gjennom Lillehammer – bygdevern ca. 14 mann. Det finnes ingen god omveg: laget (4 mann) må slåss seg gjennom der.»
+  function ruteFareTekst(b, har) { const hvem = b.vern ? `bygdevern ca. ${b.mann} mann` : b.grunn + (b.mann ? `, ca. ${b.mann} mann` : '');
+    return `Marsjen går gjennom ${b.navn} – ${hvem}. Det finnes ingen god omveg: ` + (har && b.mann >= har ? `laget (${har} mann) er for svakt til å slåss seg gjennom` : 'laget må slåss seg gjennom der') + (b.vern ? ', eller gjør en avtale med bygdevernet først.' : '.'); }
+  // til Strategi.trekk: forsvaret på ruta for forslaget (b, lag) – { mann, navn } når ruta går gjennom fiendtlige tettsteder, ellers null.
+  // Ukjente ruter bestilles (høyst RUTE_FORAN om gangen) mens krigskartet er åpent.
+  const RUTE_FORAN = 2; let ruteBestilt = 0;
+  function ruteAv(b, k) { const s = k && k.lag; if (!s || s.ombord || !ruteAuto()) return null; const r = ruteKjent(s, b);
+    if (r === undefined) { if (åpen && ruteBestilt < RUTE_FORAN && Math.hypot(b.x - s.x, b.y - s.y) <= S.REGLER.marsj) { ruteBestilt++; ruteSjekk(s, b).finally(() => { ruteBestilt--; sist = ''; }); } return null; }
+    if (!r || !r.gjennom || !r.gjennom.length) return null;
+    return { mann: r.gjennom.reduce((a, q) => a + (q.mann || 0), 0), navn: r.gjennom.map(q => q.navn).join(' og '), tekst: r.gjennom.map(q => `${q.navn} (${q.vern ? 'bygdevern ca. ' + q.mann + ' mann' : q.grunn})`).join(' og ') }; }
   function farer(by, lagListe, t) { const ut = [], e = eierAv(by.id), kf = e === 'blå' ? { mann: 0 } : kjentForsvar(by), fred = e && e !== 'blå' ? fredTekst() : '';
     if (t && e !== 'blå' && (t.minst || kf.mann)) { const k = S.kravFor(t, lagListe, kf.mann); if (k.tekst) ut.push({ id: !k.nok ? 'forfå' : k.svak ? 'svak' : 'sakte', tekst: k.tekst + '.', alvor: k.nok && !k.svak && !kf.mann ? 0 : 2 }); }
     const v = vern(by); if (v && v.mann > 0) ut.push({ id: 'vern', tekst: `Bygdevernet i ${by.navn} (${v.mann} mann) slipper dere ikke inn – laget må slåss, eller dere gjør en avtale først (${kroner(v.pris)}).`, alvor: 2, vern: v });
@@ -150,8 +198,16 @@
     else if (fred) ut.push({ id: 'fred', tekst: `Det er ${fred}.`, alvor: 1 });
     // (R1-løkka 26. nov, kritikken: «marsjen til Kvam gikk gjennom Otta, og laget havnet i kamp med bygdevernet uten varsel») ligger et
     // fiendtlig tettsted mellom laget og målet (rett linje – den ekte ruta prøver å gå utenom, spill/krig-visning.js), står det her,
-    // med en avtale som valg når det er et bygdevern
-    { const KS = window.KrigSpill, s0 = lagListe[0]; if (KS && KS.ruteGjennom && s0) { let gj = []; try { gj = KS.ruteGjennom([[s0.x, s0.y], [by.x, by.y]], [[s0.x, s0.y], [by.x, by.y]]); } catch (e) { gj = []; }
+    // med en avtale som valg når det er et bygdevern.
+    // (ut8-kr-krig, Ingrid 28. nov: «ruta gikk gjennom Lillehammer (bygdevern 14) og Vingnes (10) – det sto først i loggen etterpå») er
+    // marsjruta regnet ut (ruteSjekk – samme regel som ordre()), står de tettstedene den EKTE ruta går gjennom her, med tallet på forsvaret
+    // og alvor 2; omvegen står som en opplysning. Ellers som før (rett linje).
+    const rk = lagListe[0] && !lagListe[0].ombord ? ruteKjent(lagListe[0], by) : undefined;
+    if (rk && rk.gjennom) { const har = Math.floor(lagListe.reduce((a, q) => a + (window.Fraksjoner && Fraksjoner.styrke ? Fraksjoner.styrke(q) : (q.menn || []).length), 0));
+      for (const b of rk.gjennom) ut.push({ id: 'rute', alvor: 2, mann: b.mann, tekst: ruteFareTekst(b, har), gjennom: b.vern ? { id: b.id, folk: b.folk, navn: b.navn, pris: b.pris } : null });
+      if (rk.omveg) ut.push({ id: 'omveg', alvor: 0, tekst: `Marsjen går utenom ${rk.omveg.rundt.join(' og ')}` + (rk.omveg.ekstra > .05 ? ` – omvegen tar ca. ${String(Math.round(rk.omveg.ekstra * 10) / 10).replace('.', ',')} t ekstra.` : '.') }); }
+    else if (rk && rk.ingen) ut.push({ id: 'rute', alvor: 1, tekst: `Laget finner ingen marsjrute til ${by.navn} til fots (vann eller stengt terreng).` });
+    else { const KS = window.KrigSpill, s0 = lagListe[0]; if (KS && KS.ruteGjennom && s0) { let gj = []; try { gj = KS.ruteGjennom([[s0.x, s0.y], [by.x, by.y]], [[s0.x, s0.y], [by.x, by.y]]); } catch (e) { gj = []; }
       for (const b of gj) { const K = window.Krig, vpris = K && K.vernPris ? K.vernPris(b.by.e.folk) : 0;
         ut.push({ id: 'rute', tekst: `Ruta kan gå gjennom ${b.navn} (${b.grunn}). Laget går utenom når det finnes en god omveg – ellers havner det i kamp der${b.mann ? ', eller gjør en avtale med bygdevernet først' : ''}.`, alvor: 1,
           gjennom: b.mann ? { id: b.by.e.id, folk: b.by.e.folk || 0, navn: b.navn, pris: vpris } : null }); } } }
@@ -252,6 +308,10 @@
     // (runde 13) radioens rekkevidde med terrenget: sjekkes før advarselen (tar et øyeblikk første gang for et sted)
     if (auto() && !o.likevel && !o.sjekket && KR() && terrengKjent(by) === undefined) { advarsel = { by, lag, ute: [], farer: [], sjekker: true }; if (åpen) { sist = ''; vis(true); }
       terrengSjekk(by).then(() => { if (advarsel && advarsel.sjekker && advarsel.by === by) { advarsel = null; send(by, lag, { ...o, sjekket: true }); } }); rullTilVarsel(); return false; }
+    // (ut8-kr-krig) marsjruta regnes før bekreftelsen: hvilke fiendtlige tettsteder går den gjennom (tar et øyeblikk første gang)
+    if (ruteAuto() && !o.likevel && !o.ruteSjekket) { const s0 = lag || (t && t.flere && t.flere.length > 1 && t.flere[0].lag ? t.flere[0].lag : t && t.lag && t.lag.lag);
+      if (s0 && !s0.ombord && ruteKjent(s0, by) === undefined) { advarsel = { by, lag, ute: [], farer: [], sjekker: true }; if (åpen) { sist = ''; vis(true); }
+        ruteSjekk(s0, by).then(() => { if (advarsel && advarsel.sjekker && advarsel.by === by) { advarsel = null; send(by, lag, { ...o, ruteSjekket: true }); } }); rullTilVarsel(); return false; } }
     // (19. nov, pakke «krig») store tettsteder trenger flere lag: send alle i t.flere, og si fra når det ikke er nok
     if (!lag && t && t.flere && t.flere.length > 1) { const sendt = t.flere.filter(q => q.lag && kanSendes(q.lag));
       if (auto() && !o.likevel) { const ute = sendt.filter(q => utenforRadio(q.lag, by)), fa = farer(by, sendt.map(q => q.lag), t);
@@ -272,7 +332,7 @@
     const p2 = panel.getBoundingClientRect(); if (p2.top < 0) panel.style.top = Math.round(Math.max(0, parseFloat(getComputedStyle(panel).top) || 0) - p2.top + 2) + 'px'; }
   // advarselsboksen øverst i panelet: radioen (med terrenget) og farene på stedet
   function advarselBoks(T) { const a = advarsel; if (!a) return null; const k = KR(), L = leir();
-    if (a.sjekker) return el('div', { klasse: 'by advarsel', id: 'krigadvarsel', role: 'status' }, el('b', {}, `Sjekker radiodekningen mot ${a.by.navn} …`), el('div', {}, 'Terrenget mellom leiren og stedet regnes ut.'));
+    if (a.sjekker) return el('div', { klasse: 'by advarsel', id: 'krigadvarsel', role: 'status' }, el('b', {}, `Sjekker radiodekningen og marsjruta mot ${a.by.navn} …`), el('div', {}, 'Terrenget og ruta dit regnes ut – hvilke tettsteder laget må gjennom.'));
     const boks = el('div', { klasse: 'by advarsel', id: 'krigadvarsel', role: 'alert' }), flere = a.ute.length > 1, d = L ? Math.hypot(a.by.x - L.x, a.by.y - L.y) : 0;
     const send2 = () => { const A = advarsel; advarsel = null; send(A.by, A.lag, { likevel: true }); };
     if (a.ute.length && k && L) { const første = a.ute[0], R1 = rekkeviddeTil(første, a.by);
@@ -286,7 +346,7 @@
     if (sp.length && farlig) kn2.append(knapp('Speid og meld', () => speid(a.by, sp), { klasse: 'hoved', 'data-advarsel': 'speid', title: `Stopper før ${a.by.navn} og melder hva som står der` }));
     if (vf) kn2.append(knapp(`Gjør avtale (${kroner(vf.vern.pris)}) og send`, () => { avtale(a.by, send2); }, { klasse: sp.length ? '' : 'hoved', 'data-advarsel': 'avtale' }));
     for (const f of a.farer) if (f.id === 'rute' && f.gjennom) { const g = f.gjennom; kn2.append(knapp(`Avtale med ${g.navn} (${kroner(g.pris)}) og send`, () => { avtale(g, send2); }, { 'data-advarsel': 'avtale-rute' })); }
-    kn2.append(knapp(a.ute.length || a.farer.some(f => f.alvor >= 1) ? 'Send likevel' : 'Send', send2, Object.assign({ 'data-advarsel': 'likevel' }, a.farer.some(f => f.id === 'svak' || f.id === 'forfå') ? { klasse: 'rød', title: 'Forsvaret er større enn laget' } : {})));
+    kn2.append(knapp(a.ute.length || a.farer.some(f => f.alvor >= 1) ? 'Send likevel' : 'Send', send2, Object.assign({ 'data-advarsel': 'likevel' }, a.farer.some(f => f.id === 'svak' || f.id === 'forfå') ? { klasse: 'rød', title: 'Forsvaret er større enn laget' } : a.farer.some(f => f.id === 'rute' && f.alvor >= 2) ? { klasse: 'rød', title: 'Marsjen går gjennom et forsvart tettsted' } : {})));
     if (a.ute.length && k && L) { const første = a.ute[0];
       // feltradio til dem som har håndradio, når feltradioen rekker (med terrenget)
       const hånd = a.ute.filter(q => (q.radio || 'hånd') !== 'felt'), feltR = rekkeviddeTil(første, a.by, 'felt'), pris = (window.Kontrollrom && Kontrollrom.RADIO.felt.pris) || 1e6;
@@ -436,7 +496,7 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
   function forsvarLinje(t) { const v = !t.eier ? vern(t.by) : null, deler = []; if (v && !(v.mann > 0)) deler.push(vernTekst(v)); const k = t.eier === 'blå' ? null : kjentForsvar(t.by);
     if (k && k.mann) deler.push(`ca. ${k.mann} mann (${forsvarTekst(k)})`); const fr = t.eier ? fredTekst() : ''; if (fr) deler.push(fr);
     return deler.length ? 'Forsvar: ' + deler.join(' · ') : ''; }
-  const forSvak = t => { if (!t || t.eier === 'blå' || !t.lag) return false; const k = kjentForsvar(t.by); return k.mann > 0 && k.mann >= (t.flere && t.flere.length > 1 ? t.har : Math.floor(window.Fraksjoner && Fraksjoner.styrke && t.lag.lag ? Fraksjoner.styrke(t.lag.lag) : t.har)); };
+  const forSvak = t => { if (!t || t.eier === 'blå' || !t.lag) return false; if (t.rute && t.rute.mann > 0 && t.rute.mann >= t.har) return true; const k = kjentForsvar(t.by); return k.mann > 0 && k.mann >= (t.flere && t.flere.length > 1 ? t.har : Math.floor(window.Fraksjoner && Fraksjoner.styrke && t.lag.lag ? Fraksjoner.styrke(t.lag.lag) : t.har)); };
   // laget i forslaget havner utenfor radioen (med terrenget, når det er regnet ut)
   function radioLinje(t) { if (!KR() || !t.lag || !t.lag.lag) return ''; const u = utenforRadio(t.lag.lag, t.by); return u ? `utenfor radioen for ${t.lag.navn} (${radioTekst(t.lag.lag, u)})` : ''; }
   // TEGNFORKLARING (kritiker H: «et rødt "?" uten forklaring»): små tegninger av merkene i krigskartet
@@ -489,6 +549,8 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
       // (runde 13) hva stedet forsvares med, og om laget havner utenfor radioen (med terrenget) – før du trykker «Send»
       forsvarLinje(t) ? el('small', { klasse: 'forsvar', 'data-forsvar': t.by.id }, forsvarLinje(t)) : '',
       t.tapt ? el('small', { klasse: 'forsvar', 'data-tapt': t.by.id }, S.tapTekst(t, tid) + '.') : '',
+      // (ut8-kr-krig) marsjruta går gjennom forsvarte tettsteder (når den er regnet ut)
+      t.rute ? el('small', { klasse: 'forsvar', 'data-rute': t.by.id }, `⚠ Marsjen går gjennom ${t.rute.tekst} – ingen god omveg.`) : '',
       t.lag && t.lag.kontakt !== false && radioLinje(t) ? el('small', { klasse: 'radio' }, radioLinje(t)) : '',
       // (runde 12) laget du ikke har kontakt med: grå knapp «Ingen kontakt» med forklaringen (pek for hele teksten)
       t.lag && t.lag.kontakt === false ? el('small', { klasse: 'ingenkontakt' }, 'ingen radiokontakt med ' + t.lag.navn) : '',
@@ -655,6 +717,6 @@ body.kort #krig h3{ margin:8px 0 2px; } body.kort #krig .rad{ padding:3px 0; } b
     const a = fk.getBoundingClientRect(); if (flyttetNed) { panel.style.top = ''; panel.style.bottom = ''; } const b = panel.getBoundingClientRect();
     if (a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom) { panel.style.top = Math.round(a.bottom + 6) + 'px'; panel.style.bottom = 'auto'; flyttetNed = true; } else if (flyttetNed) { panel.style.bottom = ''; flyttetNed = false; } }, 250);
   setInterval(takt, 2000); window.addEventListener('riksbrudd-spill', () => setTimeout(takt, 300));
-  const api = { test: false, avtale: (id, etter) => { const by = område().find(b => b.id === id); return by ? avtale(by, etter) : false; }, boks, skjul, skjult: () => inne, passInn, friDel, nivå: () => meldt.nivå || 0, seire: () => meldt.seire || 0, størreRegion, sterkere, seierKort, område, åpne, lukk, erÅpen: () => åpen, bilde, send, advarsel: () => advarsel, kontakt, utenforRadio, terrengSjekk, terrengKjent, settTerreng: (p, blokk) => { if (blokk === null) TERRENG.delete(terrengNøkkel(p)); else TERRENG.set(terrengNøkkel(p), { blokk: !!blokk }); }, rekkeviddeTil, farer, vern, kjentForsvar, sjekkTap, tap: () => (meldt.tap || []), fredSlutt, hvorforIkkeTar, speid, speider, sendTil, varsel: () => flyt, mannTekst, scenarioBoks, velg: id => { valgtBy = område().find(b => b.id === id) || null; vis(true); skitten = true; return !!valgtBy; }, takt, tegn };
+  const api = { test: false, avtale: (id, etter) => { const by = område().find(b => b.id === id); return by ? avtale(by, etter) : false; }, boks, skjul, skjult: () => inne, passInn, friDel, nivå: () => meldt.nivå || 0, seire: () => meldt.seire || 0, størreRegion, sterkere, seierKort, område, åpne, lukk, erÅpen: () => åpen, bilde, send, advarsel: () => advarsel, kontakt, utenforRadio, terrengSjekk, terrengKjent, settTerreng: (p, blokk) => { if (blokk === null) TERRENG.delete(terrengNøkkel(p)); else TERRENG.set(terrengNøkkel(p), { blokk: !!blokk }); }, rekkeviddeTil, farer, vern, kjentForsvar, ruteSjekk, ruteKjent, ruteTest: false, glemRuter: () => RUTER.clear(), sjekkTap, tap: () => (meldt.tap || []), fredSlutt, hvorforIkkeTar, speid, speider, sendTil, varsel: () => flyt, mannTekst, scenarioBoks, velg: id => { valgtBy = område().find(b => b.id === id) || null; vis(true); skitten = true; return !!valgtBy; }, takt, tegn };
   window.StrategiSpill = api;
 })();
