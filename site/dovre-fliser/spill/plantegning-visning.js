@@ -219,9 +219,9 @@
     if (o) {
       const tre = PT.planker(o), navn = PT.åpNavn(o) + (et ? ' i ' + et.navn.toLowerCase() : '');
       html += `<div class="rad valg"><span>${esc(navn)} · ${tall(o.b.toFixed(1))} m${o.sperre === 'planker' ? ' · barrikadert' : o.sperre ? ' · tettet' : ''}</span>`
-        + (o.sperre ? '<button type="button" data-h="åpne" id="plan2dåpne">Fjern plankene</button>' : `<button type="button" data-h="barrikader" id="plan2dbarr">Barrikader (${tall(tre)} m³ tre)</button>`)
-        + '<button type="button" data-h="avbryt">Avbryt</button></div>';
-    } else html += `<div class="rad"><small>${esc(et ? et.navn : '')}${et && et.stengt ? ' (stengt)' : ''} · trykk på et vindu eller en dør for å barrikadere</small></div>`;
+        + (o.sperre === 'planker' ? '<button type="button" data-h="åpne" id="plan2dåpne">Fjern plankene</button>' : o.sperre ? '' : `<button type="button" data-h="barrikader" id="plan2dbarr">Barrikader (${tall(tre)} m³ tre)</button>`)
+        + (window.HusEndring ? HusEndring.knapper(h, n, o) : '') + '<button type="button" data-h="avbryt">Avbryt</button></div>';
+    } else html += (window.HusEndring && HusEndring.rad(h, n, et)) || `<div class="rad"><small>${esc(et ? et.navn : '')}${et && et.stengt ? ' (stengt)' : ''} · trykk på et vindu eller en dør for å barrikadere</small></div>`;
     velger.classList.add('på');
     if (html === sistHtml || (typeof pekerNede === 'function' && pekerNede(velger))) return;
     sistHtml = html; velger.innerHTML = html;
@@ -254,6 +254,8 @@
   const leiren = () => (window.LeirSpill && LeirSpill.tilstand ? LeirSpill.tilstand() : null);
   function åpningAv(h, d) { return h && h.m ? PT.figur(h.m, d.e).åpninger.find(q => q.id === d.id) || null : null; }
   function sjekk(k) {
+    // (B3) riving, nye åpninger, bjelker, søyler, tetting og «Riv hele huset»: spill/husendring-visning.js
+    if (window.HusEndring && HusEndring.eier(k)) return HusEndring.sjekk(k);
     if (!k || !Number.isFinite(k.hus) || !Number.isFinite(k.e) || !Number.isInteger(k.id)) return 'Ugyldig endring.';
     if (k.del !== 'åpning' || (k.gjør !== 'barrikader' && k.gjør !== 'åpne')) return 'Det kan ikke gjøres ennå.';
     const h = HUS.get(k.hus); if (!h || !h.klar || !h.m) return 'Huset er ikke lastet.';
@@ -264,6 +266,7 @@
     const s = BG().vurder(h.m, { e: k.e, del: k.del, id: k.id, gjør: k.gjør }); return s.ok ? null : s.feil;
   }
   function utfør(k) {
+    if (window.HusEndring && HusEndring.eier(k)) return HusEndring.utfør(k);
     const h = HUS.get(k.hus), o = åpningAv(h, k), L = leiren(), d = { e: k.e, del: k.del, id: k.id, gjør: k.gjør }, svar = BG().vurder(h.m, d);
     let tre = 0;
     if (k.gjør === 'barrikader') { tre = PT.planker(o); L.lager.tre = Math.round((L.lager.tre - tre) * 100) / 100; }
@@ -274,7 +277,7 @@
   }
   function registrer() {
     const K = window.Kommando; if (!K) return false; if (K.finnes('husEndre')) return true;
-    K.registrer('husEndre', { leir: true, meld: true, sjekk: k => sjekk(k), utfør: k => utfør(k), beskriv: k => (k.gjør === 'barrikader' ? 'barrikaderer en åpning i et hus' : 'tar ned planker i et hus') });
+    K.registrer('husEndre', { leir: true, meld: true, sjekk: k => sjekk(k), utfør: k => utfør(k), beskriv: k => (window.HusEndring && HusEndring.eier(k) ? HusEndring.beskriv(k) : k.gjør === 'barrikader' ? 'barrikaderer en åpning i et hus' : 'tar ned planker i et hus') });
     return true;
   }
   // gjør endringen nå (gjennom kommandolaget). k = { hus, e, del, id, gjør }
@@ -359,5 +362,5 @@
   try { Object.defineProperty(window, 'MIN_ZOOM_M', { configurable: true, get: () => (aktiv() && (S.fokus || S.nær.some(h => h.klar)) ? R.minZoom : .1) }); } catch (e) { /* finnes */ }
 
   window.Plantegning2D = { S, HUS, hus: i => HUS.get(i) || null, modell: i => modell(HUS.get(i)), prøvehus, fjernPrøve, seInn, endre, handling, sjekk, registrer,
-    logg: () => LOGG, lagre, lesInn, planker3d, planker: () => (PLANK ? PLANK.count : 0), aktiv, visVelger, nyttHus, NØKKEL, skannNå: () => { S.sist = null; tegnPå(); } };
+    logg: () => LOGG, lagre, lesInn, oppdater, planker3d, planker: () => (PLANK ? PLANK.count : 0), aktiv, visVelger, nyttHus, NØKKEL, skannNå: () => { S.sist = null; tegnPå(); } };
 })();

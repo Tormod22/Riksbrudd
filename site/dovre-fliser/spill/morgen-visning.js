@@ -320,6 +320,8 @@ body.kort #morgenkort h3{ font-size:15.5px; margin-bottom:4px; } body.kort #morg
     // og tallene på sårede/falne står ikke to ganger (navnene står i linja over)
     if ((tap || taptTekst) && oppgjør) oppgjør = oppgjør.replace(/^Siste døgn: Et rolig døgn\.\s*/, '').replace(/(\d+ (ny såret|nye sårede)(, \d+ falt)?|\d+ falt)\.\s*/, '').replace(/^Siste døgn:\s*$/, '').trim() || null;
     if (taptTekst) rapport.push(taptTekst); if (db) rapport.push(db); if (tap) rapport.push(tap); if (oppgjør) rapport.push(oppgjør); for (const t of igår) rapport.push('I går: ' + t);
+    // (28. nov, rekruttering) andre moduler kan legge til én linje i rapporten: window.MORGEN_LINJER = [d => tekst | null]
+    for (const f of rot.MORGEN_LINJER || []) { try { const t = f(d); if (t) rapport.push(t); } catch (e) { /* modulen er ikke klar */ } }
     S.storHist = S.storHist || {};
     let stor = null; if (o.stor || M.erStorDag(d, S.storSist)) { stor = M.storBeslutning(s, tilfV, S.storId, S.storHist); if (o.stor) { for (let k = 0; k < 60 && (!stor || stor.id !== o.stor); k++) stor = M.storBeslutning(s, tilfV, null); if (stor && stor.id !== o.stor) stor = null; } }
     S.kort = { dag: d, rapport, valg: M.dagensValg(s, tilfV).map(v => ({ ...v, vekt: undefined })), stor, steg: 0, valgt: '', ferdig: false };

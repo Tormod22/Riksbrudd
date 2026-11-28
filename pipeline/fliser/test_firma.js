@@ -115,6 +115,12 @@ const P1 = PR.ny(), før1 = L.lager.tre || 0; PR.steg(P1, L, 60, { kraft: 3 }); 
 sag.høvleri = true; const før2 = L.lager.tre; PR.steg(P1, L, 60, { kraft: 3 }); const høvlet = L.lager.tre - før2;
 ok(vanlig > 0 && Math.abs(høvlet / vanlig - 1.4) < .01, `høvleriet gir 1,4 × planker (${vanlig.toFixed(2)} -> ${høvlet.toFixed(2)} m³)`);
 
+// høvleriet virker også når bærerne mater maskinen (F3: ctx.mating / kraftPer)
+{ const L2 = LB.ny(), s2 = { id: 7, type: 'sagbruk', hp: 1, igjen: 0, nivå: 1 }; L2.bygg.push(s2); const P2 = PR.ny();
+  const kjør = () => { const MT = { 7: { inn: { tømmer: 4 }, ut: {} } }; PR.steg(P2, L2, 60, { mating: MT, kraftPer: { 7: 3 } }); return MT[7].ut.tre || 0; };
+  const a1 = kjør(); s2.høvleri = true; const a2 = kjør();
+  ok(a1 > 0 && Math.abs(a2 / a1 - 1.4) < .01, `høvleriet med mating: ${a1.toFixed(2)} -> ${a2.toFixed(2)} m³ planker i utmatingen`); }
+
 // ---------- pakter med rivalene ----------
 F = Fi.ny(leir);
 const pp = Fi.paktPris(F, 'hvile', 'rød', 7, 10000), pg = Fi.paktPris(F, 'hvile', 'grønn', 7, 10000);

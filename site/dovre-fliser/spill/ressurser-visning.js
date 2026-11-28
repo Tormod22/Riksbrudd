@@ -52,7 +52,7 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
     hode.appendChild(d);
   });
   function jobbLinje(j) {
-    const navn = j.type === 'hogst' ? `Hogst (${j.r} m)` : `Riving: ${husNavn(j.hus)}`, f = RS.fram(j), h = RS.iHaug(j);
+    const navn = j.type === 'hogst' ? `Hogst (${j.r} m)` : j.endringer ? `Husarbeid: ${j.navn || 'del av huset'} (${husNavn(j.hus)})` : `Riving: ${husNavn(j.hus)}`, f = RS.fram(j), h = RS.iHaug(j);
     return `${navn} – ${j.stoppet ? 'stoppet' : f >= 1 ? 'arbeidet er ferdig' : `${Math.round(f * 100)} %` + (folk(j.type) ? '' : ` – venter: ingen har oppgaven «${j.type}» (sett noen i Folk)`)}${h > .05 ? `, ${tall(h)} venter på frakt` : ''}${j.bil ? ` (${j.bil})` : ''}`;
   }
   const husNavn = h => ((typeof BYGGTYPE !== 'undefined' && BYGGTYPE[h.t]) || 'Bygg').toLowerCase();
@@ -93,13 +93,14 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
       if (!b) { v.hus = null; v.feil = 'Fant ikke noe hus her.'; return visVelg(); }
       v.hus = { i: b.o.e.i, P: b.P.slice(0, -1), t: b.o.e.t, h: b.o.e.h || 6 }; v.areal = RS.areal(v.hus.P); const c = RS.midt(v.hus.P); v.avst = lx ? Math.hypot(c.x - lx.x, c.y - lx.y) : 0;
       v.ut = RS.husUtbytte(v.hus.t, v.areal, v.hus.h); v.feil = !lx ? 'Sett opp leiren først.' : v.ut.feil || (v.avst > RS.REGLER.maksAvstand ? `For langt fra leiren (${tall(v.avst / 1000)} km, høyst ${RS.REGLER.maksAvstand / 1000} km).` : null)
-        || (R.jobber.some(j => j.hus && j.hus.i === v.hus.i) ? 'Huset rives allerede.' : null); }
+        || (R.jobber.some(j => j.hus && !j.endringer && !j.stoppet && j.hus.i === v.hus.i) ? 'Huset rives allerede.' : null); }
     if (v.frakt === 'lastebil' && !v.bil) { v.bil = ledigBil(); if (!v.bil) v.frakt = 'fots'; }
     visVelg();
   }
   function start() {
     const v = velg; if (!v || v.feil) return; const lx = leirXY();
-    const r = v.type === 'hogst' ? RS.startHogst(R, { x: v.x, y: v.y, r: v.r, skog: v.skog }, lx) : RS.startRiving(R, v.hus, lx);
+    // (B3) et delvis revet hus gir bare det som står igjen, og rives etasje for etasje ovenfra (spill/husendring-visning.js)
+    const r = v.type === 'hogst' ? RS.startHogst(R, { x: v.x, y: v.y, r: v.r, skog: v.skog }, lx) : RS.startRiving(R, window.HusEndring && HusEndring.rivInfo ? HusEndring.rivInfo(v.hus) : v.hus, lx);
     if (r.feil) { v.feil = r.feil; return visVelg(); }
     const j = r.jobb; logg(`${v.type === 'hogst' ? 'Hogst' : 'Riving'} startet: gir ${matTekst(j.mat)}${folk(v.type) ? '' : ` – men ingen har oppgaven «${v.type}»`}.`);
     if (v.frakt === 'lastebil' && v.bil && j.avst > RS.REGLER.nær) sendBil(v.bil, j.id);
@@ -122,7 +123,8 @@ body.kort #ressursvalg{ bottom:calc(6px + env(safe-area-inset-bottom,0px)); padd
   // ---------- trykk i kartet og i 3D ----------
   function trykk(X, Y) {
     if (velg) { velg.x = X; velg.y = Y; prøv(); return true; }
-    const j = R.jobber.find(q => (q.type === 'hogst' ? Math.hypot(X - q.x, Y - q.y) < q.r : pip(q.hus.P, X, Y)));
+    // (B3) husarbeid på én del vises i plantegningen, ikke her
+    const j = R.jobber.find(q => (q.type === 'hogst' ? Math.hypot(X - q.x, Y - q.y) < q.r : !q.endringer && pip(q.hus.P, X, Y)));
     if (j && !(window.LeirSpill && LeirSpill.plassering())) { visJobb(j.id); return true; }
     if (valgt) { valgt = null; banner.classList.remove('på'); }
     return false;

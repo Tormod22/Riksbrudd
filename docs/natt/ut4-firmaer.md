@@ -77,7 +77,7 @@ bryte det. Dere kan ikke ha pakt med begge samtidig når den ene er en allianse 
 - `spill/produksjon.js`: `REGLER.høvleri` og `utFor(b)` (sagbruk med `b.høvleri`). test_produksjon.js er grønn.
 - `spill/selskapspanel.js` (bare fanen Partnere): fanen er ikke lenger «kommer» når FirmaSpill finnes, `tegn` spør `FirmaSpill.fane()`, klikk på
   `[data-sp^="fi-"]` går til `FirmaSpill.trykk`.
-- `pipeline/fliser/test_okonomitest.js`: én linje i KJENT (`utenSjanse:kontraktFirma` – de samme kjøringene som kontraktVare, 12 % blakk).
+- `pipeline/fliser/test_okonomitest.js`: ingen endring etter flettingen (KJENT er tom).
 - `pipeline/fliser/okonomitest-band.json`: bare båndet for `kontraktFirma` lagt til (de andre urørt; NB: båndet for `kontraktVare` var alt litt
   gammelt – en ny kjøring gir 100,3 mot lagret 102,5 mill., innenfor slingringsmonnet – det er ikke endret).
 
@@ -98,6 +98,14 @@ kjøringene (snitt dag 14), høvleriet i 82 % (snitt dag 17); bare 167 av 530 fa
 og saga rekker den), så Storlia slutter og kommer tilbake flere ganger. Varekontraktene gir 16,7 mill. (mot 12,5). Krav: fast kunde i minst
 50 %, og med samarbeid 0,9–1,15 × uten. **Kjent brudd:** 7 av 60 blakk de tre siste døgnene (12 %) – de samme frøene (7, 18, 19 …) som
 kontraktVare; samarbeidet løfter ikke de dårligste kjøringene.
+
+### Etter flettingen med claude/nattfiks (28. nov, ca. 05:00)
+- `produksjon.js`: høvleriet virker også med F3-matingen (bærerne): plassen i utmatingen og det som legges i den regnes med `utFor(b)`
+  (test_firma.js sjekker 1,4 × planker i utmatingen). `api` har både `utFor` og `driftVarsel`, `leirDøgn`, `MATETEKST`, `utSum`.
+- Økonomitesten: KJENT er tom (ut4-balanse2), og min KJENT-linje er fjernet. «kontrakter + sag + varer + fast kunde» bygger på den nye
+  «kontrakter + sag + varer» (venter med saga til varselet er borte) og er grønn med `OKO_STRENG=1`: median dag 30 106,2 mill. [52–142]
+  mot 98,8 uten, 1 av 60 blakk (2 %), Storlia fast kunde i 88 %, høvleriet i 73 %. Båndet er lagret på nytt (`OKO_NYTT_BAND=1`) – bare
+  båndet for `kontraktFirma` endret seg.
 
 ## Prøvd
 - `node pipeline/fliser/test_firma.js` (69), test_selskap, test_vare, test_produksjon, test_fraksjoner, test_okonomitest (grønn, 7 kjente) og alle

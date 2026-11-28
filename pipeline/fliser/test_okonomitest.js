@@ -36,19 +36,11 @@ const REGLER = {
 // ikke testen – med OKO_STRENG=1 gjør de det. Fjern linja når balansen er rettet.
 // (ut2-balanse 28. nov) de tre bruddene fra ut1-okotest (kontraktene over grensen for «bare kontrakter» og «blandet», «byer med makt» blakk i
 // 18 %) er rettet i reglene – se docs/natt/ut2-balanse.md.
-const KJENT = {
-  // (Ø1, 28. nov, docs/natt/ut2-sagbruk.md) hogst gir nå tømmer som selges billig (planen 4.1) – hogst og salg alene bærer ikke leiren
-  'utenSjanse:hogst': 'docs/natt/ut2-sagbruk.md: hogst gir tømmer (8 000 kr/m³ × 80 %), som planen sier skal være billig – sag det eller ta kontrakter',
-  // sagbruket fra start koster 36 av 40 mill. med startleiren; røverne herjer uten tropp, folk drar, og saga står (planen: sagbruk er trinn 2)
-  'utenSjanse:sagbruk': 'docs/natt/ut2-sagbruk.md: «bare sagbruk» fra første dag har ikke råd til noe annet; saga er trinn 2 i planen, etter kontraktene',
-  'uteIngenting:sagbruk': 'samme som over',
-  'sag:sagbruk': 'samme som over: folk drar (røverne herjer), og uten folk står saga – og da kjelen, og da strømmen',
-  // (28. nov, flettingen av byavtalene) på grensen: 10–12 % blakk – varekontraktene (Ø2) skal gi saga kunder og løfte strategien
-  'utenSjanse:kontraktSag': 'på grensen (10–12 %): saga, kjelen og bilen (ca. 15 mill.) tidlig gjør de dårligste kjøringene blakke – balansepakke 2 skal rette det',
-  'utenSjanse:kontraktVare': 'samme som over (10–12 %), selv om varekontraktene løfter de dårligste kjøringene – balansepakke 2',
-  // (ut4-firmaer, Ø5) samme kjøringer som «kontrakter + sag + varer» (frø 7, 18, 19 …) – samarbeidet med Storlia løfter ikke de dårligste
-  'utenSjanse:kontraktFirma': 'samme som over (10–12 %): fast kunde og høvleri endrer ikke de dårligste kjøringene (docs/natt/ut4-firmaer.md) – balansepakke 2',
-};
+// (ut4-balanse2 28. nov) de seks bruddene fra ut2-sagbruk og flettingen er rettet – se docs/natt/ut4-balanse2.md: «hogst og salg» (modellen
+// satte fire på hogst og lot leiren stå åpen), «bare sagbruk» (nå en felle MED varsel i byggelista – ikke fornuftig, kravet er at varselet
+// kom), «kontrakter + sagbruk» og «+ varer» (venter til varselet er borte; maskinene betaler ikke vedlikeholdet to ganger).
+// Ingen kjente brudd igjen. Nye linjer her: 'nøkkel': 'hvorfor (notat)'.
+const KJENT = {};
 const BAND_FIL = path.join(__dirname, 'okonomitest-band.json');
 
 let feil = 0, kjente = 0;
