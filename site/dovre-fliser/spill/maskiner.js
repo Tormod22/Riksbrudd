@@ -407,7 +407,7 @@
     // Sagbruket som eget bygg er et lukket hus (modellen «verksted») – der synes ikke bladet, så det får ingen deler.
     bs_sagbenk: [{ del: 'blad', x: 2.2, y: 0, z: .95, r: .55, akse: 'y' }],
     bs_høvel: [{ del: 'blad', x: 0, y: 0, z: 1.25, r: .2, akse: 'x' }], vedkløyver: [{ del: 'stempel', x: 0, y: 0, z: 1, slag: .5 }], bs_vedkløyver: [{ del: 'stempel', x: 0, y: 0, z: 1, slag: .5 }],
-    fyrkjele: [{ del: 'røyk', x: 0, y: 0, z: 4.5 }], bs_fyrkjele: [{ del: 'røyk', x: .9, y: 0, z: 4.2 }], smie: [{ del: 'røyk', x: 0, y: 0, z: 4 }], raffineri: [{ del: 'røyk', x: 0, y: 0, z: 8 }],
+    fyrkjele: [{ del: 'røyk', x: 0, y: 0, z: 4.5 }], bs_fyrkjele: [{ del: 'røyk', x: 1.08, y: 0, z: 4.2 }], smie: [{ del: 'røyk', x: 0, y: 0, z: 4 }], raffineri: [{ del: 'røyk', x: 0, y: 0, z: 8 }],
     steinknuser: [{ del: 'stempel', x: 0, y: 0, z: 2.5, slag: .15 }], fiskemottak: [{ del: 'bånd' }],
   };
 

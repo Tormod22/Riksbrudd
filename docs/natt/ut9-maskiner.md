@@ -53,13 +53,16 @@ haug (høydekurver), kar med bølger, kroker på skinne, reol (striper), skap me
 
 ## 3D: maskinlivet (maskiner-visning.js)
 Maskinene **du driver selv** – `ProduksjonSpill.status()[id].går` – får de bevegelige delene i `Maskiner.LIV`:
-- sagbenken i fabrikken (bs_sagbenk) og sagbruket: sagblad med tenner som roterer (38 rad/s),
+- sagbenken i fabrikken (bs_sagbenk_1): sagblad med tenner som roterer (38 rad/s) og stikker ca. 0,6 m opp av bordet foran
+  motorhuset; gulvet hentes fra byggesettets grunnhøyde (`ByggesettRegler.høyder`, samme som huset tegnes med),
 - vedkløyveren: stempel/kløyvekile opp og ned,
 - fyrkjelen, smia og raffineriet: røyk (`Effekter3d.røyk`, samme punktsky som kamp og brann; hvert 0,7 s),
 - fiskemottaket og båndene: knaster som går langs båndet.
 Står maskinen (eller spillet er i pause), står delene. Tre instansnett (blad, stempel, knast), høyst 24 maskiner, ingen nye lys; lages
 første gang det trengs og byttes når scenen er ny. Industribyggene i kartet (som ingen driver) står stille.
-OBS: sagbruket som eget bygg har modellen «verksted» (lukket hus) – bladet står inne og synes ikke; den åpne sagbenken i byggesettet viser det.
+OBS: sagbruket som eget bygg har modellen «verksted» (lukket hus) – det får ingen deler (bladet ville stått inne og ikke synes).
+Prøvd med bilde (scratchpad `natt/ut9-maskiner/sag-pc.png` og `sag2-pc.png`): en sagbenk bygd i en blikkhall med byggesettet, status «går»
+satt for prøven – bladet står i bordet og tennene har dreid seg mellom to bilder.
 
 ## Fellesfiler endret (små, samlet)
 - `index.html`: skript-taggene `maskiner.js` (rett før `industri.js`) og `maskiner-visning.js` (rett etter `industri-visning.js`).
