@@ -346,7 +346,10 @@ body.kort #byggesett .tekst{ font-size:12px; margin-top:2px; } body.kort #bygges
     if (V.åpen && o && GS / m >= 6) { g.save(); g.lineWidth = 1; const x0 = vx0, x1 = vx0 + VW * m, y1 = vy1, y0 = vy1 - VH * m;
       for (let i = Math.ceil((x0 - o.ox) / GS); o.ox + i * GS < x1; i++) { const x = sx(o.ox + i * GS); g.strokeStyle = (V.nett === 4 || i % 4 === 0) ? 'rgba(240,215,154,.24)' : 'rgba(240,215,154,.11)'; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, VH); g.stroke(); }
       for (let j = Math.ceil((y0 - o.oy) / GS); o.oy + j * GS < y1; j++) { const y = sy(o.oy + j * GS); g.strokeStyle = (V.nett === 4 || j % 4 === 0) ? 'rgba(240,215,154,.24)' : 'rgba(240,215,154,.11)'; g.beginPath(); g.moveTo(0, y); g.lineTo(VW, y); g.stroke(); } g.restore(); }
-    if (V.åpen && V.fane === 'plan') { tegnPlan(g, sx, sy, m); return; }
+    if (V.åpen && V.fane === 'plan') { tegnPlan(g, sx, sy, m);
+      // (B5) maskinene, hyllene og lampene i etasjen som vises (plantegningen har dem ikke)
+      if (window.FabrikkSpill) for (const d of alle) if (['maskin', 'lager', 'lampe'].includes(D[d.type].kat) && (d.n || 0) === (V.planE || 1) - 1) { g.save(); FabrikkSpill.tegnDel(g, d, o, sx, sy, m, null); g.restore(); }
+      return; }
     const tegnDel = (d, skisse) => {
       if (!syn(d)) return; const K = D[d.type].kat, st = D[d.type].stoff, alfa = skisse ? 1 : d.ferdig ? 1 : .45, ds = d.s || D[d.type].s;
       g.save(); g.globalAlpha = alfa;
