@@ -2042,6 +2042,61 @@ window.HJELP_TILLEGG = [
 "Leiren"
 ],
 [
+"Flere maskiner: stein, fisk, korn, olje og skrap",
+"I Leir → Bygg (gruppen Produksjon) finnes nå flere maskiner. Steinbruddet bryter stein (det må stå ved fjell), steinknuseren gjør stein om til pukk, og betongblanderen lager betong av pukk og sement. Fiskemottaket fryser fisken fra båtene dine (det må stå ved en kai, og Ytterø Sjømat må ha vist dere fryselageret). Mølla maler korn fra byene dere handler med, og kjøkkenet lager mat av melet. Det lille raffineriet gjør olje fra basen om til diesel rett i tanken. Smia gjør skrap fra riving om til stål og deler. Alle trenger folk på «Maskiner» og strøm – en fyrkjele er billigere enn diesel. Fanen Produksjon i Selskapet viser hvordan det går.",
+"Leiren"
+],
+[
+"Lån: banken og lånehaien",
+"Under Leir → Lager står «Bank og lån». Banken i en by dere har handelsavtale med låner billig (0,4 % rente i døgnet, 30 døgn), men sier nei når dere skylder mye. Lånehaien sier alltid ja – men renten er 3 % i døgnet, og etter 14 døgn dobles den. Renten legges til gjelden hver morgen. Betal ned med knappene ved lånet.",
+"Leiren"
+],
+[
+"Avisa og årstidene",
+"Hver morgen kommer lokalavisa Fjellposten: det viktigste som har skjedd (angrep, ulykker, byene, markedet, børsen, lånene). Tittelen står i morgenmøtet og dagboka, og hele avisa i Leir → Mål. Årstidene betyr noe: hogsten går raskere om vinteren (frossen mark), fisket er best om høsten, og veden er dyrest i kulda.",
+"Kom i gang"
+],
+[
+"Utposter",
+"En utpost er et sted langt fra leiren – et hus, et hogstfelt – med egne folk. Lag den i Leir-menyen (fanen Bygg, «Utposter») og trykk i kartet. Send folk dit med valget ved personen i Folk. De reiser dit én gang (det tar tid) og bor og arbeider der. Kjøp senger, og velg om maten kommer fra leiren (en tur hver dag tar arbeidstid) eller kjøpes lokalt (dyrere).",
+"Leiren"
+],
+[
+"Trafikkart",
+"I Folk-panelet slår «Trafikkart» på et varmekart over hvor folk har gått mest det siste døgnet. Rødt betyr mye gåing. Ligger lageret, kjøkkenet eller en dør langt fra der folk arbeider, går mye av dagen med til å gå – flytt det nærmere.",
+"Leiren"
+],
+[
+"Ordre til én person",
+"Trykk på en person i kartet (zoomet inn). «Gå hit» – trykk så i kartet – sender personen dit. «Gjør dette nå» gir en oppgave med en gang i en time. Etterpå tar jobbtavla over igjen. Det trengs sjelden: jobbtavla fordeler folkene selv.",
+"Leiren"
+],
+[
+"Mange folk",
+"Med mange folk står Folk-panelet i grupper per jobb og per utpost – trykk på en gruppe for å se folkene. Søk etter navn eller yrke, eller vis bare de syke, de som står fast eller de i en utpost.",
+"Leiren"
+],
+[
+"Spioner i leiren",
+"En ny søker kan være sendt av Ravnsund eller Mosevakt – oftere jo mer dere ligger foran dem. En spion forteller rivalen hvor leiren er og hva dere byr på, gjør sabotasjen deres mer treffsikker, og kan åpne porten når de angriper. Har dere kontrollrom og folk på overvåking, kan søkerkortet si «Noe stemmer ikke med historien».",
+"Leiren"
+],
+[
+"Mistanke, avhør og sparken",
+"Kameravakta (eller vakta) kan se noen ved lageret om natta, og en leirsjef kan fatte mistanke. Da står personen under «Mistanke» i Folk-panelet. «Avhør» tar tre timer og kan avsløre en spion; «Spark» får hen ut. Er personen uskyldig, faller moralen – så ikke mistenk for lett.",
+"Leiren"
+],
+[
+"Falske opplysninger",
+"En avslørt spion kan brukes mot rivalen: «Falskt sted» får dem til å angripe et tomt sted et døgn, «Falsk kontrakt» får dem til å kaste bort penger. Rivalen kan skjønne det og trekke spionen ut. Høyst annethvert døgn.",
+"Leiren"
+],
+[
+"Egne spioner",
+"Under Selskapet → Partnere kan dere sende en av folkene inn hos en rival. Da ser dere lagene deres i kartet og hva de planlegger, og spionen kan sabotere sagbruket deres. Modige folk og nattmennesker egner seg best. Blir spionen avslørt, er personen tapt, en pakt med rivalen er brutt, og ryktet faller.",
+"Lag og strid"
+],
+[
 "Kartet mens det lastes",
 "Når du zoomer eller åpner spillet, kommer kartet først uskarpt for hele skjermen, og så blir det skarpt bit for bit. De skarpe bitene tones inn og glir mykt over i de uskarpe, så du ser ikke rette kanter. Venter du et par sekunder, er alt skarpt.",
 "Vær, lyd og bilde"
