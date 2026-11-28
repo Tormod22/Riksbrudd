@@ -268,7 +268,7 @@
     let tre = 0;
     if (k.gjør === 'barrikader') { tre = PT.planker(o); L.lager.tre = Math.round((L.lager.tre - tre) * 100) / 100; }
     else { tre = PT.planker(o) * .5; if (L && L.lager) { if (window.Leir && Leir.leggInn) Leir.leggInn(L, 'tre', tre); else L.lager.tre = Math.round(((L.lager.tre || 0) + tre) * 100) / 100; } }
-    PT.leggTil(LOGG, h.i, d); oppdater(h); lagre(); tegnPå();
+    PT.leggTil(LOGG, h.i, d); PT.husKart(LOGG, h.i, h.e, h.tett, h.Pv); oppdater(h); lagre(); tegnPå(); try { planker3d(); } catch (e) { console.warn('planker i 3D:', e); }
     const navn = PT.åpNavn(o).toLowerCase();
     return { ok: true, tekst: k.gjør === 'barrikader' ? `Planker over ${navn === 'vindu' ? 'vinduet' : 'døra'} (${tall(tre)} m³ tre fra lageret).` : `Plankene er tatt ned (${tall(Math.round(tre * 100) / 100)} m³ tre tilbake).`, tre, svar };
   }
@@ -318,9 +318,39 @@
   function prøvehus(Pv, e) { const P = PT.arealS(Pv) < 0 ? Pv.slice().reverse() : Pv.slice(); S.prøve.set(e.i, { Pv: P, e }); S.sist = null; return e.i; }
   function fjernPrøve(i) { S.prøve.delete(i); HUS.delete(i); if (S.fokus && S.fokus.i === i) S.fokus = null; S.nær = S.nær.filter(h => h.i !== i); S.sist = null; tegnPå(); }
 
+  // ---------- planker i 3D ----------
+  // Barrikaderte vinduer og dører i husene i 3D-utsnittet (hus3d legger P.bygg og P.dør på omrisset): tre planker på skrå utenpå
+  // åpningen, ett instansnett for alle. Bare hus med endringer i loggen, så 3D blir ikke tregere ellers. Gulvet i 1. etasje = døras
+  // underkant fra hus3d (interior3d legger gulvet like over).
+  let PLANK = null;
+  function fjernPlanker() { if (!PLANK) return; if (PLANK.parent) PLANK.parent.remove(PLANK); PLANK.geometry.dispose(); PLANK.material.dispose(); PLANK = null; }
+  function planker3d(u0, R0) {
+    const R3x = R0 || (typeof R3 !== 'undefined' ? R3 : null), u = u0 || (R3x && R3x.ut); fjernPlanker();
+    if (!R3x || !R3x.scene || !u || !u.hus || !u.hus.omriss || typeof THREE === 'undefined' || !BG()) return 0;
+    const stk = [];
+    for (const P of u.hus.omriss) {
+      if (!P.bygg || !P.dør || !PT.endringer(LOGG, P.bygg.i).length) continue; const i = P.bygg.i;
+      let h = HUS.get(i); if (!h) { const k = LOGG.kart && LOGG.kart[i]; if (!k) continue; h = nyttHus(k.P, k.e, k.tett); }
+      const m = modell(h); if (!m) continue; const z0 = P.dør.z0 + .05;
+      for (const e of m.etasjer) for (const o of e.åpninger) {
+        if (o.sperre !== 'planker' || o.tilstand === 'revet') continue; const w = e.vegger[o.vegg]; if (!w) continue;
+        const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]), ux = (w.b[0] - w.a[0]) / L, uy = (w.b[1] - w.a[1]) / L, nx = uy, ny = -ux, t = (w.tykk || .2) / 2 + .05;
+        const x = h.o[0] + w.a[0] + ux * o.t + nx * t - u.cx, y = h.o[1] + w.a[1] + uy * o.t + ny * t - u.cy, zc = z0 + e.z + (o.ned || 0) + o.h / 2;
+        for (const [dz, a] of [[-o.h / 3.4, .12], [0, -.16], [o.h / 3.4, .1]]) stk.push({ x, y, z: zc + dz, ux, uy, nx, ny, len: o.b + .3, a });
+      }
+    }
+    if (!stk.length) return 0;
+    const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x8a6438 }), stk.length);
+    const M = new THREE.Matrix4(), A = new THREE.Vector3(), N = new THREE.Vector3(), H = new THREE.Vector3();
+    stk.forEach((q, k) => { const c = Math.cos(q.a), s = Math.sin(q.a); A.set(q.ux * c * q.len, q.uy * c * q.len, s * q.len); N.set(q.nx * .035, q.ny * .035, 0); H.set(-q.ux * s * .17, -q.uy * s * .17, c * .17);
+      M.makeBasis(A, N, H); M.setPosition(q.x, q.y, q.z); mesh.setMatrixAt(k, M); });
+    mesh.instanceMatrix.needsUpdate = true; mesh.userData.kilde = 'plantegning-visning.js'; R3x.scene.add(mesh); PLANK = mesh; return stk.length;
+  }
+  if (typeof KROKER !== 'undefined' && KROKER.sett3d) KROKER.sett3d.push((u, R) => { try { planker3d(u, R); } catch (e) { console.warn('planker i 3D:', e); } });
+
   // nærmere zoom når en plantegning vises (zoom() i index.html leser window.MIN_ZOOM_M)
   try { Object.defineProperty(window, 'MIN_ZOOM_M', { configurable: true, get: () => (aktiv() && (S.fokus || S.nær.some(h => h.klar)) ? R.minZoom : .1) }); } catch (e) { /* finnes */ }
 
   window.Plantegning2D = { S, HUS, hus: i => HUS.get(i) || null, modell: i => modell(HUS.get(i)), prøvehus, fjernPrøve, seInn, endre, handling, sjekk, registrer,
-    logg: () => LOGG, lagre, lesInn, aktiv, visVelger, nyttHus, NØKKEL, skannNå: () => { S.sist = null; tegnPå(); } };
+    logg: () => LOGG, lagre, lesInn, planker3d, planker: () => (PLANK ? PLANK.count : 0), aktiv, visVelger, nyttHus, NØKKEL, skannNå: () => { S.sist = null; tegnPå(); } };
 })();

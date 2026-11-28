@@ -137,9 +137,13 @@
   const endringer = (L, i) => (L && L.hus[i]) || [];
   function leggTil(L, i, d) { const ren = { e: d.e, del: d.del, id: d.id, gjør: d.gjør }; for (const k of ['vegg', 't', 'b', 'type', 'bjelke', 'x', 'y']) if (d[k] !== undefined) ren[k] = d[k]; (L.hus[i] = L.hus[i] || []).push(ren); return ren; }
   const antall = L => Object.values((L && L.hus) || {}).reduce((s, l) => s + l.length, 0);
+  // det kartet vet om et endret hus (omrisset i verdensmeter, egenskapene og tettheten), så modellen kan lages på nytt også der
+  // kartflisene ikke er lastet (3D, senere flerspiller): L.kart[nr] = { e { i, t, h, r, k }, tett, P }
+  function husKart(L, i, e, tett, Pv) { L.kart = L.kart || {}; const ren = { i: e.i, t: e.t, h: e.h }; if (e.r !== undefined) ren.r = e.r; if (e.k !== undefined) ren.k = e.k;
+    L.kart[i] = { e: ren, tett: tett || 0, P: Pv.map(p => [Math.round(p[0] * 100) / 100, Math.round(p[1] * 100) / 100]) }; return L.kart[i]; }
 
   const api = { REGLER, klasse, DØR, mønFor, husTak, ramme, lokal, info, åpent, senter, tetthet, figur, etasje, etasjeValg, finnÅpning, planker, åpNavn, romNavn,
-    nyLogg, lesLogg, endringer, leggTil, antall, arealS };
+    nyLogg, lesLogg, endringer, leggTil, antall, husKart, arealS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Plantegning = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
