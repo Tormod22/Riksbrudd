@@ -50,7 +50,7 @@ module.exports = { navn: 'verden (vinter, snøstengte veger, flom i flomfeltet, 
         VS.snøTilbake(); krev(VS.snøGrense() == null && !VS.snøLenker().size, 'snøstengningen ble ikke opphevet'); }
       { const hp = ENHETER.map(e => (e.menn || []).map(m => m.hp)), led = ENHETER.map(e => e.leder), fi = nyttLag('Vaktfiende', l.x + 4000, l.y - 3000, 'rød'); ENHETER.push(fi);
         try { const v0 = VAER.regel || VAER; for (let i = 0; i < 4; i++) VS.kuldeTime({ ...v0, temp: -25 }, 6); ut.fiendeFryser = fi.menn.filter(m => m.hp < 1).length; }
-        finally { ENHETER.splice(ENHETER.indexOf(fi), 1); ENHETER.forEach((e, i) => { (e.menn || []).forEach((m, k) => { if (hp[i] && hp[i][k] != null) m.hp = hp[i][k]; }); e.leder = led[i]; }); }
+        finally { (ENHETER.indexOf(fi) >= 0 && ENHETER.splice(ENHETER.indexOf(fi), 1)); ENHETER.forEach((e, i) => { (e.menn || []).forEach((m, k) => { if (hp[i] && hp[i][k] != null) m.hp = hp[i][k]; }); e.leder = led[i]; }); }
         krev(ut.fiendeFryser > 0, 'fiendens lag fryser ikke'); }
       if (window.Effekter3d && Effekter3d.kratere) { const K = Effekter3d.kratere(), n0 = K.length; Effekter3d.krater(l.x + 50, l.y + 50, 3); krev(K.length === Math.min(n0 + 1, Effekter.REGLER.kratere), 'krateret kom ikke'); K.pop(); Effekter3d.lagre();
         krev(Effekter.salveKratere(0, 0, 150, 1).length === Effekter.REGLER.salve.nedslag && !!window.SALVER, 'salvene lager ikke kratere'); }

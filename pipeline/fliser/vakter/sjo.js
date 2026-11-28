@@ -60,7 +60,7 @@ module.exports = { navn: 'sjøen', kjør: async (pg, profil) => {
         const ai = nyttLag('Vaktbåtfolk', L.x + 500, L.y + 40, 'rød'); ai.ai = { neste: 0, mål: [L.x + 4000, L.y] }; ENHETER.push(ai);
         const pl = await SjoSpill.planAI(ai, 0, 1, 1e6, [L.x + 4000, L.y], { vindu: v }); ok(pl && pl.plan && ai.båtPlan, 'AI-laget planlegger båt (' + (pl && (pl.feil || Math.round(pl.plan.meter) + ' m')) + ')');
         if (ai.båtPlan) { const ab = SjoSpill.gåOmAI(ai, ai.båtPlan); ok(ab && ai.påBåt === ab && FB.includes(ab), 'AI-laget er om bord'); let fr4 = null, m4 = 0; while (!fr4 && m4++ < 3000) fr4 = Sjo.steg(ab, 1); if (FB.includes(ab)) { FB.splice(FB.indexOf(ab), 1); SjoSpill.iLandAI(ab); } ok(fr4 === 'framme' && !ai.påBåt && ai.ai.neste === 0, 'AI-båten kom fram og laget gikk i land'); }
-        ENHETER.splice(ENHETER.indexOf(ai), 1); FB.length = nF; if (s4) { s4.x = før[0]; s4.y = før[1]; s4.sti = før[2]; s4.siktSkitten = true; }
+        (ENHETER.indexOf(ai) >= 0 && ENHETER.splice(ENHETER.indexOf(ai), 1)); FB.length = nF; if (s4) { s4.x = før[0]; s4.y = før[1]; s4.sti = før[2]; s4.siktSkitten = true; }
         // trykk i 3D (kroken med kartets meter): båten åpner panelet
         // (19. nov, test2) et lag innen 30 m av trykket går foran båten (trykk3d svarer da false med vilje) – hvor lagene står etter de
         // andre vaktene, avhenger av hvor mye spilltid som har gått, så lag ved båten flyttes bort mens vakta trykker, og settes tilbake

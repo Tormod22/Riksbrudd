@@ -13,6 +13,14 @@ module.exports = {
       // 1. REGLENE
       krev(LL.stilling({ inne: 'brakke', sover: true }, 'bygg', 'brakke') === 'ligger' && LL.stilling({ inne: 'kjøkken', hva: 'mat' }, 'bygg', 'kjøkken') === 'sitter', 'stillingene i køya/ved bordet');
       krev(LL.røyk('kjøkken', 12) === 1 && LL.røyk('kjøkken', 3) === 0 && LL.lys('brakke', 21, .8) && !LL.lys('brakke', 13, .02), 'røyk og lys etter klokka');
+      // 1b. KARAKTERVERNET: et prøvelag som alt er fjernet, «fjernes» igjen med indexOf = −1 – det tar ut det siste laget (ofte karakteren);
+      // spill/karaktervern.js setter karakteren inn igjen innen et sekund
+      { const kar = ENHETER.find(e => e.karakter); if (kar && window.KaraktervernSpill) { const i0 = ENHETER.indexOf(kar); ENHETER.push(ENHETER.splice(i0, 1)[0]);
+          const p = nyttLag('Prøvelag', m.x + 500, m.y, 'rød'); ENHETER.push(p); ENHETER.splice(ENHETER.indexOf(p), 1); ENHETER.splice(ENHETER.indexOf(p), 1);
+          const borte = !ENHETER.includes(kar); for (let k = 0; k < 30 && !ENHETER.includes(kar); k++) await vent(100);
+          ut.vern = { borte, tilbake: ENHETER.includes(kar) }; if (!ENHETER.includes(kar)) ENHETER.splice(Math.min(i0, ENHETER.length), 0, kar);
+          else if (ENHETER.indexOf(kar) !== i0) { ENHETER.splice(ENHETER.indexOf(kar), 1); ENHETER.splice(Math.min(i0, ENHETER.length), 0, kar); }
+          krev(ut.vern.borte && ut.vern.tilbake, 'karakteren kom ikke tilbake etter en feil fjerning ' + JSON.stringify(ut.vern)); } }
       // 2. PRØVELEIREN: en ferdig brakke og et kjøkken litt unna midten, og en byggeplass (lagertelt under arbeid)
       let id = 930000; const legg = (type, x, y, ferdig = true) => { const b = { id: id++, type, x: m.x + x, y: m.y + y, ret: .3, nivå: 1, hp: 1, igjen: ferdig ? 0 : 600, totalt: 600, nr: id, arbeid: null }; L.bygg.push(b); return b; };
       const brakke = legg('brakke', 40, 40), kjøk = Leir.BYGG.kjøkken ? legg('kjøkken', 60, 20) : null, plass = legg('lagertelt', 30, 70, false);
@@ -47,6 +55,6 @@ module.exports = {
       L.bygg.splice(0, L.bygg.length, ...JSON.parse(bygg0)); L.neste = neste0; tid = tid0; if (window.NATT) NATT.mørke = mørke0; LV.oppdater(); if (typeof skitten !== 'undefined') skitten = true;
     }
     const d3 = ut.d3 ? `; 3D: ${ut.d3.ting.snor} snor, ${ut.d3.ting.kasse + ut.d3.ting.verktøy + ut.d3.ting.bukk} kasser/verktøy, ${ut.d3.vinduer} vinduer med lys, ${ut.d3.røykKilder} piper, køya ${ut.d3.seng ? 'inne' : '–'}, bordet ${ut.d3.bord ? 'inne' : '–'}` : ' (3D av)';
-    return { ok: !ut.feil.length, tekst: ut.feil.length ? ut.feil.join('; ') : `vasketøy ved brakka, ${ut.ting.ved} ting ved byggeplassen, 0 i bygg; hund ${ut.hund.n} (gikk ${ut.hund.gikk || 0} m, ligger om natta ${!!ut.hund.natt})` + d3, data: ut };
+    return { ok: !ut.feil.length, tekst: ut.feil.length ? ut.feil.join('; ') : `karakteren kom tilbake etter feil fjerning: ${ut.vern ? ut.vern.tilbake : '–'}; vasketøy ved brakka, ${ut.ting.ved} ting ved byggeplassen, 0 i bygg; hund ${ut.hund.n} (gikk ${ut.hund.gikk || 0} m, ligger om natta ${!!ut.hund.natt})` + d3, data: ut };
   }),
 };

@@ -40,7 +40,7 @@ module.exports = {
         ok(k2.blink >= 1, 'ingen blink i kartet for granatene');
         ok(k2.und > 0 && k2.ild < 1 && k2.fart < 1, `maskingeværene holdt ikke laget nede (${JSON.stringify(k2)})`);
         const { res: selv } = runde(0); ut.selvtest2d = selv; ok(selv.a === 4 && selv.b === 4, 'selvtesten: granater med rekkevidde 0 ble likevel brukt');
-        ENHETER.push(a); a.ammo = .2; BK.fyllSteg(); a.ammo = 1; BK.fyllSteg(); ENHETER.splice(ENHETER.indexOf(a), 1); ut.fylt = a.granater; ok(a.granater === B.Lagkamp.start(a), `granatene ble ikke etterfylt med ammunisjonen (${a.granater})`);
+        ENHETER.push(a); a.ammo = .2; BK.fyllSteg(); a.ammo = 1; BK.fyllSteg(); (ENHETER.indexOf(a) >= 0 && ENHETER.splice(ENHETER.indexOf(a), 1)); ut.fylt = a.granater; ok(a.granater === B.Lagkamp.start(a), `granatene ble ikke etterfylt med ammunisjonen (${a.granater})`);
         // ---------- (2) 3D ----------
         if (!R || !R.ut || !R.hindre || !window.Gange || !window.SpilletSpill) { ut.i3d = 'ikke prøvd (3D er av)'; return ut; }
         const varPå3d = typeof på3d !== 'undefined' && på3d, varGår = !!R.fot, K = SpilletSpill.K(), hp0 = K.hp, bane0 = { x: R.bane.x, y: R.bane.y };
