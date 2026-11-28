@@ -69,6 +69,8 @@ const REGLER = {
   byAngrep: { sjanse: .04, menn: 8 }, rivalTar: .03,
   // så mange mann blir igjen som garnison i et tettsted strategiene tar (Garnison/Region: garnisonen løfter lojaliteten og hindrer opprør)
   garnison: 3,
+  // så mange fulle tropper (Tropper.R.maks) som kan gå sammen mot ett tettsted i «byer med makt» (ut2-balanse; Claudes forslag)
+  byTropper: 2,
   // timer fra en tropp er hjemme til spilleren har sett det og gitt neste ordre (lese tilbudene, velge, sende)
   reaksjon: 1,
   // når en kjøring regnes som blakk: kassa klarer ikke lønna (F.ubetalt > 0)
@@ -324,11 +326,17 @@ leggTilDel({ id: 'byer',
     for (const tr of sim.tropper) if (tr.jobb && tr.jobb.by) byJobbTime(sim, tr);
   },
   døgn(sim) {
+    // (ut2-balanse) varene tettstedene sender (tre, betong, stål) og som strategien ikke bygger med, selges om morgenen som i «hogst og
+    // salg» (Marked.kanSelge: det markedet tar imot, til Marked.SALG av markedsprisen); «selgVarer» = det som blir liggende igjen i lageret
+    if (sim.selgVarer !== undefined) for (const v of ['tre', 'betong', 'stål']) { const m = Marked.kanSelge(sim.M, v, Math.floor(Math.max(0, (sim.L.lager[v] || 0) - sim.selgVarer) * 10) / 10); if (!(m > 0)) continue;
+      const kr = Math.round(m * Marked.pris(sim.M, v, Leir.MATERIALER[v].pris) * Marked.SALG); sim.L.lager[v] -= m; Marked.selg(sim.M, v, m); sim.gi(kr, 'salg'); }
     for (const by of sim.region.byer) {
       // motstanderne prøver å ta et av dine tettsteder (med garnison: kamp; uten: det er tapt)
       if (by.eier === ID && sim.rng() < REGLER.byAngrep.sjanse) {
-        const g = by.garnison, ok = g && kamp(g.menn, fiendeLag(REGLER.byAngrep.menn), sim.rngKamp, { stoppA: troppGirOpp, stoppB: Trussel.brutt, fA: { målPåMarsj: true } }).vinner === 'A';
-        if (!ok) { by.eier = sim.rng() < .5 ? 'rød' : 'grønn'; Region.mistet(sim.RG, by.id); sim.byerMistet++; if (g) { g.menn = g.menn.filter(m => m.hp > 0 && sim.rng() < .3); g.garnisonI = null; g.hjemme = true; by.garnison = null; } sim.logg(`mistet ${by.navn}`); }
+        // (ut2-balanse) garnisonen står i dekning i husene, som forsvarerne i leiren (fB.målISkog halverer treffsjansen) – før sto den i
+        // åpent lende og tapte nesten alltid
+        const g = by.garnison, ok = g && kamp(g.menn, fiendeLag(REGLER.byAngrep.menn), sim.rngKamp, { stoppA: troppGirOpp, stoppB: Trussel.brutt, fA: { målPåMarsj: true }, fB: { målISkog: true } }).vinner === 'A';
+        if (!ok) { by.eier = sim.rng() < .5 ? 'rød' : 'grønn'; by.mistet = true; Region.mistet(sim.RG, by.id); sim.byerMistet++; if (g) { g.menn = g.menn.filter(m => m.hp > 0 && sim.rng() < .3); g.garnisonI = null; g.hjemme = true; by.garnison = null; } sim.logg(`mistet ${by.navn}`); }
         else sim.logg(`garnisonen i ${by.navn} slo tilbake et angrep`);
       } else if (!by.eier && sim.rng() < REGLER.rivalTar) by.eier = sim.rng() < .5 ? 'rød' : 'grønn';
     }
@@ -343,8 +351,14 @@ function byJobbTime(sim, tr) {
   while (igjen > 1e-9 && tr.jobb) {
     if (J.fase === 'marsj' || J.fase === 'hjem') { const t = Math.min(igjen, J.timer); J.timer -= t; igjen -= t; if (J.timer > 1e-9) break;
       if (J.fase === 'hjem') { tr.jobb = null; tr.hjemme = true; tr.ledigFra = sim.t + REGLER.reaksjon * 60; break; }
-      J.fase = by.eier && by.eier !== ID ? 'snu' : by.vern > 0 ? 'vern' : 'inntak'; J.sek = 0; continue; }
+      J.fase = by.eier && by.eier !== ID ? (by.mistet ? 'garnison' : 'snu') : by.vern > 0 ? 'vern' : 'inntak'; J.sek = 0; continue; }
     if (J.fase === 'snu') { J.fase = 'hjem'; J.timer = marsjTimer(Math.hypot(by.x, by.y)); continue; }
+    // (ut2-balanse) et sted motstanderen tok fra deg: slå garnisonen deres (like mange som tok det), så inntak som før
+    if (J.fase === 'garnison') {
+      const r = kamp(tr.menn, fiendeLag(REGLER.byAngrep.menn), sim.rngKamp, { stoppA: troppGirOpp, stoppB: Trussel.brutt }); igjen -= r.runder * Terreng.KAMPRUNDE_MIN / 60;
+      if (r.vinner === 'A') { by.eier = null; J.fase = 'inntak'; J.sek = 0; sim.logg(`${tr.navn} slo garnisonen i ${by.navn}`); }
+      else { J.fase = 'hjem'; J.timer = marsjTimer(Math.hypot(by.x, by.y)); sim.logg(`${tr.navn} trekker seg fra ${by.navn}`); }
+      continue; }
     if (J.fase === 'vern') {
       // én runde per KAMPRUNDE_MIN (som vern() i spill/krig-visning.js)
       const r = Krig.vernRunde(by.vern, friske(tr.menn), sim.rngKamp); Terreng.fordelTreff(tr.menn, r.motLaget, sim.rngKamp); by.vern -= r.motVernet; igjen -= Terreng.KAMPRUNDE_MIN / 60;
@@ -404,12 +418,18 @@ leggTilStrategi({ id: 'kontrakter', navn: 'bare kontrakter', fornuftig: true, te
   start(sim) { Selskap.førsteKontrakt(sim.SK, ID, 0, steder(sim), { x: 600, y: 700, navn: 'nødlageret' }); lagTropp(sim, 6).rolle = 'kontrakt'; },
   time(sim) { const tr = sim.tropper.find(t => t.rolle === 'kontrakt'); if (!tr) return; const nv = Selskap.nivå(Selskap.side(sim.SK, ID)); if (tr.hjemme && !tr.jobb) fyllTropp(sim, tr, Math.max(6, nv.menn + 2), reserve(sim, 3)); kontraktTime(sim, tr); } });
 leggTilStrategi({ id: 'byer', navn: 'byer med makt', fornuftig: true, tekst: 'en tropp tar de nærmeste nøytrale tettstedene med makt, lar en garnison på tre stå igjen og fylles opp med rekrutter',
-  start(sim) { lagTropp(sim, 7).rolle = 'by'; },
+  start(sim) { lagTropp(sim, 7).rolle = 'by'; sim.selgVarer = 20; },
   time(sim) { byTime(sim, sim.tropper.find(t => t.rolle === 'by'), 3); } });
 // én angrepstropp tar tettsteder: de med mest folk per km først; fylles opp til det krigskartet anbefaler (Strategi.anbefalt)
 function byTime(sim, tr, reserveDøgn, garnison = REGLER.garnison) {
-  const mål = sim.region.byer.filter(b => !b.eier && !sim.tropper.some(t => t.jobb && t.jobb.by === b)).sort((a, b) => (Math.hypot(a.x, a.y) / Math.sqrt(a.folk)) - (Math.hypot(b.x, b.y) / Math.sqrt(b.folk)))[0];
-  if (!mål) return; const trengs = Math.min(Tropper.R.maks, Strategi.anbefalt(Garnison.minstFor(mål.folk), mål.vern) + 1 + garnison);
+  // (ut2-balanse 28. nov) troppen det krigskartet anbefaler (Strategi.anbefalt mot bygdevernet + én + garnisonen). Før ble den kuttet til
+  // Tropper.R.maks (12), og troppen gikk igjen og igjen mot et bygdevern på 12–14 med 12 mann, tapte og rekrutterte for 15 mill. – det gjør
+  // ikke en fornuftig spiller (Krig sier «for svakt»). Nå får troppen den størrelsen som trengs – opptil to fulle tropper som går sammen
+  // (spillet lar flere lag gå mot samme sted, Strategi «flere») – og steder som trenger mer, lar strategien være.
+  // Et sted motstanderen tok fra deg (by.mistet), tas tilbake: forsvaret er da garnisonen deres (REGLER.byAngrep.menn).
+  const trengsFor = b => Strategi.anbefalt(Garnison.minstFor(b.folk), b.eier ? REGLER.byAngrep.menn : b.vern) + 1 + garnison;
+  const mål = sim.region.byer.filter(b => (!b.eier || (b.mistet && b.eier !== ID)) && !sim.tropper.some(t => t.jobb && t.jobb.by === b) && trengsFor(b) <= REGLER.byTropper * Tropper.R.maks).sort((a, b) => (Math.hypot(a.x, a.y) / Math.sqrt(a.folk)) - (Math.hypot(b.x, b.y) / Math.sqrt(b.folk)))[0];
+  if (!mål) return; const trengs = trengsFor(mål);
   if (!tr) {
     // ingen angrepstropp: rekrutter til leiren til det er nok folk til en ny (minst to blir igjen i leiren)
     if (sim.F.personer.length >= Math.min(trengs, 6) + 2) { const t = lagTropp(sim, Math.min(trengs, sim.F.personer.length - 2)); if (t) t.rolle = 'by'; }

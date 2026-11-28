@@ -15,12 +15,13 @@ ok(/holder ord|nokså stødig/.test(S0.rykteTekst(S.sider.blå.rykte)), 'ryktete
 
 // tilbud: tre, innenfor avstanden, med tittel og betaling
 const nye = S0.lagTilbud(S, 'blå', 600, steder, S0.lagRand(42));
-ok(nye.length === 3 && S.tilbud.length === 3, 'tre tilbud ved rykte 50');
+// (ut2-balanse 28. nov) tilbudPerDag 3 -> 2: to tilbud ved rykte 50
+ok(nye.length === S0.REGLER.tilbudPerDag && S.tilbud.length === S0.REGLER.tilbudPerDag && S0.REGLER.tilbudPerDag === 2, 'to tilbud ved rykte 50');
 ok(nye.every(k => k.sted.navn !== 'For langt' && k.betaling > 100000 && k.bot === Math.round(k.betaling * .35 / 10000) * 10000 && k.tittel && S0.kravTekst(k)), 'tilbudene har sted, betaling, bot og tekst');
 ok(S0.lagTilbud(S0.ny(leir), 'blå', 0, [], S0.lagRand(1)).length === 0, 'ingen steder = ingen tilbud');
 
 // ryktet styrer tilbudene: pålitelig gir flere, hardhendt gir flere ryddejobber og færre hentejobber
-ok(S0.antallTilbud({ pålitelig: 80, hardhendt: 20, billig: 50 }) === 4 && S0.antallTilbud({ pålitelig: 10, hardhendt: 20, billig: 50 }) === 2, 'antall etter pålitelighet');
+ok(S0.antallTilbud({ pålitelig: 80, hardhendt: 20, billig: 50 }) === 3 && S0.antallTilbud({ pålitelig: 10, hardhendt: 20, billig: 50 }) === 1, 'antall etter pålitelighet');
 const v1 = S0.typeVekter({ pålitelig: 50, hardhendt: 10, billig: 50 }), v2 = S0.typeVekter({ pålitelig: 50, hardhendt: 90, billig: 50 });
 ok(v2.rydd > v1.rydd * 2 && v2.hent < v1.hent / 2, 'hardhendt: flere rydd, færre hent');
 const tell = (r, typ) => { const T = S0.ny(leir); T.sider.blå.rykte = r; let k = 0; for (let i = 0; i < 40; i++) k += S0.lagTilbud(T, 'blå', i * 1440, steder, S0.lagRand(i + 1)).filter(q => q.type === typ).length; return k; };
@@ -157,7 +158,9 @@ ok(S0.fristTekst({ frist: 839.6 }, 0) === '14 t 0 min igjen' && S0.fristTekst({ 
     ok(n > 0 && feil === 0, `bygd/kommune i tettsted er stedets egen: ${n} kontrakter, ${feil} feil`); }
   // nivåene
   const sd = S0.side(S0.ny(L0), 'blå'); ok(S0.nivå(sd).nr === 1 && S0.nesteNivå(sd).mangler.length === 2, 'nivå 1, to ting mangler for nivå 2');
-  sd.sum.levert = 2; sd.rykte.pålitelig = 56; ok(S0.nivå(sd).nr === 2 && S0.nesteNivå(sd).nivå.nr === 3, 'nivå 2');
+  // (ut2-balanse 28. nov) nivå 2 krever nå tre leverte (før to): to er fortsatt nivå 1
+  sd.sum.levert = 2; sd.rykte.pålitelig = 56; ok(S0.nivå(sd).nr === 1, 'to leverte er fortsatt nivå 1');
+  sd.sum.levert = 3; ok(S0.nivå(sd).nr === 2 && S0.nesteNivå(sd).nivå.nr === 3, 'nivå 2');
   sd.sum.levert = 20; sd.rykte.pålitelig = 99; ok(S0.nivå(sd).nr === 4 && S0.nesteNivå(sd) === null, 'øverste nivå');
   // kravene
   const hold = { type: 'hold', nivå: 1 }, esk = { type: 'eskorte', nivå: 1 }, stor = { type: 'hold', nivå: 2 }, sd1 = S0.side(S0.ny(L0), 'blå');

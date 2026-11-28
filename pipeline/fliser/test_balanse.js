@@ -128,7 +128,8 @@ ok(SB.kasse > SB.etterStart, `med én kontrakt i døgnet vokser kassa: ${mill(SB
   ok(postMaks <= 2.5 * en, `en røverpost betaler høyst ${mill(postMaks)} per røverlag (høyst 2,5 eskorter)`); }
 
 // ---------- R2-løkka: betaling etter risiko, drift som vokser med leiren ----------
-{ const r = Selskap.REGLER.rykte.start, rolig = Selskap.betaling('eskorte', r, 'vanlig', KONTRAKT.meter, 0), bakhold = Math.round(rolig * Selskap.REGLER.RISIKO.bakhold.faktor),
+// (ut2-balanse 28. nov) lagTilbud ganger nå også en rolig rute med RISIKO.rolig.faktor – samme regel her
+{ const r = Selskap.REGLER.rykte.start, grunnE = Selskap.betaling('eskorte', r, 'vanlig', KONTRAKT.meter, 0), rolig = Math.round(grunnE * (Selskap.REGLER.RISIKO.rolig.faktor || 1)), bakhold = Math.round(grunnE * Selskap.REGLER.RISIKO.bakhold.faktor),
     hold = Selskap.betaling('hold', r, 'vanlig', KONTRAKT.meter, 6);
   ok(rolig <= RAMME.roligMaks * bakhold && rolig <= RAMME.roligMaks * hold, `en rolig eskorte (${mill(rolig)}) betaler høyst ${RAMME.roligMaks * 100} % av en eskorte med bakhold (${mill(bakhold)}) og av å holde et sted i 6 t (${mill(hold)})`);
   const vekst = (SB.kasse - SB.etterStart) / START;
@@ -151,7 +152,10 @@ ok(SB.kasse > SB.etterStart, `med én kontrakt i døgnet vokser kassa: ${mill(SB
   ok(full >= 3 * garnison, `… og er verdt å holde: minst tre ganger lønna til en garnison på 12 (${mill(garnison)} per døgn)`);
   ok(første <= .4 * middels, `det første døgnet gir byen bare ${mill(første)} (skatten kommer gradvis)`);
   const smått = Region.gir(1500, 'bygd', { ...st, holdt: 99 }).penger;
-  ok(smått < garnison, `en bygd på 1500 gir ${mill(smått)} i skatt – mindre enn en full garnison koster (den holdes for varene og ruta)`); }
+  // (ut2-balanse 28. nov) små steder betaler nå minst 6000 × √innbyggere (region.js skattRot), så en bygd på 1500 dekker lønna til en
+  // garnison – men den skal fortsatt ikke være en pengemaskin: høyst halvparten av drifta i startleiren (før: under lønna til 12 mann)
+  ok(smått <= .5 * SA.drift / 10, `en bygd på 1500 gir ${mill(smått)} i skatt – høyst halvparten av drifta i startleiren (${mill(SA.drift / 10)} per døgn)`);
+  ok(smått > 3 * FolkR.lønnPerDøgn(1, 1), `… men mer enn lønna til en garnison på tre (${mill(3 * FolkR.lønnPerDøgn(1, 1))} per døgn)`); }
 
 // ---------- knappe ressurser (R18: «hver kule og hver førstehjelpspakke skal telle», med Silent Hill som stemning) ----------
 // Prisene på våpen og ammunisjon eies av spor C (utstyr.js) – her sjekkes bare mengdene du starter med og finner.

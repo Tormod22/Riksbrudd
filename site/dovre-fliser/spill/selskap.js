@@ -25,7 +25,9 @@
       // (R1-løkka 26. nov, kritikken: «alle tre selskapene har samme ryktetekst») de andre selskapene starter med sitt eget rykte –
       // Ravnsund er rask, røff og dyr; Mosevakt er stødig, skånsom og billig (Claudes forslag, passer omtalen i selskap-visning.js)
       sider: { rød: { pålitelig: 44, hardhendt: 66, billig: 24 }, grønn: { pålitelig: 70, hardhendt: 12, billig: 78 } } },
-    tilbudPerDag: 3,          // nye tilbud hver morgen (± 1 etter hvor pålitelig selskapet er)
+    // nye tilbud hver morgen (± 1 etter hvor pålitelig selskapet er). (ut2-balanse 28. nov, økonomitesten: én tropp leverte ca. 2,3
+    // kontrakter i døgnet og 448 mill. på 30 døgn) 3 -> 2: et nytt selskap får to tilbud, et pålitelig (70+) tre (Claudes forslag)
+    tilbudPerDag: 2,
     maksTilbud: 6,            // så mange tilbud ligger åpne samtidig (de eldste går ut)
     tilbudVarer: 30 * 60,     // spillminutter et tilbud ligger før oppdragsgiveren finner en annen
     maksAktive: 3,            // så mange kontrakter selskapet kan ha samtidig
@@ -44,12 +46,18 @@
     TYPER: {
       // (R2-løkka 26. nov, kritikken: «to ufarlige eskorter betalte 2,7 og 3,6 mill. kr for 20 min kjøring») betaling etter risiko og
       // innsats: grunnbetalingen gjelder en ROLIG rute (1 600 000 -> 700 000); en rute med meldt bakhold betaler × RISIKO.bakhold.faktor
-      eskorte: { navn: 'Eskorte', betaling: 700000, timer: 10, hardhendt: 0, givere: ['firma', 'bygd', 'by'] },
-      hold: { navn: 'Hold', betaling: 2100000, holdTimer: [4, 10], ekstraTimer: 10, hardhendt: 1, givere: ['by', 'bygd', 'firma'] },
+      // (ut2-balanse 28. nov, økonomitesten: en eskorte ga i snitt 6,9 mill. for ca. 1,3 timer – 5,3 mill. i timen mot 0,7–1,0 for de andre)
+      // eskorten betales etter strekket bilen kjøres (se lagTilbud), vegfaktoren er høyst × meterTak, og grunnbetalingen 700 000 -> 600 000
+      // (Claudes forslag)
+      eskorte: { navn: 'Eskorte', betaling: 600000, timer: 10, hardhendt: 0, givere: ['firma', 'bygd', 'by'], meterTak: 1.25 },
+      // (ut2-balanse 28. nov) hold 2 100 000 -> 1 700 000: holdet var den største enkeltbetalingen (ca. 6,7 mill. på nivå 4) – Claudes forslag
+      hold: { navn: 'Hold', betaling: 1700000, holdTimer: [4, 10], ekstraTimer: 10, hardhendt: 1, givere: ['by', 'bygd', 'firma'] },
       rydd: { navn: 'Rydd vegsperre', betaling: 1900000, timer: 14, hardhendt: 4, givere: ['firma', 'by'] },
       hent: { navn: 'Hent person', betaling: 1250000, timer: 12, hardhendt: -2, givere: ['bygd', 'by', 'firma'] },
     },
     avstand: { min: 2500, maks: 22000 },    // meter fra leiren til stedene i kontraktene
+    // betalingen vokser med vegen: × (1 + meter / meterPer), for typer med meterTak høyst × meterTak (Claudes forslag)
+    meterPer: 40000,
     // meter: eskorten er framme innen fram av B; et lag holder et sted innen hold (uten fiender der); personen hentes innen hent;
     // med personen hjem når laget er innen leir av leiren
     nær: { fram: 200, hold: 350, hent: 80, leir: 300 },
@@ -60,7 +68,9 @@
     // bakhold.andel = andelen nye eskorter med meldt bakhold (alltid når et annet selskap holder et av stedene); faktor = på betalingen;
     // angrep = sjansen for at bakholdet faktisk kommer når kontrakten er tatt. En rolig rute kan også overraske (rolig.angrep).
     // Gamle lagrede eskorter uten risiko bruker rival.angrep som før.
-    RISIKO: { bakhold: { andel: .45, faktor: 2.6, angrep: .85 }, rolig: { angrep: .08 } },
+    // (ut2-balanse 28. nov) bakhold.faktor 2,6 -> 1,6: bakholdet er seks mann, som en tropp på seks slår i de fleste kampene; og en rolig rute
+    // betaler rolig.faktor 0,75 av grunnbetalingen, så den fortsatt er høyst halvparten av en rute med bakhold (test_balanse.js) – Claudes forslag
+    RISIKO: { bakhold: { andel: .45, faktor: 1.6, angrep: .85 }, rolig: { angrep: .08, faktor: .75 } },
     // ---------- R18-A: DEN RØDE TRÅDEN (23. nov, brukeren: «det må være én tydelig rød tråd») – alle tallene er Claudes forslag ----------
     // Den første kontrakten: hent forsyninger i et tettsted (eller en bru) nær leiren. Stedet: nærmest ønsket avstand innenfor min–maks;
     // finnes ingen, legger visningen et forsyningslager reserve meter fra leiren. Fristen er romslig (1× er sanntid).
@@ -72,11 +82,13 @@
     første: { betaling: 1500000, timer: 72, min: 600, maks: 8000, ønsket: 2000, reserve: 900, avstand: 900, utenfor: 250, nær: 150, bruddRykte: .5 },
     // NIVÅENE: leverte kontrakter og «pålitelig» låser opp større kontrakter. faktor = på betalingen; menn = minste lagstørrelse for
     // hold/rydd på det nivået; teaser = sjansen for at ett av dagens tilbud er fra neste nivå (låst, men synlig)
+    // (ut2-balanse 28. nov, økonomitesten: nivå 4 (× 2,4) ble nådd rundt dag 6) levert 2/5/10 -> 3/8/20 og faktor 1,35/1,8/2,4 ->
+    // 1,15/1,35/1,55 (Claudes forslag): nivå 4 kommer nå rundt dag 13–15 for en som tar kontrakt etter kontrakt
     NIVÅER: [
       { nr: 1, navn: 'Ukjent', levert: 0, pålitelig: 0, faktor: 1, menn: 3 },
-      { nr: 2, navn: 'Kjent i bygda', levert: 2, pålitelig: 55, faktor: 1.35, menn: 5 },
-      { nr: 3, navn: 'Etablert', levert: 5, pålitelig: 65, faktor: 1.8, menn: 7 },
-      { nr: 4, navn: 'Ettertraktet', levert: 10, pålitelig: 78, faktor: 2.4, menn: 9 },
+      { nr: 2, navn: 'Kjent i bygda', levert: 3, pålitelig: 55, faktor: 1.15, menn: 5 },
+      { nr: 3, navn: 'Etablert', levert: 8, pålitelig: 65, faktor: 1.35, menn: 7 },
+      { nr: 4, navn: 'Ettertraktet', levert: 20, pålitelig: 78, faktor: 1.55, menn: 9 },
     ],
     teaser: .5,
     // koblingene til resten av spillet ved levering: motangrep mot leiren (sjanse per type), en ny person vil bli med (fra nivå 2),
@@ -145,7 +157,8 @@
   function betaling(typ, r, prisId, meter, timer, nivåFaktor = 1, infl = 1) {
     const T = REGLER.TYPER[typ], p = (REGLER.pris[prisId] || REGLER.pris.vanlig).faktor;
     const ekstra = typ === 'hold' ? timer / 6 : 1;
-    return avrund(T.betaling * (.75 + r.pålitelig / 200) * p * ekstra * (1 + meter / 40000) * nivåFaktor * (Number.isFinite(infl) && infl > 0 ? infl : 1));
+    const mf = Math.min(T.meterTak || Infinity, 1 + meter / REGLER.meterPer);
+    return avrund(T.betaling * (.75 + r.pålitelig / 200) * p * ekstra * mf * nivåFaktor * (Number.isFinite(infl) && infl > 0 ? infl : 1));
   }
   // steder: [{ navn, x, y, slag: 'tettsted' | 'bru', id, folk }] – visningen finner dem i kartet. Gir de nye tilbudene (lagt i S.tilbud).
   // o: { infl } – prisstigningen i markedet ganges inn i betalingen
@@ -186,10 +199,12 @@
       const kommune = sted.slag !== 'bru' ? sted : byer.length ? velg(byer, r) : sted;
       const giver = giverSlag === 'firma' ? { slag: 'firma', navn: velg(FIRMA, r) } : giverSlag === 'by' ? { slag: 'by', navn: `Kommunen i ${kommune.navn}`, by: kommune.id === undefined ? null : kommune.id }
         : { slag: 'bygd', navn: `Bygdelaget i ${sted.navn}`, by: sted.slag !== 'bru' && sted.id !== undefined ? sted.id : null };
-      const meter = Math.hypot(sted.x - L.x, sted.y - L.y) + (fra ? Math.hypot(fra.x - sted.x, fra.y - sted.y) : 0);
+      // (ut2-balanse 28. nov) eskorten betales etter strekket bilen kjøres (fra -> til): bilen står klar ved «fra» (selskap-visning.js
+      // lagBil), så vegen fra leiren dit er ikke en del av jobben. De andre typene betales etter vegen fra leiren som før.
+      const meter = typ === 'eskorte' && fra ? Math.hypot(fra.x - sted.x, fra.y - sted.y) : Math.hypot(sted.x - L.x, sted.y - L.y) + (fra ? Math.hypot(fra.x - sted.x, fra.y - sted.y) : 0);
       // eskorte: rolig rute eller meldt bakhold (alltid bakhold når et annet selskap holder et av stedene)
       const risiko = typ === 'eskorte' ? ([fra, sted].some(q => q && q.eier && q.eier !== id) || r() < REGLER.RISIKO.bakhold.andel ? 'bakhold' : 'rolig') : null;
-      const kr = betaling(typ, R, sd.pris, meter, hold, kNivå.faktor, o.infl) * (risiko === 'bakhold' ? REGLER.RISIKO.bakhold.faktor : 1);
+      const kr = betaling(typ, R, sd.pris, meter, hold, kNivå.faktor, o.infl) * (risiko === 'bakhold' ? REGLER.RISIKO.bakhold.faktor : risiko === 'rolig' ? (REGLER.RISIKO.rolig.faktor || 1) : 1);
       // vegsperra står litt utenfor stedet (visningen flytter den til nærmeste veg)
       const v = r() * Math.PI * 2, sperre = typ === 'rydd' ? { x: Math.round(sted.x + Math.cos(v) * 900), y: Math.round(sted.y + Math.sin(v) * 900) } : null;
       const andreSider = SIDER.filter(q => q !== id);

@@ -36,6 +36,12 @@
     // Målet: en mellomstor by (ca. 20 000) gir netto ca. 0,9 mill. kr per døgn når skatten er full – omtrent én rolig eskorte, under en
     // middels kontrakt (hent person 1,5 mill.) – og ca. 0,3 mill. det første døgnet (test_balanse.js, «tettstedene»).
     skattKr: 100, skattMaks: 1.2e6,
+    // (ut2-balanse 28. nov, økonomitesten docs/natt/ut1-okotest.md funn 2: «en bygd på 800 gir ca. 60 000 kr netto i døgnet mot 45 000 kr i
+    // lønn til en garnison på tre», og leiren alene bruker 0,6–0,7 mill. i døgnet) også en liten bygd har gårder, butikk, sag og verksted:
+    // et tettsted betaler minst skattRot × √innbyggere kr brutto per døgn ved vanlig skatt, rundet til hele tusen (Claudes forslag: 6000 –
+    // en bygd på 800 gir da 170 000 kr brutto og ca. 127 000 netto, før 80 000/60 000; 1500 innb. 232 000 brutto, høyst halvparten av drifta
+    // i startleiren, test_balanse.js). Fra 3600 innbyggere gjelder skattKr som før, så byene og taket er uendret.
+    skattRot: 6000,
     forvaltning: .25,
     innkjøring: { start: .3, døgn: 3 },
     // lojalitet 0–100
@@ -92,7 +98,7 @@
   function grunn(folk, t) {
     const ut = {}, G = (TYPER[t] || TYPER.bygd).gir;
     for (const [k, [per, min, maks]] of Object.entries(G)) ut[k] = klem(folk / 1000 * per, min, maks);
-    ut.penger = Math.min(REGLER.skattMaks, folk * REGLER.skattKr);
+    ut.penger = folk > 0 ? Math.min(REGLER.skattMaks, Math.max(Math.round((REGLER.skattRot || 0) * Math.sqrt(folk) / 1000) * 1000, folk * REGLER.skattKr)) : 0;
     return ut;
   }
   const lojFaktor = loj => REGLER.lojFaktor[0] + (REGLER.lojFaktor[1] - REGLER.lojFaktor[0]) * klem(loj, 0, 100) / 100;
