@@ -15,7 +15,10 @@
   const infra = () => (typeof INFRA !== 'undefined' && INFRA) || null;
   const pkt = o => (o && o.deler && o.deler[0] ? { x: o.deler[0][0], y: o.deler[0][1] } : null);
   function nærmest(liste, x, y, filter) { let d = Infinity; for (const o of liste || []) { if (filter && !filter(o)) continue; const p = pkt(o); if (p) d = Math.min(d, Math.hypot(p.x - x, p.y - y)); } return d; }
-  const høyde = (x, y) => { try { const v = typeof hoydeVed === 'function' ? hoydeVed(x, y) : null; return Number.isFinite(v) ? v : null; } catch (e) { return null; } };
+  // høyden: kartflisene i 2D (hoydeVed), ellers 3D-utsnittet (hoyde3d) når 3D er åpent
+  const høyde = (x, y) => { try { let v = typeof hoydeVed === 'function' ? hoydeVed(x, y) : null;
+    if (!Number.isFinite(v) && typeof hoyde3d === 'function' && typeof R3 !== 'undefined' && R3 && R3.ut) { const u = R3.ut; if (Math.abs(x - u.cx) < u.S && Math.abs(y - u.cy) < u.S) v = hoyde3d(x, y, u); }
+    return Number.isFinite(v) ? v : null; } catch (e) { return null; } };
   // Omgivelsene rundt (X, Y). null når stedet ikke er kjent (bygget mangler X/Y).
   function omgivelser(info) {
     if (!info || !Number.isFinite(info.X) || !Number.isFinite(info.Y)) return null;
