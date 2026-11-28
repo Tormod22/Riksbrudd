@@ -127,6 +127,8 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     return h;
   }
   function byer() {
+    // (Ø3 byene på laget) fanen fylles av spill/byavtale-visning.js når den finnes: byens kort, forhandling og avtalene
+    if (window.ByavtaleSpill && ByavtaleSpill.fane) { const h = ByavtaleSpill.fane(byListe()); if (h) return h; }
     const L = byListe(); if (!L.length) return '<p class="rolig">Ingen tettsteder i området ennå. Kartet laster kanskje fortsatt.</p>';
     let h = `<p class="rolig" style="margin:6px 0">Tettstedene i området og hvem som holder dem. Snart kan dere vinne byene over med avtaler – nå tar dere et tettsted ved å holde det med et lag.</p>`;
     h += L.slice(0, 40).map(b => `<div class="by" data-by="${esc(b.id)}"><span>${esc(b.navn)}<small>${b.folk ? b.folk.toLocaleString('nb-NO') + ' innbyggere' : 'tettsted'}${b.loj !== null ? ' · lojalitet ' + b.loj : ''}</small></span><em class="${esc(b.eier || '')}">${esc(b.eierNavn)}</em><button type="button" data-sp="by" data-id="${esc(b.id)}">Vis</button></div>`).join('');
@@ -178,6 +180,7 @@ body.kort #storliakort{ top:calc(var(--topp,44px) + 4px); font-size:13px; }
     if (e.target.closest('#selskap')) return;
     const f = e.target.closest('.sfaner button'); if (f) { e.stopPropagation(); velgFane(f.dataset.fane, true); return; }
     const b = e.target.closest('[data-sp]'); if (!b) return; e.stopPropagation(); const s = b.dataset.sp;
+    if (s.startsWith('ba-') && window.ByavtaleSpill) { if (ByavtaleSpill.trykk(b)) { sistKropp = ''; tegn(); } return; }
     if (s === 'lukk') vis(false);
     else if (s === 'gå') { const k = viktigste()[+b.dataset.i]; if (!k) return; if (k.l0) { if (k.l0.pek === 'selskap') { velgFane('kontrakter'); return; } vis(false); if (window.SelskapSpill && SelskapSpill.følgLapp) SelskapSpill.følgLapp(); } else if (k.trykk) { vis(false); k.trykk(); } }
     else if (s === 'by') { const by = byListe().find(q => String(q.id) === b.dataset.id); if (by && Number.isFinite(by.x)) { if (typeof på3d !== 'undefined' && på3d && typeof slå3d === 'function') slå3d(false); kam.x = by.x; kam.y = by.y; if (kam.m > 20) kam.m = 12; skitten = true; if (smal()) vis(false); } }

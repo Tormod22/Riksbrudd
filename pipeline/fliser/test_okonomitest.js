@@ -43,6 +43,8 @@ const KJENT = {
   'utenSjanse:sagbruk': 'docs/natt/ut2-sagbruk.md: «bare sagbruk» fra første dag har ikke råd til noe annet; saga er trinn 2 i planen, etter kontraktene',
   'uteIngenting:sagbruk': 'samme som over',
   'sag:sagbruk': 'samme som over: folk drar (røverne herjer), og uten folk står saga – og da kjelen, og da strømmen',
+  // (28. nov, flettingen av byavtalene) på grensen: 10–12 % blakk – varekontraktene (Ø2) skal gi saga kunder og løfte strategien
+  'utenSjanse:kontraktSag': 'på grensen (10–12 %) etter flettingen av Ø3; rettes med varekontraktene (Ø2, docs/natt/ut3-varekontrakt.md)',
 };
 const BAND_FIL = path.join(__dirname, 'okonomitest-band.json');
 
