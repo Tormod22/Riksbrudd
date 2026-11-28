@@ -123,11 +123,38 @@
     for (const m of [T.blad, T.stempel, T.knast]) m.instanceMatrix.needsUpdate = true;
     if (nb + ns + nk) R.maskinLiv = nå;
   }
+  // ---------- LYD (ut9-maskiner2): en dur fra maskinen som går nærmest deg i 3D (Web Audio, samme motor som spill/lyd.js:
+  // Lyd.motor() gir ac og hovedkanalen, så ☰ «Lyd» og skjult fane demper den også). Brumming (sagtann, lavpass) + sus (støy, båndpass);
+  // tonen etter delen (sagblad høyest, stempel dypest). Styrken faller med avstanden og er borte ved LYD.rekkevidde. Claudes tall.
+  const LYD = { rekkevidde: 30, maks: .1, tone: { blad: 150, stempel: 62, bånd: 88, røyk: 48 } };
+  const LS = { nivå: 0, tone: 0, k: null, sist: 0 };
+  function lydKanal() {
+    if (LS.k) return LS.k; const m = window.Lyd && Lyd.motor ? Lyd.motor() : null; if (!m || !m.ac || !m.hoved) return null; const ac = m.ac;
+    const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 80; const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; lp.Q.value = .8;
+    const n = ac.createBufferSource(); n.buffer = m.støy; n.loop = true; const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 1.4; const ng = ac.createGain(); ng.gain.value = .35;
+    const g = ac.createGain(); g.gain.value = 0; o.connect(lp); lp.connect(g); n.connect(bp); bp.connect(ng); ng.connect(g); g.connect(m.hoved); o.start(); if (m.støy) n.start();
+    return (LS.k = { ac, o, g, lp });
+  }
+  function lyd(R, kilder) {
+    let best = Infinity, tone = 0; const cam = R.cam && R.cam.position;
+    if (cam && R.ut) for (const k of kilder) { const d = Math.hypot(k.X - R.ut.cx - cam.x, k.Y - R.ut.cy - cam.y); if (d < best) { best = d; tone = LYD.tone[(k.liv[0] || {}).del] || 70; } }
+    const f = Math.max(0, 1 - best / LYD.rekkevidde); LS.nivå = f * f * LYD.maks; LS.tone = tone; sett(LS.nivå, tone);
+  }
+  function sett(nivå, tone) { const K = nivå > 0 || LS.k ? lydKanal() : null; if (!K) return; const t = K.ac.currentTime; K.g.gain.setTargetAtTime(nivå, t, .25);
+    if (tone) { K.o.frequency.setTargetAtTime(tone, t, .3); K.lp.frequency.setTargetAtTime(tone * 5, t, .3); } }
+  // utenfor 3D eller i skjult fane: stille
+  setInterval(() => { if (LS.nivå > 0 && (typeof på3d === 'undefined' || !på3d || document.hidden || performance.now() / 1000 - (T.sistRamme || 0) > 4)) { LS.nivå = 0; sett(0, 0); } }, 500);
   if (typeof KROKER !== 'undefined') {
     KROKER.ramme3d.push(R => { try { ramme(R); } catch (e) { console.warn('maskinliv:', e.message); } });
+    KROKER.ramme3d.push(R => { try { const nå = performance.now(); if (nå - LS.sist > 250) { LS.sist = nå; lyd(R, T.kilder); } } catch (e) { console.warn('maskinlyd:', e.message); } });
     // et nytt utsnitt bygger scenen på nytt: lag nettene igjen der
     KROKER.sett3d.push(() => { T.sist = 0; });
   }
-  window.MaskinerSpill = { kilder, tall: () => Object.assign({}, T.tall, { kilder: T.kilder.length, t: T.t }), prøve: liste => { T.prøve = liste || null; T.sist = 0; }, tegnet2d: () => S2.tegnet,
+  // (ut9-maskiner2) ikonene for de nye maskinene i byggesettet (Ikoner.legg, som kjeder-visning.js gjør for sine maskiner)
+  const IKON = { flis: "<path d='M4 18l6-12 2 4 4-6 4 14z'/><path d='M8 18l2-3 2 3'/>", filet: "<path d='M3 12c4-5 10-5 14 0-4 5-10 5-14 0z'/><path d='M17 12l4-3v6zM7 10l6 4'/>",
+    balle: "<rect x='4' y='7' width='16' height='11' rx='1'/><path d='M4 11h16M4 14h16M9 7v11M15 7v11'/>", knus: "<path d='M4 5h16l-5 8H9z'/><path d='M9 13l-2 7M15 13l2 7M10 20h4'/>" };
+  const IKONBYGG = {}; for (const [d, n] of [['bs_flishogger', 'flis'], ['bs_filetmaskin', 'filet'], ['bs_ballepresse', 'balle'], ['bs_knuser', 'knus']]) { IKONBYGG[d] = n; IKONBYGG[d + '_1'] = n; }
+  (function ikoner(n) { if (window.Ikoner && Ikoner.legg) Ikoner.legg(IKON, IKONBYGG); else if (n < 40) setTimeout(() => ikoner(n + 1), 500); })(0);
+  window.MaskinerSpill = { lyd: () => ({ nivå: LS.nivå, tone: LS.tone, kanal: !!LS.k }), LYD, kilder, tall: () => Object.assign({}, T.tall, { kilder: T.kilder.length, t: T.t }), prøve: liste => { T.prøve = liste || null; T.sist = 0; }, tegnet2d: () => S2.tegnet,
     nullstill2d: () => { S2.tegnet = 0; }, matrise: i => { if (!T.blad || i >= T.blad.count) return null; const m = new THREE.Matrix4(); T.blad.getMatrixAt(i, m); return Array.from(m.elements); }, rydd, LIVR };
 })();

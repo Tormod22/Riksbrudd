@@ -42,8 +42,16 @@
       // raffineriet: 0,25 t olje gir 20 l diesel i timen – dieselen går rett i leirens tank (spill/kjeder-visning.js flytter den)
       raffineri: { folk: 4, kw: 40, inn: [{ olje: .25 }], ut: { diesel: 20 }, tom: 'olje' },
       smie: { folk: 2, kw: 10, inn: [{ skrap: .5 }], ut: { stål: .15, deler: .03 }, tom: 'skrap' },
+      // (ut9-maskiner2 28. nov) MASKINER I EGEN FABRIKK for bransjene som manglet – bare som deler i byggesettet (bs_flishogger …).
+      // Claudes forslag, regnet så hver arbeider gir omtrent like mye som på de andre maskinene:
+      //   flishoggeren hogger tømmer rett til flis (brensel til fyrkjelen uten sagbruk),
+      //   filetmaskinen fileterer og fryser fisken fra båtene (fisken kommer bare når leiren har et fiskemottak ved kai – kjeder-visning.js),
+      //   ballepressa presser skrap fra riving til stålballer (mer stål per arbeider enn smia, men ingen deler).
+      flishogger: { folk: 1, kw: 8, inn: [{ tømmer: 1 }], ut: { flis: .9 }, tom: 'tømmer' },
+      filetmaskin: { folk: 1, kw: 6, inn: [{ fisk: .4 }], ut: { frossenfisk: .38 }, tom: 'fisk' },
+      ballepresse: { folk: 1, kw: 7, inn: [{ skrap: .5 }], ut: { stål: .18 }, tom: 'skrap' },
     },
-    rekkefølge: ['fyrkjele', 'høvel', 'sagbruk', 'vedkløyver', 'steinbrudd', 'steinknuser', 'betongblander', 'fiskemottak', 'mølle', 'raffineri', 'smie'],
+    rekkefølge: ['fyrkjele', 'høvel', 'sagbruk', 'vedkløyver', 'steinbrudd', 'steinknuser', 'betongblander', 'fiskemottak', 'mølle', 'raffineri', 'smie', 'flishogger', 'filetmaskin', 'ballepresse'],
     // (ut6-kjeder) enheten per vare i tekstene (resten er m³)
     enhet: { stål: 't', sement: 't', skrap: 't', deler: 't', fisk: 't', frossenfisk: 't', korn: 't', mel: 't', olje: 't', diesel: 'l' },
     slitasje: .0015,          // hp per driftstime (en maskin i full drift er halvslitt etter ca. 14 døgn: da går den med halv fart til den er reparert)

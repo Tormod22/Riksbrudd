@@ -87,6 +87,15 @@
       tekst: 'Kløyver flis til ved, 2,4 × 3,6 m (1 folk, 3 kW)' },
     bs_fyrkjele: { navn: 'Fyrkjele', kort: 'Fyrkjele', kat: 'maskin', stoff: 'stål', maskin: 'fyrkjele', l: 3, b: 2, tung: true, kw: 0, pris: 4e6, tid: 1.5, mat: { betong: 3, stål: 5 }, str: [1],
       tekst: 'Brenner flis eller ved: 30 kW og varme i rommet (betonggulv, 1 folk)' },
+    // (ut9-maskiner2 28. nov) flere maskiner for egen fabrikk (reglene i produksjon.js; knuseren bruker steinknuserens regler). Claudes tall.
+    bs_flishogger: { navn: 'Flishogger', kort: 'Flishogger', kat: 'maskin', stoff: 'stål', maskin: 'flishogger', l: 3, b: 2, kw: -8, pris: 1.5e6, tid: .8, mat: { stål: 2 }, str: [1],
+      tekst: 'Hogger tømmer til flis for fyrkjelen: 1 m³ tømmer -> 0,9 m³ flis i timen (1 folk, 8 kW)' },
+    bs_filetmaskin: { navn: 'Filetmaskin', kort: 'Filet', kat: 'maskin', stoff: 'stål', maskin: 'filetmaskin', l: 4, b: 2, kw: -6, pris: 3e6, tid: 1, mat: { stål: 3 }, str: [1],
+      tekst: 'Fileterer og fryser fisken: 0,4 t fisk -> 0,38 t frossen fisk i timen (1 folk, 6 kW; fisken fra båtene kommer når dere har et fiskemottak ved kai)' },
+    bs_ballepresse: { navn: 'Ballepresse', kort: 'Ballepresse', kat: 'maskin', stoff: 'stål', maskin: 'ballepresse', l: 3, b: 2, tung: true, kw: -7, pris: 2e6, tid: 1, mat: { stål: 3, betong: 1 }, str: [1],
+      tekst: 'Presser skrap fra riving til stål: 0,5 t skrap -> 0,18 t stål i timen (betonggulv, 1 folk, 7 kW)' },
+    bs_knuser: { navn: 'Steinknuser', kort: 'Knuser', kat: 'maskin', stoff: 'stål', maskin: 'steinknuser', l: 4, b: 3, tung: true, kw: -20, pris: 5e6, tid: 1.5, mat: { stål: 5, betong: 2 }, str: [1],
+      tekst: 'Knuser stein fra steinbruddet til pukk: 2 m³ stein -> 1,8 m³ pukk i timen (betonggulv, 2 folk, 20 kW)' },
     // LYS: lamper på gulvet/i taket i en rute; lyser opp så mange meter rundt seg (lys) og bruker strøm (kW). Claudes tall.
     bs_lysrør: { navn: 'Lysrør', kort: 'Lysrør', kat: 'lampe', stoff: 'stål', lys: 6, kw: -.3, pris: 4000, tid: .05, mat: { stål: .02 }, str: [1], tekst: 'Lyser opp 6 m rundt seg (0,3 kW)' },
     bs_lyskaster: { navn: 'Lyskaster', kort: 'Lyskaster', kat: 'lampe', stoff: 'stål', lys: 14, kw: -1.2, pris: 9000, tid: .08, mat: { stål: .05 }, str: [1], tekst: 'Lyser opp 14 m rundt seg (1,2 kW)' },
@@ -578,7 +587,8 @@
     const S = romSum(rom(fraLeir(L, Leir), L.romBruk)); return (rb ? S.lager : 0) + S.hyller; };
 
   // (ut8-hverdag) delene i fanen «Maskiner» i byggesett-visning.js: maskinene, lampene, så hyllene og skapene
-  const MASKINFANE = ['bs_sagbenk', 'bs_høvel', 'bs_vedkløyver', 'bs_fyrkjele', 'bs_lysrør', 'bs_lyskaster', 'bs_hylle', 'bs_pall', 'bs_pallreol', 'bs_kjøleskap', 'bs_kjølerom', 'bs_frys', 'bs_medisinskap', 'bs_verktøytavle', 'bs_garderobe', 'bs_kiste', 'bs_tønne',
+  // (ut9-maskiner2) flishogger, filetmaskin, ballepresse og steinknuser står etter fyrkjelen; (ut9-mobler) de ti hyllene sist
+  const MASKINFANE = ['bs_sagbenk', 'bs_høvel', 'bs_vedkløyver', 'bs_fyrkjele', 'bs_flishogger', 'bs_filetmaskin', 'bs_ballepresse', 'bs_knuser', 'bs_lysrør', 'bs_lyskaster', 'bs_hylle', 'bs_pall', 'bs_pallreol', 'bs_kjøleskap', 'bs_kjølerom', 'bs_frys', 'bs_medisinskap', 'bs_verktøytavle', 'bs_garderobe', 'bs_kiste', 'bs_tønne',
     'bs_trehylle', 'bs_stålreol', 'bs_vitrine', 'bs_kjøkkenhylle', 'bs_kjølereol', 'bs_verktøyskap', 'bs_arkivskap', 'bs_smalhylle', 'bs_hjørnehylle', 'bs_tønnestativ'];
   const api = { MASKINFANE, U, G, H, ETASJER, GROV, SOKKEL, DELER, GAMLE, NYE, STOFF, HUS, erDel, registrer, størrelse, typeFor, celle, ruter, kanter, biter, midt, kantEnder, kantVed, hjørneVed, rad,
     nøkkel, indeks, norm, punkter, støttet, plassering, forslag, spenn, rasVedRiving, lagHus, husDeler, husForslag, dreiDel, tilMal, malGyldig, rom, ROMBRUK, ROMTYPER, romType, romSum, høyder, fraBygg, fraLeir, plassFor,

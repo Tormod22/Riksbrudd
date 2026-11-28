@@ -409,9 +409,15 @@
     bs_høvel: [{ del: 'blad', x: 0, y: 0, z: 1.25, r: .2, akse: 'x' }], vedkløyver: [{ del: 'stempel', x: 0, y: 0, z: 1, slag: .5 }], bs_vedkløyver: [{ del: 'stempel', x: 0, y: 0, z: 1, slag: .5 }],
     fyrkjele: [{ del: 'røyk', x: 0, y: 0, z: 4.5 }], bs_fyrkjele: [{ del: 'røyk', x: 1.08, y: 0, z: 4.2 }], smie: [{ del: 'røyk', x: 0, y: 0, z: 4 }], raffineri: [{ del: 'røyk', x: 0, y: 0, z: 8 }],
     steinknuser: [{ del: 'stempel', x: 0, y: 0, z: 2.5, slag: .15 }], fiskemottak: [{ del: 'bånd' }],
+    // (ut9-maskiner2) de nye maskinene i egen fabrikk (byggesettet): flishoggeren blåser flis (støv) ut av røret, filetmaskinens bånd går,
+    // ballepressas stempel går opp og ned, steinknuseren rister
+    bs_flishogger: [{ del: 'røyk', x: 1.6, y: 0, z: 2.4 }], bs_filetmaskin: [{ del: 'bånd', z: .95 }], bs_ballepresse: [{ del: 'stempel', x: 0, y: 0, z: 2.1, slag: .3 }],
+    bs_knuser: [{ del: 'stempel', x: 0, y: 0, z: 2.9, slag: .12 }],
   };
+  // (ut9-maskiner2) delene i byggesettet som tegnes med modellene her (fabrikk-visning.js bygg3d): del -> modell
+  const FABRIKK = { bs_flishogger: 'flishogger', bs_filetmaskin: 'filetmaskin', bs_ballepresse: 'ballepresse', bs_knuser: 'knuser' };
 
-  const api = { C, MASKINER, MODELLER, LINJER, EKSTRA, LAGERHALL, OPPSKRIFT, SYMBOL, LIV, S, LX, LY, bein, rf };
+  const api = { C, MASKINER, MODELLER, LINJER, EKSTRA, LAGERHALL, OPPSKRIFT, SYMBOL, LIV, FABRIKK, S, LX, LY, bein, rf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Maskiner = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

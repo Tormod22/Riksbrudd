@@ -15,7 +15,7 @@
   const L = () => (window.LeirSpill && LeirSpill.tilstand ? LeirSpill.tilstand() : null);
   const nf = (v, d = 1) => (Math.round(v * 10 ** d) / 10 ** d).toString().replace('.', ',');
   // maskinene får strøm etter de andre byggene (som maskin-byggene i Leir.PRIORITET)
-  if (Array.isArray(LB.PRIORITET)) for (const t of ['bs_vedkløyver_1', 'bs_høvel_1', 'bs_sagbenk_1']) if (!LB.PRIORITET.includes(t)) LB.PRIORITET.push(t);
+  if (Array.isArray(LB.PRIORITET)) for (const t of ['bs_vedkløyver_1', 'bs_flishogger_1', 'bs_ballepresse_1', 'bs_filetmaskin_1', 'bs_høvel_1', 'bs_sagbenk_1', 'bs_knuser_1']) if (!LB.PRIORITET.includes(t)) LB.PRIORITET.push(t);
   if (window.Produksjon && Produksjon.alias) Produksjon.alias();
 
   // ---------- hallen (huskes til byggene endres, høyst hvert 1,5 s) ----------
@@ -125,6 +125,13 @@
     if (mt === 'høvel') { boks('farge', F3.grønn, cx, cy, ux, uy, l - .4, b - .5, z, z + 1.1 * s); boks('farge', F3.mørk, cx, cy, ux, uy, 1.2, b - .3, z + 1.1 * s, z + 1.5 * s); return; }
     if (mt === 'vedkløyver') { boks('farge', F3.tre, cx, cy, ux, uy, l - .3, b - .6, z, z + .7 * s); boks('farge', F3.stål, cx, cy, ux, uy, .3, .3, z + .7 * s, z + 1.9 * s); return; }
     if (mt === 'fyrkjele') { boks('farge', F3.kjele, cx, cy, ux, uy, l - .5, b - .5, z, z + 2 * s); boks('farge', F3.mørk, cx + ux * l * .3, cy + uy * l * .3, ux, uy, .4, .4, z + 2 * s, z + 4 * s); return; }
+    // (ut9-maskiner2) flishogger, filetmaskin, ballepresse og steinknuser: modellene i spill/maskiner.js (kassene i maskinens akser ->
+    // bokser langs flyten; sylindrene blir firkantede her). Høyden reiser seg med byggingen (s).
+    const mod = window.Maskiner && Maskiner.FABRIKK && Maskiner.FABRIKK[T.grunn], tegn = mod && window.Industri && Industri.MODELLER[mod];
+    if (tegn) { const Mm = Industri.MASKINER[mod] || [l, b, 1.5], h = Mm[2];
+      try { tegn({ type: mod, b: l - .2, d: b - .2, h, f: .4 }, (x0, x1, y0, y1, a0, a1, farge) => { const xm = (x0 + x1) / 2, ym = (y0 + y1) / 2;
+        boks('farge', farge, cx + ux * xm - uy * ym, cy + uy * xm + ux * ym, ux, uy, Math.max(.02, x1 - x0), Math.max(.02, y1 - y0), z + a0 * s, z + Math.max(a0 + .01, a1) * s); }, (l - .2) / 2, (b - .2) / 2, h);
+        return; } catch (e) { /* modellen feilet: kassen under */ } }
     boks('farge', F3.stål, cx, cy, ux, uy, l - .2, b - .2, z, z + 1.2 * s);
   }
 
