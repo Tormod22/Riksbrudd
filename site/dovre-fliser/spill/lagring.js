@@ -182,6 +182,8 @@
     if (d.versjon !== PLASS.versjon) return { feil: 'Fila er fra en annen utgave av spillet og kan ikke leses.' };
     if (!d.nøkler || typeof d.nøkler !== 'object') return { feil: 'Fila mangler selve spillet.' };
     const n = {}; for (const [k, v] of Object.entries(d.nøkler)) { if (typeof v !== 'string' || !LS.erSpill(k, v)) return { feil: 'Fila har noe som ikke hører til et spill (' + tekst2(k, 40) + ').' }; n[k] = v; }
+    // (G0, 28. nov) et spill lagret med en nyere utgave av spillet kan ikke leses riktig av denne (versjonsmerket i nøklene)
+    if (LS && LS.versjonAv && LS.versjonAv(n[LS.VERSJON_NØKKEL]) > LS.VERSJON) return { feil: 'Fila er laget med en nyere utgave av spillet. Last siden på nytt (Ctrl+F5 eller dra ned på telefonen) og prøv igjen.' };
     const S = (() => { try { return JSON.parse(n['riksbrudd-k1']); } catch (e) { return null; } })();
     if (!S || !S.ferdig || !S.leir || !Number.isFinite(S.leir.x) || !Number.isFinite(S.leir.y)) return { feil: 'Fila har ikke et ferdig satt opp spill (leiren mangler).' };
     const fra = Object.prototype.hasOwnProperty.call(SIDENAVN, d.side) ? d.side : 'dovre';
@@ -205,7 +207,8 @@
   const Plass = { REGLER: PLASS, SIDENAVN, info: plassInfo, pakk: pakkPlass, les: lesPlass, byttPlan, tilFil, filnavn, standardNavn };
   const api = { VERSJON, pakk, fraJSON, pakkLag, brukLag, pakkKj, brukKj, settTilbake, pakkMinne, brukMinne, brukBaser, Plass };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
-  rot.Lagring = api;
+  // (G0, 28. nov) spill/lagringsside.js har alt laget Lagring.omgjør – resten legges til
+  rot.Lagring = Object.assign(rot.Lagring || {}, api);
   if (typeof document === 'undefined' || typeof KROKER === 'undefined') return;
 
   // ---------- visningen: kobler lagringen på spillet ----------

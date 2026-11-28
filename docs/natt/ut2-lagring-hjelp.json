@@ -1,0 +1,4 @@
+[
+ ["Hvor spillet lagres", "Spillet lagres i nettleseren. Lagringsplassene og store ting ligger i nettleserens database, som har plass til mye mer enn det vanlige lageret. Nederst i «Lagre og last» (☰) står hvor mye plass spillet bruker. Blir det vanlige lageret fullt, flyttes resten til databasen av seg selv og spillet sier fra – ingenting blir borte. Last gjerne ned spillet som fil innimellom.", "Kom i gang"],
+ ["Etter en oppdatering", "Hvert lagret spill har et versjonsmerke. Når spillet oppdateres, gjøres gamle lagrede spill, lagringsplasser og filer om til den nye formen før noe leses, så et spill fra før kan spilles videre. En fil fra en nyere utgave enn den du har, blir ikke lest – last siden på nytt først.", "Kom i gang"]
+]
