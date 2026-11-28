@@ -44,7 +44,8 @@ const KJENT = {
   'uteIngenting:sagbruk': 'samme som over',
   'sag:sagbruk': 'samme som over: folk drar (røverne herjer), og uten folk står saga – og da kjelen, og da strømmen',
   // (28. nov, flettingen av byavtalene) på grensen: 10–12 % blakk – varekontraktene (Ø2) skal gi saga kunder og løfte strategien
-  'utenSjanse:kontraktSag': 'på grensen (10–12 %) etter flettingen av Ø3; rettes med varekontraktene (Ø2, docs/natt/ut3-varekontrakt.md)',
+  'utenSjanse:kontraktSag': 'på grensen (10–12 %): saga, kjelen og bilen (ca. 15 mill.) tidlig gjør de dårligste kjøringene blakke – balansepakke 2 skal rette det',
+  'utenSjanse:kontraktVare': 'samme som over (10–12 %), selv om varekontraktene løfter de dårligste kjøringene – balansepakke 2',
 };
 const BAND_FIL = path.join(__dirname, 'okonomitest-band.json');
 
