@@ -46,6 +46,10 @@ module.exports = {
       // handelspartneren teller halvt i krigsstillingen
       b.avtale.trinn = 'handel'; const st = Strategi.stilling([{ id: 'ut2a', folk: 3000 }, { id: 'ut2b', folk: 3000 }], () => null);
       d.stilling = Math.round(st.sider.blå.andel * 100); krev(st.sider.blå.partnere === 1 && Math.abs(st.sider.blå.andel - .25) < 1e-6, 'partneren teller ikke halvt i stillingen');
+      // tatt med makt (bare utenfor testene, her med ByavtaleSpill.test): tillit (= lojaliteten) 10 og frykt 80, og byen er lydig
+      { const t0 = BS.test; BS.test = true; try { TETTSTEDER.set('ut2b', { eier: 'blå', inntar: null }); RS.status(); const rb = RS.tilstand().byer.ut2b, fb = BS.tilstand().byer.ut2b;
+        d.makt = [rb && rb.loj, fb && fb.frykt]; krev(rb && rb.loj === Byavtale.REGLER.makt.tillit && fb && fb.frykt === Byavtale.REGLER.makt.frykt && RS.lydig('ut2b'), 'en by tatt med makt fikk ikke tillit 10 og frykt 80: ' + JSON.stringify(d.makt)); }
+        finally { BS.test = t0; } }
       // fanen Byer viser prøvebyen med avtalen
       if (window.SelskapetSpill) { SelskapetSpill.vis(true, 'byer'); await new Promise(r => setTimeout(r, 200)); const t = (document.querySelector('#selskapet .skropp') || {}).textContent || '';
         d.fane = /Vakt ut2a/.test(t) && /Handel/.test(t); krev(d.fane, 'fanen Byer viser ikke byen og avtalen'); SelskapetSpill.vis(false); }

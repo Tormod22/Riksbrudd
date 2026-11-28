@@ -85,7 +85,9 @@
     for (let i = 0; i < r.noder.length; i += steg) sti.push(g.punkt(r.noder[i])); sti.push(g.punkt(r.noder[r.noder.length - 1]), [job.b.x, job.b.y]);
     const brutt = r.lenker.filter(e => spSett.has(e)); VEG.set(job.k, { sti, brutt: brutt.length ? brutteNavn(g, brutt) : null, meter: r.meter }); statusTid = -1e9; }
   setInterval(() => { if (!klar || !vegKø.length || !window.VEGNETT) return; const t0 = performance.now(); while (vegKø.length && performance.now() - t0 < 40) regnVeg(vegKø.shift()); }, 500);
-  const stFor = q => ({ loj: q.b.loj, skatt: q.b.skatt, strøm: q.strøm, rute: q.rute.status, uro: q.b.uro, garnison: q.garnison, utenStrøm: G.REGLER.strøm.uten, holdt: q.b.holdt });
+  // (Ø3) en by som er redd dere og har en garnison (api.lydig, spill/byavtale-visning.js), betaler som en rolig by (lojalitet minst 50) selv om
+  // tilliten er lav – frykten holder den lydig. Lojaliteten selv (tilliten) stiger som før.
+  const stFor = q => ({ loj: q.garnison && api.lydig && api.lydig(q.by.e.id) ? Math.max(q.b.loj, 50) : q.b.loj, skatt: q.b.skatt, strøm: q.strøm, rute: q.rute.status, uro: q.b.uro, garnison: q.garnison, utenStrøm: G.REGLER.strøm.uten, holdt: q.b.holdt });
   // vanskelighetsgraden (window.SPILLREGLER.faktor.penger: lett 1,5, vanlig 1, hard 0,6) gjelder også skatten fra tettstedene
   const pf = () => { const f = window.SPILLREGLER && SPILLREGLER.faktor ? +SPILLREGLER.faktor.penger : 1; return f > 0 ? Math.max(.4, Math.min(1.5, f)) : 1; };
   const medPf = g => { if (g.penger > 0) g.penger *= pf(); return g; };
