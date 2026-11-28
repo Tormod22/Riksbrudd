@@ -52,7 +52,7 @@
   // fargen for en rute med v meter når den største har maks: [r, g, b, a] (0–255) – fra mørk gul til rød, svak for lite
   function farge(v, maks) {
     if (!(v > 0) || !(maks > 0)) return null; const t = Math.min(1, Math.sqrt(v / maks));
-    return [Math.round(230 + 20 * t), Math.round(200 - 150 * t), Math.round(60 - 30 * t), Math.round(50 + 160 * t)];
+    return [Math.round(235 + 20 * t), Math.round(215 - 170 * t), Math.round(70 - 40 * t), Math.round(110 + 135 * t)];
   }
 
   const api = { REGLER, ny, rull, legg, sum, oversikt, topp, farge, ruteFor, midt };

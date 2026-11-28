@@ -211,7 +211,7 @@
       if (!s) { const a = hash(p.id, 3) * 6.283, r = 2 + hash(p.id, 4) * 6; s = G.pers[p.id] = { id: p.id, x: ctx.leir.x + Math.cos(a) * r, y: ctx.leir.y + Math.sin(a) * r, e: 1, hus: 'leir', a, vei: [], vi: 0, mk: null, fast: null, framme: false, går: false, gått: 0 }; }
       s.hva = hva; s.oppgave = p.oppgave;
       // (F5) ORDRE «Gå hit»: til punktet – det overstyrer jobbtavla til hen er framme
-      const M = Oo && Oo.type === 'gå' && !p.borte ? { k: 'ordre:' + Oo.n, x: Oo.x, y: Oo.y, e: Oo.e || 1, hus: Oo.hus, navn: 'stedet du pekte på', gjør: 'er framme der du sa', ordre: true } : målFor(p, i, hva, ctx, sm); s.mål = M;
+      const M = Oo && Oo.type === 'gå' && !p.borte ? { k: 'ordre:' + Oo.n, x: Oo.x, y: Oo.y, e: Oo.e || 1, hus: Oo.hus, navn: 'stedet du pekte på', gjør: 'ordre fra deg', ordre: true } : målFor(p, i, hva, ctx, sm); s.mål = M;
       s.ordre = !!Oo; s.utpost = M && M.utpost !== undefined ? M.utpost : null;
       const mk = M ? M.k + '|' + r1(M.x) + ',' + r1(M.y) : null;
       if ((mk !== s.mk || kartNytt || s.nyKart || (s.inn && K && iNett(K, s.x, s.y))) && planer < REGLER.planPerSteg && (Date.now() - t0 < REGLER.planMs || !planer)) { s.mk = mk; s.nyKart = false; planlegg(s, M, K); planer++; }

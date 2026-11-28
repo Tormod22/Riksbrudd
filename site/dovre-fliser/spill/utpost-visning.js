@@ -93,11 +93,11 @@
   (window.LEIR_MENY = window.LEIR_MENY || []).push((hode, { el, knapp }) => {
     if (!midte() || !window.LeirSpill) return; const m = midte();
     hode.appendChild(el('h3', { 'data-fane': 'bygg' }, 'Utposter'));
-    hode.appendChild(el('div', { klasse: 'status', style: 'font-size:13px' }, velger ? 'Trykk i kartet der utposten skal ligge (minst 500 m fra leiren).' :
+    hode.appendChild(el('small', { style: 'display:block;font-size:13px;line-height:1.35;color:var(--ink-dim)' }, velger ? 'Trykk i kartet der utposten skal ligge (minst 500 m fra leiren).' :
       'Et sted langt unna (et hus, et hogstfelt) med egne folk, senger og mat. Folkene reiser dit én gang og arbeider der. Send folk dit fra Folk.'));
     hode.appendChild(el('div', { klasse: 'rad' }, knapp(velger ? 'Avbryt' : 'Ny utpost (trykk i kartet)', () => { velger = !velger; if (window.LeirSpill.visMeny) LeirSpill.visMeny(); }, { id: 'nyutpost' })));
     for (const U of S.liste) {
-      const v = el('select', { 'aria-label': 'Arbeid i ' + U.navn, 'data-utpost': String(U.id) }); for (const [j, t] of Object.entries(UR.REGLER.JOBB)) { const o = el('option', { value: j }, t); if (j === U.jobb) o.setAttribute('selected', ''); v.appendChild(o); }
+      const v = el('select', { 'aria-label': 'Arbeid i ' + U.navn, 'data-utpost': String(U.id), style: 'background:#2a2318;color:var(--ink);border:1px solid var(--rule);font:inherit;font-size:13px;min-height:36px' }); for (const [j, t] of Object.entries(UR.REGLER.JOBB)) { const o = el('option', { value: j }, t); if (j === U.jobb) o.setAttribute('selected', ''); v.appendChild(o); }
       v.onchange = () => kom({ type: 'utpostJobb', utpost: U.id, jobb: v.value });
       const navn = Fo() ? Fo().personer.filter(p => U.folk.includes(p.id)).map(p => p.navn.split(' ')[0]) : [];
       hode.appendChild(el('div', { klasse: 'utpost', 'data-utpost': String(U.id) }, el('b', {}, U.navn), el('small', { style: 'display:block;color:var(--ink-dim)' }, UR.tekst(U, m)),

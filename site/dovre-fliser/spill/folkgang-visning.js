@@ -110,8 +110,8 @@
     k.dataset.html = html; k.innerHTML = html;
     k.querySelector('[data-o="lukk"]').onclick = () => visKort(null);
     k.querySelector('[data-o="gå"]').onclick = () => { venterGå = venterGå === p.id ? null : p.id; visKort(p); };
-    k.querySelector('[data-o="gjør"]').onclick = () => { const v = k.querySelector('[data-o="valg"]').value; ordre({ person: p.id, type: 'gjør', oppgave: v }); venterGå = null; visKort(p); };
-    const st = k.querySelector('[data-o="stopp"]'); if (st) st.onclick = () => { ordre({ person: p.id, type: 'stopp' }); visKort(p); };
+    k.querySelector('[data-o="gjør"]').onclick = () => { const v = k.querySelector('[data-o="valg"]').value; ordre({ person: p.id, hva: 'gjør', oppgave: v }); venterGå = null; visKort(p); };
+    const st = k.querySelector('[data-o="stopp"]'); if (st) st.onclick = () => { ordre({ person: p.id, hva: 'stopp' }); visKort(p); };
     if (typeof skitten !== 'undefined') skitten = true;
   }
   // kortet holder seg oppdatert mens det står (hva personen gjør, endrer seg)
@@ -121,7 +121,7 @@
     for (const p of F.personer) { const q = plass2d(p); if (!q) continue; const d = Math.hypot(q.x - X, q.y - Y); if (d < bd) { bd = d; best = p; } } return best; }
   KROKER.trykk.unshift((X, Y) => {
     // (F5) «Gå hit»: neste trykk i kartet er stedet
-    if (venterGå !== null) { const id = venterGå; venterGå = null; ordre({ person: id, type: 'gå', x: X, y: Y }); const F = Fo(), p = F && F.personer.find(q => q.id === id); if (p) visKort(p); return true; }
+    if (venterGå !== null) { const id = venterGå; venterGå = null; ordre({ person: id, hva: 'gå', x: X, y: Y }); const F = Fo(), p = F && F.personer.find(q => q.id === id); if (p) visKort(p); return true; }
     if (typeof kam === 'undefined' || kam.m >= 3 || (window.BYGGEVISNING && BYGGEVISNING.på && BYGGEVISNING.på())) { if (valgtId !== null) visKort(null); return false; }
     // et trykk inne i et av leirens bygg hører til bygget (byggpanelet), ikke til folk som står ved døra
     const L = Lr(); if (L && window.Leir && L.bygg.some(b => Leir.BYGG[b.type] && !Leir.BYGG[b.type].del && !Leir.BYGG[b.type].linje && innenfor(Leir.hjørner(b), X, Y))) { if (valgtId !== null) visKort(null); return false; }
@@ -135,11 +135,11 @@
   const nyttNavn = n => String(n || '').split(' ')[0];
   function ordreRett(k) {
     const F = Fo(), p = F && F.personer.find(q => q.id === k.person); if (!p) return { feil: 'Fant ikke personen.' };
-    if (k.type === 'stopp') { const O = FG.stopp(G, p.id); if (O && O.type === 'gjør') tilbake(p, O); return { ok: true, stoppet: !!O }; }
-    if (k.type === 'gå') { if (!Number.isFinite(k.x) || !Number.isFinite(k.y)) return { feil: 'Ugyldig sted.' };
+    if (k.hva === 'stopp') { const O = FG.stopp(G, p.id); if (O && O.type === 'gjør') tilbake(p, O); return { ok: true, stoppet: !!O }; }
+    if (k.hva === 'gå') { if (!Number.isFinite(k.x) || !Number.isFinite(k.y)) return { feil: 'Ugyldig sted.' };
       const før = G.ordre[p.id]; if (før && før.type === 'gjør') tilbake(p, før);
       FG.gi(G, p.id, { type: 'gå', x: k.x, y: k.y, e: 1 }); return { ok: true }; }
-    if (k.type === 'gjør') { if (!FR || !FR.OPPGAVER.includes(k.oppgave) || k.oppgave === 'fri') return { feil: 'Ukjent oppgave.' };
+    if (k.hva === 'gjør') { if (!FR || !FR.OPPGAVER.includes(k.oppgave) || k.oppgave === 'fri') return { feil: 'Ukjent oppgave.' };
       const før = G.ordre[p.id], fra = før && før.type === 'gjør' ? før.fra : p.oppgave, J = window.JobberSpill && JobberSpill.tilstand ? JobberSpill.tilstand() : null;
       const lås = før && før.type === 'gjør' ? før.lås : J && J.lås ? J.lås[p.id] || null : null;
       p.oppgave = k.oppgave; if (J && J.auto && window.KOMMANDO) KOMMANDO({ type: 'jobbLås', person: p.id, jobb: k.oppgave });
@@ -163,7 +163,7 @@
   function registrer() {
     if (!window.Kommando || registrer.ferdig) return; registrer.ferdig = true;
     Kommando.registrer('personOrdre', { leir: true, sjekk: k => (Number.isFinite(k.person) ? null : 'Ugyldig person.'), utfør: k => ordreRett(k),
-      beskriv: k => (k.type === 'gå' ? 'sender en person et sted' : k.type === 'gjør' ? 'gir en person en oppgave nå' : 'stopper en ordre') });
+      beskriv: k => (k.hva === 'gå' ? 'sender en person et sted' : k.hva === 'gjør' ? 'gir en person en oppgave nå' : 'stopper en ordre') });
   }
   document.addEventListener('DOMContentLoaded', registrer); setTimeout(registrer, 0);
   const ordre = k => { registrer(); const r = window.KOMMANDO ? KOMMANDO({ type: 'personOrdre', ...k }) : { ok: false, feil: 'Kommandolaget mangler.' };
