@@ -12,6 +12,8 @@ Alle tall er Claudes forslag (`Fabrikk.REGLER`, delene i `ByggesettRegler.NYE`).
   (fundament eller betongdekke)», «Vedkløyver står over en vegg», «Det står en søyle der …», «Her går det en trapp», «Her står det alt en maskin
   eller hylle», og **«Ingen vei til bruksplassen (rommet har ingen dør) – sett inn en dør eller port, eller flytt maskinen.»** (Vei.kanNå med
   `bruksplass: true` for hver bruksplass, med maskinen i fotavtrykket). **Ikke under tak** er lov, men oransje advarsel: «… slites dobbelt så fort».
+- **Varselet før kjøpet** (Produksjon.driftVarsel fra ut4-balanse2) står også under sagbenken i byggesettet når kassa ikke rekker (prøvd: 7 mill. i
+  kassa → «… det rekker ca. 2 døgn (vent til dere har 10 mill. kr)»).
 - **Rommet**: et rom med en sagbenk eller to maskiner heter «Fabrikk», én maskin «Verksted», bare hyller/paller «Lagerrom» (`ROMTYPER` i
   byggesett.js, romType-kroken fra B4). Navnet i kartet får «· lager 10 m³» når rommet har hyller.
 - **2D** (kartet og fanen Plan): maskinene med fotavtrykk og tegn (sagblad, valser, kile, flamme), retningen som en liten pil, lampene som gule
@@ -101,5 +103,4 @@ Hallen 9,6 × 19,2 m i blikk med to porter koster ca. 2,4 mill. kr.
 - Strøm «per bygg med kabel» (planen 5.6) er forenklet: alt går fortsatt på leirens felles nett; Leir-menyen viser forbruket per rom.
 - Hyllene gir lagerplass (Leir.lagerplass → varelagerets «egne rom»), men enhetene tegnes ikke på hyllene.
 - Maskiner i etasjene over: reglene tillater det (gulv i etasjen), men bærerne/Vei-sjekken er bare prøvd i 1. etasje.
-- Varselet før kjøpet (Produksjon.driftVarsel) vises ikke i byggesettet for sagbenken – bare i byggelista for maskin-byggene.
 - Ta over hus i kartet og sette maskiner der (B7) er ikke laget.
