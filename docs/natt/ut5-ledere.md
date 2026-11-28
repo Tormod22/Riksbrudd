@@ -99,7 +99,8 @@ testen skriver «ny … har ikke noe lagret bånd». Kjør `OKO_NYTT_BAND=1` ett
 - Nettleser (Dovre-testsiden, 1400 × 860 og 390 × 844 mobil, bilder sett): Folk-panelet med lederne, reglene, «Utnevn …» med kandidater, kasserer
   utnevnt med knappene, troppsjef for «1. lag» via knappene – laget 3 km unna med 10 % ammunisjon fikk ordre hjem («Troppsjef Erik tar 1. lag,
   Dombås hjem til leiren – ammunisjonen er 10 %.»), regelknappen for kassa byttet til 10 mill. Lokkingen: en dyktig kasserer med lav lojalitet
-  fikk bud fra Ravnsund, kortet sto i Folk-panelet, «La gå» – rollen ble tom og meldt. Ingen sidefeil.
+  fikk bud fra Ravnsund, kortet sto i Folk-panelet, «La gå» – rollen ble tom og meldt. Leirsjefen med et drivhus og en brakke i planen og ti i
+  telt: brakka ble bestilt først (materialene kjøpt, 4,65 mill. kr). Forhandleren sa ja til fast kunde da et firma tilbød det. Ingen sidefeil.
 - Vakta `ut5-ledere` grønn på PC og mobil (0,5–0,9 s), to ganger på rad, og alt er som før etter den (penger, mat, lønn, oppgaver, jobbtavla).
   Feil lagt inn med vilje (formannen reagerer ikke på «venter på folk») → vakta feilet på «formannen flyttet ingen til saga». Etter den: vaktene
   ut1-jobber, ut3-rekruttering, ut2-byer, folk, ut4-maskinfolk, lonn grønne.
