@@ -7,7 +7,9 @@ module.exports = { navn: 'krig', kjør: async (pg, profil) => {
     const ild = (a, b) => KROKER.ild.reduce((v, h) => v * h(a, b), 1);
     const a = nyttLag('Vakt blå', L.x + 5000, L.y + 5000, 'blå'), b = nyttLag('Vakt rød', L.x + 5300, L.y + 5000, 'rød'); ENHETER.push(a, b);
     // (18. nov) føreren har en væremåte etter navnet (tilfeldig); en «forsiktig» fører tar ×0,88 og ga «av i testene ×1,14» – vakta trenger en nøytral
-    if (K.væremåte) { const m0 = b.menn[b.leder || 0] || b.menn[0]; for (let n = 0; n < 50 && m0; n++) { const v = K.væremåte(m0.navn); if (v.ild === 1 && v.tar === 1) break; m0.navn = 'Ola Vakt ' + n; } }
+    // (28. nov, ut9-kontroll) «seig» har også ild 1 og tar 1, men gir seg først med 8 ute – med et seigt navn ga laget seg aldri (overgivelsen
+    // feilet «i rekke», avhengig av navnet laget fikk). Nøytral = ikke seig heller.
+    if (K.væremåte) { const m0 = b.menn[b.leder || 0] || b.menn[0]; for (let n = 0; n < 50 && m0; n++) { const v = K.væremåte(m0.navn); if (v.ild === 1 && v.tar === 1 && !v.seig) break; m0.navn = 'Ola Vakt ' + n; } }
     try {
       // i testene er de nye stridsfaktorene av
       KS.test = false; b.retning = 0; const av = ild(a, b); KS.test = true;
