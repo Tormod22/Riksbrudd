@@ -88,7 +88,7 @@
     const under = document.elementFromPoint(x, y), k = klikkbar(under);
     return k && k !== n.k && nøkkel(k) === n.sig && !k.disabled ? k : null;
   }
-  function lever(n, k) { if (n.klikk) return; n.klikk = true; api.levert++; try { k.click(); } catch (x) { /* knappen feilet selv */ } }
+  function lever(n, k) { if (n.klikk) return; n.klikk = true; n.levertTil = k; n.levertT = performance.now(); api.levert++; try { k.click(); } catch (x) { /* knappen feilet selv */ } }
   // de siste avgjørelsene (for feilsøking og vakta): [hva, tekst]
   const spor = api.spor = []; const sp = (h, t) => { spor.push([h, t]); if (spor.length > 12) spor.shift(); };
   rot.addEventListener('pointerup', e => {
@@ -102,6 +102,8 @@
   rot.addEventListener('click', e => {
     const n = ned; if (!n || !e.isTrusted) return; sp('klikk', (e.target.id || e.target.tagName) + (n.k.isConnected ? ' (samme)' : ' (byttet)'));
     // klikket gikk til den nye knappen (berøring treffer det som står der fingeren slapp): ferdig
+    // kom nettleserens eget klikk likevel etter at vi leverte det (tregt klikk på berøringsskjerm): ikke to ganger
+    if (n.levertTil && n.levertTil.contains(e.target) && performance.now() - n.levertT < 1000) { e.stopPropagation(); e.preventDefault(); n.levertTil = null; sp('klikk', 'dobbelt – stoppet'); return; }
     if (n.k.isConnected || (n.klikk)) { n.klikk = true; return; }
     const k = finnLik(n, e.clientX, e.clientY);
     if (k && !k.contains(e.target)) { e.stopPropagation(); e.preventDefault(); lever(n, k); return; }
