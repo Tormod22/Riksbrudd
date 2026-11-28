@@ -34,31 +34,40 @@
   // snittferdigheten til dem som arbeider på maskinene (kvaliteten: over 1,2 gir 10 % mer)
   const ferdighet = () => { const f = F(); if (!f || !FR) return 0; const A = f.personer.filter(p => p.oppgave === 'maskin' && FR.arbeidsfør(p)); return A.length ? A.reduce((s, p) => s + ((p.ferd && p.ferd.maskin) || 0), 0) / A.length : 0; };
 
+  // (F3) med døgnplanen på bærer folk mellom lageret og maskinene (spill/baering-visning.js): da tar maskinene råvaren fra innmatingen,
+  // legger det de lager i utmatingen, og bare operatørene som står på bruksplassen teller (BaeringSpill.mating / kraftPer)
+  const mating = () => (window.BaeringSpill && BaeringSpill.aktiv() ? BaeringSpill : null);
   // ---------- krokene i reglene ----------
   LB.maskinKW = l => (l === L() ? sist.kw : 0);
-  LB.hviler = (l, b) => (l === L() ? PR.hviler(l, b, kraft()) : false);
+  LB.hviler = (l, b) => { if (l !== L()) return false; const M = mating(); return M ? PR.hviler(l, b, M.kraftPer()[b.id] || 0, M.mating()[b.id] || { inn: {}, ut: {} }) : PR.hviler(l, b, kraft()); };
   if (FR) FR.varmeAndel = (l, B) => (l === L() ? PR.varmeAndel(sist.varme, B.fyring) : 0);
   if (window.Jobber) Jobber.maskiner = (f, l) => {
     const M = PR.maskinene(l); if (!M.length) return null;
     const hva = M.map(b => `Driv ${LB.BYGG[b.type].navn.toLowerCase()}` + (sist.status[b.id] && !sist.status[b.id].går ? ` (${sist.status[b.id].tekst})` : ''));
     // står ALLE maskinene for råvare, plass eller av, sendes ingen dit (folkene gjør noe annet imens)
-    const alle = M.every(b => { const v = PR.vil(l, b); return v.grunn && v.grunn !== 'folk'; });
-    return { plasser: M.reduce((s, b) => s + PR.REGLER.maskiner[b.type].folk, 0), hva, blokk: alle ? PR.grunnTekst(PR.vil(l, M[0]).grunn, M[0].type) : null };
+    // (F3: med bæring står de ikke for råvare så lenge det ligger noe i innmatingen eller utmatingen kan bæres bort)
+    const Mt = mating(), mt = Mt ? Mt.mating() : null;
+    const alle = M.every(b => { const v = PR.vil(l, b); if (!v.grunn || v.grunn === 'folk') return false;
+      if (mt && (v.grunn === 'tom' || v.grunn === 'fullt')) { const Bf = mt[b.id]; return !(Bf && (Object.values(Bf.inn).some(q => q > .05) || Object.values(Bf.ut).some(q => q > .05))); } return true; });
+    // bærejobbene først (de som kan tas nå), så maskinene
+    const bær = Mt ? Mt.linjer() : [];
+    return { plasser: M.reduce((s, b) => s + PR.REGLER.maskiner[b.type].folk, 0) + (Mt ? Mt.ekstraPlasser(l) : 0), hva: bær.concat(hva), blokk: alle ? PR.grunnTekst(PR.vil(l, M[0]).grunn, M[0].type) : null };
   };
 
   // ---------- simuleringen ----------
-  if (typeof KROKER !== 'undefined') KROKER.sim.push(dt => {
+  function simSteg(dt) {
     const l = L(); if (!l || !(dt > 0)) return; les();
     if (!PR.maskinene(l).length) { sist = { status: {}, kw: 0, varme: 0 }; return; }
-    const mangler = window.LeirSpill && LeirSpill.siste ? LeirSpill.siste().mangler : new Set();
-    const før = sist.status; sist = PR.steg(P, l, dt, { kraft: kraft(), mangler, ferdighet: ferdighet() });
+    const mangler = window.LeirSpill && LeirSpill.siste ? LeirSpill.siste().mangler : new Set(), Mt = mating();
+    const før = sist.status; sist = PR.steg(P, l, dt, Mt ? { mating: Mt.mating(), kraftPer: Mt.kraftPer(), mangler, ferdighet: ferdighet() } : { kraft: kraft(), mangler, ferdighet: ferdighet() });
     // et stopp meldes én gang (ny grunn), ikke oftere enn hvert 30. spillminutt per maskin
     for (const [bid, s] of Object.entries(sist.status)) { const f = før[bid];
       if (!s.går && s.grunn && s.grunn !== 'av' && f && f.går && (meldt[bid] === undefined || nåTid() - meldt[bid] > VIS.meldHvert || nåTid() < meldt[bid])) {
         meldt[bid] = nåTid(); if (typeof logg === 'function') logg(`${LB.BYGG[s.type].navn} står: ${s.tekst}.`); }
       if (s.går && f && !f.går && f.grunn && f.grunn !== 'av' && typeof logg === 'function' && meldt[bid] !== undefined) logg(`${LB.BYGG[s.type].navn} går igjen.`); }
     if (performance.now() - sistLagret > 5000) { sistLagret = performance.now(); lagre(); }
-  });
+  }
+  if (typeof KROKER !== 'undefined') KROKER.sim.push(simSteg);
 
   // ---------- statistikken: produksjon og «hvorfor saga sto» (snitt over døgnet: × 24 = per døgn) ----------
   function sagaAndel(g) { const S = Object.values(sist.status).filter(s => s.type === 'sagbruk'); if (!S.length) return 0;
@@ -104,7 +113,8 @@
     if (!M.length) h += '<div class="krav"><div>Ingen maskiner ennå.</div><small>Bygg et sagbruk i Leir → Bygg (gruppen Produksjon). Hogst gir tømmer – saga gjør det til planker. Uten saga kan tømmeret selges billig.</small></div>';
     for (const b of M) { const B = LB.BYGG[b.type], R = PR.REGLER.maskiner[b.type], s = sist.status[b.id] || { går: false, tekst: 'venter', folk: 0, drift: 0 };
       const strøm = R.gir ? `gir ${nf(s.kw || 0, 0)} av ${R.gir} kW` : `${R.kw} kW`;
-      h += `<div class="by mrad" data-maskin="${b.id}"><span>${esc(B.navn)}<small>${esc(PR.oppskrift(b.type))}</small><small>Folk ${nf(s.folk || 0, 1)} av ${R.folk}${s.kvalitet ? ' (dyktige: +10 %)' : ''} · ${strøm} · slitt ${Math.round((1 - (b.hp || 0)) * 100)} %</small></span>`
+      h += `<div class="by mrad" data-maskin="${b.id}"><span>${esc(B.navn)}<small>${esc(PR.oppskrift(b.type))}</small><small>Folk ${nf(s.folk || 0, 1)} av ${R.folk}${s.kvalitet ? ' (dyktige: +10 %)' : ''} · ${strøm} · slitt ${Math.round((1 - (b.hp || 0)) * 100)} %</small>`
+        + (mating() ? `<small class="mating">${esc(mating().maskinTekst(b))}</small>` : '') + '</span>'
         + `<em class="${s.går && s.drift >= .98 ? 'grønn' : s.går || b.av ? '' : 'rød'}">${esc(s.går ? s.tekst : b.av ? 'slått av' : s.tekst)}</em>`
         + `<button type="button" data-pr="av" data-id="${b.id}" data-av="${b.av ? '0' : '1'}">${b.av ? 'Slå på' : 'Slå av'}</button></div>`; }
     h += '<ul class="tall">' + VARER.map(([v, navn]) => `<li><span>${navn}</span><b>${nf((l.lager && l.lager[v]) || 0, 1)} av ${plass} m³</b></li>`).join('');
@@ -113,6 +123,14 @@
     const sto = Object.entries(P.sto).filter(([, t]) => t > .05).sort((a, b) => b[1] - a[1]);
     if (sto.length) h += `<li><span>Maskinene sto</span><b>${nf(sto.reduce((a, q) => a + q[1], 0), 1)} t<small>${sto.map(([g, t]) => `${PR.grunnTekst(g, g === 'tom' ? 'sagbruk' : '')} ${nf(t, 1)} t`).join(', ')}</small></b></li>`;
     h += '</ul>';
+    // (F3) bæringen: hvor mye tid som går med til å gå og bære mellom lageret og maskinene
+    if (M.length && window.BaeringSpill) { const t = BaeringSpill.bæreTekst();
+      h += '<h3>Bæring</h3>';
+      if (t.tekst) h += `<p class="rolig" style="font-size:13px">${esc(t.tekst)}</p>`;
+      else { h += '<ul class="tall bering">' + `<li><span>Bæring i dag</span><b>${nf(t.i.sek / 3600, 1)} t<small>${t.i.turer} turer, ${nf(t.i.m3, 1)} m³ · ${nf(t.i.gå / 3600, 1)} t av det er gange</small></b></li>`
+          + (t.snitt ? `<li><span>Snitt per tur</span><b>${nf(t.snitt, 1)} min<small>${Math.round(t.gåAndel * 100)} % av bæretida er gange – kort vei mellom lager og maskin gir mer produksjon</small></b></li>` : '')
+          + '</ul>';
+        h += t.linjer.length ? '<p class="rolig" style="font-size:13px">Bærejobber nå: ' + t.linjer.map(esc).join(' · ') + '</p>' : '<p class="rolig" style="font-size:13px">Ingen bærejobber nå.</p>'; } }
     if (window.StatistikkSpill) h += '<h3>Produksjon per døgn</h3><div class="prgraf" data-graf="produksjon"></div><h3>Hvorfor saga sto</h3><div class="prgraf" data-graf="sagaSto"></div>';
     const biler = typeof KJORETOY !== 'undefined' ? KJORETOY.filter(k => k.type === 'tømmerbil' && k.side === 'blå').length : 0;
     h += `<div class="knapperad"><button type="button" data-pr="bygg">Bygg en maskin</button><button type="button" data-pr="bil">Kjøp tømmerbil (${kr(VIS.tømmerbilPris)})</button></div>`;
@@ -143,6 +161,13 @@
       g.font = '600 13px "Cormorant Garamond", serif'; const w = Math.max(g.measureText(t).width, under && kam.m < 1.6 ? g.measureText(under).width : 0) + 10;
       g.fillStyle = 'rgba(20,17,12,.78)'; g.fillRect(x - w / 2, y - 16 - (under && kam.m < 1.6 ? 14 : 0), w, 17 + (under && kam.m < 1.6 ? 14 : 0));
       g.fillStyle = går ? '#a9d48a' : '#e0a070'; g.fillText(t, x, y);
+      // (F3) status-ikonet til venstre for tallet: grønn = går, gul = venter (folk, råvare, full), rød = uten strøm / i stykker
+      { const st = window.BaeringSpill ? BaeringSpill.status(s) : (går ? 'går' : 'venter'), ix = x - w / 2 - 9, iy = y - 8;
+        g.fillStyle = 'rgba(20,17,12,.78)'; g.beginPath(); g.arc(ix, iy, 8, 0, 6.283); g.fill();
+        g.fillStyle = st === 'går' ? '#7fc06a' : st === 'strøm' || st === 'stykker' ? '#d0574a' : st === 'av' ? '#8a8a80' : '#e3b45a'; g.beginPath(); g.arc(ix, iy, 5.5, 0, 6.283); g.fill();
+        g.fillStyle = '#14110c'; g.font = '700 9px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText({ går: '✓', delvis: '~', folk: 'F', tom: 'T', fullt: '!', strøm: 'S', stykker: 'X', av: '–' }[st] || '…', ix, iy + .5);
+        g.textAlign = 'center'; g.textBaseline = 'bottom'; }
       if (under && kam.m < 1.6) { g.font = '11px "Cormorant Garamond", serif'; g.fillStyle = '#d8c8a8'; g.fillText(under, x, y - 14); } }
     g.restore();
   });
@@ -176,7 +201,7 @@
   window.addEventListener('load', () => setTimeout(oppsett, 0));
   window.addEventListener('pagehide', lagre);
 
-  window.ProduksjonSpill = { html, etter, tilstand: () => P, siste: () => sist, kraft, lagre, les: () => { id = ''; les(); }, kjøpTømmerbil, oppsett, VIS,
+  window.ProduksjonSpill = { html, etter, tilstand: () => P, siste: () => sist, kraft, lagre, steg: simSteg, les: () => { id = ''; les(); }, kjøpTømmerbil, oppsett, VIS,
     // for vakta og testene: nullstill tellingene
     nullstill: () => { P = PR.ny(); sist = { status: {}, kw: 0, varme: 0 }; } };
 })();
