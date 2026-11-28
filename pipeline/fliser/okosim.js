@@ -277,6 +277,8 @@ leggTilDel({ id: 'kontrakter',
         sim.gi(kr, 'kontrakt'); sim.kontrakter.levert++; sim.kontrakter.tjent += kr;
         { const T = sim.kontrakter.type[h.k.type] || (sim.kontrakter.type[h.k.type] = { n: 0, kr: 0, timer: 0 }); T.n++; T.kr += kr; T.timer += (sim.t - h.k.godtatt) / 60; } sim.logg(`levert «${h.k.tittel}»: ${mill(kr)}`);
         if (h.rekrutt) FolkR.rekrutter(sim.F, sim.L, () => true, { årstid: sim.årstid });
+        // (ut2-balanse) som i spillet (selskap-visning.js kobling): når den første kontrakten er levert, kommer nye tilbud straks
+        if (h.k.første) Selskap.lagTilbud(S, ID, nå, steder(sim), Selskap.lagRand(sim.frø * 613 + nå + 3), { infl: sim.M.infl });
         if (h.motangrep) sim.røverAngrep = true;
         if (tr && tr.jobb) tr.jobb.faser = tr.jobb.faser.filter((f, i) => i < tr.jobb.i || f.hva === 'hjem'); }
       else if (h.type === 'brutt') { const bot = Math.min(h.kr || 0, sim.kasse); sim.betal(bot, 'bøter'); sim.kontrakter.brutt++; sim.logg(`brutt «${h.k.tittel}» (${h.grunn})`); if (tr && tr.jobb) { tr.jobb.tapt = true; tr.jobb.faser = tr.jobb.faser.filter((f, i) => i < tr.jobb.i || f.hva === 'hjem'); } }
