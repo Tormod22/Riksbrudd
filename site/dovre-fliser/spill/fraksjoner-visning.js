@@ -116,8 +116,16 @@
   // VÅPENHVILE (18. nov, spill/krig-visning.js): AI.fred[side] = spillminuttet hvilen varer til. Så lenge ser ikke fraksjonens lag
   // dine lag som fiender, og de går ikke mot leiren din.
   AI.fred = {};
-  const hvile = (a, b) => (a === 'blå' && (AI.fred[b] || 0) > tid) || (b === 'blå' && (AI.fred[a] || 0) > tid);
+  // (ut4-firmaer, Ø5) PAKTER fra spill/firma-visning.js (AI.pakter = lista i Firma-tilstanden): en allianse er fred overalt (som AI.fred),
+  // en våpenhvile gjelder innen radius rundt leiren – AI.hvileVed(a, b, x, y). Lagene til en side med våpenhvile ser ikke dine lag i
+  // området som fiender, tar ikke dine tettsteder der og går ikke mot leiren (Fraksjoner.respekterPakt)
+  AI.pakter = [];
+  const iPakt = (a, b, x, y) => !!(window.Firma && AI.pakter.length && Firma.iPakt(AI.pakter, a, b, x, y, tid));
+  const hvile = (a, b) => (a === 'blå' && (AI.fred[b] || 0) > tid) || (b === 'blå' && (AI.fred[a] || 0) > tid) || iPakt(a, b);
   AI.hvile = hvile;
+  AI.hvileVed = (a, b, x, y) => hvile(a, b) || iPakt(a, b, x, y);
+  // et lag s og en fiende e: fred når én av dem står i området
+  const hvileHer = (s, e) => hvile(s.side, e.side) || iPakt(s.side, e.side, e.x, e.y) || iPakt(s.side, e.side, s.x, s.y);
   let akk = 0;
   KROKER.sim.push(dt => {
     akk += dt * 3600 / TIME; if (akk < 60) return; const sek = akk; akk = 0;   // ett steg per spillminutt
@@ -131,16 +139,16 @@
       if (!s.ai || !levende(s) || s.planlegger) continue;
       s.ai.neste -= sek; if (s.ai.neste > 0) continue; s.ai.neste = R.tenk;
       // om bord i lastebilen: gå av når den er framme eller laget ser en fiende nær, ellers kjør videre (tenker hvert minutt)
-      if (s.ombord) { const k = s.ombord, nær = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvile(s.side, e.side) && ser(s, e.x, e.y)).reduce((d, e) => Math.min(d, Math.hypot(e.x - s.x, e.y - s.y)), Infinity);
+      if (s.ombord) { const k = s.ombord, nær = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvileHer(s, e) && ser(s, e.x, e.y)).reduce((d, e) => Math.min(d, Math.hypot(e.x - s.x, e.y - s.y)), Infinity);
         if (!KJORETOY.includes(k) || F.gåAv(!k.sti, nær === Infinity ? null : nær)) avBil(s); else { s.ai.neste = 60; continue; } }
       const byer = byerRundt(s, R.rekkevidde + 5000).map(by => { const [x, y] = inne(by); return { id: by.e.id, navn: by.e.navn, x, y, folk: by.e.folk, eier: eier(by), inni: (X, Y) => Garnison.inni(by, X, Y), mann: Garnison.mannFor ? Garnison.mannFor(by.e.folk) : 0, minst: Garnison.minstFor ? Garnison.minstFor(by.e.folk) : 0 }; });
-      const fiender = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvile(s.side, e.side) && ser(s, e.x, e.y)).map(e => ({ x: e.x, y: e.y, navn: e.navn, styrke: F.styrke(e, Forsyning.ammo(e)) }))
-        .concat(KJORETOY.filter(k => k.side !== s.side && !hvile(s.side, k.side) && ser(s, k.x, k.y)).map(k => ({ x: k.x, y: k.y, navn: k.navn, styrke: ((window.Enheter && Enheter.REGLER.styrke[k.type]) || 1) * k.antall })));   // stridsvogner skremmer, lastebiler er bytte
+      const fiender = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvileHer(s, e) && ser(s, e.x, e.y)).map(e => ({ x: e.x, y: e.y, navn: e.navn, styrke: F.styrke(e, Forsyning.ammo(e)) }))
+        .concat(KJORETOY.filter(k => k.side !== s.side && !hvileHer(s, k) && ser(s, k.x, k.y)).map(k => ({ x: k.x, y: k.y, navn: k.navn, styrke: ((window.Enheter && Enheter.REGLER.styrke[k.type]) || 1) * k.antall })));   // stridsvogner skremmer, lastebiler er bytte
       // BEDRE AI (17. nov): det fraksjonen husker og vet – hvor den sist så en fiende, hvilke tettsteder den har mistet, hvem av
       // vennene som blir beskutt, hva de andre lagene alt går mot, og hvor spillerens leir er når et lag har vært nær nok til å se den
       const M = MINNE[s.side], venner = ENHETER.filter(e => e.side === s.side && e.ai && levende(e)), L = leir();
       for (const b of byer) { if (b.eier === s.side) M.hatt.add(b.id); else if (M.hatt.has(b.id)) b.tapt = true; }
-      const sett = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvile(s.side, e.side) && ser(s, e.x, e.y)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+      const sett = ENHETER.filter(e => e.side !== s.side && levende(e) && !hvileHer(s, e) && ser(s, e.x, e.y)).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
       if (sett) M.sist = { x: sett.x, y: sett.y, navn: sett.navn, styrke: F.styrke(sett, Forsyning.ammo(sett)), t: tid };
       if (M.sist && Math.hypot(M.sist.x - s.x, M.sist.y - s.y) < 250 && !sett) M.sist = null;   // vi er der, og ingen er her lenger
       // (balansen 18. nov, Claudes forslag) i et ekte spill går motstanderne ikke løs på leiren de første døgnene: 4 på «Vanlig»,
@@ -158,12 +166,16 @@
       // (18. nov) førerens væremåte (spill/krig.js) flytter terskelen for når laget angriper
       const vmF = window.Krig && window.KrigSpill && KrigSpill.auto() && !s.raid ? (Krig.væremåte((s.menn[s.leder] || s.menn[0]).navn).overtak || 1) : 1;
       // (19. nov) fienden som står i tettstedet laget er i (lagene vet om hverandre der, også når skogen skjuler dem)
-      const byHer = byer.find(b => b.inni(s.x, s.y)), iByFiende = byHer ? ENHETER.filter(e => e !== s && e.side !== s.side && levende(e) && Array.isArray(e.menn) && !F.slåttUt(e) && !hvile(s.side, e.side) && byHer.inni(e.x, e.y))
+      const byHer = byer.find(b => b.inni(s.x, s.y)), iByFiende = byHer ? ENHETER.filter(e => e !== s && e.side !== s.side && levende(e) && Array.isArray(e.menn) && !F.slåttUt(e) && !hvileHer(s, e) && byHer.inni(e.x, e.y))
         .map(e => ({ x: e.x, y: e.y, navn: e.navn, styrke: F.styrke(e, Forsyning.ammo(e)) })).sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0] : null;
-      const v = F.velg(s, { overtakF: vmF, fred: regionFred(), småFørst: småFørst(), storbyStengt: AI.storbyStengt ? AI.storbyStengt() : 0, blåMedVarsel: !!AI.leirMedVarsel, mot, iByFiende, side: s.side, byer, fiender: fredTid() && L && s.side !== 'blå' ? fiender.filter(f => Math.hypot(f.x - L.x, f.y - L.y) > 1500) : fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
+      const pVern = AI.pakter.length ? (x, y) => iPakt(s.side, 'blå', x, y) : null, pFelles = AI.pakter.length && window.Firma ? (AI.pakter.find(p => p.type === 'allianse' && p.side === s.side && Firma.gjelder(p, tid)) || {}).mot || null : null;
+      const v = F.velg(s, { vern: pVern, felles: pFelles, overtakF: vmF, fred: regionFred(), småFørst: småFørst(), storbyStengt: AI.storbyStengt ? AI.storbyStengt() : 0, blåMedVarsel: !!AI.leirMedVarsel, mot, iByFiende, side: s.side, byer, fiender: fredTid() && L && s.side !== 'blå' ? fiender.filter(f => Math.hypot(f.x - L.x, f.y - L.y) > 1500) : fiender, venner, hjem: HJEM[s.side], ammo: Forsyning.ammo(s), opptatt, hjelp,
         minne: M.sist ? { ...M.sist, alder: tid - M.sist.t } : null, leir: M.leir && L && AI.angripLeir !== false && !AI.leirMedVarsel && !hvile(s.side, 'blå') && !fredTid() ? { x: L.x, y: L.y, navn: 'leiren din' } : null, iSkog: !!(s.her && s.her.k === 1), beskutt: s.beskuttTid !== undefined && tid - s.beskuttTid < 15 });
       // (runde 7) lag i en angrepsgruppe følger gruppa (spill/eskalering-visning.js) – unntatt når laget er slått ut eller angriper en fiende det ser
       if (AI.styr) { const o = AI.styr(s, v); if (o) { delete v.mål; Object.assign(v, o); } }
+      // (ut4-firmaer, Ø5) våpenhvilen: ingen angrep på det som er ditt i området, heller ikke fra eskaleringens grupper
+      if (AI.pakter.length) { const vern = (x, y) => iPakt(s.side, 'blå', x, y), L2 = leir(), blåVed = (x, y) => (L2 && Math.hypot(L2.x - x, L2.y - y) < 400) || byer.some(b => b.eier === 'blå' && b.inni(x, y)) || ENHETER.some(e => e.side === 'blå' && levende(e) && Math.hypot(e.x - x, e.y - y) < R.pakt.nær);
+        const ny2 = F.respekterPakt(v, s, vern, blåVed); if (ny2 !== v) { for (const k of Object.keys(v)) delete v[k]; Object.assign(v, ny2); } }
       s.ai.målBy = v.hva === 'ta' || v.hva === 'leir' ? v.mål : v.hva === 'hold' && /^(tar|venter på flere for å ta) /.test(v.tekst) ? (byer.find(b => b.inni(s.x, s.y)) || {}).id : null;
       // angrep: still deg på det høyeste punktet rundt målet (høyde gir overtak), leiren angripes tettere på
       if (v.hva === 'angrip' || v.hva === 'leir') { const p = F.angrepspunkt(s, v, (x, y) => hoydeVed(x, y), v.hva === 'leir' ? 110 : 280); v.x = p.x; v.y = p.y; }

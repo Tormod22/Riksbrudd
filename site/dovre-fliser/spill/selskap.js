@@ -102,6 +102,9 @@
   const SIDER = ['blå', 'rød', 'grønn'];
   // oppdiktede firmaer (Claudes forslag; ikke ekte firmaer)
   const FIRMA = ['Gråfjell Frakt', 'Tindvik Drivstoff', 'Brattli Mineral', 'Dalsnes Kraftlag', 'Kvernhaug Mølle', 'Storlia Tømmer', 'Ytterø Sjømat'];
+  // (ut4-firmaer, Ø5) registeret (spill/firma-visning.js) kan gi lista over firmaer som finnes nå (nye firmaer, ikke de som er konkurs):
+  // api.firmaKilde = () => [navn]. Uten kilde (Node, økonomitesten) er lista FIRMA som før – samme tilfeldighet.
+  const firmaListe = () => { const f = typeof api !== 'undefined' && typeof api.firmaKilde === 'function' ? api.firmaKilde() : null; return Array.isArray(f) && f.length ? f : FIRMA; };
   const ROLLER = ['legen', 'ingeniøren', 'sykepleieren', 'ordføreren', 'mekanikeren', 'veterinæren', 'presten', 'radiomannen'];
   const FORNAVN = ['Ingrid', 'Per', 'Solveig', 'Arne', 'Marit', 'Knut', 'Liv', 'Odd', 'Randi', 'Tor', 'Berit', 'Geir'];
   const ETTERNAVN = ['Halvorsen', 'Moe', 'Bakken', 'Lien', 'Brekke', 'Rustad', 'Haugen', 'Nygård', 'Sletten', 'Engen'];
@@ -170,7 +173,9 @@
     const nye = [];
     if (!iNærheten.length) return nye;
     const byer = iNærheten.filter(q => q.slag !== 'bru'), bruer = iNærheten.filter(q => q.slag === 'bru');
-    for (let n = antallTilbud(R), forsøk = 0; n > 0 && forsøk < 4 * antallTilbud(R); forsøk++) {
+    // (ut4-firmaer, Ø5) o.antall = så mange tilbud (fast kunde: ett fra firmaet), o.giver = oppdragsgiveren (fast kunde), o.faktor på betalingen
+    const ant = Number.isFinite(o.antall) ? o.antall : antallTilbud(R);
+    for (let n = ant, forsøk = 0; n > 0 && forsøk < 4 * Math.max(1, ant); forsøk++) {
       // det siste tilbudet kan være fra neste nivå: låst til ryktet er godt nok, men synlig (så spilleren ser hva som venter)
       const kNivå = teaser && n === 1 ? NV[nv.nr] : nv;
       const typ = vektet(typeVekter(R), r), giverSlag = vektet(giverVekter(R, typ), r), T = REGLER.TYPER[typ];
@@ -197,14 +202,14 @@
       if (typ === 'hent') person = `${velg(ROLLER, r)} ${velg(FORNAVN, r)} ${velg(ETTERNAVN, r)}`;
       // (R1-løkka) kommunen er stedets egen når stedet er et tettsted (så bygdevernet der vet om jobben – giver.by), ellers et tettsted i nærheten
       const kommune = sted.slag !== 'bru' ? sted : byer.length ? velg(byer, r) : sted;
-      const giver = giverSlag === 'firma' ? { slag: 'firma', navn: velg(FIRMA, r) } : giverSlag === 'by' ? { slag: 'by', navn: `Kommunen i ${kommune.navn}`, by: kommune.id === undefined ? null : kommune.id }
+      const giver = o.giver ? { ...o.giver } : giverSlag === 'firma' ? { slag: 'firma', navn: velg(firmaListe(), r) } : giverSlag === 'by' ? { slag: 'by', navn: `Kommunen i ${kommune.navn}`, by: kommune.id === undefined ? null : kommune.id }
         : { slag: 'bygd', navn: `Bygdelaget i ${sted.navn}`, by: sted.slag !== 'bru' && sted.id !== undefined ? sted.id : null };
       // (ut2-balanse 28. nov) eskorten betales etter strekket bilen kjøres (fra -> til): bilen står klar ved «fra» (selskap-visning.js
       // lagBil), så vegen fra leiren dit er ikke en del av jobben. De andre typene betales etter vegen fra leiren som før.
       const meter = typ === 'eskorte' && fra ? Math.hypot(fra.x - sted.x, fra.y - sted.y) : Math.hypot(sted.x - L.x, sted.y - L.y) + (fra ? Math.hypot(fra.x - sted.x, fra.y - sted.y) : 0);
       // eskorte: rolig rute eller meldt bakhold (alltid bakhold når et annet selskap holder et av stedene)
       const risiko = typ === 'eskorte' ? ([fra, sted].some(q => q && q.eier && q.eier !== id) || r() < REGLER.RISIKO.bakhold.andel ? 'bakhold' : 'rolig') : null;
-      const kr = betaling(typ, R, sd.pris, meter, hold, kNivå.faktor, o.infl) * (risiko === 'bakhold' ? REGLER.RISIKO.bakhold.faktor : risiko === 'rolig' ? (REGLER.RISIKO.rolig.faktor || 1) : 1);
+      const kr = betaling(typ, R, sd.pris, meter, hold, kNivå.faktor, o.infl) * (Number.isFinite(o.faktor) && o.faktor > 0 ? o.faktor : 1) * (risiko === 'bakhold' ? REGLER.RISIKO.bakhold.faktor : risiko === 'rolig' ? (REGLER.RISIKO.rolig.faktor || 1) : 1);
       // vegsperra står litt utenfor stedet (visningen flytter den til nærmeste veg)
       const v = r() * Math.PI * 2, sperre = typ === 'rydd' ? { x: Math.round(sted.x + Math.cos(v) * 900), y: Math.round(sted.y + Math.sin(v) * 900) } : null;
       const andreSider = SIDER.filter(q => q !== id);
@@ -508,7 +513,7 @@
     } catch (e) { return null; }
   }
 
-  const api = { REGLER, SIDER, ORD, ny, side, endreRykte, ord, rykteTekst, typeVekter, giverVekter, antallTilbud, betaling, lagTilbud, tittel, kravTekst, bruttTekst, retningOrd,
+  const api = { FIRMA, firmaKilde: null, REGLER, SIDER, ORD, ny, side, endreRykte, ord, rykteTekst, typeVekter, giverVekter, antallTilbud, betaling, lagTilbud, tittel, kravTekst, bruttTekst, retningOrd,
     godta, lever, bryt, avbryt, steg, dagSteg, marsjVurdering, nivå, nesteNivå, kravFor, kanTa, kravKort, førsteKontrakt, TRÅD, oppdaterTråd, trådSteg, lappFor, hardhendt, settPris, fristTekst, tilJSON, fraJSON, lagRand, påfyll };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Selskap = api;

@@ -43,6 +43,9 @@
     //  midten: meter fra tettstedets midtpunkt et lag som tar det, går inn til
     //  inntil: meter et lag går inntil en fiende i tettstedet det vil ta (så de ser hverandre også i skog)
     regionFred: 2.5, lagPerDøgn: .5, startMaks: 8000, storEtter: 1, ettLag: 12, midten: 150, inntil: 25,
+    // (ut4-firmaer, Ø5) pakter med spilleren (spill/firma.js): tettstedene til den felles fienden teller så mye nærmere i en allianse;
+    // et mål innen «nær» meter fra et eget lag i våpenhvileområdet regnes som spillerens (Claudes forslag)
+    pakt: { felles: 2, nær: 300 },
   };
   // døgnene med fred i regionkrigen for en fiendefaktor f (vanskelighetsgraden: lett 0,75, vanlig 1, hard 1,3)
   const fredDøgn = (f = 1) => Math.max(1.5, Math.min(4, REGLER.regionFred / (f > 0 ? f : 1)));
@@ -55,6 +58,7 @@
   // venner: [lag på samme side], hjem: [x, y], ammo }. Gir { hva, x, y, tekst } – hva: trekk | forsyn | angrip | ta | hold.
   function velg(s, v) {
     const R = REGLER, her = { x: s.x, y: s.y }, egne = v.byer.filter(b => b.eier === v.side), nærmest = l => l.slice().sort((a, b) => avstand(a, her) - avstand(b, her))[0];
+    const vernet = b => !!(v.vern && b.eier === 'blå' && v.vern(b.x, b.y));
     if (slåttUt(s)) { const b = nærmest(egne); return b ? { hva: 'trekk', x: b.x, y: b.y, tekst: `trekker seg tilbake til ${b.navn}` } : { hva: 'trekk', x: v.hjem[0], y: v.hjem[1], tekst: 'trekker seg tilbake' }; }
     const fi = v.fiender.filter(f => avstand(f, her) <= R.angrep).sort((a, b) => avstand(a, her) - avstand(b, her))[0];
     const behov = ute(s) >= R.såret || (v.ammo !== undefined && v.ammo < R.ammoLav);
@@ -102,7 +106,7 @@
     if (iBy && iBy.eier !== v.side && fb && avstand(fb, her) > R.inntil && min >= overtak * (fb.styrke || 0)) return { hva: 'jakt', x: fb.x, y: fb.y, tekst: `går mot ${fb.navn} i ${iBy.navn}` };
     // (19. nov, gjennomspillingen: to sider sto i hver sin kant av Ålgård i tre døgn uten å se hverandre, og ingen tok byen) laget går
     // inn mot midten av tettstedet (b.x, b.y) før det blir stående; da møtes de som slåss om det
-    if (iBy && iBy.eier !== v.side && mulig(iBy)) { const tekst = !(iBy.minst > 0) || der(iBy) >= iBy.minst ? `tar ${iBy.navn}` : `venter på flere for å ta ${iBy.navn}`;
+    if (iBy && iBy.eier !== v.side && mulig(iBy) && !vernet(iBy)) { const tekst = !(iBy.minst > 0) || der(iBy) >= iBy.minst ? `tar ${iBy.navn}` : `venter på flere for å ta ${iBy.navn}`;
       return avstand(iBy, her) > R.midten ? { hva: 'ta', mål: iBy.id, x: iBy.x, y: iBy.y, tekst } : { hva: 'hold', x: s.x, y: s.y, tekst }; }
     // ta det nærmeste tettstedet som ikke er vårt (større tettsteder teller som nærmere)
     // … men ikke det samme som en venn alt går mot (v.opptatt: Map tettsted-id -> lag), så lenge det finnes et annet;
@@ -110,8 +114,11 @@
     const vekt = b => avstand(b, her) / Math.sqrt(1 + b.folk / 1000) / (b.tapt ? R.tapt : 1);
     // (runde 7) dine tettsteder angripes bare av angrepsgrupper med etterretning først (v.blåMedVarsel – spill/eskalering-visning.js);
     // et enkelt lag går ikke dit av seg selv (gjennomspillingen: småstedene ble tatt uten varsel av enkeltlag)
-    const kand = v.byer.filter(b => b.eier !== v.side && avstand(b, her) <= R.rekkevidde && mulig(b) && !(v.blåMedVarsel && b.eier === 'blå')).map(b => ({ b, v: vekt(b), leir: false }));
-    if (v.leir && avstand(v.leir, her) <= R.rekkevidde) kand.push({ b: { id: 'leir', navn: v.leir.navn || 'leiren', x: v.leir.x, y: v.leir.y, folk: R.leirVekt }, v: avstand(v.leir, her) / Math.sqrt(1 + R.leirVekt / 1000), leir: true });
+    // (ut4-firmaer, Ø5) PAKTER: v.vern(x, y) = true der fraksjonen har våpenhvile med spilleren (dine tettsteder og leiren der er ikke mål);
+    // v.felles = sida dere har allianse mot (tettstedene deres teller som nærmere – felles mål)
+    const kand = v.byer.filter(b => b.eier !== v.side && avstand(b, her) <= R.rekkevidde && mulig(b) && !(v.blåMedVarsel && b.eier === 'blå') && !vernet(b))
+      .map(b => ({ b, v: vekt(b) / (v.felles && b.eier === v.felles ? R.pakt.felles : 1), leir: false }));
+    if (v.leir && avstand(v.leir, her) <= R.rekkevidde && !(v.vern && v.vern(v.leir.x, v.leir.y))) kand.push({ b: { id: 'leir', navn: v.leir.navn || 'leiren', x: v.leir.x, y: v.leir.y, folk: R.leirVekt }, v: avstand(v.leir, her) / Math.sqrt(1 + R.leirVekt / 1000), leir: true });
     kand.sort((a, b) => a.v - b.v);
     // (19. nov) et stort tettsted er «ledig» til de som går dit, er mange nok for full fart (b.mann)
     const fullt = b => (b.mann > 0 && v.mot ? mot(b).filter(f => f !== s).reduce((a, f) => a + sty(f), 0) >= b.mann : !!(v.opptatt && v.opptatt.has(b.id) && v.opptatt.get(b.id) !== s));
@@ -154,7 +161,15 @@
   const byggStilling = (holdt, nærmeste, antall) => holdt >= REGLER.stilling.etter && antall < REGLER.stilling.maks && !(nærmeste < REGLER.stilling.avstand);
   // Vernet et lag har av stillingene: lag = { x, y, side }, stillinger = [{ x, y, side }]
   const stillingVern = (lag, stillinger) => ((stillinger || []).some(q => q.side === lag.side && Math.hypot(q.x - lag.x, q.y - lag.y) <= REGLER.stilling.radius) ? REGLER.stilling.vern : 1);
-  const api = { FRAKSJONER, REGLER, fredDøgn, kjør, gåAv, byggStilling, stillingVern, lagTak, angrepspunkt, velg, styrke, slåttUt, sympati, startsteder };
+  // (ut4-firmaer, Ø5) RESPEKTER PAKTEN etter valget (også når eskaleringen – AI.styr – har overstyrt det): vil laget angripe, ta eller rykke
+  // mot noe av spillerens innenfor våpenhvileområdet (vern(x, y)), blir det stående i stedet. blåVed(x, y) = det som står der, er spillerens
+  // (et lag, et tettsted eller leiren). Gir valget (det samme, eller et nytt «hold»).
+  function respekterPakt(valg, s, vern, blåVed) {
+    if (!valg || !vern || !['angrip', 'ta', 'leir', 'jakt', 'støtt'].includes(valg.hva)) return valg;
+    if (!vern(valg.x, valg.y) || (blåVed && !blåVed(valg.x, valg.y))) return valg;
+    return { hva: 'hold', x: s.x, y: s.y, tekst: 'holder våpenhvilen' };
+  }
+  const api = { respekterPakt, FRAKSJONER, REGLER, fredDøgn, kjør, gåAv, byggStilling, stillingVern, lagTak, angrepspunkt, velg, styrke, slåttUt, sympati, startsteder };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else rot.Fraksjoner = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

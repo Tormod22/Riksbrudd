@@ -39,6 +39,8 @@
     // (ca. 0,2–0,3 mill. i døgnet når den går). Har kassa etter kjøpet mindre enn «døgn» (15) døgn med leirens faste utgifter + maskinens drift,
     // sier byggelista fra før du kjøper (driftVarsel). Økonomitesten (okosim-sagbruk.js) lar den fornuftige spilleren vente til varselet er borte.
     varsel: { døgn: 15, lønn: 15000 },
+    // (ut4-firmaer, Ø5 – planen 14.5) HØVLERIET fra Storlia Tømmer: et sagbruk med b.høvleri gir planker × tre og flis × flis av det samme tømmeret
+    høvleri: { tre: 1.4, flis: .5 },
   };
   const GRUNNER = ['av', 'ødelagt', 'fullt', 'tom', 'folk', 'strøm', 'slitt'];
   const GRUNNTEKST = { av: 'slått av', ødelagt: 'ødelagt', fullt: 'lageret fullt', folk: 'ingen folk', strøm: 'uten strøm', slitt: 'slitt – må repareres' };
@@ -71,6 +73,9 @@
   const venterTekst = (t) => (t === 'sagbruk' ? 'venter på tømmer' : t === 'vedkløyver' ? 'venter på flis' : 'venter på brensel');
   const grunnTekst = (g, t, mating) => (g === 'tom' ? (mating ? venterTekst(t) : tomTekst(t)) : (mating ? MATETEKST : GRUNNTEKST)[g] || g);
 
+  // det maskinen gir per time ved full drift – sagbruket med høvleri (b.høvleri) gir flere planker og mindre flis
+  function utFor(b) { const M = REGLER.maskiner[b.type]; if (!M) return {}; if (b.type !== 'sagbruk' || !b.høvleri) return M.ut; const H = REGLER.høvleri;
+    return { tre: M.ut.tre * H.tre, flis: M.ut.flis * H.flis }; }
   // Vil maskinen gå nå (alt unntatt strøm og folk er på plass)? Brukes av leir.js (api.hviler) så en maskin som står, ikke tar strøm.
   // Folk telles også: uten folk på «maskin» tar den ingen strøm.
   function vil(L, b, folkIgjen, Bf) {
@@ -108,15 +113,15 @@
         let fRå = 1, fPlass = 1;
         for (const [vare, m] of Object.entries(v.r)) fRå = Math.min(fRå, h(vare) / (m * t));
         // (utmatingen er felles for alle varene maskinen lager: plassen deles på summen)
-        const utPerT = Object.values(M.ut).reduce((a, m) => a + m, 0);
-        if (Bf) { if (utPerT > 0) fPlass = pl() / (utPerT * t * kval); } else for (const [vare, m] of Object.entries(M.ut)) fPlass = Math.min(fPlass, plass(L, vare) / (m * t));
+        const UT = utFor(b), utPerT = Object.values(UT).reduce((a, m) => a + m, 0);
+        if (Bf) { if (utPerT > 0) fPlass = pl() / (utPerT * t * kval); } else for (const [vare, m] of Object.entries(UT)) fPlass = Math.min(fPlass, plass(L, vare) / (m * t));
         const drift = Math.max(0, Math.min(fFolk * fSlitt, fRå, fPlass));
         // grunnen når den ikke går fullt: det som begrenser mest
         if (drift < 1 - 1e-6) s.grunn = fRå <= drift + 1e-9 && fRå < fFolk * fSlitt ? 'tom' : fPlass <= drift + 1e-9 && fPlass < fFolk * fSlitt ? 'fullt' : fSlitt < 1 && fSlitt <= fFolk ? 'slitt' : 'folk';
         if (drift > 1e-6) {
           s.går = true; s.drift = drift;
           for (const [vare, m] of Object.entries(v.r)) { const q = m * t * drift; if (Bf) Bf.inn[vare] = Math.max(0, h(vare) - q); else L.lager[vare] = Math.max(0, har(L, vare) - q); s.inn[vare] = m * drift; P.brukt[vare] = (P.brukt[vare] || 0) + q; }
-          for (const [vare, m] of Object.entries(M.ut)) { const q = Bf ? m * t * drift * kval : Math.min(m * t * drift * kval, plass(L, vare));
+          for (const [vare, m] of Object.entries(utFor(b))) { const q = Bf ? m * t * drift * kval : Math.min(m * t * drift * kval, plass(L, vare));
             if (Bf) Bf.ut[vare] = (Bf.ut[vare] || 0) + q; else L.lager[vare] = har(L, vare) + q; s.ut[vare] = q / t; P.laget[vare] = (P.laget[vare] || 0) + q; }
           s.kvalitet = kval > 1;
           if (M.gir) { s.kw = M.gir * drift; kw += s.kw; varme += M.varme * drift; }
@@ -189,7 +194,7 @@
     return Math.round((Number.isFinite(o.lønn) ? o.lønn : (+o.personer || 0) * V.lønn * infl) + vedl + diesel);
   }
 
-  const api = { driftVarsel, leirDøgn, REGLER, GRUNNER, GRUNNTEKST, VARENAVN, erMaskin, ny, fraJSON, maskinene, råvare, vil, steg, hviler, oppskrift, merke, grunnTekst, varmeAndel, verdi, nf, MATETEKST, utSum };
+  const api = { utFor, driftVarsel, leirDøgn, REGLER, GRUNNER, GRUNNTEKST, VARENAVN, erMaskin, ny, fraJSON, maskinene, råvare, vil, steg, hviler, oppskrift, merke, grunnTekst, varmeAndel, verdi, nf, MATETEKST, utSum };
   if (NODE) module.exports = api; else rot.Produksjon = api;
 
   // (ut4-balanse2) VARSELET I BYGGELISTA (bare i nettleseren): leir-visning.js spør window.BYGG_VARSEL for hvert bygg i lista og viser
