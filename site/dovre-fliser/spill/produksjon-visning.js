@@ -179,7 +179,8 @@
     const css = document.createElement('style'); css.textContent = Object.entries(I).map(([n, s]) => `[data-ikon="${n}"]{ --ik:${url(s)}; }`).join('\n') + '\n#selskapet .mrad button{ flex:none; } #selskapet .prgraf{ margin:4px 0 8px; } #selskapet .tall li.prfolk{ align-items:center; gap:6px; } #selskapet .tall li.prfolk span{ flex:1; } #selskapet .tall li.prfolk button{ min-width:34px; min-height:30px; }';
     document.head.appendChild(css); }
   function oppsett() {
-    if (window.Ikoner && Ikoner.BYGG) Object.assign(Ikoner.BYGG, { sagbruk: 'sag', vedkløyver: 'kloyver', fyrkjele: 'kjele' });
+    const IB = { sagbruk: 'sag', vedkløyver: 'kloyver', fyrkjele: 'kjele' };
+    if (window.Ikoner && Ikoner.legg) Ikoner.legg(I, IB); else if (window.Ikoner && Ikoner.BYGG) Object.assign(Ikoner.BYGG, IB);
     // (2D-stilen for maskinene står i leir2d.js STIL)
     const G = window.LEIR2_GRUPPER; if (Array.isArray(G) && !G.some(g => g[0] === 'Produksjon')) G.push(['Produksjon', ['sagbruk', 'vedkløyver', 'fyrkjele']]);
     else if (!G) window.LEIR2_GRUPPER = [['Produksjon', ['sagbruk', 'vedkløyver', 'fyrkjele']]];

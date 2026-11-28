@@ -53,5 +53,11 @@ ${Object.entries(I).map(([n, s]) => `[data-ikon="${n}"]{ --ik:${url(s)}; }`).joi
   }
   setInterval(merk, 400); new MutationObserver(() => merk()).observe(document.body, { childList: true, subtree: false });
   { const m = document.getElementById('leirmeny'); if (m) new MutationObserver(merk).observe(m, { childList: true }); else setTimeout(() => { const q = document.getElementById('leirmeny'); if (q) new MutationObserver(merk).observe(q, { childList: true }); }, 2000); }
-  window.Ikoner = { navn: () => Object.keys(I), har: n => !!I[n], merk, BYGG, STAT };
+  // andre moduler (f.eks. maskinene i produksjon-visning.js) legger inn sine egne ikoner her, så har() og vakta kjenner dem
+  function legg(nye, bygg) {
+    const ny = Object.entries(nye || {}).filter(([n]) => !I[n]); for (const [n, s] of ny) I[n] = s;
+    if (ny.length) { const c = document.createElement('style'); c.textContent = ny.map(([n, s]) => `[data-ikon="${n}"]{ --ik:${url(s)}; }`).join('\n'); document.head.appendChild(c); }
+    if (bygg) Object.assign(BYGG, bygg);
+  }
+  window.Ikoner = { navn: () => Object.keys(I), har: n => !!I[n], merk, legg, BYGG, STAT };
 })();

@@ -21,7 +21,7 @@ module.exports = {
     const før = { tid, tempo, kam: { ...kam }, penger: S.penger, moral: F ? F.moral : null, T: { ...T }, enh: ENHETER.slice(), blå: ENHETER.filter(e => e.side === 'blå').map(e => [e, e.x, e.y, e.sti, e.forsvar, e.strid, e.skyterPå]),
       tet: new Map(TETTSTEDER), lager: Object.keys(localStorage).filter(n => /^riksbrudd-(trussel|angrep|marked|oppdrag|hendelser)/.test(n)).map(n => [n, localStorage.getItem(n)]),
       logg: typeof loggLinjer !== 'undefined' ? loggLinjer.slice() : null, satt: ForsvarSpill.erSatt(), oppdrag: O && O.liste ? O.liste.slice() : null, hÅpen: H ? H.åpen : null };
-    const fart = id => { const b = $(id); if (b) b.click(); }; let nyBy = null, lagetInfra = false;
+    const fart = id => { const b = $(id); if (b) b.click(); }; let nyBy = null, lagetInfra = false, serAv = null;
     try {
       for (const n of FLAGG) if (window[n]) window[n].test = true;
       if (ForsvarSpill.erSatt()) ForsvarSpill.opphev(false);
@@ -31,6 +31,10 @@ module.exports = {
         krev(p.ord === 'god' && /holde leiren/.test(p.tekst) && /tap/.test(p.tekst), 'prognosen «god» sier ikke «holde leiren … regn med tap»: ' + p.tekst); }
       // ---------- 2: varselet og banneret sier det samme ----------
       fart('sp0'); await vent(60);
+      // (28. nov, fiksb) sensorene (KROKER.ser: radar, kameramaster, droner fra kontrollen før) skrus av allerede her: ser de røverne i de
+      // 1300 ms etter avmarsjen, går observasjonen med vilje foran ruta i banneret, mens varselet i loggen ble skrevet ved avmarsjen
+      // (full kontroll 28. nov: «varselet (vest) og banneret (nord) er ulike»). De settes tilbake etter fartsprøven (og i finally).
+      serAv = KROKER.ser.splice(0);
       T.aktiv = 0; T.nesteSpill = T.nesteEkte = Infinity;
       await SpilletSpill.angrep(); await vent(1300);
       const raid = ENHETER.filter(e => e.raid === T.aktiv && T.aktiv > 0), lv = loggLinjer.slice(0, 15).map(l => (typeof l === 'string' ? l : l.t || l.tekst || JSON.stringify(l))).find(l => /Varsel: .* røverlag/.test(l)) || '';
@@ -44,11 +48,10 @@ module.exports = {
       // ---------- 3: farten senkes ikke før de er sett ----------
       krev(!ForsvarSpill.fase().sett, 'fasen sier «sett» før noen har sett røverne');
       // (28. nov) sensorer fra tidligere vakter (radartårn, kameramaster) kan se røverne i løpet av de 700 ms og gjøre fasen «sett»: de skrus av under prøven
-      const serFør = KROKER.ser.splice(0);
       fart('sp3'); await vent(100); FlytSpill.settAuto(true);
       window.dispatchEvent(new CustomEvent('riksbrudd-hendelse', { detail: { type: 'alarm', tekst: 'prøve: leiren angripes' } })); await vent(700);
       d.fartFør = tempo; d.kortÅpne = [...document.querySelectorAll('.på')].map(e => e.id).filter(Boolean).join(','); { const q = FlytSpill.sistStopp(); d.stoppFør = q ? q.liste.map(h => h.type + ':' + h.tekst).join(', ') : null; } krev(tempo === 60, `farten ble senket (${tempo}) før røverne var sett`);
-      KROKER.ser.push(...serFør);
+      KROKER.ser.push(...serAv); serAv = null;
       // røverne inne i leiren: sett – farten ned én gang …
       const r1 = raid[0]; r1.x = L.x + 30; r1.y = L.y + 20; r1.sti = null; for (const e of raid.slice(1)) { e.x = L.x + 2400; e.y = L.y; e.sti = null; }
       for (let i = 0; i < 40 && tempo !== 1; i++) await vent(100); d.fartSett = tempo; krev(tempo === 1, `farten ble ikke senket da røverne ble sett (${tempo})`);
@@ -93,6 +96,7 @@ module.exports = {
         TETTSTEDER.delete(by.e.id); GarnisonSpill.bykampSteg(); }
     } catch (e) { feil.push('unntak: ' + e.message); }
     finally {
+      if (serAv) { KROKER.ser.push(...serAv); serAv = null; }
       if (O0 && Ofør) { O0.liste.splice(0, O0.liste.length, ...Ofør.liste); for (const k of ['nr', 'nesteSpill', 'nesteEkte']) { if (Ofør[k] === undefined) delete O0[k]; else O0[k] = Ofør[k]; } } if (H0) H0.åpen = Hfør;
       if (ForsvarSpill.erSatt()) ForsvarSpill.opphev(false);
       ENHETER.length = 0; ENHETER.push(...før.enh);

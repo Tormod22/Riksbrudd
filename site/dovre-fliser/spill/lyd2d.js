@@ -191,9 +191,22 @@
   if (typeof rot.logg === 'function' && !rot.logg.lyd) {
     const før = rot.logg;
     const ny = function (t) { const a = typeof loggLinjer !== 'undefined' ? loggLinjer[0] : undefined; const r = før.apply(this, arguments);
-      try { const b = typeof loggLinjer !== 'undefined' ? loggLinjer[0] : t; if (b !== a || typeof loggLinjer === 'undefined') { const l = meldingLyd(t, egneNavn()); if (l) hør(l, { hva: String(t).slice(0, 80) }); } } catch (e) { /* lyden skal aldri stoppe loggen */ }
+      try { const b = typeof loggLinjer !== 'undefined' ? loggLinjer[0] : t; if (b !== a || typeof loggLinjer === 'undefined') { const l = meldingLyd(t, egneNavn()); if (l && !(l === 'ordre' && iOrdre)) hør(l, { hva: String(t).slice(0, 80) }); } } catch (e) { /* lyden skal aldri stoppe loggen */ }
       return r; };
     for (const k of Object.keys(før)) ny[k] = før[k]; ny.lyd = true; rot.logg = ny;
+  }
+  // (28. nov, fiksb) ordrelyden kommer fra selve ordre()-kallet, ikke fra loggteksten: loggdemp.js holder igjen «planlegger rute …» når
+  // samme lag fikk en ordre for under 3 min siden, og da kom ingen lyd. ordre() setter s.planlegger før første await, så det vi ser rett
+  // etter kallet, sier om ordren ble tatt imot (ikke for langt, ikke utenfor kartet). Stille ordre (AI, køen, anleggsarbeid) gir ingen lyd.
+  // Mens kallet går, hoppes «planlegger rute» i loggen over (ellers to lyder).
+  let iOrdre = false;
+  if (typeof rot.ordre === 'function' && !rot.ordre.lyd) {
+    const før = rot.ordre;
+    const ny = function (s, X, Y, stille) { iOrdre = true; let r;
+      try { r = før.apply(this, arguments); } finally { iOrdre = false; }
+      try { if (!stille && s && s.planlegger && egneNavn().includes(s.navn)) hør('ordre', { hva: String(s.navn) + ': ordre' }); } catch (e) { /* lyden skal aldri stoppe ordren */ }
+      return r; };
+    for (const k of Object.keys(før)) ny[k] = før[k]; ny.lyd = true; rot.ordre = ny;
   }
   window.addEventListener('riksbrudd-hendelse', e => { const d = e.detail || {}; if (d.type === 'alarm') hør('alarm', { hva: String(d.tekst || '').slice(0, 80) }); });
   window.addEventListener('riksbrudd-by-ber', e => hør('telefon', { hva: (e.detail && e.detail.tekst) || 'en by ber om hjelp' }));
