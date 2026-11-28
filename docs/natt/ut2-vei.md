@@ -6,7 +6,7 @@ F1 = veien som ren regelmodul. **Figurene går ikke etter den ennå** (det er F2
 ## Filer
 - `site/dovre-fliser/spill/vei.js` – NY. Regler uten DOM (Node: `require('./vei')`, henter bygning.js, leir.js og byggesett.js selv;
   nettleser: `window.Vei`). Nederst (bare i nettleseren): feilsøkingsvisningen `window.VeiSpill` (KROKER.tegn, av som standard).
-- `pipeline/fliser/test_vei.js` – NY (36 sjekker, ca. 6 s; `RASK=1` færre prøvehus).
+- `pipeline/fliser/test_vei.js` – NY (39 sjekker, ca. 6 s; `RASK=1` færre prøvehus).
 - `pipeline/fliser/vakter/ut2-vei.js` – NY vakt.
 - Endret, små og samlede endringer:
   - `site/dovre-fliser/spill/byggesett-visning.js`:
@@ -81,7 +81,7 @@ Stor leir med gjerde 400 × 400 m: 126 000 ruter, Vei.lag 48 ms, ett veikart 101
 alle prøvene (tre prøvehus, veikart, leirens kart).
 
 ## Prøvd
-- `node pipeline/fliser/test_vei.js` (36 sjekker grønne), test_byggesett, test_leir, test_kommando, test_bygning (RASK) grønne.
+- `node pipeline/fliser/test_vei.js` (39 sjekker grønne), test_byggesett, test_leir, test_kommando, test_bygning (RASK) grønne.
 - Nettleser PC (1400 × 860) og mobil (390 × 844): vakta grønn på begge, ingen sidefeil; bilder av feilsøkingsvisningen (veien fra leiren gjennom
   døra inn i en brakke, «Rom uten dør» uten dørkanter) og av byggesettet med advarselen (en ring av vegger rundt gulv og tak).
 - Feil med vilje: dørene regnet som vegg (`h = [].find(...)` i lagLag) → vakta feilet på døra, trappa og veikartet. Satt tilbake.
