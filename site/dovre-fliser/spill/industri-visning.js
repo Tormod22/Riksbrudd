@@ -33,7 +33,7 @@
   // Omgivelsene rundt (X, Y). null når stedet ikke er kjent (bygget mangler X/Y).
   function omgivelser(info) {
     if (!info || !Number.isFinite(info.X) || !Number.isFinite(info.Y)) return null;
-    const nøkkel = info.i | 0; if (CACHE.has(nøkkel)) return CACHE.get(nøkkel);
+    const nøkkel = Number.isFinite(info.i) ? info.i | 0 : null; if (nøkkel !== null && CACHE.has(nøkkel)) return CACHE.get(nøkkel);
     // rundes til 10 m, så 2D (plantegningen) og 3D (hus3d) regner fra samme punkt
     const x = Math.round(info.X / 10) * 10, y = Math.round(info.Y / 10) * 10, F = infra(), o = {};
     if (F) {
@@ -50,8 +50,8 @@
     // (ut9-industri2) STABILT: svaret huskes første gang infrastrukturen er lest – også uten høyden (da anslås typen uten høyde og
     // helning). Samme bygg får altså samme type i plantegningen, huspanelet og 3D, og den skifter ikke når flere kartfliser er lest.
     // (Før ble svaret bare husket med høyden, og en plantegning laget før høyden var lest kunne vise en annen type enn panelet etterpå.)
-    // Uten infrastruktur (de første sekundene) huskes ingenting, og forInfo gir den enkle regelen.
-    if (F) { o.utenHøyde = h0 === null; CACHE.set(nøkkel, o); }
+    // Også uten infrastruktur (de første sekundene, eller når den ikke kan hentes) huskes svaret – ellers kunne typen skifte når den kom.
+    o.utenHøyde = h0 === null; o.utenInfra = !F; if (nøkkel !== null) CACHE.set(nøkkel, o);
     return o;
   }
   I.omgivelser = omgivelser;
