@@ -141,7 +141,7 @@
       // om natta: går til en fri plass ved bålet (leirens midte) og legger seg
       if (!h.sov) h.sov = sovPlass(h.nr, ctx);
       const d = Math.hypot(h.sov[0] - h.x, h.sov[1] - h.y);
-      if (d > .6) { if (h.tx === null || Math.hypot(h.tx - h.sov[0], h.ty - h.sov[1]) > .1) { h.tx = h.sov[0]; h.ty = h.sov[1]; h.vent = 0; } } else { h.ligger = Math.min(1, h.ligger + dt); return h; } }
+      if (d > .6) { if (h.tx === null || Math.hypot(h.tx - h.sov[0], h.ty - h.sov[1]) > .1) { h.tx = h.sov[0]; h.ty = h.sov[1]; h.vent = 0; } } else { h.ligger = 1; h.går = 0; return h; } }
     else { h.sov = null; if (h.ligger > 0 && h.vent > 0) { h.vent -= dt; return h; } }
     if (h.tx === null) {
       if (h.vent > 0) { h.vent -= dt; h.går = 0; return h; }
