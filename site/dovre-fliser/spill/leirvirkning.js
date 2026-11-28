@@ -58,7 +58,7 @@
     // (Ø1, 28. nov) maskinene – reglene i spill/produksjon.js
     sagbruk: { tekst: '2 m³ tømmer → 1,1 m³ planker + 0,7 m³ flis i timen (3 folk på «Maskiner», 15 kW)', strøm: true },
     vedkløyver: { tekst: '0,6 m³ flis → 0,5 m³ ved i timen (1 folk, 3 kW)', strøm: true },
-    fyrkjele: { tekst: 'Brenner 0,5 m³ flis (eller ved) i timen: 30 kW og varme i stedet for diesel (1 folk)' },
+    fyrkjele: { tekst: 'Brenner 0,6 m³ flis (eller ved) i timen: 30 kW og varme i stedet for diesel (1 folk)' },
     drivstofftank: { tekst: 'Rommer 5 000/10 000/20 000 l diesel (nivå 1–3) til aggregat, fyring og fyllestasjon' },
     aggregat: { tekst: 'Gir 20/35/50 kW (nivå 1–3), bruker diesel' },
     solcelle: { tekst: 'Gir 5/9/14 kW i dagslys (nivå 1–3)' },

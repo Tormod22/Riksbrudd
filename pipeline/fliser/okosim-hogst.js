@@ -14,6 +14,10 @@ const Ressurser = require(SP + '/ressurser.js'), FolkR = require(SP + '/folk.js'
 const H = { radius: 35, skog: .6, avstand: 400 };
 // tømmerbilen (Claudes forslag for modellen): snittfart 30 km/t mellom feltet og leiren, lasting og lossing som lastebilen (ressurser.js)
 const BIL = { kmt: 30 };
+// (ut4-balanse2 28. nov) MODELLEN VAR FEIL: fire på hogst feller ca. 12 m³ i timen, men to bærere får bare ca. 1,5 m³ hjem, og markedet tar
+// 40 m³ i døgnet (1,7 m³ i timen) – de to andre hoggerne sto i skogen mens leiren sto åpen for røverne (45 % blakk). En fornuftig spiller setter
+// to på hogst, to på frakt og resten på vakt i leiren (Claudes valg for modellen).
+const HOGST = { hogst: 2, frakt: 2, vakt: true };
 const bilPerTime = () => { const R = Ressurser.REGLER; return R.tømmerbil.last / (2 * H.avstand / 1000 / BIL.kmt + (R.lastebil.lastetid + R.lastebil.lossetid) / 3600); };
 
 O.leggTilDel({ id: 'hogst',
@@ -34,9 +38,9 @@ O.leggTilDel({ id: 'hogst',
   },
 });
 
-O.leggTilStrategi({ id: 'hogst', navn: 'hogst og salg', fornuftig: true, tekst: 'fire på hogst og to på frakt; selger tømmeret markedet tar imot hver morgen',
+O.leggTilStrategi({ id: 'hogst', navn: 'hogst og salg', fornuftig: true, tekst: 'to på hogst, to på frakt og resten på vakt; selger tømmeret markedet tar imot hver morgen',
   start(sim) { sim.selgTømmer = true; const P = sim.F.personer.slice().sort((a, b) => (b.ferd.hogst || 0) - (a.ferd.hogst || 0));
-    P.forEach((p, i) => { if (i < 4) FolkR.sett(sim.F, p.id, 'hogst'); else if (i < 6) FolkR.sett(sim.F, p.id, 'frakt'); }); },
+    P.forEach((p, i) => { if (i < HOGST.hogst) FolkR.sett(sim.F, p.id, 'hogst'); else if (i < HOGST.hogst + HOGST.frakt) FolkR.sett(sim.F, p.id, 'frakt'); else if (HOGST.vakt && p.oppgave !== 'bygg' && p.oppgave !== 'kjøkken') FolkR.sett(sim.F, p.id, 'vakt'); }); },
   // (ut2-balanse 28. nov) når startleiren er ferdig bygget, går de som bygde, på vakt i leiren (Leirvakta) – en fornuftig spiller lar ikke
   // leiren stå åpen for røverne mens hogstlaget er ute (før dekket belønningen for bølgene det; den er nå lavere, spillet.js Trussel)
   time(sim) { if (sim.hogstVakt || Leir.jobber(sim.L).length) return; sim.hogstVakt = true;
@@ -49,4 +53,4 @@ O.leggTilKrav({ navn: 'hogst og salg', sjekk(RES) {
   const tak = M * Leir.MATERIALER.tømmer.pris * 1.8 * Math.pow(Marked.INFL, O.REGLER.døgn) * Marked.SALG;
   return [{ ok: snitt > 0 && snitt <= tak, tekst: `salget av tømmer gir i snitt ${O.mill(snitt)} på ${O.REGLER.døgn} døgn (høyst ${O.mill(tak)}: markedet tar ${Marked.KJØPER.tømmer} m³ i døgnet)` }];
 } });
-module.exports = { H, BIL, bilPerTime };
+module.exports = { H, BIL, HOGST, bilPerTime };

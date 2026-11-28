@@ -66,7 +66,11 @@
   // Nye varer med egen lagerplass (som de andre): TØMMER (hogst, kjøpes billig), FLIS og VED (fra sagbruket og vedkløyveren, spill/produksjon.js).
   // Prisene på tømmer, flis og ved er Claudes forslag (tømmer 8 000 kr/m³ fra planen; flis og ved: Claudes eget anslag).
   const MATERIALER = { tre: { navn: 'Planker', enhet: 'm³', pris: 20000 }, betong: { navn: 'Betong', enhet: 'm³', pris: 30000 }, stål: { navn: 'Stål', enhet: 't', pris: 60000 },
-    tømmer: { navn: 'Tømmer', enhet: 'm³', pris: 8000 }, flis: { navn: 'Flis', enhet: 'm³', pris: 3000 }, ved: { navn: 'Ved', enhet: 'm³', pris: 9000 } };
+    tømmer: { navn: 'Tømmer', enhet: 'm³', pris: 8000 }, flis: { navn: 'Flis', enhet: 'm³', pris: 6000 }, ved: { navn: 'Ved', enhet: 'm³', pris: 12000 } };
+  // (ut4-balanse2 28. nov, Claudes forslag) flis 3 000 -> 6 000 og ved 9 000 -> 12 000 kr/m³: med 3 000 kr var strømmen fra fyrkjelen
+  // ca. 20 ganger billigere enn diesel i timen (1 200 mot 27 000 kr for 30 kW) og 2–3 ganger billigere enn solceller over tid. Nå koster
+  // brenselet noe (kjelen brenner også litt mer, spill/produksjon.js), og over tid er en kWt fra kjelen omtrent som fra solcellene
+  // (docs/natt/ut4-balanse2.md). Ved er dyrere enn flis per m³ (tettere, mer varme). Saga i full drift gir nå 1,3 × lønna til ti.
   const GRUNNLAGER = 60;   // så mye av hvert materiale leiren kan ha uten lagertelt og containere
   // hvem får strøm først når det er for lite
   const PRIORITET = ['kontrollrom', 'radiomast', 'kameramast', 'sykestue', 'verksted', 'drivhus', 'brakke', 'vedkløyver', 'sagbruk'];
@@ -86,11 +90,15 @@
   // døgn i vedlikehold, reservedeler og slitasje. Startleiren (ca. 15 mill. kr i grunnpris) koster da ca. 150 000 kr i døgnet – omtrent
   // som lønna til ti personer. Bygg som er slått av, koster halvparten. Trekkes hver spilltime i spill/penger-visning.js.
   REGLER.vedlikehold = .01; REGLER.vedlikeholdAv = .5;
+  // (ut4-balanse2 28. nov, Claudes forslag: 1 % -> 0,3 %) MASKINENE (maskin: true) slites allerede med driften og repareres for
+  // reparerPris (25 %) av prisen ganger skaden (spill/produksjon.js: slitasje) – det ER vedlikeholdet deres. Med 1 % i døgnet i tillegg
+  // betalte saga det to ganger (ca. 60 000 + 54 000 kr i døgnet). Nå betaler de 0,3 % for selve bygget (tak, vegger, gulv).
+  REGLER.vedlikeholdMaskin = .003;
   // { perDøgn (kr), antall (bygg), bygg: [{ id, navn, kr }] (dyrest først) }
   function vedlikehold(L) {
     const ut = { perDøgn: 0, antall: 0, bygg: [] }; if (!L || !Array.isArray(L.bygg)) return ut;
     for (const b of L.bygg) { const B = BYGG[b.type]; if (!B || !(b.igjen <= 0)) continue; const grunn = Number.isFinite(b.pris) && b.pris > 0 ? b.pris : (B.pris || 0);
-      const kr = grunn * REGLER.vedlikehold * (b.av ? REGLER.vedlikeholdAv : 1); if (!(kr > 0)) continue; ut.perDøgn += kr; ut.antall++; ut.bygg.push({ id: b.id, navn: B.navn, kr: Math.round(kr) }); }
+      const kr = grunn * (B.maskin && Number.isFinite(REGLER.vedlikeholdMaskin) ? REGLER.vedlikeholdMaskin : REGLER.vedlikehold) * (b.av ? REGLER.vedlikeholdAv : 1); if (!(kr > 0)) continue; ut.perDøgn += kr; ut.antall++; ut.bygg.push({ id: b.id, navn: B.navn, kr: Math.round(kr) }); }
     ut.perDøgn = Math.round(ut.perDøgn); ut.bygg.sort((a, b) => b.kr - a.kr); return ut;
   }
 
