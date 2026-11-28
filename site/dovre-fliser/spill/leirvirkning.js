@@ -66,7 +66,7 @@
     fiskemottak: { tekst: '0,8 t fisk fra båtene → 0,7 t frossen fisk i timen (3 folk, 25 kW)', strøm: true },
     mølle: { tekst: '0,6 t korn → 0,5 t mel i timen; kjøkkenet lager mat av melet (2 folk, 10 kW)', strøm: true },
     raffineri: { tekst: '0,25 t olje fra basen → 20 l diesel i timen til leirens tank (4 folk, 40 kW)', strøm: true },
-    smie: { tekst: '0,5 t skrap → 0,3 t stål + 0,05 t deler i timen (2 folk, 10 kW)', strøm: true },
+    smie: { tekst: '0,5 t skrap → 0,15 t stål + 0,03 t deler i timen (2 folk, 10 kW)', strøm: true },
     drivstofftank: { tekst: 'Rommer 5 000/10 000/20 000 l diesel (nivå 1–3) til aggregat, fyring og fyllestasjon' },
     aggregat: { tekst: 'Gir 20/35/50 kW (nivå 1–3), bruker diesel' },
     solcelle: { tekst: 'Gir 5/9/14 kW i dagslys (nivå 1–3)' },

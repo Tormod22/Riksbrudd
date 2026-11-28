@@ -34,7 +34,7 @@ ok(Leir.BYGG.fiskemottak.pris === 7e6 && Leir.BYGG.mølle.pris === 3e6 && Leir.B
   L.drivstoff = 100; const m = K.dieselTilTank(L, 120); ok(m === 20 && L.drivstoff === 120 && Math.abs(L.lager.diesel - 20) < .1, 'dieselen går i tanken så langt den rekker'); }
 // fiskemottaket og smia
 { const L = leir('fiskemottak', { fisk: 3 }); kjør(L, 1, 3); ok(Math.abs(L.lager.frossenfisk - .7) < .01, 'fiskemottaket: 1 t gir 0,7 t frossen fisk'); }
-{ const L = leir('smie', { skrap: 2 }); kjør(L, 2); ok(Math.abs(L.lager.stål - .6) < .01 && Math.abs(L.lager.deler - .1) < .01, 'smia: 2 t gir 0,6 t stål og 0,1 t deler av 1 t skrap'); }
+{ const L = leir('smie', { skrap: 2 }); kjør(L, 2); ok(Math.abs(L.lager.stål - .3) < .01 && Math.abs(L.lager.deler - .06) < .01, 'smia: 2 t gir 0,3 t stål og 0,06 t deler av 1 t skrap'); }
 // færre folk = saktere
 { const L = leir('raffineri', { olje: 2 }); kjør(L, 2, 2); ok(Math.abs(L.lager.diesel - 20) < .1, 'raffineriet med 2 av 4 folk går halvt så fort'); }
 

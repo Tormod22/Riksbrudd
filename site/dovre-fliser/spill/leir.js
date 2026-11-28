@@ -79,7 +79,7 @@
     tømmer: { navn: 'Tømmer', enhet: 'm³', pris: 8000 }, flis: { navn: 'Flis', enhet: 'm³', pris: 6000 }, ved: { navn: 'Ved', enhet: 'm³', pris: 12000 },
     // (ut6-kjeder, fase Ø9) VARENE I DE NYE KJEDENE – prisene er Claudes forslag (regnet så hver maskin i full drift gir omtrent det samme
     // som saga per arbeider, se docs/natt/ut6-kjeder.md). kjede: true = vises i Leir → Lager bare når dere har noe eller en maskin som bruker det.
-    stein: { navn: 'Stein', enhet: 'm³', pris: 2500, kjede: true }, pukk: { navn: 'Pukk', enhet: 'm³', pris: 7000, kjede: true },
+    stein: { navn: 'Stein', enhet: 'm³', pris: 2500, kjede: true }, pukk: { navn: 'Pukk', enhet: 'm³', pris: 12000, kjede: true },
     sement: { navn: 'Sement', enhet: 't', pris: 40000, kjede: true }, skrap: { navn: 'Skrap', enhet: 't', pris: 8000, kjede: true },
     deler: { navn: 'Deler', enhet: 't', pris: 90000, kjede: true }, fisk: { navn: 'Fisk', enhet: 't', pris: 15000, kjede: true },
     frossenfisk: { navn: 'Frossen fisk', enhet: 't', pris: 30000, kjede: true }, korn: { navn: 'Korn', enhet: 't', pris: 5000, kjede: true },

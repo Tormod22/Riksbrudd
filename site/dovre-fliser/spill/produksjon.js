@@ -37,7 +37,7 @@
       mølle: { folk: 2, kw: 10, inn: [{ korn: .6 }], ut: { mel: .5 }, tom: 'korn' },
       // raffineriet: 0,25 t olje gir 20 l diesel i timen – dieselen går rett i leirens tank (spill/kjeder-visning.js flytter den)
       raffineri: { folk: 4, kw: 40, inn: [{ olje: .25 }], ut: { diesel: 20 }, tom: 'olje' },
-      smie: { folk: 2, kw: 10, inn: [{ skrap: .5 }], ut: { stål: .3, deler: .05 }, tom: 'skrap' },
+      smie: { folk: 2, kw: 10, inn: [{ skrap: .5 }], ut: { stål: .15, deler: .03 }, tom: 'skrap' },
     },
     rekkefølge: ['fyrkjele', 'sagbruk', 'vedkløyver', 'steinbrudd', 'steinknuser', 'betongblander', 'fiskemottak', 'mølle', 'raffineri', 'smie'],
     // (ut6-kjeder) enheten per vare i tekstene (resten er m³)
