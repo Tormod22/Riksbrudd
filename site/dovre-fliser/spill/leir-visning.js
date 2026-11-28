@@ -254,6 +254,9 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   menyEl.addEventListener('pointerleave', () => { pekerOver = null; if (utsatt && meny) visMeny(); });
   function visMeny(auto) {
     if (auto === true && menyEl.firstChild && pekerOver) { utsatt = true; return; }
+    // (ut8-kr-telefon) heller ikke kall fra KROKER.sim (bygg ferdig, ny jobb) bytter ut lista mens en finger er nede på den eller rett etter
+    // (pekerNede holder litt etter at fingeren slapp – spill/trykkvakt.js; kall fra selve trykket går som før)
+    if (auto !== true && menyEl.firstChild && window.pekerNede && pekerNede(menyEl)) { utsatt = true; return; }
     const S = spill(), rulle = menyEl.scrollTop;
     const kap = LB.kapasitet(L), plass = LB.lagerplass(L);
     // status som fire små fliser (tall først, forklaringen i tittelen), og en rød linje når noe mangler strøm

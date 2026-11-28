@@ -82,7 +82,10 @@
     g.fillStyle = 'rgba(30,26,18,.55)'; g.strokeStyle = 'rgba(232,214,170,.7)'; g.lineWidth = 1; g.setLineDash([3, 2]);
     g.fillRect(x - r, y - r, 2 * r, 2 * r); g.strokeRect(x - r, y - r, 2 * r, 2 * r); g.setLineDash([]);
     const fyll = Math.max(0, Math.min(1, innhold)); if (fyll > 0) { g.fillStyle = farge; g.fillRect(x - r + 2, y + r - 2 - (2 * r - 4) * fyll, 2 * r - 4, (2 * r - 4) * fyll); }
-    if (m < .9) { g.font = '11px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.textBaseline = 'top'; g.fillStyle = '#e8dcc0'; g.fillText(tittel, x, y + r + 2); }
+    // (ut8-kr-telefon, Jonas: «Sagbruk · 97 % helt» oppå «inn 3,3 m³») feltet er et merke navnene går utenom, og teksten plasseres av Etikett
+    if (window.Etikett && Etikett.hinder) Etikett.hinder(x - r, y - r, 2 * r, 2 * r);
+    if (m < .9) { g.font = '11px "Cormorant Garamond", serif'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#e8dcc0'; const y0 = y + r + 13;
+      const ty = window.Etikett ? Etikett.tekst(g, tittel, x, y0, 1, 1) : y0; g.fillText(tittel, x, ty); }
   }
   KROKER.tegn.push((g, vx0, vy1) => {
     if (typeof kam === 'undefined' || (typeof på3d !== 'undefined' && på3d) || !aktiv()) return; const L = Lr(), F = Fo(); if (!L || !F) return; const m = kam.m;

@@ -327,7 +327,9 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
     const LS = window.LeirSpill && LeirSpill.tilstand(), sk = LS && window.Leir ? FO.skadet(repListe(LS)) : { n: 0 }, ventende = LS ? repListe(LS).filter(q => !q.opptatt && q.hp < FO.R.rep.varsel) : [];
     const SL = stoppNå(), nøkkel = ['rapport', r.tittel, ventende.length, SL ? SL.tekst : ''].join('|'); alarm.classList.add('på'); alarm.classList.add('satt'); alarm.classList.toggle('god', !!r.god); if (nøkkel === sistAlarm || (window.pekerNede && pekerNede(alarm))) return true; sistAlarm = nøkkel;
     // (skadevarselet etter angrepet står i rapporten når rapporten ikke alt sier det)
-    alarm.replaceChildren(el('span', { klasse: 'rapport' }, el('b', {}, r.tittel + '.'), ' ', el('small', {}, r.tekst + (sk.n && !/bygg skadet|ødelagt/.test(r.tekst) ? ' ' + sk.tekst + '.' : ''))));
+    // (ut8-kr-telefon, Jonas: «Brakke, Kjøkken og Sagbruk skadet. 2 bygg er skadet.») – nevner rapporten alt skadde bygg (med navn), kommer ikke
+    // et nytt tall i tillegg (det telte bare byggene under 98 % nå)
+    alarm.replaceChildren(el('span', { klasse: 'rapport' }, el('b', {}, r.tittel + '.'), ' ', el('small', {}, r.tekst + (sk.n && !/skadet|ødelagt/.test(r.tekst) ? ' ' + sk.tekst + '.' : ''))));
     if (sk.n && ventende.length) alarm.append(kn(`Reparer alle (${Leir.kroner(ventende.reduce((t, q) => t + q.pris, 0))})`, () => { reparerAlle(); rapportNå = null; vis(); }, { id: 'reparerknapp' }));
     // (runde 12) knapper dit det gjelder: det skadde bygget, og Folk (de sårede)
     { const LS2 = window.LeirSpill && LeirSpill.tilstand(), bb = LS2 && r.bygg ? r.bygg.map(i => LS2.bygg.find(q => q.id === i)).filter(Boolean) : [];
@@ -547,7 +549,11 @@ body.gaar #alarm button{ min-height:28px; padding:0 8px; font-size:12.5px; flex:
   function settAnslag(o) { if (!o || typeof o.id !== 'string' || !Number.isFinite(o.v) || !Number.isFinite(o.t)) return false;
     est = { id: o.id, v: o.v, t: o.t, minNær: Number.isFinite(o.minNær) ? o.minNær : Infinity, sett: !!o.sett, rute: !!o.rute }; sistAlarm = ''; return true; }
   // (kritikerløkka r1) kampen om leiren pågår: den har begynt (kampStart), eller angriperne er nærmere enn KAMP.nær – da spoler ⏭ ikke i 600× (flyt.js)
-  function kampPågår() { const A = angrep(), L = leir(); if (!A || !L) return false; if (kampStart.has(A.id)) return true; return A.lag.some(e => !e.trekker && !e.flykter && Math.hypot(e.x - L.x, e.y - L.y) <= KAMP.nær); }
+  // (ut8-kr-telefon, Jonas: «⏭ holdt meg på 10×» fra 12:56 til 14:24 mens røverne ikke var sett) – kampen regnes bare som i gang når det er
+  // skutt de siste KAMP_STILLE spillminuttene (Claudes forslag), eller angriperne er nær
+  const KAMP_STILLE = 20; let sisteKamp = -Infinity;
+  KROKER.sim.push(() => { const A = angrep(); if (A && A.lag.some(q => levende(q) && iStrid(q))) sisteKamp = tid; });
+  function kampPågår() { const A = angrep(), L = leir(); if (!A || !L) return false; if (kampStart.has(A.id) && tid - sisteKamp <= KAMP_STILLE) return true; return A.lag.some(e => !e.trekker && !e.flykter && Math.hypot(e.x - L.x, e.y - L.y) <= KAMP.nær); }
   // (kritikerløkka r3) hvor langt angrepet er kommet – flyt.js senker farten én gang per angrep, først når angriperne er sett, er under
   // KAMP.nær m unna eller kampen har begynt
   // (nøkkel = angrepet og når det startet: et nytt spill i samme side har bølge 1 igjen)

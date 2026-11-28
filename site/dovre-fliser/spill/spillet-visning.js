@@ -95,10 +95,14 @@
     for (const e of ENHETER) if (e.raid === T.aktiv && !e.trekker && levende(e) && !Terreng.slattUt(e.menn) && (Math.hypot(e.x - leir.x, e.y - leir.y) <= Trussel.HERJ.radius || (window.HERJER && HERJER.has(e)))) e.inne = (e.inne || 0) + dt; });
   // (kritikerløkka r3, Jonas) RØVERE SOM GÅR LEI (Trussel.LEI): minutter hvert lag har stått utenfor leiren uten kamp etter at det kom nær
   const iKampNå = e => !!((e.skyterPå && [...e.skyterPå].some(b => b && b.side === 'blå')) || ENHETER.some(s => s.side === 'blå' && s.skyterPå && s.skyterPå.has(e)));
-  KROKER.sim.push(dt => { if (!klar || !T || !T.aktiv || !auto() || !S() || !S().leir || !Trussel.stilleSteg) return; const leir = S().leir;
+  KROKER.sim.push(dt => leiSteg(dt));
+  function leiSteg(dt) { if (!klar || !T || !T.aktiv || !auto() || !S() || !S().leir || !Trussel.stilleSteg) return; const leir = S().leir;
     for (const e of ENHETER) { if (e.raid !== T.aktiv || e.trekker || e.flykter || !levende(e)) continue; const d = Math.hypot(e.x - leir.x, e.y - leir.y);
       if (d <= Trussel.LEI.nær) e.leiNær = true; const kamp = iKampNå(e); if (kamp) e.leiNær = true;
-      e.stille = Trussel.stilleSteg({ nærVært: !!e.leiNær, inne: d <= Trussel.HERJ.radius || !!(window.HERJER && HERJER.has(e)), kamp, venter: !!e.venterNatt, stille: e.stille }, dt); } });
+      const inne = d <= Trussel.HERJ.radius || !!(window.HERJER && HERJER.has(e));
+      e.stille = Trussel.stilleSteg({ nærVært: !!e.leiNær, inne, kamp, venter: !!e.venterNatt, stille: e.stille }, dt);
+      // (ut8-kr-telefon) lag som ikke kommer nærmere leiren (gått seg fast, står og venter langt ute): Trussel.framSteg
+      if (Trussel.framSteg) { const f = Trussel.framSteg({ nærmest: e.leiNærmest, stå: e.stå, inne, kamp, venter: !!e.venterNatt, går: !!(e.sti || e.planlegger) }, d, dt); e.leiNærmest = f.nærmest; e.stå = f.stå; } } }
   // laget tar byttet (kassa, lageret, dieselen og maten) og marsjerer bort fra leiren
   function trekkUt(e) { const leir = S().leir, LS = L(), f = F(), H = Trussel.HERJ;
     const b = Trussel.bytte({ penger: S().penger, lager: LS ? LS.lager : {}, diesel: LS ? LS.drivstoff : 0, mat: f ? f.mat : 0 });
@@ -383,7 +387,7 @@
     const g = deg(); skytKnapp.classList.toggle('på', !!g && VW < 900 && !(window.KjorSpill && KjorSpill.fører()));
     if (tempo > 0) { utSteg(); angrepSteg(); markedSteg(); oppdragSteg(); hendelseSteg(); kampSteg(); faltSteg(); } }, 1000);
   Object.assign(api, { venner: () => V.map(v => v.d), minStilling, start, angrep, ta, fullfør, skyt, lad, hendelse, velg, leggTilVenn, minLenke, settPriser, varsel, knapt, hyller: () => (M ? Marked.hyller(M) : null), markedNå: () => { M.spilldag = -1; const t = api.test; api.test = true; markedSteg(); api.test = t; }, fyllOppdrag,
-    T: () => T, M: () => M, O: () => O, K: () => K, H: () => H, V: () => V, klar: () => klar, kampSteg, oppdragSteg, angrepSteg, trekkUt, utSteg });
+    T: () => T, M: () => M, O: () => O, K: () => K, H: () => H, V: () => V, klar: () => klar, kampSteg, oppdragSteg, angrepSteg, leiSteg, trekkUt, utSteg });
   api.FØRSTE = FØRSTE;
   window.SpilletSpill = api;
 })();

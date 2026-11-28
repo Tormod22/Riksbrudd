@@ -93,9 +93,11 @@ body.kort #folkmeny h2{ font-size:19px; } body.kort #folkmeny .opp button{ min-h
   }
   let sistHtml = '';
   function vis() {
-    if (!åpen) return; const ny = el('div'); fyll(ny);
+    // (ut8-kr-telefon, Jonas: «Gi lønnstillegg» virket ikke på 60×) lederne, jobbtavla og søkerne kaller vis() fra KROKER.sim – heller ikke
+    // da tegnes panelet på nytt mens en finger er nede på det (eller rett etter, se spill/trykkvakt.js); delene som ikke er endret, blir stående
+    if (!åpen) return; if (window.pekerNede && pekerNede(panel)) return; const ny = el('div'); fyll(ny);
     if (ny.innerHTML === sistHtml && panel.firstChild) return;
-    const rulle = panel.scrollTop; sistHtml = ny.innerHTML; panel.innerHTML = ''; panel.append(...ny.childNodes); panel.scrollTop = rulle;
+    const rulle = panel.scrollTop; sistHtml = ny.innerHTML; if (window.Trykkvakt) Trykkvakt.bytt(panel, ny); else { panel.innerHTML = ''; panel.append(...ny.childNodes); } panel.scrollTop = rulle;
   }
   // (runde 4) små portretter i lista over folkene: portrettmotoren (Samfunn.portrettSVG, fast per person – samme ansikt som i
   // personkortet). Bildet lages én gang per person som en blob-adresse, så innerHTML holder seg kort og lik mellom tegningene

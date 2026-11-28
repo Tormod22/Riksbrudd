@@ -228,6 +228,8 @@
       const t = PR.merke(b.type, s), går = s && s.går, under = !går && s ? s.tekst : b.av ? 'slått av' : '';
       g.font = '600 13px "Cormorant Garamond", serif'; const w = Math.max(g.measureText(t).width, under && kam.m < 1.6 ? g.measureText(under).width : 0) + 10;
       g.fillStyle = 'rgba(20,17,12,.78)'; g.fillRect(x - w / 2, y - 16 - (under && kam.m < 1.6 ? 14 : 0), w, 17 + (under && kam.m < 1.6 ? 14 : 0));
+      // (ut8-kr-telefon) tavla og ikonet er et merke navnene går utenom (Etikett)
+      if (window.Etikett && Etikett.hinder) Etikett.hinder(x - w / 2 - 18, y - 16 - (under && kam.m < 1.6 ? 14 : 0), w + 18, 17 + (under && kam.m < 1.6 ? 14 : 0));
       g.fillStyle = går ? '#a9d48a' : '#e0a070'; g.fillText(t, x, y);
       // (F3) status-ikonet til venstre for tallet: grønn = går, gul = venter (folk, råvare, full), rød = uten strøm / i stykker
       { const st = window.BaeringSpill ? BaeringSpill.status(s) : (går ? 'går' : 'venter'), ix = x - w / 2 - 9, iy = y - 8;

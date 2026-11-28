@@ -271,7 +271,8 @@
         const xs = Pv.map(q => sx(q[0])), ys = Pv.map(q => sy(q[1]));
         if (Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) < 16) { const c = PT.ramme(Pv); g.fillStyle = farge; g.strokeStyle = '#e7dcc3'; g.lineWidth = 1.5; g.beginPath(); g.rect(sx(c[0]) - 5, sy(c[1]) - 5, 10, 10); g.fill(); g.stroke(); }
         if (m < 3) { const c = PT.ramme(Pv); g.globalAlpha = 1; g.font = '13px "Cormorant Garamond", Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'bottom'; g.fillStyle = '#e7dcc3';
-          g.fillText('Vårt · ' + OT.BRUK[o.bruk].navn, sx(c[0]), sy(Math.max(...Pv.map(q => q[1]))) - 3); }
+          // (ut8-kr-telefon, Jonas: «Vårt · Kaserne» under «Jonas Bakke (deg)») plasseres av Etikett som de andre navnene
+          { const t = 'Vårt · ' + OT.BRUK[o.bruk].navn, x0 = sx(c[0]), y0 = sy(Math.max(...Pv.map(q => q[1]))) - 3, ty = window.Etikett ? Etikett.tekst(g, t, x0, y0, -1, 1) : y0; g.textBaseline = 'alphabetic'; g.fillText(t, x0, ty); } }
         g.restore(); } }
     // vernet i plantegningen
     if (!p || !p.aktiv() || !PT) return;

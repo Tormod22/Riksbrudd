@@ -104,6 +104,9 @@
 
   // ================= PERSONER: ansikt, historie, lynne og ønske =================
   const STEDER = ['Otta', 'Lesja', 'Vågå', 'Oppdal', 'Lom', 'Hjerkinn', 'Folldal', 'Tynset', 'Ringebu', 'Sunndalsøra', 'Vinstra', 'Åndalsnes'];
+  // (ut8-kr-telefon, Jonas: flyktninger «fra Ringebu» ved porten i Ulvik) – visningen kan gi stedene rundt leiren (Samfunn.nærSteder =
+  // ['Granvin', 'Eidfjord', …]); da hentes navnene derfra. Uten (testene, Dovre-siden før kartet er lest) som før.
+  const stedListe = () => (typeof api !== 'undefined' && api && Array.isArray(api.nærSteder) && api.nærSteder.length >= 3 ? api.nærSteder : STEDER);
   const TAP = ['Mistet broren i Grålungen.', 'Vet ikke hvor familien er.', 'Gikk i tre uker for å komme hit.', 'Var på jobb den dagen strømmen gikk.', 'Har en datter et sted i sør.',
     'Begravde naboene sine selv.', 'Kom hit med bare en ryggsekk.', 'Snakker lite om tida før.', 'Mistet alt da banken stengte.', 'Passet på foreldrene til det siste.'];
   const LYNNE = { rolig: 'Rolig og tålmodig', stri: 'Sta og egenrådig', lojal: 'Trofast mot gjengen', urolig: 'Rastløs og urolig' };
@@ -127,7 +130,7 @@
   // Fast profil per person (fra navnet, alderen og yrket – id-en kan skifte når en person kommer tilbake fra en tropp)
   function profil(p) {
     const h = hash(p.navn + '|' + p.yrke), r = FR.rng(h), v = a => a[Math.floor(r() * a.length)], k = kvinne(p);
-    const sted = v(STEDER), tap = v(TAP), lynne = v(Object.keys(LYNNE)), ønske = v(Object.keys(ØNSKER));
+    const sted = v(stedListe()), tap = v(TAP), lynne = v(Object.keys(LYNNE)), ønske = v(Object.keys(ØNSKER));
     const spes = p.spes && SPES[p.spes] ? SPES[p.spes].navn.toLowerCase() : null;
     // p.fra: stedet personen kom fra (rekrutter fra byene, spill/region-visning.js); p.fange: fraksjonen hen kjempet for (spill/krig-visning.js)
     const hvor = p.fra ? `i ${p.fra}` : `${sted === 'Hjerkinn' ? 'på' : 'i'} ${sted}`;
@@ -196,7 +199,7 @@
   function nyeFlyktninger(S, r) {
     const voksne = 1 + Math.floor(r() * 3), barn = r() < .55 ? 1 + Math.floor(r() * 2) : 0, gamle = r() < .35 ? 1 : 0;
     const typer = Object.keys(SPES), spes = r() < REGLER.flyktSpes ? typer[Math.floor(r() * typer.length)] : null;
-    return { type: 'flyktninger', voksne, barn, gamle, spes, smittet: r() < REGLER.flyktSmittet, fra: STEDER[Math.floor(r() * STEDER.length)] };
+    return { type: 'flyktninger', voksne, barn, gamle, spes, smittet: r() < REGLER.flyktSmittet, fra: (L => L[Math.floor(r() * L.length)])(stedListe()) };
   }
   const flyktTekst = g => { const d = [`${g.voksne} ${g.voksne === 1 ? 'voksen' : 'voksne'}`]; if (g.barn) d.push(`${g.barn} barn`); if (g.gamle) d.push(`${g.gamle} ${g.gamle === 1 ? 'gammel' : 'gamle'}`);
     return `En gruppe flyktninger fra ${g.fra} står ved porten: ${d.join(', ').replace(/, ([^,]*)$/, ' og $1')}. De er slitne og sultne.` + (g.spes ? ` En av dem sier hen er ${SPES[g.spes].yrke}.` : ''); };

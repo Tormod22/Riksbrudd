@@ -75,9 +75,18 @@
     // nordøst for leiren og gjorde ingenting, og bølgen ble aldri avsluttet) RØVERE SOM GÅR LEI: et lag som er kommet innen «nær» meter
     // av leiren (eller har vært i kamp), men så har stått utenfor leiren uten å skyte eller bli skutt på i «min» spillminutter til sammen,
     // gir opp og går sin vei (flykter – bølgen regnes da som slått tilbake). Lag som venter på mørket, teller ikke. Claudes forslag.
-    LEI: { nær: 1000, min: 60 },
-    // q: { stille (spillminutter utenfor leiren uten kamp siden laget sist var i leiren eller i kamp) }
-    lei: q => (q.stille || 0) >= Trussel.LEI.min,
+    // (ut8-kr-telefon, Jonas: bølge 2 sto fra 12:56 til 14:24 på «sist sett 420 m V … ikke sett siden», så kom den fra øst) – i tillegg:
+    // et lag som ikke er kommet minst «fram» meter nærmere leiren på «stå» spillminutter (og ikke er i leiren, i kamp eller venter på
+    // mørket), har gått seg fast eller gitt opp – det går også sin vei, uansett hvor langt unna det står. Claudes forslag.
+    LEI: { nær: 1000, min: 60, stå: 45, fram: 100 },
+    // q: { stille (spillminutter utenfor leiren uten kamp siden laget sist var i leiren eller i kamp), stå (minutter uten å komme nærmere) }
+    lei: q => (q.stille || 0) >= Trussel.LEI.min || (q.stå || 0) >= Trussel.LEI.stå,
+    // framSteg(q, d, dt): q = { nærmest (nærmeste avstand til leiren så langt), stå, inne, kamp, venter, går }, d = avstanden nå -> { nærmest, stå }
+    // (et lag som går – en omvei rundt en fjord – teller halvt så fort som et som står)
+    framSteg: (q, d, dt) => { const n = Number.isFinite(q.nærmest) ? q.nærmest : Infinity, stå = q.stå || 0;
+      if (d <= n - Trussel.LEI.fram || !Number.isFinite(n)) return { nærmest: Math.min(n, d), stå: 0 };
+      if (q.inne || q.kamp) return { nærmest: Math.min(n, d), stå: 0 };
+      return { nærmest: n, stå: q.venter ? stå : stå + Math.max(0, dt || 0) * (q.går ? .5 : 1) }; },
     // ett steg for ett lag: e = { nærVært (har vært innen LEI.nær), inne (i leiren nå), kamp (skyter eller blir skutt på nå), venter
     // (venter på mørket), stille } – gir det nye tallet for stille
     stilleSteg: (e, dt) => (!e.nærVært || e.venter ? (e.stille || 0) : e.inne || e.kamp ? 0 : (e.stille || 0) + Math.max(0, dt || 0)),
