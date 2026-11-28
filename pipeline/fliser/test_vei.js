@@ -140,4 +140,8 @@ const ms = f => { const t = process.hrtime.bigint(); const r = f(); return [r, N
     if (folk === 200) ok(tKart / 4 < 400 && tLag < 2000, '200 folk: veikart ' + (tKart / 4).toFixed(0) + ' ms per mål, Vei.lag ' + tLag.toFixed(0) + ' ms');
   }
 }
+// ---------- (28. nov, fiks c) veikartet over en stor leir: avstandene rundes ikke opp, så ingen rute legges i haugen om og om igjen ----------
+// (med Float32Array gikk siden tom for minne: et bygg 400 m fra leirens midte ga 30 s og over 3 GB i nettleseren)
+{ const K = V.lag({ deler: [], start: [0, 0], mål: { langt: [[300, 300]] } }), [vk, t] = ms(() => V.veikart('langt')), a = vk.avstand({ x: 0, y: 0 });
+  ok(t < 2000 && Math.abs(a - 300 * Math.SQRT2) < 3, `veikart over ${K.N} ruter til et mål 424 m unna: ${t.toFixed(0)} ms, ${a.toFixed(1)} m`); }
 console.log(feil ? `\n${feil} FEIL` : '\nAlle sjekker ok'); process.exit(feil ? 1 : 0);
