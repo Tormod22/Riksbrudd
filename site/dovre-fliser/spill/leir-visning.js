@@ -556,10 +556,11 @@ body:not(.tlfligg) #byggvalg button[data-tegn]:not([data-medtegn])::before{ cont
   // STORE KJØP BEKREFTES (kritikerløkka r2, Ingrid: «et kort i lista kjøper rett ut uten bekreftelse» – hun bestilte en ammunisjonsbunker
   // til 9,3 mill. kr ved et feiltrykk): fra BEKREFT.kr (Claudes tall: 3 mill. kr) spør banneret én gang til, med navn og pris, før pengene
   // trekkes. I testene (navigator.webdriver) som før, til LeirSpill.test = true.
-  const BEKREFT = { kr: 3e6 };
+  // (ut8-kr-krig, Ingrid 28. nov) felles regel for alle store kjøp: over 1 mill. kr (spill/storkjop.js, StortKjøp.REGLER.grense)
+  const BEKREFT = { kr: 1e6 };
   function måSpørre(p, medMat) { if (!p || p.plan || p.flytt || p.mal || !p.type || (navigator.webdriver && !(window.LeirSpill && LeirSpill.test === true))) return null;
     const tot = (p.pris || 0) + (medMat ? p.matPris || 0 : 0), sig = [p.type, p.x, p.y, p.ret].join(',');
-    return tot >= BEKREFT.kr && p.bekreftet !== sig ? { tot, sig } : null; }
+    return tot > ((window.StortKjøp && StortKjøp.REGLER.grense) || BEKREFT.kr) && p.bekreftet !== sig ? { tot, sig } : null; }
   function spør(p, q, gjør) { const B = LB.BYGG[p.type];
     banner.innerHTML = ''; banner.classList.add('på');
     banner.append(el('div', {}, el('b', {}, `Bestille ${B.navn.toLowerCase()} for ${LB.kroner(q.tot)}?`)), el('small', {}, 'Store kjøp må bekreftes: pengene trekkes først når du trykker «Ja, bestill».'),
