@@ -98,6 +98,8 @@
       if (s.hus) settHus(s, null);
       S.sett.set(s, nøk);
       // ikke slått opp på dette stedet før: spør kartet (svaret kommer senere)
+      // (bare egne lag og fiender nær leiren – ikke hent husflisene over hele landet for fjerne AI-lag)
+      const l = leirXY(); if (s.side !== 'blå' && !(l && Math.hypot(s.x - l.x, s.y - l.y) < 5000)) continue;
       if (!S.oppslag.has(nøk)) { S.oppslag.add(nøk); if (S.oppslag.size > 400) S.oppslag.clear(); slåOpp(s.x, s.y).then(H2 => { if (H2 && !s.sti && Math.abs(s.x - +nøk.split(',')[0]) < 1.5) { settHus(s, H2); S.sett.set(s, nøk); if (valgtEr(s)) visPanelNå(); } }); }
     }
   }
